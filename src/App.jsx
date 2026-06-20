@@ -4,10 +4,9 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
-// ⚠️ 1. นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
-// ⚠️ 2. นำ Firebase Config ของคุณมาวางทับที่นี่ (ได้จาก Firebase Console -> Project Settings)
+// ⚠️ ผนวก Firebase Config เรียบร้อยแล้ว
 const customFirebaseConfig = {
   apiKey: "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
   authDomain: "taskflow-plus-3fce7.firebaseapp.com",
@@ -17,23 +16,39 @@ const customFirebaseConfig = {
   appId: "1:829369182338:web:5c6c326a6dcb1a7a6e2c9b"
 };
 
-// --- การตั้งค่า Firebase ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : customFirebaseConfig;
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ฟังก์ชันช่วยกำหนด Path ของ Firestore (รองรับทั้งการเทสต์และรันจริงบน Vercel)
 const getColRef = (colName) => {
-    if (typeof __app_id !== 'undefined') return collection(db, 'artifacts', __app_id, 'public', 'data', colName);
-    return collection(db, colName);
-};
-const getDocRef = (colName, docId) => {
-    if (typeof __app_id !== 'undefined') return doc(db, 'artifacts', __app_id, 'public', 'data', colName, docId);
-    return doc(db, colName, String(docId));
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    return collection(db, 'artifacts', appId, 'public', 'data', colName);
 };
 
-// --- ฟังก์ชันช่วยเหลือต่างๆ ---
+const getDocRef = (colName, docId) => {
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    return doc(db, 'artifacts', appId, 'public', 'data', colName, String(docId));
+};
+
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Prompt', sans-serif; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .animate-in { animation: fadeIn 0.2s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @media print {
+      body { background-color: white !important; -webkit-print-color-adjust: exact; }
+      #app-main { display: none !important; }
+      #print-area { display: block !important; padding: 20px; }
+      @page { margin: 10mm; size: A4 portrait; }
+      .print-break { page-break-inside: avoid; }
+    }
+  `}</style>
+);
+
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
 
@@ -102,7 +117,6 @@ export default function App() {
   const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
-  // 1. ตรวจสอบสถานะและเข้าสู่ระบบ Firebase
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -118,11 +132,10 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore
   useEffect(() => {
-    if (!user && typeof __app_id !== 'undefined') return;
-
+    if (!user) return;
     setLoading(true);
+    
     const unsubTasks = onSnapshot(getColRef('Tasks'), (snap) => {
       const arr = []; snap.forEach(d => arr.push(d.data())); setTasks(arr);
     }, console.error);
@@ -139,15 +152,13 @@ export default function App() {
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
-  // --- 🛠️ ระบบบันทึกข้อมูลคู่ขนาน (Dual-Save) ---
   const saveD = async (t, d) => {
+    if (!user) return;
     try {
-      // 1. บันทึกลง Firebase เพื่อความเร็วสูงสุด (เสี้ยววินาที)
       if (t === 'task') await setDoc(getDocRef('Tasks', d.id), d);
       else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
       else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
       
-      // 2. แอบยิงข้อมูลไปอัปเดต Google Sheet และสั่งบอทส่งอีเมลเป็น Backup แบบทำงานเบื้องหลัง (Background)
       fetch(API_URL, { 
         method: "POST", mode: "no-cors", 
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -157,9 +168,8 @@ export default function App() {
     } catch (e) { console.error("Error saving data:", e); }
   };
 
-  // --- 🚀 ปุ่มมหัศจรรย์: ดูดข้อมูลจาก Sheet เข้า Firebase ทันที (Migration) ---
   const runMigration = async () => {
-    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase (ทำเฉพาะครั้งแรกตอนย้ายระบบ)');
+    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
     if (confirmCode !== 'MIGRATE') return;
     
     setLoading(true);
@@ -219,7 +229,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // --- ฟังก์ชันเก่าต่างๆ ถูกรวมและทำงานกับ Firebase ทันที ---
   const chkOvdTimeAware = (t, rD = getTStr()) => { 
     if (!t.endDate || t.status === 'ยกเลิก') return false; 
     if (t.status === 'จบงาน') return t.completedDate > t.endDate; 
@@ -252,7 +261,6 @@ export default function App() {
         infSnap.forEach(d => promises.push(deleteDoc(d.ref)));
         await Promise.all(promises);
         
-        // ล้างใน Sheet ด้วย
         fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{});
         alert('ล้างข้อมูลสำเร็จ!'); 
     } catch(e) { alert(e.message); } 
@@ -633,7 +641,6 @@ export default function App() {
               <div className="w-full bg-gray-200 rounded-full h-3"><div className={`${healthColor} h-3 rounded-full transition-all duration-500`} style={{width: `${healthPct}%`}}></div></div>
             </div>
             
-            {/* 🚀 ปุ่มดูดข้อมูลเก่าเข้าสู่ Firebase */}
             <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm">
                 <Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase
             </button>
@@ -675,12 +682,17 @@ export default function App() {
 
   return (
     <React.Fragment>
+      <GlobalStyles />
       {loading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[99999] flex flex-col justify-center items-center text-[#0f2e4a]">
           <Icon name="loader2" size={40} className="animate-spin mb-4 text-[#bca374]" />
           <h2 className="text-lg font-bold">กำลังซิงค์ข้อมูล...</h2>
         </div>
       )}
+      
+      {/* ⚠️ เพิ่มคอมโพเนนต์ PReport ตรงนี้ เพื่อให้อยู่ในหน้าเว็บแต่ถูกซ่อนไว้รอการสั่งพิมพ์ */}
+      <PReport />
+
       <div className="w-full min-h-screen">
         <div id="app-main" className="flex h-screen overflow-hidden text-slate-800 print:hidden">
           <aside className="w-64 bg-[#0f2e4a] text-white hidden md:flex flex-col shadow-xl z-20">
