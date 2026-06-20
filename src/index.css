@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 * { font-family: 'Prompt', sans-serif; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .animate-in { animation: fadeIn 0.2s ease-out forwards; }
