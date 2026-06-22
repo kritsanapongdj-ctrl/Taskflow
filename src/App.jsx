@@ -4,7 +4,6 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
-// ⚠️ ลิงก์ Web App (Google Apps Script)
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
 // ⚠️ Firebase Config ของคุณ
@@ -283,26 +282,51 @@ export default function App() {
   };
 
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail&emails=${encodeURIComponent(sets.emails.map(e=>e.split('|')[0]).join(','))}`, '_blank'); };
-  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
+  
+  // 🛠️ อัปเดตการกดปุ่มสร้างบอทเป็นทุกๆ 15 นาที
+  const installTrigger = async () => { 
+    setLoading(true); 
+    try { 
+      await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); 
+      alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (รอบตรวจสอบทุก 15 นาที) เรียบร้อย'); 
+    } catch(e) {} finally { setLoading(false); } 
+  };
 
   const subT = (e) => {
-    e.preventDefault(); const fd = new FormData(e.target); let det = fd.get('details'), ePl = null;
+    e.preventDefault(); 
+    const fd = new FormData(e.target); 
+    let det = fd.get('details'), ePl = null;
     const proj = fd.get('project');
+    const sDate = fd.get('startDate');
+    const eDate = fd.get('endDate');
     
-    if(eTask && eTask.startDate !== fd.get('startDate')) {
+    // แจ้งเตือนกรณีเลื่อนวันเริ่มงาน
+    if(eTask && eTask.startDate !== sDate) {
       if(!sRsn) return alert('โปรดระบุเหตุผลที่เปลี่ยนวันเริ่มงาน');
-      det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det };
+      det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; 
+      ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det };
     }
     
+    // 🛠️ ระบบตรวจสอบ SLA อัจฉริยะ (แจ้งเตือนอีเมลทันที)
     const slaCat = fd.get('slaCategory');
     if (slaCat) {
       const slaLimitObj = sets.slas.find(s => getProjName(s) === slaCat);
       if (slaLimitObj) {
         const limitDays = parseInt(getProjArea(slaLimitObj));
-        const diffDays = Math.ceil((new Date(fd.get('endDate')) - new Date(fd.get('startDate'))) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil((new Date(eDate) - new Date(sDate)) / (1000 * 60 * 60 * 24));
+        
         if (diffDays > limitDays) {
-           alert(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA ของหมวดงานนี้ (${limitDays} วัน)\nระบบจะบันทึกงานตามปกติ แต่จะส่งอีเมลแจ้งผู้ดูแลโครงการทันที!`);
-           if(!ePl) ePl = { action: 'บันทึกงานเกินเวลา SLA', reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน (เกิน SLA ที่ตั้งไว้ ${limitDays} วัน)`, emails: getTargetEms(proj), project: proj, details: det };
+           const confirmSLA = window.confirm(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA ของหมวดงานนี้ (${limitDays} วัน)\n\nระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันที! ต้องการยืนยันบันทึกข้อมูลหรือไม่?`);
+           if(!confirmSLA) return; // ยกเลิกการเซฟถ้ากด Cancel
+           
+           // ถ้ายืนยัน เซ็ตข้อมูลส่งเมล์ด่วน
+           if(!ePl) ePl = { 
+             action: 'บันทึกงานเกินกรอบเวลา SLA', 
+             reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน ซึ่งเกินกว่าเกณฑ์ SLA ที่ตั้งไว้ที่ ${limitDays} วัน`, 
+             emails: getTargetEms(proj), 
+             project: proj, 
+             details: det 
+           };
         }
       }
     }
@@ -310,13 +334,15 @@ export default function App() {
     const tD = { 
       id: eTask?eTask.id:`JOB-${Date.now().toString().slice(-4)}`, details: det, requester: fd.get('requester'), project: proj, area: fd.get('area'), 
       receivedDate: eTask ? eTask.receivedDate : fd.get('receivedDate'), slaCategory: slaCat,
-      startDate: fd.get('startDate'), endDate: fd.get('endDate'), status: eTask?eTask.status:'อยู่ระหว่างดำเนินการ', completedDate: eTask?eTask.completedDate:null, 
+      startDate: sDate, endDate: eDate, status: eTask?eTask.status:'อยู่ระหว่างดำเนินการ', completedDate: eTask?eTask.completedDate:null, 
       cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'' 
     };
     
     tD.overdueStatus = (eTask && eTask.overdueStatus === 'เกินกำหนด') ? 'เกินกำหนด' : (chkOvdTimeAware(tD, getTStr()) ? 'เกินกำหนด' : 'ปกติ');
+    
     if(ePl) tD.emailAlert = ePl;
-    saveD('task', tD); setTMod(false); setETask(null); setSReason(''); setShowStartReason(false);
+    saveD('task', tD); 
+    setTMod(false); setETask(null); setSReason(''); setShowStartReason(false);
   };
 
   const initSt = (id, val) => {
@@ -385,10 +411,11 @@ export default function App() {
     saveD('settings', {...sets, emails: nEms});
   };
 
-  // 🛠️ แก้ไขการดึงข้อมูลเพื่อแก้ปัญหา Autocomplete บนเบราว์เซอร์
+  // 🛠️ แก้ไขการดึงข้อมูลเพื่อแก้ปัญหา Autocomplete
   const subInf = (e) => { 
     e.preventDefault(); 
     const form = e.target;
+    // อ่านค่าตรงๆ ป้องกันปัญหา Autocomplete
     const reqName = form.requesterName.value.trim();
     if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง');
 
@@ -571,6 +598,7 @@ export default function App() {
     const healthPct = Math.min((totalRows / 3000) * 100, 100);
     const healthColor = totalRows < 1500 ? 'bg-green-500' : (totalRows < 2500 ? 'bg-amber-500' : 'bg-red-500');
     
+    // จัดกลุ่มโครงการตามพื้นที่เพื่อแสดงผลสวยงาม
     const groupedProjects = sets.projects.reduce((acc, curr) => {
         const p = getProjName(curr), a = getProjArea(curr);
         if (!acc[a]) acc[a] = [];
@@ -592,6 +620,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
           <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
@@ -709,7 +738,7 @@ export default function App() {
     const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; 
     const tS = getTStr();
 
-    // 🛠️ 1. ระบบรวบยอดชื่อโครงการอัจฉริยะ (ลบช่องว่างและขีดกลางออกตอนเปรียบเทียบ)
+    // 🛠️ 1. ระบบรวบยอดชื่อโครงการอัจฉริยะ
     const pMap = {};
     sets.projects.forEach(p => {
        const name = getProjName(p);
@@ -734,7 +763,6 @@ export default function App() {
       return true;
     });
 
-    // 🛠️ 3. แยกกลุ่มงาน
     const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
     const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
 
@@ -742,7 +770,6 @@ export default function App() {
     const rOd = rT.filter(t => t.status !== 'จบงาน' && (t.overdueStatus === 'เกินกำหนด' || chkOvdTimeAware(t, tS)));
     const rO = rT.filter(t => t.status !== 'จบงาน' && t.overdueStatus !== 'เกินกำหนด' && !chkOvdTimeAware(t, tS));
     
-    // 🛠️ 4. นับสถิติแต่ละโครงการด้วยชื่อที่รวบยอดแล้ว
     const pSt = {}; 
     rT.forEach(t => { 
       const pName = getStdName(t.project);
@@ -753,7 +780,6 @@ export default function App() {
       else pSt[pName].o++; 
     });
     
-    // 🛠️ 5. หางานค้างเบิกสะสมทั้งหมด (ไม่กรองเดือน) แต่กรองพื้นที่/โครงการตามที่เลือก
     const allC = tasks.filter(t => {
       if (t.status !== 'จบงาน') return false;
       if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
@@ -861,11 +887,10 @@ export default function App() {
       {loading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[99999] flex flex-col justify-center items-center text-[#0f2e4a]">
           <Icon name="loader2" size={40} className="animate-spin mb-4 text-[#bca374]" />
-          <h2 className="text-lg font-bold">กำลังซิงค์ข้อมูล...</h2>
+          <h2 className="text-lg font-bold">กำลังประมวลผล...</h2>
         </div>
       )}
       
-      {/* ⚠️ PReport ถูกวางไว้ตรงนี้เพื่อรอการแสดงผลเมื่อกดพิมพ์ PDF */}
       <PReport />
 
       <div className="w-full min-h-screen">
@@ -898,7 +923,7 @@ export default function App() {
 
           {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
           
-          {/* 🛠️ Calendar Pop-up UI (แก้ไขล่าสุด) */}
+          {/* 🛠️ Calendar Pop-up UI */}
           {cPop.isOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
               <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col animate-in" onClick={e=>e.stopPropagation()}>
