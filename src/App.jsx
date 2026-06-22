@@ -21,14 +21,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ปรับ Path สำหรับการใช้งานบน Vercel โดยเฉพาะ
 const getColRef = (colName) => {
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    return collection(db, 'artifacts', appId, 'public', 'data', colName);
+    if (typeof __app_id !== 'undefined') return collection(db, 'artifacts', __app_id, 'public', 'data', colName);
+    return collection(db, colName);
 };
 
 const getDocRef = (colName, docId) => {
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    return doc(db, 'artifacts', appId, 'public', 'data', colName, String(docId));
+    if (typeof __app_id !== 'undefined') return doc(db, 'artifacts', __app_id, 'public', 'data', colName, String(docId));
+    return doc(db, colName, String(docId));
 };
 
 const GlobalStyles = () => (
@@ -117,6 +118,7 @@ export default function App() {
   const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
+  // 1. ตรวจสอบสถานะและเข้าสู่ระบบ Firebase แบบจับ Error
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -125,29 +127,38 @@ export default function App() {
         } else {
           await signInAnonymously(auth);
         }
-      } catch (error) { console.error("Auth Error:", error); }
+      } catch (error) { 
+        console.error("Auth Error:", error); 
+        setLoading(false);
+        alert("⚠️ เข้าระบบ Firebase ไม่สำเร็จ! โปรดเข้าไปที่ Firebase Console -> Authentication -> เปิดใช้งานโหมด 'Anonymous'");
+      }
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
+  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore พร้อมแจ้งเตือนหาก Rules ถูกบล็อก
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     
     const unsubTasks = onSnapshot(getColRef('Tasks'), (snap) => {
       const arr = []; snap.forEach(d => arr.push(d.data())); setTasks(arr);
-    }, console.error);
+    }, (err) => { console.error(err); setLoading(false); alert("ไม่สามารถโหลด Tasks ได้ โปรดตรวจสอบ Firestore Rules"); });
 
     const unsubInfs = onSnapshot(getColRef('InformJobs'), (snap) => {
       const arr = []; snap.forEach(d => arr.push(d.data())); setInforms(arr);
-    }, console.error);
+    }, (err) => { console.error(err); setLoading(false); });
 
     const unsubSets = onSnapshot(getDocRef('Settings', 'main'), (doc) => {
       if (doc.exists()) setSets(doc.data());
       setLoading(false);
-    }, console.error);
+    }, (err) => {
+      console.error(err);
+      setLoading(false);
+      alert("⚠️ ถูกบล็อกการเชื่อมต่อฐานข้อมูล! โปรดเข้าไปที่ Firebase Console -> Firestore Database -> Rules -> เปลี่ยนเป็น allow read, write: if true;");
+    });
 
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
@@ -165,7 +176,7 @@ export default function App() {
         body: JSON.stringify({ type: t, data: d }) 
       }).catch(()=>{});
 
-    } catch (e) { console.error("Error saving data:", e); }
+    } catch (e) { console.error("Error saving data:", e); alert("บันทึกข้อมูลล้มเหลว โปรดตรวจสอบ Firestore Rules"); }
   };
 
   const runMigration = async () => {
@@ -657,16 +668,59 @@ export default function App() {
   };
 
   const PReport = () => {
-    const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
-    const rT = tasks.filter(t => t.status !== 'ยกเลิก' && t.startDate && t.startDate.startsWith(fS) && (rCfg.area==='ทั้งหมด'||t.area===rCfg.area) && (rCfg.project==='ทั้งหมด'||t.project===rCfg.project));
+    const isY = rCfg.type === 'year'; 
+    const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; 
+    const tS = getTStr();
+
+    // 🛠️ ฟังก์ชันรวมชื่อโครงการที่พิมพ์ผิดรูปแบบ (เช่น เว้นวรรค, ขีดกลาง) ให้เป็นชื่อเดียวกันตามตั้งค่า
+    const standardizeProj = (rawName) => {
+        if(!rawName) return "ไม่ระบุ";
+        const cleanRaw = String(rawName).replace(/[\s\-]/g, '').toLowerCase();
+        const official = sets.projects.find(p => {
+            return getProjName(p).replace(/[\s\-]/g, '').toLowerCase() === cleanRaw;
+        });
+        return official ? getProjName(official) : String(rawName).trim();
+    };
+
+    // 🛠️ คัดกรองงานทั้งหมดในรอบเวลาและพื้นที่ (รวมงานยกเลิก)
+    const allPeriodTasks = tasks.filter(t => {
+      if(!t.startDate || !t.startDate.startsWith(fS)) return false;
+      if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
+      const stdP = standardizeProj(t.project);
+      if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
+      return true;
+    });
+
+    const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
+    const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
+
     const rC = rT.filter(t => t.status === 'จบงาน'); 
     const rOd = rT.filter(t => t.status !== 'จบงาน' && (t.overdueStatus === 'เกินกำหนด' || chkOvdTimeAware(t, tS)));
     const rO = rT.filter(t => t.status !== 'จบงาน' && t.overdueStatus !== 'เกินกำหนด' && !chkOvdTimeAware(t, tS));
+    
     const pSt = {}; 
-    rT.forEach(t => { if(!pSt[t.project]) pSt[t.project] = { t:0, d:0, o:0, od:0 }; pSt[t.project].t++; if(t.status==='จบงาน') pSt[t.project].d++; else if(t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t, tS)) pSt[t.project].od++; else pSt[t.project].o++; });
-    const allC = tasks.filter(t => t.status === 'จบงาน' && (rCfg.area==='ทั้งหมด'||t.area===rCfg.area) && (rCfg.project==='ทั้งหมด'||t.project===rCfg.project));
-    const unbilledTasks = allC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); const ub = unbilledTasks.length; const b = allC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
-    const ubBreakdown = {}; unbilledTasks.forEach(t => { let m = "ไม่ระบุเดือน"; if (t.completedDate) m = t.completedDate.substring(0,7); else if (t.endDate) m = t.endDate.substring(0,7); if (!ubBreakdown[m]) ubBreakdown[m] = 0; ubBreakdown[m]++; });
+    rT.forEach(t => { 
+      const pName = standardizeProj(t.project);
+      if(!pSt[pName]) pSt[pName] = { t:0, d:0, o:0, od:0 }; 
+      pSt[pName].t++; 
+      if(t.status==='จบงาน') pSt[pName].d++; 
+      else if(t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t, tS)) pSt[pName].od++; 
+      else pSt[pName].o++; 
+    });
+    
+    const allC = rT.filter(t => t.status === 'จบงาน');
+    const unbilledTasks = allC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); 
+    const ub = unbilledTasks.length; 
+    const b = allC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
+    
+    const ubBreakdown = {}; 
+    unbilledTasks.forEach(t => { 
+      let m = "ไม่ระบุเดือน"; 
+      if (t.completedDate) m = t.completedDate.substring(0,7); 
+      else if (t.endDate) m = t.endDate.substring(0,7); 
+      if (!ubBreakdown[m]) ubBreakdown[m] = 0; 
+      ubBreakdown[m]++; 
+    });
     const sortedUbMonths = Object.keys(ubBreakdown).sort();
 
     return (
@@ -675,7 +729,7 @@ export default function App() {
         <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
         <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
         <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rT.filter(t=>t.status==='ยกเลิก').map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{t.project}</span></td><td className="border p-2">{t.details}</td><td className="border p-2">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))}</tbody></table></div>
+        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rCancel.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{standardizeProj(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))}</tbody></table></div>
       </div>
     );
   };
