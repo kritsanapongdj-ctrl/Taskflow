@@ -381,7 +381,35 @@ export default function App() {
     saveD('settings', {...sets, emails: nEms});
   };
 
-  const subInf = (e) => { e.preventDefault(); const fd = Object.fromEntries(new FormData(e.target)); fd.id = `REQ-${Date.now().toString().slice(-4)}`; fd.status = 'รอดำเนินการ'; fd.informNo = ''; fd.cancelReason = ''; saveD('informJob', fd); alert('ส่งเรื่องเรียบร้อย'); e.target.reset(); setITab('manage'); };
+  // 🛠️ แก้ไขการดึงข้อมูลเพื่อแก้ปัญหา Autocomplete บนเบราว์เซอร์
+  const subInf = (e) => { 
+    e.preventDefault(); 
+    const form = e.target;
+    // อ่านค่าตรงๆ จาก Element ป้องกันปัญหา Autocomplete ไม่เซฟลง FormData
+    const reqName = form.requesterName.value.trim();
+    if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง');
+
+    const fd = {
+      id: `REQ-${Date.now().toString().slice(-4)}`,
+      date: form.date.value,
+      requesterName: reqName,
+      phone: form.phone.value.trim(),
+      project: form.project.value,
+      area: form.area.value,
+      jobType: form.jobType.value,
+      location: form.location.value,
+      details: form.details.value.trim(),
+      status: 'รอดำเนินการ',
+      informNo: '',
+      cancelReason: ''
+    };
+    
+    saveD('informJob', fd); 
+    alert('ส่งเรื่องเรียบร้อย'); 
+    form.reset(); 
+    setITab('manage'); 
+  };
+  
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
   
   const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; saveD('task', nT); } }); };
@@ -445,7 +473,14 @@ export default function App() {
         {iTab === 'form' ? (
           <form onSubmit={subInf} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-2 gap-4 border-t-4 border-t-[#bca374]">
             <div><label className="text-xs font-bold mb-1 block">วันที่</label><input type="date" name="date" required defaultValue={getTStr()} className="border rounded-xl px-3 py-2 w-full text-sm outline-none" /></div>
-            <div><label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label><div className="flex gap-2"><input name="requesterName" required placeholder="ชื่อ" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" /><input name="phone" required placeholder="เบอร์โทร" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" /></div></div>
+            <div>
+              <label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label>
+              <div className="flex gap-2">
+                {/* 🛠️ เพิ่มแท็ก autoComplete ช่วยเบราว์เซอร์ */}
+                <input name="requesterName" required placeholder="ชื่อ" autoComplete="name" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
+                <input name="phone" required placeholder="เบอร์โทร" autoComplete="tel" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
+              </div>
+            </div>
             <div><label className="text-xs font-bold mb-1 block">โครงการ (ออโต้พื้นที่)</label>
               <select name="project" required onChange={(e) => { const pData = sets.projects.find(p=>getProjName(p) === e.target.value); if(pData) document.getElementById('inf_area').value = getProjArea(pData); }} className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{sets.projects.map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select>
             </div>
