@@ -4,9 +4,10 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
+// ⚠️ ลิงก์ Web App (Google Apps Script)
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
-// ⚠️ Firebase Config
+// ⚠️ Firebase Config ของคุณ
 const customFirebaseConfig = {
   apiKey: "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
   authDomain: "taskflow-plus-3fce7.firebaseapp.com",
@@ -21,7 +22,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ปรับ Path สำหรับการใช้งานบน Vercel โดยเฉพาะ
+// ปรับ Path สำหรับการใช้งานบน Vercel (รองรับทั้ง Local และ Production)
 const getColRef = (colName) => {
     if (typeof __app_id !== 'undefined') return collection(db, 'artifacts', __app_id, 'public', 'data', colName);
     return collection(db, colName);
@@ -32,6 +33,7 @@ const getDocRef = (colName, docId) => {
     return doc(db, colName, String(docId));
 };
 
+// --- สไตล์และฟอนต์ (Global Styles) ---
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -138,7 +140,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore
+  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore พร้อมแจ้งเตือนหาก Rules ถูกบล็อก
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -157,12 +159,13 @@ export default function App() {
     }, (err) => {
       console.error(err);
       setLoading(false);
-      alert("⚠️ ถูกบล็อกการเชื่อมต่อฐานข้อมูล! โปรดเข้าไปที่ Firebase Console -> Firestore Database -> Rules -> เปลี่ยนเป็น allow read, write: if request.auth != null;");
+      alert("⚠️ ถูกบล็อกการเชื่อมต่อฐานข้อมูล! โปรดตรวจสอบ Rules ให้เป็น allow read, write: if request.auth != null;");
     });
 
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
+  // ระบบบันทึกคู่ขนาน (Dual-Save)
   const saveD = async (t, d) => {
     if (!user) return;
     try {
@@ -170,6 +173,7 @@ export default function App() {
       else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
       else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
       
+      // แอบส่งสำเนาไป Google Sheets แบบพื้นหลัง
       fetch(API_URL, { 
         method: "POST", mode: "no-cors", 
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -385,7 +389,6 @@ export default function App() {
   const subInf = (e) => { 
     e.preventDefault(); 
     const form = e.target;
-    // อ่านค่าตรงๆ จาก Element ป้องกันปัญหา Autocomplete ไม่เซฟลง FormData
     const reqName = form.requesterName.value.trim();
     if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง');
 
@@ -476,7 +479,6 @@ export default function App() {
             <div>
               <label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label>
               <div className="flex gap-2">
-                {/* 🛠️ เพิ่มแท็ก autoComplete ช่วยเบราว์เซอร์ */}
                 <input name="requesterName" required placeholder="ชื่อ" autoComplete="name" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
                 <input name="phone" required placeholder="เบอร์โทร" autoComplete="tel" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
               </div>
@@ -718,7 +720,7 @@ export default function App() {
         const clean = String(raw || 'ไม่ระบุ').trim();
         const norm = clean.replace(/[\s\-]/g, '').toUpperCase();
         if (pMap[norm]) return pMap[norm];
-        pMap[norm] = clean; // ถ้าไม่เคยเจอ ให้จำชื่อแรกไว้เป็นมาตรฐาน
+        pMap[norm] = clean;
         return clean;
     };
 
@@ -896,6 +898,42 @@ export default function App() {
 
           {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
           
+          {/* 🛠️ Calendar Pop-up UI (แก้ไขล่าสุด) */}
+          {cPop.isOpen && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
+              <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col animate-in" onClick={e=>e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                  <h3 className="font-bold text-[#0f2e4a] flex items-center"><Icon name="calendar" size={18} className="mr-2 text-[#bca374]"/> งานประจำวันที่ {fDate(cPop.date)}</h3>
+                  <button type="button" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})} className="text-gray-400 hover:text-gray-700"><Icon name="x" size={18}/></button>
+                </div>
+                <div className="overflow-auto space-y-2 flex-1 pr-1 hide-scrollbar">
+                  {cPop.tasks.map(t => (
+                    <div key={t.id} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex justify-between items-center hover:bg-blue-50 transition-colors">
+                      <div>
+                        <div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div>
+                        <div className="text-xs text-gray-600 line-clamp-1">{t.details}</div>
+                        <div className="text-[10px] mt-1 font-bold">
+                          <span className="text-gray-400">ID: {t.id}</span>
+                          <span className="mx-1 text-gray-300">|</span>
+                          <span className={t.status==='จบงาน'?'text-green-600':t.overdueStatus==='เกินกำหนด'?'text-red-600':'text-amber-600'}>
+                            สถานะ: {t.status}
+                          </span>
+                        </div>
+                      </div>
+                      <button type="button" onClick={()=>{
+                        setCPop({isOpen:false, date:null, tasks:[]});
+                        setGilt({...gFilt, date: cPop.date});
+                        setTab('daily');
+                      }} className="bg-white border border-blue-200 text-blue-700 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm hover:bg-blue-100 whitespace-nowrap ml-2">
+                        จัดการงาน
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {tMod && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
