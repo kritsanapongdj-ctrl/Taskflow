@@ -6,7 +6,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
-// ⚠️ ผนวก Firebase Config เรียบร้อยแล้ว
+// ⚠️ Firebase Config
 const customFirebaseConfig = {
   apiKey: "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
   authDomain: "taskflow-plus-3fce7.firebaseapp.com",
@@ -138,7 +138,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore พร้อมแจ้งเตือนหาก Rules ถูกบล็อก
+  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -157,7 +157,7 @@ export default function App() {
     }, (err) => {
       console.error(err);
       setLoading(false);
-      alert("⚠️ ถูกบล็อกการเชื่อมต่อฐานข้อมูล! โปรดเข้าไปที่ Firebase Console -> Firestore Database -> Rules -> เปลี่ยนเป็น allow read, write: if true;");
+      alert("⚠️ ถูกบล็อกการเชื่อมต่อฐานข้อมูล! โปรดเข้าไปที่ Firebase Console -> Firestore Database -> Rules -> เปลี่ยนเป็น allow read, write: if request.auth != null;");
     });
 
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
@@ -672,25 +672,32 @@ export default function App() {
     const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; 
     const tS = getTStr();
 
-    // 🛠️ ฟังก์ชันรวมชื่อโครงการที่พิมพ์ผิดรูปแบบ (เช่น เว้นวรรค, ขีดกลาง) ให้เป็นชื่อเดียวกันตามตั้งค่า
-    const standardizeProj = (rawName) => {
-        if(!rawName) return "ไม่ระบุ";
-        const cleanRaw = String(rawName).replace(/[\s\-]/g, '').toLowerCase();
-        const official = sets.projects.find(p => {
-            return getProjName(p).replace(/[\s\-]/g, '').toLowerCase() === cleanRaw;
-        });
-        return official ? getProjName(official) : String(rawName).trim();
+    // 🛠️ 1. ระบบรวบยอดชื่อโครงการอัจฉริยะ (ลบช่องว่างและขีดกลางออกตอนเปรียบเทียบ)
+    const pMap = {};
+    sets.projects.forEach(p => {
+       const name = getProjName(p);
+       pMap[name.replace(/[\s\-]/g, '').toUpperCase()] = name;
+    });
+
+    const getStdName = (raw) => {
+        const clean = String(raw || 'ไม่ระบุ').trim();
+        const norm = clean.replace(/[\s\-]/g, '').toUpperCase();
+        if (pMap[norm]) return pMap[norm];
+        pMap[norm] = clean; // ถ้าไม่เคยเจอ ให้จำชื่อแรกไว้เป็นมาตรฐาน
+        return clean;
     };
 
-    // 🛠️ คัดกรองงานทั้งหมดในรอบเวลาและพื้นที่ (รวมงานยกเลิก)
+    // 🛠️ 2. กรองข้อมูลตามช่วงเวลาและพื้นที่
     const allPeriodTasks = tasks.filter(t => {
       if(!t.startDate || !t.startDate.startsWith(fS)) return false;
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
-      const stdP = standardizeProj(t.project);
+      
+      const stdP = getStdName(t.project);
       if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
       return true;
     });
 
+    // 🛠️ 3. แยกกลุ่มงาน
     const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
     const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
 
@@ -698,9 +705,10 @@ export default function App() {
     const rOd = rT.filter(t => t.status !== 'จบงาน' && (t.overdueStatus === 'เกินกำหนด' || chkOvdTimeAware(t, tS)));
     const rO = rT.filter(t => t.status !== 'จบงาน' && t.overdueStatus !== 'เกินกำหนด' && !chkOvdTimeAware(t, tS));
     
+    // 🛠️ 4. นับสถิติแต่ละโครงการด้วยชื่อที่รวบยอดแล้ว
     const pSt = {}; 
     rT.forEach(t => { 
-      const pName = standardizeProj(t.project);
+      const pName = getStdName(t.project);
       if(!pSt[pName]) pSt[pName] = { t:0, d:0, o:0, od:0 }; 
       pSt[pName].t++; 
       if(t.status==='จบงาน') pSt[pName].d++; 
@@ -708,7 +716,14 @@ export default function App() {
       else pSt[pName].o++; 
     });
     
-    const allC = rT.filter(t => t.status === 'จบงาน');
+    // 🛠️ 5. หางานค้างเบิกสะสมทั้งหมด (ไม่กรองเดือน) แต่กรองพื้นที่/โครงการตามที่เลือก
+    const allC = tasks.filter(t => {
+      if (t.status !== 'จบงาน') return false;
+      if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
+      if (rCfg.project !== 'ทั้งหมด' && getStdName(t.project) !== rCfg.project) return false;
+      return true;
+    });
+
     const unbilledTasks = allC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); 
     const ub = unbilledTasks.length; 
     const b = allC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
@@ -725,11 +740,80 @@ export default function App() {
 
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
-        <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
-        <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
-        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
-        <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rCancel.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{standardizeProj(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))}</tbody></table></div>
+        <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6">
+          <h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1>
+          <p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p>
+        </div>
+        <div className="flex gap-4 mb-8 print-break">
+          <div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div>
+          <div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div>
+          <div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div>
+          <div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div>
+        </div>
+        
+        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break">
+          <h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3>
+          <div className="flex justify-between px-4 text-sm mb-2">
+            <div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div>
+            <div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div>
+          </div>
+          {ub > 0 && (
+            <div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center">
+              <span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>
+              {sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}
+            </div>
+          )}
+        </div>
+        
+        <div className="mb-8 print-break">
+          <h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3>
+          <div className="space-y-3">
+            {Object.keys(pSt).map(p => { 
+              const s = pSt[p]; 
+              return (
+                <div key={p} className="flex items-center text-xs">
+                  <div className="w-1/4 font-bold truncate pr-2" title={p}>{p}</div>
+                  <div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">
+                    {s.t>0 && <div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}
+                    {s.t>0 && <div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}
+                    {s.t>0 && <div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}
+                  </div>
+                  <div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div>
+                </div>
+              ); 
+            })}
+          </div>
+          <div className="flex gap-4 text-[10px] justify-center mt-4 font-bold">
+            <div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div>
+            <div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div>
+            <div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div>
+          </div>
+        </div>
+
+        <div className="print-break">
+          <h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3>
+          <table className="w-full text-[11px] text-left border-collapse border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">รหัสงาน</th>
+                <th className="border p-2">รายละเอียด</th>
+                <th className="border p-2">สถานะ</th>
+                <th className="border p-2">เหตุผล</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rCancel.map(t=>(
+                <tr key={t.id}>
+                  <td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td>
+                  <td className="border p-2">{t.details}</td>
+                  <td className="border p-2 text-gray-500">ยกเลิก</td>
+                  <td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td>
+                </tr>
+              ))}
+              {rCancel.length === 0 && <tr><td colSpan="4" className="border p-4 text-center text-gray-400">ไม่มีงานที่ถูกยกเลิกในรอบนี้</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -744,7 +828,7 @@ export default function App() {
         </div>
       )}
       
-      {/* ⚠️ เพิ่มคอมโพเนนต์ PReport ตรงนี้ เพื่อให้อยู่ในหน้าเว็บแต่ถูกซ่อนไว้รอการสั่งพิมพ์ */}
+      {/* ⚠️ PReport ถูกวางไว้ตรงนี้เพื่อรอการแสดงผลเมื่อกดพิมพ์ PDF */}
       <PReport />
 
       <div className="w-full min-h-screen">
