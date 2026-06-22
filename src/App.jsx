@@ -68,7 +68,12 @@ const getCleanVal = (r, keys) => {
   return null;
 };
 
-const getTStr = () => new Date().toISOString().split('T')[0];
+// 🛠️ อัปเดตให้ดึงวันที่แบบ Local Time ของผู้ใช้งาน (ไม่ใช้ UTC ที่ช้ากว่า 7 ชั่วโมง)
+const getTStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
 const getMStr = () => getTStr().slice(0, 7);
 const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -119,7 +124,6 @@ export default function App() {
   const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
-  // 1. ตรวจสอบสถานะและเข้าสู่ระบบ Firebase แบบจับ Error
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -139,7 +143,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. ดึงข้อมูล Real-time แบบอัตโนมัติจาก Firestore พร้อมแจ้งเตือนหาก Rules ถูกบล็อก
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -164,7 +167,6 @@ export default function App() {
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
-  // ระบบบันทึกคู่ขนาน (Dual-Save)
   const saveD = async (t, d) => {
     if (!user) return;
     try {
@@ -172,7 +174,6 @@ export default function App() {
       else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
       else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
       
-      // แอบส่งสำเนาไป Google Sheets แบบพื้นหลัง
       fetch(API_URL, { 
         method: "POST", mode: "no-cors", 
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -283,12 +284,11 @@ export default function App() {
 
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail&emails=${encodeURIComponent(sets.emails.map(e=>e.split('|')[0]).join(','))}`, '_blank'); };
   
-  // 🛠️ อัปเดตการกดปุ่มสร้างบอทเป็นทุกๆ 15 นาที
   const installTrigger = async () => { 
     setLoading(true); 
     try { 
       await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); 
-      alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (รอบตรวจสอบทุก 15 นาที) เรียบร้อย'); 
+      alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (รอบตรวจสอบทุก 5 นาที) เรียบร้อย'); 
     } catch(e) {} finally { setLoading(false); } 
   };
 
@@ -300,14 +300,12 @@ export default function App() {
     const sDate = fd.get('startDate');
     const eDate = fd.get('endDate');
     
-    // แจ้งเตือนกรณีเลื่อนวันเริ่มงาน
     if(eTask && eTask.startDate !== sDate) {
       if(!sRsn) return alert('โปรดระบุเหตุผลที่เปลี่ยนวันเริ่มงาน');
       det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; 
       ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det };
     }
     
-    // 🛠️ ระบบตรวจสอบ SLA อัจฉริยะ (แจ้งเตือนอีเมลทันที)
     const slaCat = fd.get('slaCategory');
     if (slaCat) {
       const slaLimitObj = sets.slas.find(s => getProjName(s) === slaCat);
@@ -317,9 +315,8 @@ export default function App() {
         
         if (diffDays > limitDays) {
            const confirmSLA = window.confirm(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA ของหมวดงานนี้ (${limitDays} วัน)\n\nระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันที! ต้องการยืนยันบันทึกข้อมูลหรือไม่?`);
-           if(!confirmSLA) return; // ยกเลิกการเซฟถ้ากด Cancel
+           if(!confirmSLA) return; 
            
-           // ถ้ายืนยัน เซ็ตข้อมูลส่งเมล์ด่วน
            if(!ePl) ePl = { 
              action: 'บันทึกงานเกินกรอบเวลา SLA', 
              reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน ซึ่งเกินกว่าเกณฑ์ SLA ที่ตั้งไว้ที่ ${limitDays} วัน`, 
@@ -411,11 +408,9 @@ export default function App() {
     saveD('settings', {...sets, emails: nEms});
   };
 
-  // 🛠️ แก้ไขการดึงข้อมูลเพื่อแก้ปัญหา Autocomplete
   const subInf = (e) => { 
     e.preventDefault(); 
     const form = e.target;
-    // อ่านค่าตรงๆ ป้องกันปัญหา Autocomplete
     const reqName = form.requesterName.value.trim();
     if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง');
 
@@ -474,11 +469,18 @@ export default function App() {
   };
 
   const rDail = () => {
-    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && ((tD >= t.startDate && tD <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tD) && tD === getTStr())));
+    const tD = gFilt.date; 
+    const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && ((tD >= t.startDate && tD <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tD) && tD === getTStr())));
     return (
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>{setETask(null);setTMod(true);}} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
-        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, tD); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{t.project}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&t.status!=='จบงาน'?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status==='จบงาน'?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{setETask(t);setTMod(true);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
+        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>
+        {vT.map(t => { 
+          const od = chkOvdTimeAware(t, tD); 
+          const isOvd = t.overdueStatus === 'เกินกำหนด' || od; // 🛠️ เช็คและบังคับโชว์ป้ายทันทีจากหน้าเว็บ
+          return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{(isOvd && t.status !== 'จบงาน') && <span className="text-red-500 px-1 border border-red-200 rounded">เกินกำหนด</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{t.project}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={isOvd && t.status!=='จบงาน'?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status==='จบงาน'?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{setETask(t);setTMod(true);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); 
+        })} 
+        {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
       </div>
     );
   };
@@ -921,9 +923,8 @@ export default function App() {
             ))}
           </nav>
 
-          {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
+          {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>{const isOvd = t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()); return (<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>);})}</div></div></div>}
           
-          {/* 🛠️ Calendar Pop-up UI */}
           {cPop.isOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
               <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col animate-in" onClick={e=>e.stopPropagation()}>
@@ -932,7 +933,9 @@ export default function App() {
                   <button type="button" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})} className="text-gray-400 hover:text-gray-700"><Icon name="x" size={18}/></button>
                 </div>
                 <div className="overflow-auto space-y-2 flex-1 pr-1 hide-scrollbar">
-                  {cPop.tasks.map(t => (
+                  {cPop.tasks.map(t => {
+                    const isOvd = t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr());
+                    return (
                     <div key={t.id} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex justify-between items-center hover:bg-blue-50 transition-colors">
                       <div>
                         <div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div>
@@ -940,8 +943,8 @@ export default function App() {
                         <div className="text-[10px] mt-1 font-bold">
                           <span className="text-gray-400">ID: {t.id}</span>
                           <span className="mx-1 text-gray-300">|</span>
-                          <span className={t.status==='จบงาน'?'text-green-600':t.overdueStatus==='เกินกำหนด'?'text-red-600':'text-amber-600'}>
-                            สถานะ: {t.status}
+                          <span className={t.status==='จบงาน'?'text-green-600':isOvd?'text-red-600':'text-amber-600'}>
+                            สถานะ: {t.status} {(isOvd && t.status!=='จบงาน') ? '(เกินกำหนด)' : ''}
                           </span>
                         </div>
                       </div>
@@ -953,7 +956,7 @@ export default function App() {
                         จัดการงาน
                       </button>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             </div>
