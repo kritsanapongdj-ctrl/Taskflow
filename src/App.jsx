@@ -273,6 +273,31 @@ export default function App() {
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail&emails=${encodeURIComponent(sets.emails.map(e=>e.split('|')[0]).join(','))}`, '_blank'); };
   const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
+  // 🛠️ ปุ่มสำหรับจำลองสถานการณ์ยิงอีเมลโดยไม่ต้องสร้างงานหลอกๆ ลงฐานข้อมูล
+  const simulateOverdueEmail = () => {
+    if (sets.projects.length === 0) return alert('กรุณาเพิ่มโครงการในหน้าตั้งค่าก่อนทำการทดสอบครับ');
+    const testProj = getProjName(sets.projects[0]);
+    const fakeData = {
+      id: `TEST-${Date.now().toString().slice(-4)}`,
+      project: testProj,
+      details: "นี่คืออีเมลทดสอบการแจ้งเตือน (จำลองส่งจากปุ่มทดสอบหน้าเว็บ โดยไม่มีการสร้างงานจริงในระบบ)",
+      emailAlert: {
+        action: "จำลองงานเกินกำหนดเวลา",
+        reason: "ผู้ดูแลระบบทดสอบยิงอีเมลจำลองจากหน้าตั้งค่า",
+        emails: getTargetEms(testProj)
+      }
+    };
+    
+    // ส่งข้อมูลแบบ testOnly ไปให้ Google Apps Script ยิงเมลอย่างเดียว (ข้ามการเซฟฐานข้อมูล)
+    fetch(API_URL, { 
+        method: "POST", mode: "no-cors", 
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+        body: JSON.stringify({ type: 'simulateAlertOnly', data: fakeData }) 
+    }).catch(()=>{});
+    
+    alert(`จำลองการส่งอีเมลไปยังผู้ดูแลโครงการ "${testProj}" เรียบร้อยแล้ว!\nโปรดตรวจสอบ Inbox ของท่าน (อีเมลอาจใช้เวลาเดินทาง 10-30 วินาที)`);
+  };
+
   const subT = (e) => {
     e.preventDefault(); const fd = new FormData(e.target); let det = fd.get('details'), ePl = null;
     const proj = fd.get('project');
@@ -302,7 +327,7 @@ export default function App() {
       cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'' 
     };
     
-    tD.overdueStatus = (eTask && eTask.overdueStatus === 'เกินกำหนด') ? 'เกินกำหนด' : (chkOvdTimeAware(tD, getTStr()) ? 'เกินกำหนด' : 'ปกติ');
+    tD.overdueStatus = (eTask && eTask.overdueStatus) ? eTask.overdueStatus : 'ปกติ';
     if(ePl) tD.emailAlert = ePl;
     saveD('task', tD); setTMod(false); setETask(null); setSReason(''); setShowStartReason(false);
   };
@@ -312,7 +337,7 @@ export default function App() {
     if(val === 'จบงาน') setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: t.workOrderNo || '' });
     else {
       const nT = { ...t, status: val, completedDate: null };
-      nT.overdueStatus = t.overdueStatus === 'เกินกำหนด' ? 'เกินกำหนด' : (chkOvdTimeAware(nT, getTStr()) ? 'เกินกำหนด' : 'ปกติ');
+      nT.overdueStatus = t.overdueStatus || 'ปกติ';
       saveD('task', nT);
     }
   };
@@ -437,7 +462,13 @@ export default function App() {
         {iTab === 'form' ? (
           <form onSubmit={subInf} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-2 gap-4 border-t-4 border-t-[#bca374]">
             <div><label className="text-xs font-bold mb-1 block">วันที่</label><input type="date" name="date" required defaultValue={getTStr()} className="border rounded-xl px-3 py-2 w-full text-sm outline-none" /></div>
-            <div><label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label><div className="flex gap-2"><input name="requesterName" required placeholder="ชื่อ" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" /><input name="phone" required placeholder="เบอร์โทร" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" /></div></div>
+            <div>
+              <label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label>
+              <div className="flex gap-2">
+                <input name="requesterName" required placeholder="ชื่อ" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
+                <input name="phone" required placeholder="เบอร์โทร" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
+              </div>
+            </div>
             <div><label className="text-xs font-bold mb-1 block">โครงการ (ออโต้พื้นที่)</label>
               <select name="project" required onChange={(e) => { const pData = sets.projects.find(p=>getProjName(p) === e.target.value); if(pData) document.getElementById('inf_area').value = getProjArea(pData); }} className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{sets.projects.map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select>
             </div>
@@ -627,7 +658,14 @@ export default function App() {
             <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
             <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
             <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
-            <div className="flex gap-2 w-full mt-4"><button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-blue-100">ทดสอบส่งอีเมล (เปิดแท็บใหม่)</button><button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-amber-100">ติดตั้งบอทแจ้งเตือนรายชั่วโมง</button></div>
+            
+            {/* 🛠️ ปุ่มสำหรับจำลองอีเมลแจ้งเตือนโดยไม่สร้างงานหลอก */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
+              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
+              <button type="button" onClick={simulateOverdueEmail} className="flex-1 bg-red-50 text-red-700 border border-red-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-red-100">จำลองอีเมลเกินกำหนด</button>
+              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทอัตโนมัติ</button>
+            </div>
+            
           </div>
           <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
             <div><h3 className="font-bold text-sm mb-2 flex items-center"><Icon name="clock" size={16} className="mr-2 text-amber-500"/> เวลาตัดเกณฑ์ Overdue</h3><input type="time" className="border rounded-lg px-4 py-2 text-sm outline-none bg-gray-50 w-full" value={sets.overdueTime} onChange={e=>upS('overdueTime',e.target.value,false)} /></div>
