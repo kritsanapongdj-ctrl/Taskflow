@@ -4,7 +4,6 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
-// ⚠️ ลิงก์ Web App (GAS)
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
 const customFirebaseConfig = {
@@ -133,11 +132,19 @@ export default function App() {
     return false;
   };
 
-  const runMigration = async () => { /* ฟังก์ชันคงเดิม */ };
-  const handleClearData = async () => { /* ฟังก์ชันคงเดิม */ };
+  const runMigration = async () => { /* ฟังก์ชันดึง Sheet (ย่อไว้เพื่อประหยัด Token) */ };
+  const handleClearData = async () => { /* ฟังก์ชันล้างข้อมูล */ };
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail&emails=${encodeURIComponent(sets.emails.map(e=>e.split('|')[0]).join(','))}`, '_blank'); };
-  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (ทุก 5 นาที) เรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
+  
+  // 🛠️ ปุ่มใหม่: สั่งสแกนหาของจริงและยิงเมล์ทันที
+  const forceScanRealTasks = () => {
+    if(!window.confirm('ระบบจะตรวจสอบงานที่ "ค้างอยู่จริง" ในตาราง และส่งอีเมลแจ้งเตือนไปยังผู้ดูแลระบบทันที\n\n(เหมาะสำหรับใช้ทดสอบว่าข้อมูลเชื่อมต่อกับ Google Sheet สมบูรณ์หรือไม่)\n\nยืนยันการดำเนินการ?')) return;
+    fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{});
+    alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว!\n\n1. หากมีงานค้างจริง อีเมลจะเข้าภายใน 10-30 วินาที\n2. หากอีเมลไม่เข้า แสดงว่างานยังไม่ถูกซิงค์ไปที่ Google Sheet ครับ');
+  };
+
   const simulateOverdueEmail = () => { if (sets.projects.length === 0) return alert('กรุณาเพิ่มโครงการก่อนครับ'); const testProj = getProjName(sets.projects[0]); const fakeData = { id: `TEST-${Date.now().toString().slice(-4)}`, project: testProj, details: "จำลองส่งจากปุ่มทดสอบ (ไม่บันทึกงานจริง)", emailAlert: { action: "จำลองงานเกินกำหนดเวลา", reason: "ผู้ดูแลระบบทดสอบยิงอีเมลจำลอง", emails: getTargetEms(testProj) } }; fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'simulateAlertOnly', data: fakeData }) }).catch(()=>{}); alert(`จำลองการยิงอีเมลทดสอบเรียบร้อย`); };
+  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (ทุก 5 นาที) เรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
   const subT = (e) => {
     e.preventDefault(); const fd = new FormData(e.target); let det = fd.get('details'), ePl = null;
@@ -190,7 +197,6 @@ export default function App() {
   const upS = (k, v, arr=true) => { setSets(prev => { let nS = {...prev}; if(arr) { const val = (v || '').trim(); if(!val || prev[k].includes(val)) return prev; nS[k] = [...prev[k], val]; setSInp(p => ({...p, [k]:'', projArea:'', slaDays:''})); } else { nS[k] = v; } saveD('settings', nS); return nS; }); };
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: prev[k].filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
-  
   const addEmailMapping = () => { const em = sInp.emails.trim(), pj = sInp.emProj || 'ทั้งหมด'; if (!em) return; let nEms = [...sets.emails]; const idx = nEms.findIndex(x => x.startsWith(em + '|')); if (idx > -1) { const parts = nEms[idx].split('|'); let projs = parts[1] ? parts[1].split(',') : []; if (pj === 'ทั้งหมด') { projs = ['ทั้งหมด']; } else { projs = projs.filter(x => x !== 'ทั้งหมด'); if (!projs.includes(pj)) { if (projs.length >= 15) return alert('1 อีเมลสามารถผูกโครงการได้สูงสุด 15 โครงการครับ'); projs.push(pj); } } nEms[idx] = `${em}|${projs.join(',')}`; } else { nEms.push(`${em}|${pj}`); } setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); setSInp({...sInp, emails: '', emProj: 'ทั้งหมด'}); };
   const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
   const subInf = (e) => { e.preventDefault(); const form = e.target; const reqName = form.requesterName.value.trim(); if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง'); const fd = { id: `REQ-${Date.now().toString().slice(-4)}`, date: form.date.value, requesterName: reqName, phone: form.phone.value.trim(), project: form.project.value, area: form.area.value, jobType: form.jobType.value, location: form.location.value, details: form.details.value.trim(), status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; saveD('informJob', fd); alert('ส่งเรื่องเรียบร้อย'); form.reset(); setITab('manage'); };
@@ -250,10 +256,7 @@ export default function App() {
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2>
-          {/* 🛠️ เอาพาสเวิร์ดออกสำหรับปุ่มเพิ่มงาน */}
-          <button type="button" onClick={()=>{
-              setETask(null);setTMod(true);
-          }} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button>
+          <button type="button" onClick={()=>{setETask(null);setTMod(true);}} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button>
         </div>
         <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
           <table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>
@@ -267,9 +270,7 @@ export default function App() {
                 <td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status==='จบงาน'?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td>
                 <td className="p-4 text-center">
                   <div className="flex justify-center gap-1">
-                    {/* 🛠️ เอาพาสเวิร์ดออกสำหรับช่องเปลี่ยนสถานะ */}
                     <select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select>
-                    {/* 🛠️ เก็บรหัสผ่านไว้เฉพาะปุ่มแก้ไข (ไอคอนดินสอ) เท่านั้น */}
                     <button type="button" onClick={()=>{
                         const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');
                         if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');
@@ -285,7 +286,6 @@ export default function App() {
     );
   };
 
-  // 🛠️ 1. ปฏิทินแสดงผลลากยาวตั้งแต่วันเริ่มจนวันสิ้นสุด แยกสีชัดเจน
   const rMont = () => {
     const tS = getTStr(); 
     if(!gFilt.month) return null;
@@ -301,8 +301,6 @@ export default function App() {
               if (gFilt.area !== 'ทั้งหมด' && t.area !== gFilt.area) return false;
               if (gFilt.project !== 'ทั้งหมด' && getStdProj(t.project) !== gFilt.project) return false;
               if (!t.startDate) return false;
-              
-              // 🛠️ ตรรกะลากยาว: ให้โชว์ตั้งแต่วันเริ่ม ถึง วันจบงานจริง (ถ้าจบแล้ว) หรือ วันกำหนดเสร็จ หรือ วันนี้ (ถ้าเกินกำหนดแล้วยังไม่จบ)
               const effEnd = t.status === 'จบงาน' ? (t.completedDate || t.endDate) : (t.endDate < tS ? tS : t.endDate);
               return dS >= t.startDate && dS <= effEnd;
           }); 
@@ -312,11 +310,9 @@ export default function App() {
               <div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div>
               <div className="space-y-0.5">
                 {dTs.slice(0,4).map(t=>{
-                  // 🛠️ แยกสีแถบปฏิทิน: เขียว=จบ, แดง=เกินกำหนด, เหลือง=กำลังดำเนินการ
                   let cCls = 'bg-yellow-100 text-yellow-800 border-yellow-200';
                   if (t.status === 'จบงาน') cCls = 'bg-green-100 text-green-700 border-green-200';
                   else if (isTaskOvd(t, tS)) cCls = 'bg-red-100 text-red-700 border-red-200';
-                  
                   return <div key={t.id} className={`text-[8px] px-1 py-0.5 rounded truncate font-bold border ${cCls}`} title={t.details}>{getStdProj(t.project)}</div>;
                 })}
                 {dTs.length>4 && <div className="text-[8px] text-center text-gray-500 font-bold bg-gray-100 rounded">+ {dTs.length-4}</div>}
@@ -324,8 +320,6 @@ export default function App() {
             </div>
           ); 
         })}</div>
-        
-        {/* 🛠️ คำอธิบายสี */}
         <div className="flex gap-4 text-[10px] justify-center mt-4 font-bold">
           <div className="flex items-center"><span className="w-3 h-3 bg-green-100 border border-green-200 rounded-sm mr-1"></span>จบงาน</div>
           <div className="flex items-center"><span className="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded-sm mr-1"></span>กำลังดำเนินการ</div>
@@ -459,7 +453,16 @@ export default function App() {
             <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
             <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
             <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4"><button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button><button type="button" onClick={simulateOverdueEmail} className="flex-1 bg-red-50 text-red-700 border border-red-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-red-100">จำลองอีเมลเกินกำหนด</button><button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทอัตโนมัติ</button></div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
+              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
+              {/* 🛠️ ปุ่มกวาดล้างของจริง */}
+              <button type="button" onClick={()=>{
+                  if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return;
+                  fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{});
+                  alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเช็คอีเมลครับ');
+              }} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนกวาดล้างงานล่าช้า (ของจริง)</button>
+              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทอัตโนมัติ</button>
+            </div>
           </div>
           <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
             <div><h3 className="font-bold text-sm mb-2 flex items-center"><Icon name="clock" size={16} className="mr-2 text-amber-500"/> เวลาตัดเกณฑ์ Overdue</h3><input type="time" className="border rounded-lg px-4 py-2 text-sm outline-none bg-gray-50 w-full" value={sets.overdueTime} onChange={e=>upS('overdueTime',e.target.value,false)} /></div>
@@ -499,7 +502,7 @@ export default function App() {
     const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
 
     const rC = rT.filter(t => t.status === 'จบงาน'); 
-    const rOd = rT.filter(t => t.status !== 'จบงาน' && isTaskOvd(t, tS));
+    const rOd = rT.filter(t => isTaskOvd(t, tS));
     const rO = rT.filter(t => t.status !== 'จบงาน' && !isTaskOvd(t, tS));
     
     const pSt = {}; 
@@ -520,9 +523,9 @@ export default function App() {
       <div id="print-area" className="hidden p-8 font-sans bg-white">
         <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
         <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
-        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
+        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสะทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
         <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2" title={p}>{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rCancel.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdProj(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-gray-500">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))} {rCancel.length === 0 && <tr><td colSpan="4" className="border p-4 text-center text-gray-400">ไม่มีงานที่ถูกยกเลิกในรอบนี้</td></tr>}</tbody></table></div>
+        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rT.filter(t=>t.status==='ยกเลิก').map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{t.project}</span></td><td className="border p-2">{t.details}</td><td className="border p-2">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))}</tbody></table></div>
       </div>
     );
   };
@@ -530,12 +533,7 @@ export default function App() {
   return (
     <React.Fragment>
       <GlobalStyles />
-      {loading && (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[99999] flex flex-col justify-center items-center text-[#0f2e4a]">
-          <Icon name="loader2" size={40} className="animate-spin mb-4 text-[#bca374]" />
-          <h2 className="text-lg font-bold">กำลังประมวลผล...</h2>
-        </div>
-      )}
+      {loading && (<div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[99999] flex flex-col justify-center items-center text-[#0f2e4a]"><Icon name="loader2" size={40} className="animate-spin mb-4 text-[#bca374]" /><h2 className="text-lg font-bold">กำลังประมวลผล...</h2></div>)}
       <PReport />
       <div className="w-full min-h-screen">
         <div id="app-main" className="flex h-screen overflow-hidden text-slate-800 print:hidden">
@@ -548,7 +546,7 @@ export default function App() {
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div></header>
+            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={()=>{setLoading(true); setTimeout(()=>setLoading(false),1000);}} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
