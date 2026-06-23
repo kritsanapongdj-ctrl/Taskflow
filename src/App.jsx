@@ -4,8 +4,10 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
+// ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
+// ⚠️ นำ Firebase Config ของคุณมาวางทับที่นี่
 const customFirebaseConfig = {
   apiKey: "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
   authDomain: "taskflow-plus-3fce7.firebaseapp.com",
@@ -15,6 +17,7 @@ const customFirebaseConfig = {
   appId: "1:829369182338:web:5c6c326a6dcb1a7a6e2c9b"
 };
 
+// --- การตั้งค่า Firebase ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : customFirebaseConfig;
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -24,12 +27,12 @@ const getColRef = (colName) => {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     return collection(db, 'artifacts', appId, 'public', 'data', colName);
 };
-
 const getDocRef = (colName, docId) => {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     return doc(db, 'artifacts', appId, 'public', 'data', colName, String(docId));
 };
 
+// --- สไตล์และฟอนต์ (Global Styles) ---
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -37,10 +40,18 @@ const GlobalStyles = () => (
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .animate-in { animation: fadeIn 0.2s ease-out forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    @media print { body { background-color: white !important; -webkit-print-color-adjust: exact; } #app-main { display: none !important; } #print-area { display: block !important; padding: 20px; } @page { margin: 10mm; size: A4 portrait; } .print-break { page-break-inside: avoid; } }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @media print {
+      body { background-color: white !important; -webkit-print-color-adjust: exact; }
+      #app-main { display: none !important; }
+      #print-area { display: block !important; padding: 20px; }
+      @page { margin: 10mm; size: A4 portrait; }
+      .print-break { page-break-inside: avoid; }
+    }
   `}</style>
 );
 
+// --- ฟังก์ชันช่วยเหลือต่างๆ ---
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
 
@@ -50,26 +61,38 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   return <Comp size={size} color={color} className={className} />;
 };
 
-const getCleanVal = (r, keys) => { for(let k in r){ const cln = String(k).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase(); for(let key of keys) if(cln === String(key).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase() && r[k] !== undefined && r[k] !== '') return r[k]; } return null; };
-const getTStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const getCleanVal = (r, keys) => {
+  for (let k in r) {
+    const cln = String(k).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase();
+    for (let key of keys) if (cln === String(key).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase() && r[k] !== undefined && r[k] !== '') return r[k]; 
+  }
+  return null;
+};
+
+const getTStr = () => new Date().toISOString().split('T')[0];
 const getMStr = () => getTStr().slice(0, 7);
 const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m = String(timeStr).match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : "17:30"; };
-const downloadCSV = (data, fn) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Object.keys(data[0]); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = fn; link.click(); };
-
-const extM = (val) => {
-  if(!val) return '';
-  const str = String(val).trim();
-  if(str.match(/^\d{4}-\d{2}/)) return str.substring(0,7);
-  const d = new Date(val);
-  if(!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  return str;
-};
+const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Object.keys(data[0]); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
 
 const SimplePieChart = ({ data, title }) => {
   let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); const getC = (p) => [Math.cos(2*Math.PI*p), Math.sin(2*Math.PI*p)];
-  return (<div className="flex flex-col items-center w-full"><h3 className="text-sm font-bold mb-4 text-[#0f2e4a]">{title}</h3>{t === 0 ? <div className="w-32 h-32 rounded-full border-4 flex items-center justify-center text-xs text-gray-400">ไม่มีข้อมูล</div> : <svg viewBox="-1 -1 2 2" className="w-32 h-32 -rotate-90">{data.map((s, i) => { if(s.value===0) return null; const [sX, sY] = getC(cP); cP += s.value/t; const [eX, eY] = getC(cP); if(s.value===t) return <circle key={i} cx="0" cy="0" r="1" fill={s.color} />; return <path key={i} d={`M ${sX} ${sY} A 1 1 0 ${s.value/t>0.5?1:0} 1 ${eX} ${eY} L 0 0`} fill={s.color}><title>{s.name}: {s.value}</title></path>; })}<circle cx="0" cy="0" r="0.6" fill="white" /></svg>}<div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">{data.map((item, i)=><div key={i} className="flex items-center"><span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: item.color}}></span>{item.name} ({item.value})</div>)}</div></div>);
+  return (
+    <div className="flex flex-col items-center w-full">
+      <h3 className="text-sm font-bold mb-4 text-[#0f2e4a]">{title}</h3>
+      {t === 0 ? <div className="w-32 h-32 rounded-full border-4 flex items-center justify-center text-xs text-gray-400">ไม่มีข้อมูล</div> : 
+      <svg viewBox="-1 -1 2 2" className="w-32 h-32 -rotate-90">
+        {data.map((s, i) => { 
+          if(s.value===0) return null; const [sX, sY] = getC(cP); cP += s.value/t; const [eX, eY] = getC(cP); 
+          if(s.value===t) return <circle key={i} cx="0" cy="0" r="1" fill={s.color} />; 
+          return <path key={i} d={`M ${sX} ${sY} A 1 1 0 ${s.value/t>0.5?1:0} 1 ${eX} ${eY} L 0 0`} fill={s.color}><title>{s.name}: {s.value}</title></path>; 
+        })}
+        <circle cx="0" cy="0" r="0.6" fill="white" />
+      </svg>}
+      <div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">{data.map((item, i)=><div key={i} className="flex items-center"><span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: item.color}}></span>{item.name} ({item.value})</div>)}</div>
+    </div>
+  );
 };
 
 export default function App() {
@@ -92,24 +115,43 @@ export default function App() {
   const [eTask, setETask] = useState(null);
   const [sRsn, setSReason] = useState('');
   const [showStartReason, setShowStartReason] = useState(false);
-  
-  // 🛠️ เพิ่ม state noWO สำหรับจำสถานะว่าขอเว้นใบงานชั่วคราวหรือไม่
   const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false });
-  
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
-  const [oPop, setOPop] = useState({ isOpen: false, type: 'daily' });
+  const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
   useEffect(() => {
-    const initAuth = async () => { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); else await signInAnonymously(auth); } catch (e) {} };
-    initAuth(); const unsubscribe = onAuthStateChanged(auth, setUser); return () => unsubscribe();
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) { console.error("Auth Error:", error); }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!user) return; setLoading(true);
-    const unsubTasks = onSnapshot(getColRef('Tasks'), (snap) => { const arr = []; snap.forEach(d => arr.push(d.data())); setTasks(arr); }, () => setLoading(false));
-    const unsubInfs = onSnapshot(getColRef('InformJobs'), (snap) => { const arr = []; snap.forEach(d => arr.push(d.data())); setInforms(arr); }, () => setLoading(false));
-    const unsubSets = onSnapshot(getDocRef('Settings', 'main'), (doc) => { if (doc.exists()) setSets(doc.data()); setLoading(false); }, () => { setLoading(false); });
+    if (!user) return;
+    setLoading(true);
+    
+    const unsubTasks = onSnapshot(getColRef('Tasks'), (snap) => {
+      const arr = []; snap.forEach(d => arr.push(d.data())); setTasks(arr);
+    }, console.error);
+
+    const unsubInfs = onSnapshot(getColRef('InformJobs'), (snap) => {
+      const arr = []; snap.forEach(d => arr.push(d.data())); setInforms(arr);
+    }, console.error);
+
+    const unsubSets = onSnapshot(getDocRef('Settings', 'main'), (doc) => {
+      if (doc.exists()) setSets(doc.data());
+      setLoading(false);
+    }, console.error);
+
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
@@ -144,7 +186,6 @@ export default function App() {
     });
 
     if (updates.length > 0) {
-      // เซฟสถานะอัตโนมัติลง Firestore และ Sheet แบบเบื้องหลัง (Silent save)
       updates.forEach(u => saveD('task', u));
     }
   }, [tasks, user]);
@@ -152,20 +193,78 @@ export default function App() {
   const saveD = async (t, d) => {
     if (!user) return;
     try {
-      if (t === 'task') await setDoc(getDocRef('Tasks', d.id), d); else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d); else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
-      fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: t, data: d }) }).catch(()=>{});
-    } catch (e) {}
+      if (t === 'task') await setDoc(getDocRef('Tasks', d.id), d);
+      else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
+      else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
+      
+      fetch(API_URL, { 
+        method: "POST", mode: "no-cors", 
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+        body: JSON.stringify({ type: t, data: d }) 
+      }).catch(()=>{});
+
+    } catch (e) { console.error("Error saving data:", e); }
   };
 
-  const getProjName = (str) => str ? String(str).split('|')[0] : '';
-  const getProjArea = (str) => str ? String(str).split('|')[1] || '' : '';
-  const getTargetEms = (projName) => sets.emails.filter(e => { const p = e.split('|'); if(p.length < 2) return true; const pjList = p[1].split(','); return pjList.includes('ทั้งหมด') || pjList.includes(projName); }).map(e => e.split('|')[0]);
+  const runMigration = async () => {
+    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
+    if (confirmCode !== 'MIGRATE') return;
+    
+    setLoading(true);
+    try {
+        const ts = Date.now(); 
+        const [tR, iR, sR] = await Promise.all([ fetch(`${API_URL}?sheet=Tasks&t=${ts}`), fetch(`${API_URL}?sheet=InformJobs&t=${ts}`), fetch(`${API_URL}?sheet=Settings&t=${ts}`) ]);
+        const [tD, iD, sD] = await Promise.all([tR.json(), iR.json(), sR.json()]);
+        
+        const promises = [];
 
-  const getStdProj = (raw) => {
-    if(!raw) return "ไม่ระบุ";
-    const clean = String(raw).replace(/[\s\-]/g, '').toLowerCase();
-    const found = sets.projects.find(p => getProjName(p).replace(/[\s\-]/g, '').toLowerCase() === clean);
-    return found ? getProjName(found) : String(raw).trim();
+        if(Array.isArray(tD) && !tD.error) {
+            tD.forEach(r => {
+                const t = { 
+                  id: getCleanVal(r,['id','รหัสงาน']), details: getCleanVal(r,['details','รายละเอียดงาน','รายละเอียด']), 
+                  requester: getCleanVal(r,['requester','ผู้แจ้ง']), project: getCleanVal(r,['project','โครงการ']), 
+                  area: getCleanVal(r,['area','พื้นที่']), receivedDate: pYMD(getCleanVal(r,['receiveddate','วันที่รับเรื่อง'])), 
+                  slaCategory: getCleanVal(r,['slacategory','หมวดsla','sla'])||'', startDate: pYMD(getCleanVal(r,['startDate','เริ่มงาน'])), 
+                  endDate: pYMD(getCleanVal(r,['endDate','กำหนดเสร็จ'])), status: getCleanVal(r,['status','สถานะ'])||'อยู่ระหว่างดำเนินการ', 
+                  completedDate: pYMD(getCleanVal(r,['completedDate','วันที่จบงานจริง'])), cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), 
+                  overdueStatus: getCleanVal(r,['overduestatus','สถานะความล่าช้า'])||'ปกติ', workOrderNo: getCleanVal(r,['workorderno','เลขที่ใบงาน','เลขใบงาน','ใบงาน'])||'', 
+                  billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', billingMonth: getCleanVal(r,['billingmonth','เดือนที่เบิก'])||'' 
+                };
+                if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t));
+            });
+        }
+
+        if(Array.isArray(iD) && !iD.error) {
+            iD.forEach(r => {
+                const t = { 
+                    id: getCleanVal(r,['id','รหัสอ้างอิง']), date: pYMD(getCleanVal(r,['date','วันที่'])), 
+                    requesterName: getCleanVal(r,['requesterName','ผู้แจ้ง']), phone: getCleanVal(r,['phone','เบอร์ติดต่อ']), 
+                    project: String(getCleanVal(r,['project','โครงการ'])||'').trim(), jobType: getCleanVal(r,['jobType','ประเภทงาน']), 
+                    location: getCleanVal(r,['location','สถานที่','บริเวณ']), details: getCleanVal(r,['details','รายละเอียดปัญหา','รายละเอียด','รายละเอียดงาน','ปัญหา'])||'-', 
+                    status: getCleanVal(r,['status','สถานะ'])||'รอดำเนินการ', informNo: getCleanVal(r,['informno','เลขinform','เลขที่ใบงาน'])||'', 
+                    cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), area: String(getCleanVal(r,['area','พื้นที่'])||'').trim()
+                };
+                if(t.id) promises.push(setDoc(getDocRef('InformJobs', t.id), t));
+            });
+        }
+
+        if(Array.isArray(sD) && !sD.error) {
+            const s = { areas:[], projects:[], jobTypes:[], locations:[], emails:[], slas:[], overdueTime:'17:30', lateWorkOrderHours:24 };
+            sD.forEach((r,i) => { 
+                if(i===0){ s.overdueTime=parseTimeForInput(r.overdueTime); s.lateWorkOrderHours=r.lateWorkOrderHours||24; } 
+                if(r.areas)s.areas.push(String(r.areas).trim()); if(r.projects)s.projects.push(String(r.projects).trim());
+                if(r.jobTypes)s.jobTypes.push(String(r.jobTypes).trim()); if(r.locations)s.locations.push(String(r.locations).trim()); 
+                if(r.emails)s.emails.push(String(r.emails).trim()); if(r.slas)s.slas.push(String(r.slas).trim());
+            });
+            promises.push(setDoc(getDocRef('Settings', 'main'), s));
+        }
+
+        await Promise.all(promises);
+        alert('🎉 โอนย้ายข้อมูลจาก Google Sheet เข้า Firebase สำเร็จแล้ว!');
+    } catch(e) {
+        alert('เกิดข้อผิดพลาดในการดูดข้อมูล: ' + e.message);
+    }
+    setLoading(false);
   };
 
   const chkOvdTimeAware = (t, rD = getTStr()) => { 
@@ -181,51 +280,64 @@ export default function App() {
     return false; 
   };
 
-  // ตราประทับถาวร
-  const isTaskOvd = (t, checkDate = getTStr()) => {
-    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
-    if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
-    return false;
-  };
+  const getProjName = (str) => str ? String(str).split('|')[0] : '';
+  const getProjArea = (str) => str ? String(str).split('|')[1] || '' : '';
+  const getTargetEms = (projName) => sets.emails.filter(e => {
+      const p = e.split('|'); if(p.length < 2) return true;
+      const pjList = p[1].split(','); return pjList.includes('ทั้งหมด') || pjList.includes(projName);
+  }).map(e => e.split('|')[0]);
 
-  const runMigration = async () => {
-    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลเข้า Firebase'); if (confirmCode !== 'MIGRATE') return;
+  const handleClearData = async () => {
+    const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมดใน Firebase:');
+    if (confirmCode !== '1312') return;
     setLoading(true);
     try {
-        const ts = Date.now(); const [tR, iR, sR] = await Promise.all([ fetch(`${API_URL}?sheet=Tasks&t=${ts}`), fetch(`${API_URL}?sheet=InformJobs&t=${ts}`), fetch(`${API_URL}?sheet=Settings&t=${ts}`) ]);
-        const [tD, iD, sD] = await Promise.all([tR.json(), iR.json(), sR.json()]);
+        const tasksSnap = await getDocs(getColRef('Tasks'));
+        const infSnap = await getDocs(getColRef('InformJobs'));
         const promises = [];
-        if(Array.isArray(tD) && !tD.error) { tD.forEach(r => { const t = { id: getCleanVal(r,['id','รหัสงาน']), details: getCleanVal(r,['details','รายละเอียดงาน','รายละเอียด']), requester: getCleanVal(r,['requester','ผู้แจ้ง']), project: getCleanVal(r,['project','โครงการ']), area: getCleanVal(r,['area','พื้นที่']), receivedDate: pYMD(getCleanVal(r,['receiveddate','วันที่รับเรื่อง'])), slaCategory: getCleanVal(r,['slacategory','หมวดsla','sla'])||'', startDate: pYMD(getCleanVal(r,['startDate','เริ่มงาน'])), endDate: pYMD(getCleanVal(r,['endDate','กำหนดเสร็จ'])), status: getCleanVal(r,['status','สถานะ'])||'อยู่ระหว่างดำเนินการ', completedDate: pYMD(getCleanVal(r,['completedDate','วันที่จบงานจริง'])), cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), overdueStatus: getCleanVal(r,['overduestatus','สถานะความล่าช้า'])||'ปกติ', workOrderNo: getCleanVal(r,['workorderno','เลขที่ใบงาน','เลขใบงาน','ใบงาน'])||'', billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', billingMonth: extM(getCleanVal(r,['billingmonth','เดือนที่เบิก'])) }; if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t)); }); }
-        if(Array.isArray(iD) && !iD.error) { iD.forEach(r => { const t = { id: getCleanVal(r,['id','รหัสอ้างอิง']), date: pYMD(getCleanVal(r,['date','วันที่'])), requesterName: getCleanVal(r,['requesterName','ผู้แจ้ง']), phone: getCleanVal(r,['phone','เบอร์ติดต่อ']), project: String(getCleanVal(r,['project','โครงการ'])||'').trim(), jobType: getCleanVal(r,['jobType','ประเภทงาน']), location: getCleanVal(r,['location','สถานที่','บริเวณ']), details: getCleanVal(r,['details','รายละเอียดปัญหา','รายละเอียด','รายละเอียดงาน','ปัญหา'])||'-', status: getCleanVal(r,['status','สถานะ'])||'รอดำเนินการ', informNo: getCleanVal(r,['informno','เลขinform','เลขที่ใบงาน'])||'', cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), area: String(getCleanVal(r,['area','พื้นที่'])||'').trim() }; if(t.id) promises.push(setDoc(getDocRef('InformJobs', t.id), t)); }); }
-        if(Array.isArray(sD) && !sD.error) { const s = { areas:[], projects:[], jobTypes:[], locations:[], emails:[], slas:[], overdueTime:'17:30', lateWorkOrderHours:24 }; sD.forEach((r,i) => { if(i===0){ s.overdueTime=parseTimeForInput(r.overdueTime); s.lateWorkOrderHours=r.lateWorkOrderHours||24; } if(r.areas)s.areas.push(String(r.areas).trim()); if(r.projects)s.projects.push(String(r.projects).trim()); if(r.jobTypes)s.jobTypes.push(String(r.jobTypes).trim()); if(r.locations)s.locations.push(String(r.locations).trim()); if(r.emails)s.emails.push(String(r.emails).trim()); if(r.slas)s.slas.push(String(r.slas).trim()); }); promises.push(setDoc(getDocRef('Settings', 'main'), s)); }
-        await Promise.all(promises); alert('🎉 โอนย้ายข้อมูลสำเร็จ!');
-    } catch(e) { alert(e.message); } setLoading(false);
+        tasksSnap.forEach(d => promises.push(deleteDoc(d.ref)));
+        infSnap.forEach(d => promises.push(deleteDoc(d.ref)));
+        await Promise.all(promises);
+        
+        fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{});
+        alert('ล้างข้อมูลสำเร็จ!'); 
+    } catch(e) { alert(e.message); } 
+    finally { setLoading(false); }
   };
 
-  const handleClearData = async () => { const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมด:'); if (confirmCode !== '1312') return; setLoading(true); try { const tasksSnap = await getDocs(getColRef('Tasks')); const infSnap = await getDocs(getColRef('InformJobs')); const promises = []; tasksSnap.forEach(d => promises.push(deleteDoc(d.ref))); infSnap.forEach(d => promises.push(deleteDoc(d.ref))); await Promise.all(promises); fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{}); alert('ล้างข้อมูลสำเร็จ!'); } catch(e) {} finally { setLoading(false); } };
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail`, '_blank'); };
   const forceScanRealTasks = () => { if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return; fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{}); alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเช็คอีเมลครับ'); };
-  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (ทุก 5 นาที) เรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
+  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
-  // 🛠️ ตรวจจับการตั้งเวลา SLA
   const subT = (e) => {
     e.preventDefault(); const fd = new FormData(e.target); let det = fd.get('details'), ePl = null;
-    const proj = fd.get('project'); const sDate = fd.get('startDate'); const eDate = fd.get('endDate');
-    if(eTask && eTask.startDate !== sDate) { if(!sRsn) return alert('ระบุเหตุผลเลื่อนเริ่มงาน'); det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det }; }
+    const proj = fd.get('project');
+    
+    if(eTask && eTask.startDate !== fd.get('startDate')) {
+      if(!sRsn) return alert('โปรดระบุเหตุผลที่เปลี่ยนวันเริ่มงาน');
+      det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det };
+    }
     
     const slaCat = fd.get('slaCategory');
     if (slaCat) {
       const slaLimitObj = sets.slas.find(s => getProjName(s) === slaCat);
       if (slaLimitObj) {
-        const limitDays = parseInt(getProjArea(slaLimitObj)); const diffDays = Math.ceil((new Date(eDate) - new Date(sDate)) / (1000 * 60 * 60 * 24));
+        const limitDays = parseInt(getProjArea(slaLimitObj));
+        const diffDays = Math.ceil((new Date(fd.get('endDate')) - new Date(fd.get('startDate'))) / (1000 * 60 * 60 * 24));
         if (diffDays > limitDays) {
-           if(!window.confirm(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA (${limitDays} วัน)\nระบบจะบันทึกงานและส่งเมล์ด่วนถึงผู้ดูแลโครงการทันที ยืนยันหรือไม่?`)) return; 
-           if(!ePl) ePl = { action: 'บันทึกงานเกินเวลา SLA', reason: `ตั้งเวลาทำงาน ${diffDays} วัน (เกิน SLA ${limitDays} วัน)`, emails: getTargetEms(proj), project: proj, details: det };
+           if(!window.confirm(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA ของหมวดงานนี้ (${limitDays} วัน)\nระบบจะบันทึกงานตามปกติ แต่จะส่งอีเมลแจ้งผู้ดูแลโครงการทันที! ยืนยันหรือไม่?`)) return; 
+           if(!ePl) ePl = { action: 'บันทึกงานเกินเวลา SLA', reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน (เกิน SLA ที่ตั้งไว้ ${limitDays} วัน)`, emails: getTargetEms(proj), project: proj, details: det };
         }
       }
     }
     
-    const tD = { id: eTask?eTask.id:`JOB-${Date.now().toString().slice(-4)}`, details: det, requester: fd.get('requester'), project: proj, area: fd.get('area'), receivedDate: eTask ? eTask.receivedDate : fd.get('receivedDate'), slaCategory: slaCat, startDate: sDate, endDate: eDate, status: eTask?eTask.status:'อยู่ระหว่างดำเนินการ', completedDate: eTask?eTask.completedDate:null, cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'' };
+    const tD = { 
+      id: eTask?eTask.id:`JOB-${Date.now().toString().slice(-4)}`, details: det, requester: fd.get('requester'), project: proj, area: fd.get('area'), 
+      receivedDate: eTask ? eTask.receivedDate : fd.get('receivedDate'), slaCategory: slaCat,
+      startDate: fd.get('startDate'), endDate: fd.get('endDate'), status: eTask?eTask.status:'อยู่ระหว่างดำเนินการ', completedDate: eTask?eTask.completedDate:null, 
+      cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'' 
+    };
+    
     tD.overdueStatus = (eTask && eTask.overdueStatus === 'เกินกำหนด' || (eTask && eTask.overdueStatus === 'ออกใบงานช้า')) ? eTask.overdueStatus : 'ปกติ'; 
     if(ePl) tD.emailAlert = ePl; saveD('task', tD); setTMod(false); setETask(null); setSReason(''); setShowStartReason(false);
   };
@@ -274,7 +386,7 @@ export default function App() {
   const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
   const subInf = (e) => { e.preventDefault(); const form = e.target; const reqName = form.requesterName.value.trim(); if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง'); const fd = { id: `REQ-${Date.now().toString().slice(-4)}`, date: form.date.value, requesterName: reqName, phone: form.phone.value.trim(), project: form.project.value, area: form.area.value, jobType: form.jobType.value, location: form.location.value, details: form.details.value.trim(), status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; saveD('informJob', fd); alert('ส่งเรื่องเรียบร้อย'); form.reset(); setITab('manage'); };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
-  const moveGroup = (groupId, st) => { let updates = []; setTasks(p => p.map(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; updates.push(nT); return nT; } return t; })); setTimeout(() => updates.forEach(nT => saveD('task', nT)), 50); };
+  const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; saveD('task', nT); } }); };
   
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
   const oDS = (e, groupId) => { e.dataTransfer.setData('groupId', groupId); }; const oDp = (e, st) => { e.preventDefault(); const gId = e.dataTransfer.getData('groupId'); if(gId) moveGroup(gId, st); };
@@ -345,7 +457,6 @@ export default function App() {
                 <td className="p-4 text-center">
                   <div className="flex justify-center gap-1">
                     <select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select>
-                    {/* 🛠️ ล็อกรหัสผ่านเฉพาะการกดไอคอนแก้ไข (ดินสอ) เท่านั้น */}
                     <button type="button" onClick={()=>{
                         const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');
                         if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');
@@ -459,7 +570,6 @@ export default function App() {
 
   const rKanb = () => {
     const cT = tasks.filter(t => t.status === 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project));
-    
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
     const biGrp = groupTasks(cT.filter(t => {
       if (t.billingStatus !== 'ส่งเบิกแล้ว') return false;
@@ -505,7 +615,13 @@ export default function App() {
     const totalRows = tasks.length + informs.length; 
     const healthPct = Math.min((totalRows / 3000) * 100, 100);
     const healthColor = totalRows < 1500 ? 'bg-green-500' : (totalRows < 2500 ? 'bg-amber-500' : 'bg-red-500');
-    const groupedProjects = sets.projects.reduce((acc, curr) => { const p = getProjName(curr), a = getProjArea(curr); if (!acc[a]) acc[a] = []; acc[a].push({ fullStr: curr, name: p }); return acc; }, {});
+    
+    const groupedProjects = sets.projects.reduce((acc, curr) => {
+        const p = getProjName(curr), a = getProjArea(curr);
+        if (!acc[a]) acc[a] = [];
+        acc[a].push({ fullStr: curr, name: p });
+        return acc;
+    }, {});
 
     return (
       <div className="space-y-6 animate-in pb-10">
@@ -521,9 +637,74 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3><button type="button" onClick={()=>clearSList('projects')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">{Object.keys(groupedProjects).map(area => (<div key={area} className="border rounded-lg overflow-hidden shadow-sm"><div className="bg-gray-100 px-3 py-1.5 text-[10px] font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div><div className="p-2 flex flex-wrap gap-1.5 bg-white">{groupedProjects[area].map(p => (<span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] flex items-center shadow-sm">{p.name}<button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button></span>))}</div></div>))}</div><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} /><select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}><option value="">พท.</option>{sets.areas.map(a=><option key={a}>{a}</option>)}</select><button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button></div></div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">สิทธิ์การรับอีเมลของแต่ละบุคคล</h3><button type="button" onClick={()=>clearSList('emails')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">{sets.emails.map(item => { const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด']; return (<div key={item} className="border rounded-lg overflow-hidden shadow-sm"><div className="bg-blue-50/50 px-3 py-1.5 flex justify-between items-center border-b border-blue-100"><span className="font-bold text-[#0f2e4a] text-xs flex items-center"><Icon name="mail" size={12} className="mr-1.5 text-blue-500"/>{em}</span><button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={12}/></button></div><div className="p-2 flex flex-wrap gap-1.5 bg-white">{projs.map(p => (<span key={p} className={`px-2 py-1 rounded text-[9px] flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>{p}{p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1 text-blue-400 hover:text-blue-600"><Icon name="x" size={10}/></button>}</span>))}</div></div>) })}</div><div className="mt-3 flex gap-1 pt-2 border-t"><input type="email" placeholder="ระบุอีเมล..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.emails} onChange={e=>setSInp({...sInp,emails:e.target.value})} /><select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.emProj} onChange={e=>setSInp({...sInp,emProj:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{sets.projects.map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select><button type="button" onClick={addEmailMapping} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button></div></div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><ul className="flex-1 overflow-y-auto space-y-1.5 mb-2 pr-1 text-[11px] hide-scrollbar">{sets.slas.map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2 border border-amber-100 rounded-lg shadow-sm"><span>{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-2 py-0.5 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block"><Icon name="trash" size={12}/></button></span></li>)}</ul><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} /><input type="number" placeholder="วัน" className="border rounded px-2 py-1.5 text-xs w-16 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} /><button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-3 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={14}/></button></div></div>
+          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
+              <button type="button" onClick={()=>clearSList('projects')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">
+              {Object.keys(groupedProjects).map(area => (
+                <div key={area} className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gray-100 px-3 py-1.5 text-[10px] font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div>
+                  <div className="p-2 flex flex-wrap gap-1.5 bg-white">
+                    {groupedProjects[area].map(p => (
+                      <span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] flex items-center shadow-sm">
+                        {p.name}
+                        <button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex gap-1 pt-2 border-t">
+              <input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} />
+              <select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}>
+                <option value="">พท.</option>
+                {sets.areas.map(a=><option key={a}>{a}</option>)}
+              </select>
+              <button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-xs text-[#0f2e4a]">สิทธิ์การรับอีเมลของแต่ละบุคคล</h3>
+              <button type="button" onClick={()=>clearSList('emails')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">
+              {sets.emails.map(item => {
+                const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด'];
+                return (
+                  <div key={item} className="border rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-blue-50/50 px-3 py-1.5 flex justify-between items-center border-b border-blue-100">
+                      <span className="font-bold text-[#0f2e4a] text-xs flex items-center"><Icon name="mail" size={12} className="mr-1.5 text-blue-500"/>{em}</span>
+                      <button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={12}/></button>
+                    </div>
+                    <div className="p-2 flex flex-wrap gap-1.5 bg-white">
+                      {projs.map(p => (
+                        <span key={p} className={`px-2 py-1 rounded text-[9px] flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>{p}{p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1 text-blue-400 hover:text-blue-600"><Icon name="x" size={10}/></button>}</span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-3 flex gap-1 pt-2 border-t">
+              <input type="email" placeholder="ระบุอีเมล..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.emails} onChange={e=>setSInp({...sInp,emails:e.target.value})} />
+              <select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.emProj} onChange={e=>setSInp({...sInp,emProj:e.target.value})}>
+                <option value="ทั้งหมด">ทั้งหมด</option>
+                {sets.projects.map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}
+              </select>
+              <button type="button" onClick={addEmailMapping} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]">
+            <div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div>
+            <ul className="flex-1 overflow-y-auto space-y-1.5 mb-2 pr-1 text-[11px] hide-scrollbar">{sets.slas.map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2 border border-amber-100 rounded-lg shadow-sm"><span>{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-2 py-0.5 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block"><Icon name="trash" size={12}/></button></span></li>)}</ul>
+            <div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} /><input type="number" placeholder="วัน" className="border rounded px-2 py-1.5 text-xs w-16 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} /><button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-3 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={14}/></button></div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{k:'areas',l:'พื้นที่'},{k:'jobTypes',l:'ประเภทงาน'},{k:'locations',l:'บริเวณ'}].map(x => (<div key={x.k} className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[250px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">{x.l}</h3><button type="button" onClick={()=>clearSList(x.k)} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><ul className="flex-1 overflow-y-auto space-y-1.5 mb-2 pr-1 text-[11px] hide-scrollbar">{sets[x.k].map(item=><li key={item} className="flex justify-between items-center bg-gray-50 px-3 py-2 border rounded-lg shadow-sm"><span>{item}</span><button type="button" onClick={()=>dlS(x.k,item)} className="text-red-400 hover:text-red-600"><Icon name="trash" size={12}/></button></li>)}</ul><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="เพิ่ม..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp[x.k]||''} onChange={e=>setSInp({...sInp,[x.k]:e.target.value})} onKeyDown={e=>e.key==='Enter'&&upS(x.k,sInp[x.k])}/><button type="button" onClick={()=>upS(x.k,sInp[x.k])} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63]"><Icon name="plus" size={14}/></button></div></div>))}</div>
@@ -533,10 +714,10 @@ export default function App() {
             <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
             <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
             <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
-              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
-              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนงานล่าช้า (ของจริง)</button>
-              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทอัตโนมัติ</button>
+            <div className="flex gap-2 w-full mt-4">
+              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-blue-100">ทดสอบส่งอีเมล (เปิดแท็บใหม่)</button>
+              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-purple-100">สแกนงานล่าช้า (ของจริง)</button>
+              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-amber-100">ติดตั้งบอทแจ้งเตือนอัตโนมัติ</button>
             </div>
           </div>
           <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
@@ -547,13 +728,18 @@ export default function App() {
 
         <div className="bg-white p-6 rounded-xl border shadow-sm border-t-4 border-[#0f2e4a]">
           <h3 className="font-bold text-lg mb-4 flex items-center"><Icon name="database" size={20} className="mr-2 text-[#0f2e4a]"/> ศูนย์จัดการข้อมูล (Data Center)</h3>
+          
           <div className="mb-5 bg-gray-50 p-4 rounded-lg border flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 w-full">
               <div className="flex justify-between text-xs font-bold mb-2 text-gray-700"><span>ปริมาณข้อมูลรวมระบบ</span><span>{totalRows} รายการ</span></div>
               <div className="w-full bg-gray-200 rounded-full h-3"><div className={`${healthColor} h-3 rounded-full transition-all duration-500`} style={{width: `${healthPct}%`}}></div></div>
             </div>
-            <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm"><Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase</button>
+            
+            <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm">
+                <Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase
+            </button>
           </div>
+
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={()=>downloadCSV(tasks, `Tasks_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองข้อมูลงาน (CSV)</button>
             <button type="button" onClick={()=>downloadCSV(informs, `InformJobs_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองแจ้งเปิดงาน (CSV)</button>
@@ -603,6 +789,7 @@ export default function App() {
     const pendingTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
     const pendingGroups = groupTasks(pendingTasks);
 
+    // จำแนกยอดค้างเบิกตามเดือนที่จบงาน
     const ubBreakdown = {}; 
     pendingGroups.forEach(g => { 
       let m = "ไม่ระบุเดือน"; 
