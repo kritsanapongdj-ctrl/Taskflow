@@ -4,8 +4,10 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 
+// ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
 
+// ⚠️ นำ Firebase Config ของคุณมาวางทับที่นี่
 const customFirebaseConfig = {
   apiKey: "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
   authDomain: "taskflow-plus-3fce7.firebaseapp.com",
@@ -15,6 +17,7 @@ const customFirebaseConfig = {
   appId: "1:829369182338:web:5c6c326a6dcb1a7a6e2c9b"
 };
 
+// --- การตั้งค่า Firebase ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : customFirebaseConfig;
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -30,6 +33,7 @@ const getDocRef = (colName, docId) => {
     return doc(db, 'artifacts', appId, 'public', 'data', colName, String(docId));
 };
 
+// --- สไตล์และฟอนต์ (Global Styles) ---
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -48,6 +52,7 @@ const GlobalStyles = () => (
   `}</style>
 );
 
+// --- ฟังก์ชันช่วยเหลือต่างๆ ---
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
 
@@ -112,9 +117,8 @@ export default function App() {
   const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr() });
   const [setUnlk, setSetUnlk] = useState(false);
   const [pwd, setPwd] = useState('');
-  const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '' });
+  const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', emails: '', projArea: '', emProj: 'ทั้งหมด', slas: '', slaDays: '' });
   
-  // 🛠️ State สำหรับจัดการฟอร์มอีเมลแบบ Checkbox
   const [emForm, setEmForm] = useState({ email: '', selectedProjs: [] });
 
   const [iTab, setITab] = useState('form');
@@ -126,10 +130,9 @@ export default function App() {
   const [showStartReason, setShowStartReason] = useState(false);
   const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
-  const [oPop, setOPop] = useState({ isOpen: false, type: 'daily' });
+  const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
-  // 🛠️ 1. แก้ปัญหา Autocomplete: สร้าง State จำเพาะสำหรับฟอร์มเพื่อป้องกันข้อมูลว่างเปล่า
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
   const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', project: '', area: '', jobType: '', location: '', details: '' });
 
@@ -164,8 +167,14 @@ export default function App() {
       if (doc.exists()) {
           const d = doc.data();
           setSets({
-              areas: d.areas || [], projects: d.projects || [], jobTypes: d.jobTypes || [], locations: d.locations || [],
-              emails: d.emails || [], slas: d.slas || [], overdueTime: d.overdueTime || '17:30', lateWorkOrderHours: d.lateWorkOrderHours || 24
+              areas: d.areas || [],
+              projects: d.projects || [],
+              jobTypes: d.jobTypes || [],
+              locations: d.locations || [],
+              emails: d.emails || [],
+              slas: d.slas || [],
+              overdueTime: d.overdueTime || '17:30',
+              lateWorkOrderHours: d.lateWorkOrderHours || 24
           });
       }
       setLoading(false);
@@ -174,7 +183,6 @@ export default function App() {
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
-  // ระบบตรวจสอบและประทับตราย้อนหลังเมื่อโหลดแอป (ออกใบงานช้า / เกินกำหนด)
   useEffect(() => {
     if (!user || tasks.length === 0) return;
     const today = getTStr();
@@ -227,19 +235,22 @@ export default function App() {
   const getProjArea = (str) => str ? String(str).split('|')[1] || '' : '';
   const getTargetEms = (projName) => (sets.emails || []).filter(e => {
       const p = e.split('|'); if(p.length < 2) return true;
-      const pjList = p[1].split(','); return pjList.includes('ทั้งหมด') || pjList.includes(projName);
+      const pjList = p[1].split(','); 
+      const cleanPjList = pjList.map(name => name.split('|')[0].trim());
+      return cleanPjList.includes('ทั้งหมด') || cleanPjList.includes(projName.split('|')[0].trim());
   }).map(e => e.split('|')[0]);
 
   const getStdProj = (raw) => {
     if(!raw) return "ไม่ระบุ";
-    const clean = String(raw).replace(/[\s\-]/g, '').toLowerCase();
+    const clean = String(raw).split('|')[0].replace(/[\s\-]/g, '').toLowerCase();
     const found = (sets.projects || []).find(p => getProjName(p).replace(/[\s\-]/g, '').toLowerCase() === clean);
-    return found ? getProjName(found) : String(raw).trim();
+    return found ? getProjName(found) : String(raw).split('|')[0].trim();
   };
 
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
     if (confirmCode !== 'MIGRATE') return;
+    
     setLoading(true);
     try {
         const ts = Date.now(); 
@@ -247,6 +258,7 @@ export default function App() {
         const [tD, iD, sD] = await Promise.all([tR.json(), iR.json(), sR.json()]);
         
         const promises = [];
+
         if(Array.isArray(tD) && !tD.error) {
             tD.forEach(r => {
                 const t = { 
@@ -262,6 +274,7 @@ export default function App() {
                 if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t));
             });
         }
+
         if(Array.isArray(iD) && !iD.error) {
             iD.forEach(r => {
                 const t = { 
@@ -275,6 +288,7 @@ export default function App() {
                 if(t.id) promises.push(setDoc(getDocRef('InformJobs', t.id), t));
             });
         }
+
         if(Array.isArray(sD) && !sD.error) {
             const s = { areas:[], projects:[], jobTypes:[], locations:[], emails:[], slas:[], overdueTime:'17:30', lateWorkOrderHours:24 };
             sD.forEach((r,i) => { 
@@ -285,9 +299,12 @@ export default function App() {
             });
             promises.push(setDoc(getDocRef('Settings', 'main'), s));
         }
+
         await Promise.all(promises);
         alert('🎉 โอนย้ายข้อมูลจาก Google Sheet เข้า Firebase สำเร็จแล้ว!');
-    } catch(e) { alert('เกิดข้อผิดพลาดในการดูดข้อมูล: ' + e.message); }
+    } catch(e) {
+        alert('เกิดข้อผิดพลาดในการดูดข้อมูล: ' + e.message);
+    }
     setLoading(false);
   };
 
@@ -315,20 +332,23 @@ export default function App() {
     if (confirmCode !== '1312') return;
     setLoading(true);
     try {
-        const tasksSnap = await getDocs(getColRef('Tasks')); const infSnap = await getDocs(getColRef('InformJobs'));
+        const tasksSnap = await getDocs(getColRef('Tasks'));
+        const infSnap = await getDocs(getColRef('InformJobs'));
         const promises = [];
-        tasksSnap.forEach(d => promises.push(deleteDoc(d.ref))); infSnap.forEach(d => promises.push(deleteDoc(d.ref)));
+        tasksSnap.forEach(d => promises.push(deleteDoc(d.ref)));
+        infSnap.forEach(d => promises.push(deleteDoc(d.ref)));
         await Promise.all(promises);
+        
         fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{});
         alert('ล้างข้อมูลสำเร็จ!'); 
-    } catch(e) { alert(e.message); } finally { setLoading(false); }
+    } catch(e) { alert(e.message); } 
+    finally { setLoading(false); }
   };
 
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail`, '_blank'); };
   const forceScanRealTasks = () => { if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return; fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{}); alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเช็คอีเมลครับ'); };
   const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
-  // 🛠️ 1. ป้องกันบัก Autocomplete ในฟอร์ม Tasks
   const openTaskModal = (task = null) => {
       setETask(task);
       setSReason('');
@@ -415,7 +435,6 @@ export default function App() {
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: (prev[k]||[]).filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
   
-  // 🛠️ 2. ดีไซน์หน้าตั้งค่าอีเมลใหม่ (ใช้ Checkbox)
   const toggleEmailProj = (projName) => {
      setEmForm(p => {
          const current = p.selectedProjs;
@@ -440,19 +459,18 @@ export default function App() {
     else { nEms.push(`${em}|${projsStr}`); }
     
     setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); 
-    setEmForm({ email: '', selectedProjs: [] }); // Reset form
+    setEmForm({ email: '', selectedProjs: [] });
   };
 
   const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = (sets.emails||[]).filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
   
-  // 🛠️ 1. แก้บัก Inform Form Autocomplete
   const subInf = (e) => { 
       e.preventDefault(); 
       if (!informForm.requesterName) return alert('กรุณาระบุชื่อผู้แจ้ง');
       const fd = { ...informForm, id: `REQ-${Date.now().toString().slice(-4)}`, status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; 
       saveD('informJob', fd); 
       alert('ส่งเรื่องเรียบร้อย'); 
-      setInformForm({ date: getTStr(), requesterName: '', phone: '', project: '', area: '', jobType: '', location: '', details: '' }); // Reset
+      setInformForm({ date: getTStr(), requesterName: '', phone: '', project: '', area: '', jobType: '', location: '', details: '' }); 
       setITab('manage'); 
   };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
@@ -477,7 +495,8 @@ export default function App() {
   const rDash = () => {
     const tS = getTStr(); const tD = gFilt.date; const tM = gFilt.month;
     const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project));
-    const mt = aT.filter(t => t.startDate && String(t.startDate||'').startsWith(tM));
+    
+    const mt = aT.filter(t => t.startDate && t.startDate.startsWith(tM));
     const dy = aT.filter(t => (tD >= t.startDate && tD <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tD) && tD === tS));
     
     const mtOv = mt.filter(t => isTaskOvd(t, tS) && t.status !== 'จบงาน');
@@ -650,8 +669,8 @@ export default function App() {
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
     const biGrp = groupTasks(cT.filter(t => {
       if (t.billingStatus !== 'ส่งเบิกแล้ว') return false;
-      const bMonth = t.billingMonth || (t.completedDate ? String(t.completedDate||'').substring(0,7) : '');
-      return String(bMonth||'').startsWith(gFilt.month);
+      const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.substring(0,7) : '');
+      return bMonth.startsWith(gFilt.month);
     }));
     
     return (
@@ -714,6 +733,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
           <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
@@ -771,14 +791,13 @@ export default function App() {
               })}
             </div>
             
-            {/* 🛠️ 2. ดีไซน์หน้าตั้งค่าอีเมลใหม่ (Checkbox) */}
             <div className="mt-3 pt-2 border-t flex flex-col gap-2">
               <input type="email" placeholder="ระบุอีเมลผู้ดูแล..." className="border rounded px-2 py-1.5 text-xs w-full bg-gray-50 focus:bg-white transition-colors" value={emForm.email} onChange={e=>setEmForm({...emForm, email:e.target.value})} />
-              <div className="border rounded bg-gray-50 p-2 max-h-24 overflow-y-auto flex flex-col gap-1 hide-scrollbar">
-                 <label className="flex items-center text-[10px] cursor-pointer"><input type="checkbox" className="mr-2" checked={emForm.selectedProjs.includes('ทั้งหมด')} onChange={() => toggleEmailProj('ทั้งหมด')} /> <span className="font-bold text-amber-700">ทั้งหมด (ทุกโครงการ)</span></label>
+              <div className="border rounded bg-gray-50 p-2 max-h-[150px] overflow-y-auto flex flex-col gap-1 hide-scrollbar shadow-inner">
+                 <label className="flex items-center text-[10px] cursor-pointer hover:bg-gray-100 p-1 rounded"><input type="checkbox" className="mr-2" checked={emForm.selectedProjs.includes('ทั้งหมด')} onChange={() => toggleEmailProj('ทั้งหมด')} /> <span className="font-bold text-amber-700">ทั้งหมด (ทุกโครงการ)</span></label>
                  {(sets.projects||[]).map(p => {
                     const pName = getProjName(p);
-                    return (<label key={pName} className="flex items-center text-[10px] text-gray-700 cursor-pointer"><input type="checkbox" className="mr-2" checked={emForm.selectedProjs.includes(pName)} onChange={() => toggleEmailProj(pName)} /> {pName}</label>);
+                    return (<label key={pName} className="flex items-center text-[10px] text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded"><input type="checkbox" className="mr-2" checked={emForm.selectedProjs.includes(pName)} onChange={() => toggleEmailProj(pName)} /> {pName}</label>);
                  })}
               </div>
               <button type="button" onClick={addEmailMappingV2} className="bg-[#0f2e4a] text-white px-3 py-1.5 rounded shadow hover:bg-[#1a3f63] text-xs font-bold w-full transition-colors">เพิ่มอีเมล</button>
@@ -795,10 +814,10 @@ export default function App() {
             <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
             <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
             <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
-            <div className="flex gap-2 w-full mt-4">
-              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-blue-100">ทดสอบส่งอีเมล (เปิดแท็บใหม่)</button>
-              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-purple-100">สแกนงานล่าช้า (ของจริง)</button>
-              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-amber-100">ติดตั้งบอทแจ้งเตือนอัตโนมัติ</button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
+              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
+              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนงานล่าช้า (ของจริง)</button>
+              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทแจ้งเตือนอัตโนมัติ</button>
             </div>
           </div>
           <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
@@ -815,8 +834,12 @@ export default function App() {
               <div className="flex justify-between text-xs font-bold mb-2 text-gray-700"><span>ปริมาณข้อมูลรวมระบบ</span><span>{totalRows} รายการ</span></div>
               <div className="w-full bg-gray-200 rounded-full h-3"><div className={`${healthColor} h-3 rounded-full transition-all duration-500`} style={{width: `${healthPct}%`}}></div></div>
             </div>
-            <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm"><Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase</button>
+            
+            <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm">
+                <Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase
+            </button>
           </div>
+
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={()=>downloadCSV(tasks, `Tasks_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองข้อมูลงาน (CSV)</button>
             <button type="button" onClick={()=>downloadCSV(informs, `InformJobs_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองแจ้งเปิดงาน (CSV)</button>
@@ -829,98 +852,53 @@ export default function App() {
 
   const PReport = () => {
     const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
-    
-    const baseTasks = tasks.filter(t => {
+    const pMap = {};
+    sets.projects.forEach(p => { const name = getProjName(p); pMap[name.replace(/[\s\-]/g, '').toUpperCase()] = name; });
+    const getStdName = (raw) => { const clean = String(raw || 'ไม่ระบุ').trim(); const norm = clean.replace(/[\s\-]/g, '').toUpperCase(); if (pMap[norm]) return pMap[norm]; pMap[norm] = clean; return clean; };
+
+    const allPeriodTasks = tasks.filter(t => {
+      if(!t.startDate || !t.startDate.startsWith(fS)) return false;
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
-      const stdP = getStdProj(t.project);
+      const stdP = getStdName(t.project);
       if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
       return true;
     });
 
-    const periodTasks = baseTasks.filter(t => t.startDate && String(t.startDate||'').startsWith(fS));
-
-    const rT = periodTasks.filter(t => t.status !== 'ยกเลิก');
-    const rCancel = periodTasks.filter(t => t.status === 'ยกเลิก');
+    const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
+    const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
 
     const rC = rT.filter(t => t.status === 'จบงาน'); 
-    const rOd = rT.filter(t => t.status !== 'จบงาน' && isTaskOvd(t, tS));
-    const rO = rT.filter(t => t.status !== 'จบงาน' && !isTaskOvd(t, tS));
+    const rOd = rT.filter(t => t.status !== 'จบงาน' && (t.overdueStatus === 'เกินกำหนด' || chkOvdTimeAware(t, tS)));
+    const rO = rT.filter(t => t.status !== 'จบงาน' && t.overdueStatus !== 'เกินกำหนด' && !chkOvdTimeAware(t, tS));
     
     const pSt = {}; 
     rT.forEach(t => { 
-      const pName = getStdProj(t.project);
+      const pName = getStdName(t.project);
       if(!pSt[pName]) pSt[pName] = { t:0, d:0, o:0, od:0 }; 
       pSt[pName].t++; 
       if(t.status==='จบงาน') pSt[pName].d++; 
-      else if(isTaskOvd(t, tS)) pSt[pName].od++; 
+      else if(t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t, tS)) pSt[pName].od++; 
       else pSt[pName].o++; 
     });
-
-    const billedInPeriodTasks = baseTasks.filter(t => {
-      if (t.status !== 'จบงาน' || t.billingStatus !== 'ส่งเบิกแล้ว') return false;
-      const bMonth = t.billingMonth || (t.completedDate ? String(t.completedDate||'').substring(0,7) : '');
-      return String(bMonth||'').startsWith(fS);
-    });
-    const billedInPeriodGroups = groupTasks(billedInPeriodTasks);
-
-    const pendingTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
-    const pendingGroups = groupTasks(pendingTasks);
-
-    const ubBreakdown = {}; 
-    pendingGroups.forEach(g => { 
-      let m = "ไม่ระบุเดือน"; 
-      const firstTask = g.tasks[0];
-      if (firstTask && firstTask.completedDate) m = String(firstTask.completedDate||'').substring(0,7); 
-      else if (firstTask && firstTask.endDate) m = String(firstTask.endDate||'').substring(0,7); 
-      
-      if (!ubBreakdown[m]) ubBreakdown[m] = { groups: 0, tasks: 0 }; 
-      ubBreakdown[m].groups++;
-      ubBreakdown[m].tasks += g.tasks.length;
-    });
-    const sortedUbMonths = Object.keys(ubBreakdown).sort((a,b) => b.localeCompare(a));
     
-    const lateWoTasks = periodTasks.filter(t => t.status === 'จบงาน' && t.overdueStatus === 'ออกใบงานช้า');
+    const allC = tasks.filter(t => {
+      if (t.status !== 'จบงาน') return false;
+      if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
+      if (rCfg.project !== 'ทั้งหมด' && getStdName(t.project) !== rCfg.project) return false;
+      return true;
+    });
+
+    const unbilledTasks = allC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); const ub = unbilledTasks.length; const b = allC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
+    const ubBreakdown = {}; unbilledTasks.forEach(t => { let m = "ไม่ระบุเดือน"; if (t.completedDate) m = t.completedDate.substring(0,7); else if (t.endDate) m = t.endDate.substring(0,7); if (!ubBreakdown[m]) ubBreakdown[m] = 0; ubBreakdown[m]++; });
+    const sortedUbMonths = Object.keys(ubBreakdown).sort();
 
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
         <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
-        <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกิน/ออกใบงานช้า</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
-        
-        <div className="mb-8 p-5 border rounded-lg bg-gray-50 print-break">
-          <h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3>
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="flex justify-between items-center bg-white p-3 rounded border border-green-200 shadow-sm">
-              <span className="font-bold text-green-700">✅ ส่งเบิกแล้วในรอบ ({isY ? `ปี ${fS}` : `เดือน ${fS}`}):</span>
-              <span className="font-black text-green-700 text-lg">{billedInPeriodGroups.length} <span className="text-xs font-normal">กลุ่ม ({billedInPeriodTasks.length} งาน)</span></span>
-            </div>
-            <div className="bg-white p-3 rounded border border-red-200 shadow-sm">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-bold text-red-600">⚠️ ค้างส่งเบิก (ยอดค้างสะสมทั้งหมด):</span>
-                <span className="font-black text-red-600 text-lg">{pendingGroups.length} <span className="text-xs font-normal">กลุ่ม ({pendingTasks.length} งาน)</span></span>
-              </div>
-              {pendingGroups.length > 0 && (
-                <div className="text-[11px] mt-3 pt-3 border-t border-dashed border-red-200 flex flex-wrap gap-2 items-center">
-                  <span className="text-gray-600 font-bold">จำแนกตามเดือนที่จบงาน:</span>
-                  {sortedUbMonths.map(m => (
-                    <span key={m} className="bg-red-50 border border-red-100 px-2 py-1 rounded text-red-700 font-bold">
-                      {m} : {ubBreakdown[m].groups} กลุ่ม ({ubBreakdown[m].tasks} งาน)
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด/ช้า</div></div></div>
-        
-        {lateWoTasks.length > 0 && (
-          <div className="print-break mb-8"><h3 className="font-bold text-[#dc3545] mb-2 text-sm border-b pb-2">⚠️ งานที่ออกใบงานช้า (จบงานแล้วไม่มีใบงานเกิน 3 วัน)</h3>
-          <table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-red-50"><th className="border border-red-100 p-2">รหัสงาน</th><th className="border border-red-100 p-2">รายละเอียด</th><th className="border border-red-100 p-2">โครงการ</th><th className="border border-red-100 p-2">วันที่จบงานจริง</th></tr></thead>
-          <tbody>{lateWoTasks.map(t=>(<tr key={t.id}><td className="border border-red-100 p-2 font-bold text-red-700">{t.id}</td><td className="border border-red-100 p-2">{t.details}</td><td className="border border-red-100 p-2">{getStdProj(t.project)}</td><td className="border border-red-100 p-2 font-bold">{fDate(t.completedDate)}</td></tr>))}</tbody></table></div>
-        )}
-
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rCancel.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdProj(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-gray-500">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))} {rCancel.length === 0 && <tr><td colSpan="4" className="border p-4 text-center text-gray-400">ไม่มีงานที่ถูกยกเลิกในรอบนี้</td></tr>}</tbody></table></div>
+        <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
+        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
+        <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
+        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rT.filter(t=>t.status==='ยกเลิก').map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))}</tbody></table></div>
       </div>
     );
   };
@@ -931,7 +909,7 @@ export default function App() {
       {loading && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[99999] flex flex-col justify-center items-center text-[#0f2e4a]">
           <Icon name="loader2" size={40} className="animate-spin mb-4 text-[#bca374]" />
-          <h2 className="text-lg font-bold">กำลังซิงค์ข้อมูล...</h2>
+          <h2 className="text-lg font-bold">กำลังประมวลผล...</h2>
         </div>
       )}
       <div className="w-full min-h-screen">
@@ -945,7 +923,7 @@ export default function App() {
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
+            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div></header>
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
@@ -962,7 +940,7 @@ export default function App() {
             ))}
           </nav>
 
-          {oPop.isOpen && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop({isOpen:false, type:'daily'})}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด ({oPop.type==='daily' ? 'รายวัน' : 'รายเดือน'})</h3><button type="button" onClick={()=>setOPop({isOpen:false, type:'daily'})}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t => isTaskOvd(t, oPop.type==='daily' ? gFilt.date : getTStr()) && t.status !== 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && (oPop.type==='daily' ? ((gFilt.date >= t.startDate && gFilt.date <= t.endDate) || gFilt.date===getTStr()) : String(t.startDate||'').startsWith(gFilt.month))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{getStdProj(t.project)}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status} {t.overdueStatus==='ออกใบงานช้า'&&'(ออกใบงานช้า)'}</div></div><button type="button" onClick={()=>{setOPop({isOpen:false, type:'daily'}); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
+          {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
           
           {cPop.isOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
@@ -973,17 +951,17 @@ export default function App() {
                 </div>
                 <div className="overflow-auto space-y-2 flex-1 pr-1 hide-scrollbar">
                   {cPop.tasks.map(t => {
-                    const isOvd = t.overdueStatus==='เกินกำหนด' || t.overdueStatus==='ออกใบงานช้า' || chkOvdTimeAware(t,getTStr());
+                    const isOvd = t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr());
                     return (
                     <div key={t.id} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex justify-between items-center hover:bg-blue-50 transition-colors">
                       <div>
-                        <div className="font-bold text-sm text-[#0f2e4a]">{getStdProj(t.project)}</div>
+                        <div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div>
                         <div className="text-xs text-gray-600 line-clamp-1">{t.details}</div>
                         <div className="text-[10px] mt-1 font-bold">
                           <span className="text-gray-400">ID: {t.id}</span>
                           <span className="mx-1 text-gray-300">|</span>
-                          <span className={t.status==='จบงาน' && t.overdueStatus!=='ออกใบงานช้า' ?'text-green-600':isOvd?'text-red-600':'text-amber-600'}>
-                            สถานะ: {t.status} {t.overdueStatus==='ออกใบงานช้า' ? '(ออกใบงานช้า)' : (isOvd && t.status!=='จบงาน' ? '(เกินกำหนด)' : '')}
+                          <span className={t.status==='จบงาน'?'text-green-600':isOvd?'text-red-600':'text-amber-600'}>
+                            สถานะ: {t.status} {(isOvd && t.status!=='จบงาน') ? '(เกินกำหนด)' : ''}
                           </span>
                         </div>
                       </div>
@@ -1100,7 +1078,7 @@ export default function App() {
                     <div><span className="text-gray-400 font-bold">รหัสอ้างอิง</span><br/><span className="font-bold text-gray-800">{infView.id}</span></div>
                     <div><span className="text-gray-400 font-bold">ผู้แจ้ง</span><br/><span className="font-bold text-gray-800">{infView.requesterName}</span></div>
                     <div><span className="text-gray-400 font-bold">เบอร์ติดต่อ</span><br/><span className="font-bold text-gray-800">{infView.phone||'-'}</span></div>
-                    <div><span className="text-gray-400 font-bold">โครงการ</span><br/><span className="font-bold text-[#bca374]">{getStdProj(infView.project)}</span></div>
+                    <div><span className="text-gray-400 font-bold">โครงการ</span><br/><span className="font-bold text-[#bca374]">{infView.project}</span></div>
                     <div><span className="text-gray-400 font-bold">พื้นที่</span><br/><span className="font-bold text-gray-800">{infView.area}</span></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs mb-2">
