@@ -20,7 +20,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🛠️ ล็อก Path ฐานข้อมูลให้เสถียร (ป้องกันปัญหาข้อมูลหายเวลา Deploy ขึ้น Vercel)
 const getColRef = (colName) => {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     return collection(db, 'artifacts', appId, 'public', 'data', colName);
@@ -58,6 +57,16 @@ const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m = String(timeStr).match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : "17:30"; };
 const downloadCSV = (data, fn) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Object.keys(data[0]); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = fn; link.click(); };
+
+// 🛠️ ฟังก์ชันแปลงเดือนเบิก ให้เป็น format YYYY-MM อย่างแม่นยำ
+const extM = (val) => {
+  if(!val) return '';
+  const str = String(val).trim();
+  if(str.match(/^\d{4}-\d{2}/)) return str.substring(0,7);
+  const d = new Date(val);
+  if(!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  return str;
+};
 
 const SimplePieChart = ({ data, title }) => {
   let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); const getC = (p) => [Math.cos(2*Math.PI*p), Math.sin(2*Math.PI*p)];
@@ -140,7 +149,6 @@ export default function App() {
     return false;
   };
 
-  // 🛠️ ฟังก์ชันการดึงข้อมูลจาก Google Sheet แบบเต็ม
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดึงข้อมูลจาก Sheet เข้าสู่ Firebase'); 
     if (confirmCode !== 'MIGRATE') return;
@@ -161,7 +169,8 @@ export default function App() {
                   endDate: pYMD(getCleanVal(r,['endDate','กำหนดเสร็จ'])), status: getCleanVal(r,['status','สถานะ'])||'อยู่ระหว่างดำเนินการ', 
                   completedDate: pYMD(getCleanVal(r,['completedDate','วันที่จบงานจริง'])), cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), 
                   overdueStatus: getCleanVal(r,['overduestatus','สถานะความล่าช้า'])||'ปกติ', workOrderNo: getCleanVal(r,['workorderno','เลขที่ใบงาน','เลขใบงาน','ใบงาน'])||'', 
-                  billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', billingMonth: getCleanVal(r,['billingmonth','เดือนที่เบิก'])||'' 
+                  billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', 
+                  billingMonth: extM(getCleanVal(r,['billingmonth','เดือนที่เบิก'])) 
                 }; 
                 if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t)); 
             }); 
@@ -196,7 +205,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // 🛠️ ฟังก์ชันการลบข้อมูล
   const handleClearData = async () => { 
       const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมด:'); 
       if (confirmCode !== '1312') return; 
@@ -215,7 +223,6 @@ export default function App() {
 
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail`, '_blank'); };
   
-  // 🛠️ ปุ่มกวาดล้างของจริง
   const forceScanRealTasks = () => {
     if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return;
     fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{});
@@ -276,10 +283,24 @@ export default function App() {
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: prev[k].filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
   const addEmailMapping = () => { const em = sInp.emails.trim(), pj = sInp.emProj || 'ทั้งหมด'; if (!em) return; let nEms = [...sets.emails]; const idx = nEms.findIndex(x => x.startsWith(em + '|')); if (idx > -1) { const parts = nEms[idx].split('|'); let projs = parts[1] ? parts[1].split(',') : []; if (pj === 'ทั้งหมด') { projs = ['ทั้งหมด']; } else { projs = projs.filter(x => x !== 'ทั้งหมด'); if (!projs.includes(pj)) { if (projs.length >= 15) return alert('1 อีเมลสามารถผูกโครงการได้สูงสุด 15 โครงการครับ'); projs.push(pj); } } nEms[idx] = `${em}|${projs.join(',')}`; } else { nEms.push(`${em}|${pj}`); } setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); setSInp({...sInp, emails: '', emProj: 'ทั้งหมด'}); };
-  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
+  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); };
   const subInf = (e) => { e.preventDefault(); const form = e.target; const reqName = form.requesterName.value.trim(); if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง'); const fd = { id: `REQ-${Date.now().toString().slice(-4)}`, date: form.date.value, requesterName: reqName, phone: form.phone.value.trim(), project: form.project.value, area: form.area.value, jobType: form.jobType.value, location: form.location.value, details: form.details.value.trim(), status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; saveD('informJob', fd); alert('ส่งเรื่องเรียบร้อย'); form.reset(); setITab('manage'); };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
-  const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; saveD('task', nT); } }); };
+  
+  // 🛠️ แก้ไข moveGroup: บังคับอัปเดตหน้าจอทันที ไม่ต้องรอรีเฟรช และเซฟเข้า Firebase
+  const moveGroup = (groupId, st) => { 
+    let updates = [];
+    setTasks(p => p.map(t => { 
+      const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; 
+      if (k === groupId && t.billingStatus !== st) { 
+        const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; 
+        updates.push(nT);
+        return nT; 
+      } 
+      return t;
+    })); 
+    setTimeout(() => { updates.forEach(nT => saveD('task', nT)); }, 50); 
+  };
   
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
   const oDS = (e, groupId) => { e.dataTransfer.setData('groupId', groupId); }; const oDp = (e, st) => { e.preventDefault(); const gId = e.dataTransfer.getData('groupId'); if(gId) moveGroup(gId, st); };
@@ -462,14 +483,11 @@ export default function App() {
     );
   };
 
-  // 🛠️ ปรับปรุง Kanban ให้การดึงยอดส่งเบิก/ค้างเบิก สอดคล้องกับ PDF
+  // 🛠️ 3. ปรับปรุง Kanban ให้การดึงยอดส่งเบิก/ค้างเบิก สอดคล้องกับ PDF และกันปัญหาเดือนว่าง
   const rKanb = () => {
     const cT = tasks.filter(t => t.status === 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project));
     
-    // ค้างเบิก: ดึงทั้งหมดที่ไม่ใช่ "ส่งเบิกแล้ว" (เหมือนเดิม)
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
-    
-    // 🛠️ ส่งเบิกแล้ว: กรองเอาเฉพาะเดือนที่เลือก (เพื่อให้ตรงกับตรรกะหน้า PDF "ส่งเบิกแล้วในรอบเดือน")
     const biGrp = groupTasks(cT.filter(t => {
       if (t.billingStatus !== 'ส่งเบิกแล้ว') return false;
       const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.substring(0,7) : '');
@@ -530,7 +548,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3><button type="button" onClick={()=>clearSList('projects')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">{Object.keys(groupedProjects).map(area => (<div key={area} className="border rounded-lg overflow-hidden shadow-sm"><div className="bg-gray-100 px-3 py-1.5 text-[10px] font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div><div className="p-2 flex flex-wrap gap-1.5 bg-white">{groupedProjects[area].map(p => (<span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] flex items-center shadow-sm">{p.name}<button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button></span>))}</div></div>))}</div><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} /><select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}><option value="">พท.</option>{sets.areas.map(a=><option key={a}>{a}</option>)}</select><button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button></div></div>
+          <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3><button type="button" onClick={()=>clearSList('projects')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">{Object.keys(groupedProjects).map(area => (<div key={area} className="border rounded-lg overflow-hidden shadow-sm"><div className="bg-white px-3 py-1.5 text-[10px] font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div><div className="p-2 flex flex-wrap gap-1.5 bg-gray-50">{groupedProjects[area].map(p => (<span key={p.fullStr} className="bg-white border border-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] flex items-center shadow-sm">{p.name}<button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button></span>))}</div></div>))}</div><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} /><select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}><option value="">พท.</option>{sets.areas.map(a=><option key={a}>{a}</option>)}</select><button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button></div></div>
           <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">สิทธิ์การรับอีเมลของแต่ละบุคคล</h3><button type="button" onClick={()=>clearSList('emails')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><div className="flex-1 overflow-y-auto pr-1 hide-scrollbar space-y-2">{sets.emails.map(item => { const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด']; return (<div key={item} className="border rounded-lg overflow-hidden shadow-sm"><div className="bg-blue-50/50 px-3 py-1.5 flex justify-between items-center border-b border-blue-100"><span className="font-bold text-[#0f2e4a] text-xs flex items-center"><Icon name="mail" size={12} className="mr-1.5 text-blue-500"/>{em}</span><button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={12}/></button></div><div className="p-2 flex flex-wrap gap-1.5 bg-white">{projs.map(p => (<span key={p} className={`px-2 py-1 rounded text-[9px] flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>{p}{p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1 text-blue-400 hover:text-blue-600"><Icon name="x" size={10}/></button>}</span>))}</div></div>) })}</div><div className="mt-3 flex gap-1 pt-2 border-t"><input type="email" placeholder="ระบุอีเมล..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.emails} onChange={e=>setSInp({...sInp,emails:e.target.value})} /><select className="border rounded px-2 py-1.5 text-xs w-20 bg-gray-50 focus:bg-white transition-colors" value={sInp.emProj} onChange={e=>setSInp({...sInp,emProj:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{sets.projects.map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select><button type="button" onClick={addEmailMapping} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button></div></div>
           <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col h-[350px]"><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div><ul className="flex-1 overflow-y-auto space-y-1.5 mb-2 pr-1 text-[11px] hide-scrollbar">{sets.slas.map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2 border border-amber-100 rounded-lg shadow-sm"><span>{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-2 py-0.5 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block"><Icon name="trash" size={12}/></button></span></li>)}</ul><div className="mt-3 flex gap-1 pt-2 border-t"><input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} /><input type="number" placeholder="วัน" className="border rounded px-2 py-1.5 text-xs w-16 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} /><button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-3 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={14}/></button></div></div>
         </div>
@@ -544,11 +562,7 @@ export default function App() {
             <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
             <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
               <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
-              <button type="button" onClick={()=>{
-                  if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return;
-                  fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{});
-                  alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเช็คอีเมลครับ');
-              }} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนกวาดล้างงานล่าช้า (ของจริง)</button>
+              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนกวาดล้างงานล่าช้า (ของจริง)</button>
               <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทอัตโนมัติ</button>
             </div>
           </div>
@@ -575,10 +589,10 @@ export default function App() {
     );
   };
 
+  // 🛠️ 1. รายงาน PDF ตรงเป๊ะตาม Kanban ไม่ทับซ้อนเดือน
   const PReport = () => {
     const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
     
-    // 1. งานเบสหลักสำหรับการส่งเบิก (ดึงทั้งหมดที่ตรงกับพื้นที่/โครงการที่เลือก ไม่สนใจเดือนที่เริ่มงาน)
     const baseTasks = tasks.filter(t => {
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       const stdP = getStdProj(t.project);
@@ -586,7 +600,6 @@ export default function App() {
       return true;
     });
 
-    // 2. งานประจำรอบเดือน/ปีที่เลือก (สำหรับการแสดงปริมาณงาน 4 กล่อง และแถบสี)
     const periodTasks = baseTasks.filter(t => t.startDate && t.startDate.startsWith(fS));
 
     const rT = periodTasks.filter(t => t.status !== 'ยกเลิก');
@@ -606,16 +619,16 @@ export default function App() {
       else pSt[pName].o++; 
     });
 
-    // 3. จัดการหมวดส่งเบิก (จัดกลุ่มเหมือนหน้า Kanban เพื่อให้ตัวเลขตรงกันเป๊ะ)
-    // ส่งเบิกแล้ว เฉพาะที่ถูกกดส่งเบิก "ในเดือน/ปีที่เลือก"
-    const billedInPeriodTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus === 'ส่งเบิกแล้ว' && t.billingMonth && t.billingMonth.startsWith(fS));
+    const billedInPeriodTasks = baseTasks.filter(t => {
+      if (t.status !== 'จบงาน' || t.billingStatus !== 'ส่งเบิกแล้ว') return false;
+      const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.substring(0,7) : '');
+      return bMonth.startsWith(fS);
+    });
     const billedInPeriodGroups = groupTasks(billedInPeriodTasks);
 
-    // ค้างเบิกสะสมทั้งหมด (ยังไม่เบิก ไม่สนรอบเดือน)
     const pendingTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
     const pendingGroups = groupTasks(pendingTasks);
 
-    // จำแนกยอดค้างเบิกตามเดือนที่จบงาน
     const ubBreakdown = {}; 
     pendingGroups.forEach(g => { 
       let m = "ไม่ระบุเดือน"; 
@@ -627,7 +640,7 @@ export default function App() {
       ubBreakdown[m].groups++;
       ubBreakdown[m].tasks += g.tasks.length;
     });
-    const sortedUbMonths = Object.keys(ubBreakdown).sort((a,b) => b.localeCompare(a)); // เรียงเดือนล่าสุดขึ้นก่อน
+    const sortedUbMonths = Object.keys(ubBreakdown).sort((a,b) => b.localeCompare(a));
 
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
