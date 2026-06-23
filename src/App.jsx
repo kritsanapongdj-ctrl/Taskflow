@@ -126,7 +126,6 @@ export default function App() {
     return false; 
   };
 
-  // 🛠️ ตราประทับถาวร
   const isTaskOvd = (t, checkDate = getTStr()) => {
     if (t.overdueStatus === 'เกินกำหนด') return true;
     if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
@@ -204,10 +203,12 @@ export default function App() {
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: prev[k].filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
   const addEmailMapping = () => { const em = sInp.emails.trim(), pj = sInp.emProj || 'ทั้งหมด'; if (!em) return; let nEms = [...sets.emails]; const idx = nEms.findIndex(x => x.startsWith(em + '|')); if (idx > -1) { const parts = nEms[idx].split('|'); let projs = parts[1] ? parts[1].split(',') : []; if (pj === 'ทั้งหมด') { projs = ['ทั้งหมด']; } else { projs = projs.filter(x => x !== 'ทั้งหมด'); if (!projs.includes(pj)) { if (projs.length >= 15) return alert('1 อีเมลสามารถผูกโครงการได้สูงสุด 15 โครงการครับ'); projs.push(pj); } } nEms[idx] = `${em}|${projs.join(',')}`; } else { nEms.push(`${em}|${pj}`); } setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); setSInp({...sInp, emails: '', emProj: 'ทั้งหมด'}); };
-  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); };
+  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = sets.emails.filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
   const subInf = (e) => { e.preventDefault(); const form = e.target; const reqName = form.requesterName.value.trim(); if (!reqName) return alert('กรุณาระบุชื่อผู้แจ้ง'); const fd = { id: `REQ-${Date.now().toString().slice(-4)}`, date: form.date.value, requesterName: reqName, phone: form.phone.value.trim(), project: form.project.value, area: form.area.value, jobType: form.jobType.value, location: form.location.value, details: form.details.value.trim(), status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; saveD('informJob', fd); alert('ส่งเรื่องเรียบร้อย'); form.reset(); setITab('manage'); };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
   const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; saveD('task', nT); } }); };
+  
+  // จัดกลุ่มใบงานในกระดานส่งเบิก
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
   const oDS = (e, groupId) => { e.dataTransfer.setData('groupId', groupId); }; const oDp = (e, st) => { e.preventDefault(); const gId = e.dataTransfer.getData('groupId'); if(gId) moveGroup(gId, st); };
 
@@ -496,19 +497,22 @@ export default function App() {
   const PReport = () => {
     const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
     
-    const allPeriodTasks = tasks.filter(t => {
-      if(!t.startDate || !t.startDate.startsWith(fS)) return false;
+    // 1. ดึงงานทั้งหมดตามพื้นที่/โครงการ (ยังไม่กรองวันที่) เพื่อใช้คำนวณยอดค้างสะสม
+    const baseTasks = tasks.filter(t => {
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       const stdP = getStdProj(t.project);
       if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
       return true;
     });
 
-    const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
-    const rCancel = allPeriodTasks.filter(t => t.status === 'ยกเลิก');
+    // 2. กรองเฉพาะงานในรอบเดือน/ปีที่เลือก (สำหรับ 4 กล่องด้านบน และกราฟแท่ง)
+    const periodTasks = baseTasks.filter(t => t.startDate && t.startDate.startsWith(fS));
+    
+    const rT = periodTasks.filter(t => t.status !== 'ยกเลิก');
+    const rCancel = periodTasks.filter(t => t.status === 'ยกเลิก');
 
     const rC = rT.filter(t => t.status === 'จบงาน'); 
-    const rOd = rT.filter(t => isTaskOvd(t, tS));
+    const rOd = rT.filter(t => t.status !== 'จบงาน' && isTaskOvd(t, tS));
     const rO = rT.filter(t => t.status !== 'จบงาน' && !isTaskOvd(t, tS));
     
     const pSt = {}; 
@@ -521,15 +525,54 @@ export default function App() {
       else pSt[pName].o++; 
     });
 
-    const unbilledTasks = rC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); const ub = unbilledTasks.length; const b = rC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
-    const ubBreakdown = {}; unbilledTasks.forEach(t => { let m = "ไม่ระบุเดือน"; if (t.completedDate) m = t.completedDate.substring(0,7); else if (t.endDate) m = t.endDate.substring(0,7); if (!ubBreakdown[m]) ubBreakdown[m] = 0; ubBreakdown[m]++; });
+    // 3. จัดการสถานะการส่งเบิกแยกหมวดหมู่ชัดเจน
+    // ยอดส่งเบิก: เอาเฉพาะที่ส่งเบิก "ในรอบเวลาที่เลือก"
+    const billedInPeriod = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus === 'ส่งเบิกแล้ว' && t.billingMonth && t.billingMonth.startsWith(fS));
+    
+    // ยอดค้างเบิก: ดึง "ยอดสะสมทั้งหมด" ที่จบงานแล้วแต่ยังไม่เบิก
+    const allPendingBills = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
+    
+    const ubBreakdown = {}; 
+    allPendingBills.forEach(t => { 
+      let m = "ไม่ระบุเดือน"; 
+      if (t.completedDate) m = t.completedDate.substring(0,7); 
+      else if (t.endDate) m = t.endDate.substring(0,7); 
+      if (!ubBreakdown[m]) ubBreakdown[m] = 0; 
+      ubBreakdown[m]++; 
+    });
     const sortedUbMonths = Object.keys(ubBreakdown).sort();
 
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
         <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
         <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
-        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
+        
+        <div className="mb-8 p-5 border rounded-lg bg-gray-50 print-break">
+          <h3 className="font-bold text-[#0f2e4a] mb-3 text-sm border-b pb-2">สถานะการส่งเบิกเงิน (Billing Status)</h3>
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex justify-between bg-white p-3 rounded border border-green-200 shadow-sm">
+              <span className="font-bold text-green-700">✅ ส่งเบิกแล้วในรอบ ({isY ? `ปี ${fS}` : `เดือน ${fS}`}):</span>
+              <span className="font-black text-green-700">{billedInPeriod.length} รายการ</span>
+            </div>
+            <div className="bg-white p-3 rounded border border-red-200 shadow-sm">
+              <div className="flex justify-between mb-2">
+                <span className="font-bold text-red-600">⚠️ ค้างส่งเบิก (ยอดค้างสะสมทั้งหมด):</span>
+                <span className="font-black text-red-600">{allPendingBills.length} รายการ</span>
+              </div>
+              {allPendingBills.length > 0 && (
+                <div className="text-[11px] mt-2 pt-3 border-t border-dashed border-red-100 flex flex-wrap gap-2 items-center">
+                  <span className="text-gray-600 font-bold">จำแนกตามรอบเดือนที่จบงาน:</span>
+                  {sortedUbMonths.map(m => (
+                    <span key={m} className="bg-red-50 border border-red-100 px-2 py-0.5 rounded text-red-700 font-bold">
+                      {m} : {ubBreakdown[m]} รายการ
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2" title={p}>{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
         <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ถูกยกเลิก</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">เหตุผล</th></tr></thead><tbody>{rCancel.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdProj(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-gray-500">ยกเลิก</td><td className="border p-2 text-red-600 font-bold">{t.cancelReason}</td></tr>))} {rCancel.length === 0 && <tr><td colSpan="4" className="border p-4 text-center text-gray-400">ไม่มีงานที่ถูกยกเลิกในรอบนี้</td></tr>}</tbody></table></div>
       </div>
@@ -552,7 +595,7 @@ export default function App() {
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div></header>
+            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={loadD} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
