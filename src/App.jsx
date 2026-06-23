@@ -20,8 +20,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const getColRef = (colName) => typeof __app_id !== 'undefined' ? collection(db, 'artifacts', __app_id, 'public', 'data', colName) : collection(db, colName);
-const getDocRef = (colName, docId) => typeof __app_id !== 'undefined' ? doc(db, 'artifacts', __app_id, 'public', 'data', colName, String(docId)) : doc(db, colName, String(docId));
+// 🛠️ แก้ไข: ล็อก Path ของฐานข้อมูลให้เหมือนเดิม ป้องกันปัญหาหาข้อมูลไม่เจอบน Vercel
+const getColRef = (colName) => {
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    return collection(db, 'artifacts', appId, 'public', 'data', colName);
+};
+
+const getDocRef = (colName, docId) => {
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    return doc(db, 'artifacts', appId, 'public', 'data', colName, String(docId));
+};
 
 const GlobalStyles = () => (
   <style>{`
@@ -126,6 +134,7 @@ export default function App() {
     return false; 
   };
 
+  // 🛠️ ตราประทับถาวร
   const isTaskOvd = (t, checkDate = getTStr()) => {
     if (t.overdueStatus === 'เกินกำหนด') return true;
     if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
@@ -208,7 +217,6 @@ export default function App() {
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
   const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? gFilt.month : '' }; saveD('task', nT); } }); };
   
-  // จัดกลุ่มใบงานในกระดานส่งเบิก
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
   const oDS = (e, groupId) => { e.dataTransfer.setData('groupId', groupId); }; const oDp = (e, st) => { e.preventDefault(); const gId = e.dataTransfer.getData('groupId'); if(gId) moveGroup(gId, st); };
 
@@ -595,7 +603,7 @@ export default function App() {
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={loadD} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
+            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
