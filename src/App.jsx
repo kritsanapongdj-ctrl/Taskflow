@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🛠️ แก้ไข: ล็อก Path ของฐานข้อมูลให้เหมือนเดิม ป้องกันปัญหาหาข้อมูลไม่เจอบน Vercel
+// 🛠️ ล็อก Path ฐานข้อมูลให้เสถียร (ป้องกันปัญหาข้อมูลหายเวลา Deploy ขึ้น Vercel)
 const getColRef = (colName) => {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     return collection(db, 'artifacts', appId, 'public', 'data', colName);
@@ -134,30 +134,94 @@ export default function App() {
     return false; 
   };
 
-  // 🛠️ ตราประทับถาวร
   const isTaskOvd = (t, checkDate = getTStr()) => {
     if (t.overdueStatus === 'เกินกำหนด') return true;
     if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
     return false;
   };
 
+  // 🛠️ ฟังก์ชันการดึงข้อมูลจาก Google Sheet แบบเต็ม
   const runMigration = async () => {
-    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลเข้า Firebase'); if (confirmCode !== 'MIGRATE') return;
+    const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดึงข้อมูลจาก Sheet เข้าสู่ Firebase'); 
+    if (confirmCode !== 'MIGRATE') return;
     setLoading(true);
     try {
-        const ts = Date.now(); const [tR, iR, sR] = await Promise.all([ fetch(`${API_URL}?sheet=Tasks&t=${ts}`), fetch(`${API_URL}?sheet=InformJobs&t=${ts}`), fetch(`${API_URL}?sheet=Settings&t=${ts}`) ]);
+        const ts = Date.now(); 
+        const [tR, iR, sR] = await Promise.all([ fetch(`${API_URL}?sheet=Tasks&t=${ts}`), fetch(`${API_URL}?sheet=InformJobs&t=${ts}`), fetch(`${API_URL}?sheet=Settings&t=${ts}`) ]);
         const [tD, iD, sD] = await Promise.all([tR.json(), iR.json(), sR.json()]);
         const promises = [];
-        if(Array.isArray(tD) && !tD.error) { tD.forEach(r => { const t = { id: getCleanVal(r,['id','รหัสงาน']), details: getCleanVal(r,['details','รายละเอียดงาน','รายละเอียด']), requester: getCleanVal(r,['requester','ผู้แจ้ง']), project: getCleanVal(r,['project','โครงการ']), area: getCleanVal(r,['area','พื้นที่']), receivedDate: pYMD(getCleanVal(r,['receiveddate','วันที่รับเรื่อง'])), slaCategory: getCleanVal(r,['slacategory','หมวดsla','sla'])||'', startDate: pYMD(getCleanVal(r,['startDate','เริ่มงาน'])), endDate: pYMD(getCleanVal(r,['endDate','กำหนดเสร็จ'])), status: getCleanVal(r,['status','สถานะ'])||'อยู่ระหว่างดำเนินการ', completedDate: pYMD(getCleanVal(r,['completedDate','วันที่จบงานจริง'])), cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), overdueStatus: getCleanVal(r,['overduestatus','สถานะความล่าช้า'])||'ปกติ', workOrderNo: getCleanVal(r,['workorderno','เลขที่ใบงาน','เลขใบงาน','ใบงาน'])||'', billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', billingMonth: getCleanVal(r,['billingmonth','เดือนที่เบิก'])||'' }; if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t)); }); }
-        if(Array.isArray(iD) && !iD.error) { iD.forEach(r => { const t = { id: getCleanVal(r,['id','รหัสอ้างอิง']), date: pYMD(getCleanVal(r,['date','วันที่'])), requesterName: getCleanVal(r,['requesterName','ผู้แจ้ง']), phone: getCleanVal(r,['phone','เบอร์ติดต่อ']), project: String(getCleanVal(r,['project','โครงการ'])||'').trim(), jobType: getCleanVal(r,['jobType','ประเภทงาน']), location: getCleanVal(r,['location','สถานที่','บริเวณ']), details: getCleanVal(r,['details','รายละเอียดปัญหา','รายละเอียด','รายละเอียดงาน','ปัญหา'])||'-', status: getCleanVal(r,['status','สถานะ'])||'รอดำเนินการ', informNo: getCleanVal(r,['informno','เลขinform','เลขที่ใบงาน'])||'', cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), area: String(getCleanVal(r,['area','พื้นที่'])||'').trim() }; if(t.id) promises.push(setDoc(getDocRef('InformJobs', t.id), t)); }); }
-        if(Array.isArray(sD) && !sD.error) { const s = { areas:[], projects:[], jobTypes:[], locations:[], emails:[], slas:[], overdueTime:'17:30', lateWorkOrderHours:24 }; sD.forEach((r,i) => { if(i===0){ s.overdueTime=parseTimeForInput(r.overdueTime); s.lateWorkOrderHours=r.lateWorkOrderHours||24; } if(r.areas)s.areas.push(String(r.areas).trim()); if(r.projects)s.projects.push(String(r.projects).trim()); if(r.jobTypes)s.jobTypes.push(String(r.jobTypes).trim()); if(r.locations)s.locations.push(String(r.locations).trim()); if(r.emails)s.emails.push(String(r.emails).trim()); if(r.slas)s.slas.push(String(r.slas).trim()); }); promises.push(setDoc(getDocRef('Settings', 'main'), s)); }
+        
+        if(Array.isArray(tD) && !tD.error) { 
+            tD.forEach(r => { 
+                const t = { 
+                  id: getCleanVal(r,['id','รหัสงาน']), details: getCleanVal(r,['details','รายละเอียดงาน','รายละเอียด']), 
+                  requester: getCleanVal(r,['requester','ผู้แจ้ง']), project: getCleanVal(r,['project','โครงการ']), 
+                  area: getCleanVal(r,['area','พื้นที่']), receivedDate: pYMD(getCleanVal(r,['receiveddate','วันที่รับเรื่อง'])), 
+                  slaCategory: getCleanVal(r,['slacategory','หมวดsla','sla'])||'', startDate: pYMD(getCleanVal(r,['startDate','เริ่มงาน'])), 
+                  endDate: pYMD(getCleanVal(r,['endDate','กำหนดเสร็จ'])), status: getCleanVal(r,['status','สถานะ'])||'อยู่ระหว่างดำเนินการ', 
+                  completedDate: pYMD(getCleanVal(r,['completedDate','วันที่จบงานจริง'])), cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), 
+                  overdueStatus: getCleanVal(r,['overduestatus','สถานะความล่าช้า'])||'ปกติ', workOrderNo: getCleanVal(r,['workorderno','เลขที่ใบงาน','เลขใบงาน','ใบงาน'])||'', 
+                  billingStatus: getCleanVal(r,['billingstatus','สถานะเบิก'])||'รอส่งเบิก', billingMonth: getCleanVal(r,['billingmonth','เดือนที่เบิก'])||'' 
+                }; 
+                if(t.id) promises.push(setDoc(getDocRef('Tasks', t.id), t)); 
+            }); 
+        }
+        
+        if(Array.isArray(iD) && !iD.error) { 
+            iD.forEach(r => { 
+                const t = { 
+                    id: getCleanVal(r,['id','รหัสอ้างอิง']), date: pYMD(getCleanVal(r,['date','วันที่'])), 
+                    requesterName: getCleanVal(r,['requesterName','ผู้แจ้ง']), phone: getCleanVal(r,['phone','เบอร์ติดต่อ']), 
+                    project: String(getCleanVal(r,['project','โครงการ'])||'').trim(), jobType: getCleanVal(r,['jobType','ประเภทงาน']), 
+                    location: getCleanVal(r,['location','สถานที่','บริเวณ']), details: getCleanVal(r,['details','รายละเอียดปัญหา','รายละเอียด','รายละเอียดงาน','ปัญหา'])||'-', 
+                    status: getCleanVal(r,['status','สถานะ'])||'รอดำเนินการ', informNo: getCleanVal(r,['informno','เลขinform','เลขที่ใบงาน'])||'', 
+                    cancelReason: getCleanVal(r,['cancelReason','เหตุผลยกเลิก']), area: String(getCleanVal(r,['area','พื้นที่'])||'').trim() 
+                }; 
+                if(t.id) promises.push(setDoc(getDocRef('InformJobs', t.id), t)); 
+            }); 
+        }
+        
+        if(Array.isArray(sD) && !sD.error) { 
+            const s = { areas:[], projects:[], jobTypes:[], locations:[], emails:[], slas:[], overdueTime:'17:30', lateWorkOrderHours:24 }; 
+            sD.forEach((r,i) => { 
+                if(i===0){ s.overdueTime=parseTimeForInput(r.overdueTime); s.lateWorkOrderHours=r.lateWorkOrderHours||24; } 
+                if(r.areas)s.areas.push(String(r.areas).trim()); if(r.projects)s.projects.push(String(r.projects).trim()); 
+                if(r.jobTypes)s.jobTypes.push(String(r.jobTypes).trim()); if(r.locations)s.locations.push(String(r.locations).trim()); 
+                if(r.emails)s.emails.push(String(r.emails).trim()); if(r.slas)s.slas.push(String(r.slas).trim()); 
+            }); 
+            promises.push(setDoc(getDocRef('Settings', 'main'), s)); 
+        }
         await Promise.all(promises); alert('🎉 โอนย้ายข้อมูลสำเร็จ!');
-    } catch(e) { alert(e.message); } setLoading(false);
+    } catch(e) { alert(e.message); } 
+    setLoading(false);
   };
 
-  const handleClearData = async () => { const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมด:'); if (confirmCode !== '1312') return; setLoading(true); try { const tasksSnap = await getDocs(getColRef('Tasks')); const infSnap = await getDocs(getColRef('InformJobs')); const promises = []; tasksSnap.forEach(d => promises.push(deleteDoc(d.ref))); infSnap.forEach(d => promises.push(deleteDoc(d.ref))); await Promise.all(promises); fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{}); alert('ล้างข้อมูลสำเร็จ!'); } catch(e) {} finally { setLoading(false); } };
-  const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail&emails=${encodeURIComponent(sets.emails.map(e=>e.split('|')[0]).join(','))}`, '_blank'); };
-  const simulateOverdueEmail = () => { if (sets.projects.length === 0) return alert('กรุณาเพิ่มโครงการก่อนครับ'); const testProj = getProjName(sets.projects[0]); const fakeData = { id: `TEST-${Date.now().toString().slice(-4)}`, project: testProj, details: "จำลองส่งจากปุ่มทดสอบ (ไม่บันทึกงานจริง)", emailAlert: { action: "จำลองงานเกินกำหนดเวลา", reason: "ผู้ดูแลระบบทดสอบยิงอีเมลจำลอง", emails: getTargetEms(testProj) } }; fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'simulateAlertOnly', data: fakeData }) }).catch(()=>{}); alert(`จำลองการยิงอีเมลทดสอบเรียบร้อย`); };
+  // 🛠️ ฟังก์ชันการลบข้อมูล
+  const handleClearData = async () => { 
+      const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมด:'); 
+      if (confirmCode !== '1312') return; 
+      setLoading(true); 
+      try { 
+          const tasksSnap = await getDocs(getColRef('Tasks')); 
+          const infSnap = await getDocs(getColRef('InformJobs')); 
+          const promises = []; 
+          tasksSnap.forEach(d => promises.push(deleteDoc(d.ref))); 
+          infSnap.forEach(d => promises.push(deleteDoc(d.ref))); 
+          await Promise.all(promises); 
+          fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'clearData', data: {} }) }).catch(()=>{}); 
+          alert('ล้างข้อมูลสำเร็จ!'); 
+      } catch(e) {} finally { setLoading(false); } 
+  };
+
+  const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail`, '_blank'); };
+  
+  // 🛠️ ปุ่มกวาดล้างของจริง
+  const forceScanRealTasks = () => {
+    if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return;
+    fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{});
+    alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเช็คอีเมลครับ');
+  };
+
   const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติ (ทุก 5 นาที) เรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
   const subT = (e) => {
@@ -398,17 +462,26 @@ export default function App() {
     );
   };
 
+  // 🛠️ ปรับปรุง Kanban ให้การดึงยอดส่งเบิก/ค้างเบิก สอดคล้องกับ PDF
   const rKanb = () => {
     const cT = tasks.filter(t => t.status === 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project));
+    
+    // ค้างเบิก: ดึงทั้งหมดที่ไม่ใช่ "ส่งเบิกแล้ว" (เหมือนเดิม)
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
-    const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว'));
+    
+    // 🛠️ ส่งเบิกแล้ว: กรองเอาเฉพาะเดือนที่เลือก (เพื่อให้ตรงกับตรรกะหน้า PDF "ส่งเบิกแล้วในรอบเดือน")
+    const biGrp = groupTasks(cT.filter(t => {
+      if (t.billingStatus !== 'ส่งเบิกแล้ว') return false;
+      const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.substring(0,7) : '');
+      return bMonth.startsWith(gFilt.month);
+    }));
     
     return (
       <div className="space-y-4 animate-in">
          <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">กระดานส่งเบิก (เดือน {gFilt.month})</h2></div>
          <div className="flex flex-col md:flex-row gap-4 h-[70vh]">
             <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border" onDragOver={e=>e.preventDefault()} onDrop={e=>oDp(e, 'รอส่งเบิก')}>
-              <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between"><span>รอส่งเบิก / ค้างเบิก</span><span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} กลุ่ม</span></h3>
+              <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between"><span>รอส่งเบิก / ค้างเบิก (สะสมรวม)</span><span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} กลุ่ม</span></h3>
               <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
                 {ubGrp.map(g => (
                   <div key={g.id} draggable onDragStart={e=>oDS(e, g.id)} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-move hover:border-blue-400 relative">
@@ -420,7 +493,7 @@ export default function App() {
               </div>
             </div>
             <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100" onDragOver={e=>e.preventDefault()} onDrop={e=>oDp(e, 'ส่งเบิกแล้ว')}>
-              <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between"><span>ส่งเบิกแล้ว</span><span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span></h3>
+              <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between"><span>ส่งเบิกแล้ว (ในเดือนนี้)</span><span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span></h3>
               <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
                 {biGrp.map(g => (
                   <div key={g.id} draggable onDragStart={e=>oDS(e, g.id)} className="bg-white p-3 rounded-lg shadow-sm border border-green-200 cursor-move hover:border-green-400 relative">
@@ -505,7 +578,7 @@ export default function App() {
   const PReport = () => {
     const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
     
-    // 1. ดึงงานทั้งหมดตามพื้นที่/โครงการ (ยังไม่กรองวันที่) เพื่อใช้คำนวณยอดค้างสะสม
+    // 1. งานเบสหลักสำหรับการส่งเบิก (ดึงทั้งหมดที่ตรงกับพื้นที่/โครงการที่เลือก ไม่สนใจเดือนที่เริ่มงาน)
     const baseTasks = tasks.filter(t => {
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       const stdP = getStdProj(t.project);
@@ -513,9 +586,9 @@ export default function App() {
       return true;
     });
 
-    // 2. กรองเฉพาะงานในรอบเดือน/ปีที่เลือก (สำหรับ 4 กล่องด้านบน และกราฟแท่ง)
+    // 2. งานประจำรอบเดือน/ปีที่เลือก (สำหรับการแสดงปริมาณงาน 4 กล่อง และแถบสี)
     const periodTasks = baseTasks.filter(t => t.startDate && t.startDate.startsWith(fS));
-    
+
     const rT = periodTasks.filter(t => t.status !== 'ยกเลิก');
     const rCancel = periodTasks.filter(t => t.status === 'ยกเลิก');
 
@@ -533,22 +606,28 @@ export default function App() {
       else pSt[pName].o++; 
     });
 
-    // 3. จัดการสถานะการส่งเบิกแยกหมวดหมู่ชัดเจน
-    // ยอดส่งเบิก: เอาเฉพาะที่ส่งเบิก "ในรอบเวลาที่เลือก"
-    const billedInPeriod = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus === 'ส่งเบิกแล้ว' && t.billingMonth && t.billingMonth.startsWith(fS));
-    
-    // ยอดค้างเบิก: ดึง "ยอดสะสมทั้งหมด" ที่จบงานแล้วแต่ยังไม่เบิก
-    const allPendingBills = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
-    
+    // 3. จัดการหมวดส่งเบิก (จัดกลุ่มเหมือนหน้า Kanban เพื่อให้ตัวเลขตรงกันเป๊ะ)
+    // ส่งเบิกแล้ว เฉพาะที่ถูกกดส่งเบิก "ในเดือน/ปีที่เลือก"
+    const billedInPeriodTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus === 'ส่งเบิกแล้ว' && t.billingMonth && t.billingMonth.startsWith(fS));
+    const billedInPeriodGroups = groupTasks(billedInPeriodTasks);
+
+    // ค้างเบิกสะสมทั้งหมด (ยังไม่เบิก ไม่สนรอบเดือน)
+    const pendingTasks = baseTasks.filter(t => t.status === 'จบงาน' && t.billingStatus !== 'ส่งเบิกแล้ว');
+    const pendingGroups = groupTasks(pendingTasks);
+
+    // จำแนกยอดค้างเบิกตามเดือนที่จบงาน
     const ubBreakdown = {}; 
-    allPendingBills.forEach(t => { 
+    pendingGroups.forEach(g => { 
       let m = "ไม่ระบุเดือน"; 
-      if (t.completedDate) m = t.completedDate.substring(0,7); 
-      else if (t.endDate) m = t.endDate.substring(0,7); 
-      if (!ubBreakdown[m]) ubBreakdown[m] = 0; 
-      ubBreakdown[m]++; 
+      const firstTask = g.tasks[0];
+      if (firstTask.completedDate) m = firstTask.completedDate.substring(0,7); 
+      else if (firstTask.endDate) m = firstTask.endDate.substring(0,7); 
+      
+      if (!ubBreakdown[m]) ubBreakdown[m] = { groups: 0, tasks: 0 }; 
+      ubBreakdown[m].groups++;
+      ubBreakdown[m].tasks += g.tasks.length;
     });
-    const sortedUbMonths = Object.keys(ubBreakdown).sort();
+    const sortedUbMonths = Object.keys(ubBreakdown).sort((a,b) => b.localeCompare(a)); // เรียงเดือนล่าสุดขึ้นก่อน
 
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
@@ -556,23 +635,23 @@ export default function App() {
         <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
         
         <div className="mb-8 p-5 border rounded-lg bg-gray-50 print-break">
-          <h3 className="font-bold text-[#0f2e4a] mb-3 text-sm border-b pb-2">สถานะการส่งเบิกเงิน (Billing Status)</h3>
+          <h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3>
           <div className="flex flex-col gap-3 text-sm">
-            <div className="flex justify-between bg-white p-3 rounded border border-green-200 shadow-sm">
+            <div className="flex justify-between items-center bg-white p-3 rounded border border-green-200 shadow-sm">
               <span className="font-bold text-green-700">✅ ส่งเบิกแล้วในรอบ ({isY ? `ปี ${fS}` : `เดือน ${fS}`}):</span>
-              <span className="font-black text-green-700">{billedInPeriod.length} รายการ</span>
+              <span className="font-black text-green-700 text-lg">{billedInPeriodGroups.length} <span className="text-xs font-normal">กลุ่ม ({billedInPeriodTasks.length} งาน)</span></span>
             </div>
             <div className="bg-white p-3 rounded border border-red-200 shadow-sm">
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between items-center mb-2">
                 <span className="font-bold text-red-600">⚠️ ค้างส่งเบิก (ยอดค้างสะสมทั้งหมด):</span>
-                <span className="font-black text-red-600">{allPendingBills.length} รายการ</span>
+                <span className="font-black text-red-600 text-lg">{pendingGroups.length} <span className="text-xs font-normal">กลุ่ม ({pendingTasks.length} งาน)</span></span>
               </div>
-              {allPendingBills.length > 0 && (
-                <div className="text-[11px] mt-2 pt-3 border-t border-dashed border-red-100 flex flex-wrap gap-2 items-center">
-                  <span className="text-gray-600 font-bold">จำแนกตามรอบเดือนที่จบงาน:</span>
+              {pendingGroups.length > 0 && (
+                <div className="text-[11px] mt-3 pt-3 border-t border-dashed border-red-200 flex flex-wrap gap-2 items-center">
+                  <span className="text-gray-600 font-bold">จำแนกตามเดือนที่จบงาน:</span>
                   {sortedUbMonths.map(m => (
-                    <span key={m} className="bg-red-50 border border-red-100 px-2 py-0.5 rounded text-red-700 font-bold">
-                      {m} : {ubBreakdown[m]} รายการ
+                    <span key={m} className="bg-red-50 border border-red-100 px-2 py-1 rounded text-red-700 font-bold">
+                      {m} : {ubBreakdown[m].groups} กลุ่ม ({ubBreakdown[m].tasks} งาน)
                     </span>
                   ))}
                 </div>
