@@ -1049,6 +1049,10 @@ export default function App() {
             </div>
           )}
         </div>
+        
+        {/* เพิ่มโค้ดบรรทัดนี้ เพื่อวาง Report ซ่อนไว้สำหรับให้ดึงไปพิมพ์ PDF */}
+        {PReport()}
+        
       </div>
     </React.Fragment>
   );
