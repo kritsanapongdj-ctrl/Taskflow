@@ -120,7 +120,7 @@ export default function App() {
   const [showStartReason, setShowStartReason] = useState(false);
   const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, isOverdue: false, overdueReason: '' });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
-  const [oPop, setOPop] = useState(false);
+  const [oPop, setOPop] = useState({isOpen: false, tasks: []});
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
 
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
@@ -491,7 +491,7 @@ export default function App() {
     const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
     const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tS)));
     const mt = aT.filter(t => t.startDate && t.startDate.startsWith(gFilt.month));
-    const ov = aT.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
+    const ov = mt.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
     
     const getChartData = (arr) => [
       {name:'จบงาน(ในกำหนด)', value: arr.filter(t=>t.status==='จบงาน' && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t,tS))).length, color:THEME.success},
@@ -502,7 +502,7 @@ export default function App() {
     return (
       <div className="space-y-6 animate-in">
         <h2 className="text-xl font-bold text-[#0f2e4a] flex items-center"><Icon name="layoutDashboard" size={20} className="mr-2"/> ภาพรวม (เดือน {gFilt.month})</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{l:'ปริมาณงานรวม', v:aT.length, i:'listTodo', c:THEME.primary}, {l:'งานวันนี้', v:dy.length, i:'calendar', c:THEME.secondary}, {l:'งานล่าช้า/เกินกำหนด', v:ov.length, i:'alertTriangle', c:THEME.danger, clk:true}].map((x,i) => (<div key={i} onClick={()=>x.clk && setOPop(true)} className={`bg-white p-6 rounded-xl shadow-sm border-l-[6px] flex justify-between items-center ${x.clk?'cursor-pointer hover:shadow-md border-red-500':'border-[#0f2e4a]'}`}><div><div className="text-xs text-gray-500 font-bold mb-1">{x.l} {x.clk && <span className="text-[9px] text-red-500 bg-red-50 px-1 rounded">(คลิกดู)</span>}</div><div className="text-3xl font-black">{x.v}</div></div><div className="p-3 bg-gray-50 rounded-full"><Icon name={x.i} size={24} color={x.c}/></div></div>))}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{l:'ปริมาณงานรวม', v:mt.length, i:'listTodo', c:THEME.primary}, {l:'งานวันนี้', v:dy.length, i:'calendar', c:THEME.secondary}, {l:'งานล่าช้า/เกินกำหนด', v:ov.length, i:'alertTriangle', c:THEME.danger, clk:true}].map((x,i) => (<div key={i} onClick={()=>x.clk && setOPop({isOpen:true, tasks:ov})} className={`bg-white p-6 rounded-xl shadow-sm border-l-[6px] flex justify-between items-center ${x.clk?'cursor-pointer hover:shadow-md border-red-500':'border-[#0f2e4a]'}`}><div><div className="text-xs text-gray-500 font-bold mb-1">{x.l} {x.clk && <span className="text-[9px] text-red-500 bg-red-50 px-1 rounded">(คลิกดู)</span>}</div><div className="text-3xl font-black">{x.v}</div></div><div className="p-3 bg-gray-50 rounded-full"><Icon name={x.i} size={24} color={x.c}/></div></div>))}</div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้"/></div><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(mt)} title="สถานะเดือนนี้"/></div></div>
       </div>
     );
@@ -884,7 +884,7 @@ export default function App() {
             ))}
           </nav>
 
-          {oPop && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop(false)}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานเกินกำหนด (ประวัติถาวร)</h3><button type="button" onClick={()=>setOPop(false)}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{tasks.filter(t=>t.status!=='ยกเลิก' && (t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr()))).map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop(false); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
+          {oPop.isOpen && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop({isOpen:false,tasks:[]})}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานล่าช้า/เกินกำหนด (ประจำเดือน {gFilt.month})</h3><button type="button" onClick={()=>setOPop({isOpen:false,tasks:[]})}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{oPop.tasks.map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop({isOpen:false,tasks:[]}); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
           
           {cPop.isOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
