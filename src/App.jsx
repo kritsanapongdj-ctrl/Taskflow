@@ -74,7 +74,7 @@ const getMStr = () => getTStr().slice(0, 7);
 const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m = String(timeStr).match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : "17:30"; };
-const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Object.keys(data[0]); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
+const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Array.from(new Set(data.flatMap(Object.keys))); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
 
 const SimplePieChart = ({ data, title }) => {
   let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); const getC = (p) => [Math.cos(2*Math.PI*p), Math.sin(2*Math.PI*p)];
@@ -118,7 +118,7 @@ export default function App() {
   const [eTask, setETask] = useState(null);
   const [sRsn, setSReason] = useState('');
   const [showStartReason, setShowStartReason] = useState(false);
-  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false });
+  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, isOverdue: false, overdueReason: '' });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
   const [oPop, setOPop] = useState(false);
   const [rCfg, setRConfig] = useState({ type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
@@ -387,12 +387,16 @@ export default function App() {
 
   const initSt = (id, val) => {
     const t = tasks.find(x => x.id === id);
-    if(val === 'จบงาน') setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: t.workOrderNo || '', noWO: false });
+    if(val === 'จบงาน') {
+        const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
+        setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: t.workOrderNo || '', noWO: false, isOverdue: isOvd, overdueReason: '' });
+    }
     else { const nT = { ...t, status: val, completedDate: null }; nT.overdueStatus = (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') ? t.overdueStatus : 'ปกติ'; saveD('task', nT); }
   };
 
   const cfSt = () => {
     if (sMod.type === 'complete') {
+      if (sMod.isOverdue && !sMod.overdueReason.trim()) return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
       let cleanWo = '';
       if (!sMod.noWO) {
         const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/;
@@ -408,6 +412,7 @@ export default function App() {
         if(sMod.type === 'cancel') { nT.status = 'ยกเลิก'; nT.cancelReason = sMod.reason; nT.emailAlert = { action: 'ยกเลิกงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: t.details }; }
         else if(sMod.type === 'complete') { 
             nT.status = 'จบงาน'; nT.completedDate = getTStr(); nT.workOrderNo = sMod.workOrderNo; 
+            if (sMod.isOverdue) nT.overdueReason = sMod.overdueReason;
             
             if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(nT, getTStr()) || nT.completedDate > nT.endDate) { 
                 nT.overdueStatus = t.overdueStatus === 'ออกใบงานช้า' ? 'ออกใบงานช้า' : 'เกินกำหนด'; 
@@ -418,7 +423,7 @@ export default function App() {
         }
         saveD('task', nT);
     }
-    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false });
+    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, isOverdue: false, overdueReason: '' });
   };
 
   const upS = (k, v, arr=true) => { setSets(prev => { let nS = {...prev}; if(arr) { const val = (v || '').trim(); if(!val || (nS[k]||[]).includes(val)) return prev; nS[k] = [...(nS[k]||[]), val]; setSInp(p => ({...p, [k]:'', projArea:'', slaDays:''})); } else { nS[k] = v; } saveD('settings', nS); return nS; }); };
@@ -830,7 +835,7 @@ export default function App() {
         <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">งานที่จบแล้ว</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
         <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
         <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>เกินกำหนด</div></div></div>
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่เกินกำหนด</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">กำหนดเสร็จ</th></tr></thead><tbody>{rOd.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-red-600">{t.status}<br/><span className="text-[9px]">({t.overdueStatus || 'เกินกำหนด'})</span></td><td className="border p-2 text-red-600 font-bold">{fDate(t.endDate) || '-'}</td></tr>))}</tbody></table></div>
+        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่เกินกำหนด</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">กำหนดเสร็จ</th></tr></thead><tbody>{rOd.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}{t.overdueReason && <div className="mt-1 p-1 bg-red-50 text-red-600 border border-red-200 rounded"><strong>สาเหตุที่ช้า:</strong> {t.overdueReason}</div>}</td><td className="border p-2 text-red-600">{t.status}<br/><span className="text-[9px]">({t.overdueStatus || 'เกินกำหนด'})</span></td><td className="border p-2 text-red-600 font-bold">{fDate(t.endDate) || '-'}</td></tr>))}</tbody></table></div>
       </div>
     );
   };
@@ -978,20 +983,28 @@ export default function App() {
                     </div>
                   )}
                   {sMod.type==='complete' && (
-                    <div>
-                      <label className="text-xs font-bold text-green-700">เลขที่ใบงาน (บังคับ: อักษร 2 ตัว-เลข 3 ตัว-เลข 7 ตัว) *</label>
-                      <input type="text" placeholder="ตัวอย่าง: LH-123-1234567" disabled={sMod.noWO} className={`w-full border rounded p-2 text-sm uppercase ${sMod.noWO ? 'bg-gray-100 border-gray-300 text-gray-400' : 'bg-green-50 border-green-300'}`} value={sMod.workOrderNo} onChange={e=>setSMod({...sMod,workOrderNo:e.target.value.toUpperCase()})} />
-                      
-                      <label className="flex items-start mt-3 text-xs text-gray-700 bg-gray-50 p-2 rounded border cursor-pointer">
-                        <input type="checkbox" checked={sMod.noWO} onChange={e => setSMod({...sMod, noWO: e.target.checked, workOrderNo: ''})} className="mt-0.5 mr-2 accent-[#0f2e4a]" />
-                        <span>ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน<br/><span className="text-red-500 font-bold text-[10px]">(ต้องกลับมาใส่ภายใน 3 วัน ไม่เช่นนั้นระบบจะประทับตรา "ออกใบงานช้า")</span></span>
-                      </label>
+                    <div className="space-y-3">
+                      {sMod.isOverdue && (
+                        <div>
+                          <label className="text-xs font-bold text-red-500">สาเหตุที่จบงานช้ากว่ากำหนด (บังคับ) *</label>
+                          <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-red-50" placeholder="ระบุเหตุผลที่งานล่าช้า..." value={sMod.overdueReason} onChange={e=>setSMod({...sMod,overdueReason:e.target.value})}></textarea>
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-bold text-green-700">เลขที่ใบงาน (บังคับ: อักษร 2 ตัว-เลข 3 ตัว-เลข 7 ตัว) *</label>
+                        <input type="text" placeholder="ตัวอย่าง: LH-123-1234567" disabled={sMod.noWO} className={`w-full border rounded p-2 text-sm uppercase ${sMod.noWO ? 'bg-gray-100 border-gray-300 text-gray-400' : 'bg-green-50 border-green-300'}`} value={sMod.workOrderNo} onChange={e=>setSMod({...sMod,workOrderNo:e.target.value.toUpperCase()})} />
+                        
+                        <label className="flex items-start mt-3 text-xs text-gray-700 bg-gray-50 p-2 rounded border cursor-pointer">
+                          <input type="checkbox" checked={sMod.noWO} onChange={e => setSMod({...sMod, noWO: e.target.checked, workOrderNo: ''})} className="mt-0.5 mr-2 accent-[#0f2e4a]" />
+                          <span>ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน<br/><span className="text-red-500 font-bold text-[10px]">(ต้องกลับมาใส่ภายใน 3 วัน ไม่เช่นนั้นระบบจะประทับตรา "ออกใบงานช้า")</span></span>
+                        </label>
+                      </div>
                     </div>
                   )}
                 </div>
                 <div className="flex gap-2 mt-5">
-                  <button type="button" onClick={()=>setSMod({...sMod, isOpen:false, noWO:false})} className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded">ปิด</button>
-                  <button type="button" onClick={cfSt} disabled={(sMod.type==='cancel'&&!sMod.reason.trim()) || (sMod.type==='complete' && !sMod.noWO && !sMod.workOrderNo.trim())} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50">ยืนยัน</button>
+                  <button type="button" onClick={()=>setSMod({...sMod, isOpen:false, noWO:false, isOverdue:false, overdueReason:''})} className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded">ปิด</button>
+                  <button type="button" onClick={cfSt} disabled={(sMod.type==='cancel'&&!sMod.reason.trim()) || (sMod.type==='complete' && !sMod.noWO && !sMod.workOrderNo.trim()) || (sMod.type==='complete' && sMod.isOverdue && !sMod.overdueReason.trim())} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50">ยืนยัน</button>
                 </div>
               </div>
             </div>
