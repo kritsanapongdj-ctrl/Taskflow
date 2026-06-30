@@ -654,22 +654,22 @@ export default function App() {
           </div>
         </div>
 
-        {/* 🛠️ ดีไซน์ 3 กล่องตั้งค่าใหม่ เอา h-[350px] ออกเพื่อให้ขยายตามเนื่อหา */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* 🛠️ ดีไซน์กล่องตั้งค่าใหม่ ให้กว้างขึ้นและอ่านง่าย */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* 🛠️ หมวด โครงการ -> พื้นที่ (จัดรูปแบบใหม่ Group by Area) */}
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-xs text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
-              <button type="button" onClick={()=>clearSList('projects')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-sm text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
+              <button type="button" onClick={()=>clearSList('projects')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button>
             </div>
-            <div className="flex-1 overflow-y-auto max-h-[250px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-2 rounded">
+            <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-3 rounded">
               {Object.keys(groupedProjects).map(area => (
                 <div key={area} className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gray-100 px-3 py-1.5 text-[10px] font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div>
-                  <div className="p-2 flex flex-wrap gap-1.5 bg-white">
+                  <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div>
+                  <div className="p-3 flex flex-wrap gap-2 bg-white">
                     {groupedProjects[area].map(p => (
-                      <span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] flex items-center shadow-sm">
+                      <span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1.5 rounded text-xs flex items-center shadow-sm">
                         {p.name}
                         <button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button>
                       </span>
@@ -678,36 +678,51 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex gap-2 pt-3 border-t">
-              <input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} />
-              <select className="border rounded px-2 py-1.5 text-xs w-24 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}>
-                <option value="">พท.</option>
+            <div className="mt-4 flex gap-2 pt-4 border-t">
+              <input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} />
+              <select className="border rounded px-3 py-2 text-sm w-28 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}>
+                <option value="">เลือกพื้นที่</option>
                 {(sets.areas||[]).map(a=><option key={a}>{a}</option>)}
               </select>
-              <button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={14}/></button>
+              <button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-4 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={16}/></button>
             </div>
           </div>
           
-          {/* 🛠️ หมวด อีเมลแจ้งเตือน -> ดูแลโครงการ (จัดรูปแบบใหม่ Email Cards) */}
+          {/* 🛠️ หมวดงาน -> กรอบเวลา (SLA) ย้ายมาอยู่แถวบนแทน Email */}
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-xs text-[#0f2e4a]">สิทธิ์การรับอีเมลแจ้งเตือน</h3>
-              <button type="button" onClick={()=>clearSList('emails')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button>
+            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
+            <ul className="flex-1 overflow-y-auto max-h-[400px] space-y-2 pr-2 text-xs hide-scrollbar border border-gray-100 p-3 rounded">
+              {(sets.slas||[]).map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2.5 border border-amber-100 rounded-lg shadow-sm"><span className="font-medium text-[13px]">{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-3 py-1 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block hover:text-red-600"><Icon name="trash" size={14}/></button></span></li>)}
+            </ul>
+            <div className="mt-4 flex gap-2 pt-4 border-t">
+              <input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} />
+              <input type="number" placeholder="วัน" className="border rounded px-3 py-2 text-sm w-20 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} />
+              <button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-4 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={16}/></button>
             </div>
-            <div className="flex-1 overflow-y-auto max-h-[150px] pr-2 hide-scrollbar space-y-2 mb-3">
+          </div>
+        </div>
+
+        {/* 🛠️ หมวด อีเมลแจ้งเตือน (แยกเป็นบล็อกใหญ่เต็มความกว้างเพื่อให้อ่านง่าย) */}
+        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col lg:flex-row gap-8">
+          <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r pb-6 lg:pb-0 lg:pr-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="mail" size={18} className="mr-2 text-blue-500"/> รายชื่อและสิทธิ์การรับอีเมล</h3>
+              <button type="button" onClick={()=>clearSList('emails')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button>
+            </div>
+            <div className="flex-1 overflow-y-auto max-h-[450px] pr-2 hide-scrollbar space-y-3">
               {(sets.emails||[]).map(item => {
                 const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด'];
                 return (
                   <div key={item} className="border rounded-lg overflow-hidden shadow-sm">
-                    <div className="bg-blue-50/50 px-3 py-1.5 flex justify-between items-center border-b border-blue-100">
-                      <span className="font-bold text-[#0f2e4a] text-xs flex items-center"><Icon name="mail" size={12} className="mr-1.5 text-blue-500"/>{em}</span>
-                      <button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={12}/></button>
+                    <div className="bg-blue-50/50 px-4 py-2.5 flex justify-between items-center border-b border-blue-100">
+                      <span className="font-bold text-[#0f2e4a] text-sm">{em}</span>
+                      <button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={14}/></button>
                     </div>
-                    <div className="p-2 flex flex-wrap gap-1.5 bg-white">
+                    <div className="p-3 flex flex-wrap gap-2 bg-white">
                       {projs.map(p => (
-                        <span key={p} className={`px-2 py-1 rounded text-[9px] flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>
+                        <span key={p} className={`px-2.5 py-1.5 rounded text-xs flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>
                           {p}
-                          {p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1 text-blue-400 hover:text-blue-600"><Icon name="x" size={10}/></button>}
+                          {p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1.5 text-blue-400 hover:text-blue-600"><Icon name="x" size={12}/></button>}
                         </span>
                       ))}
                     </div>
@@ -715,45 +730,40 @@ export default function App() {
                 )
               })}
             </div>
-            
-            <div className="pt-3 border-t flex flex-col gap-2">
-              <input type="email" placeholder="ระบุอีเมลผู้ดูแล..." className="border rounded px-3 py-2 text-xs w-full bg-gray-50 focus:bg-white transition-colors" value={emForm.email} onChange={e=>setEmForm({...emForm, email:e.target.value})} />
-              <div className="border rounded bg-gray-50 p-2 max-h-[120px] overflow-y-auto flex flex-col gap-1 hide-scrollbar shadow-inner">
-                 <label className="flex items-center text-[10px] cursor-pointer hover:bg-gray-100 p-1.5 rounded transition">
-                    <input type="checkbox" className="mr-2 accent-[#bca374]" checked={emForm.selectedProjs.includes('ทั้งหมด')} onChange={() => toggleEmailProj('ทั้งหมด')} /> <span className="font-bold text-[#0f2e4a]">เลือกทุกโครงการ</span>
+          </div>
+          
+          <div className="flex-1 flex flex-col">
+            <h3 className="font-bold text-sm text-[#0f2e4a] mb-4">เพิ่ม / แก้ไข สิทธิ์อีเมล</h3>
+            <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
+              <label className="text-xs font-bold text-gray-700 mb-1">อีเมลผู้รับ</label>
+              <input type="email" placeholder="ตัวอย่าง: admin@lh.co.th" className="border rounded-lg px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors mb-4 shadow-sm" value={emForm.email} onChange={e=>setEmForm({...emForm, email:e.target.value})} />
+              
+              <label className="text-xs font-bold text-gray-700 mb-1">เลือกโครงการที่ต้องการให้แจ้งเตือน</label>
+              <div className="border rounded-lg bg-white p-3 max-h-[300px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 hide-scrollbar shadow-inner mb-4 flex-1">
+                 <label className="flex items-center text-xs cursor-pointer hover:bg-gray-50 p-2.5 rounded-lg transition border border-amber-200 bg-amber-50 col-span-1 sm:col-span-2 shadow-sm">
+                    <input type="checkbox" className="mr-3 accent-[#bca374] w-4 h-4" checked={emForm.selectedProjs.includes('ทั้งหมด')} onChange={() => toggleEmailProj('ทั้งหมด')} /> <span className="font-bold text-amber-800">เลือกทุกโครงการ (รับแจ้งเตือนทั้งหมด)</span>
                  </label>
                  {(sets.projects||[]).map(p => {
                     const pName = getProjName(p);
-                    return (<label key={pName} className="flex items-center text-[10px] text-gray-700 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition"><input type="checkbox" className="mr-2 accent-[#0f2e4a]" checked={emForm.selectedProjs.includes(pName)} onChange={() => toggleEmailProj(pName)} /> {pName}</label>);
+                    return (<label key={pName} className="flex items-center text-xs text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition border border-gray-100 shadow-sm"><input type="checkbox" className="mr-2 accent-[#0f2e4a] w-3.5 h-3.5" checked={emForm.selectedProjs.includes(pName)} onChange={() => toggleEmailProj(pName)} /> <span className="truncate" title={pName}>{pName}</span></label>);
                  })}
               </div>
-              <button type="button" onClick={addEmailMappingV2} className="bg-[#0f2e4a] text-white px-3 py-2 rounded shadow hover:bg-[#1a3f63] text-xs font-bold w-full transition-colors mt-1">บันทึกสิทธิ์รับอีเมล</button>
+              <button type="button" onClick={addEmailMappingV2} className="bg-[#0f2e4a] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#1a3f63] text-sm font-bold w-full transition-colors mt-auto flex justify-center items-center"><Icon name="save" size={16} className="mr-2" /> บันทึกสิทธิ์รับอีเมล</button>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div>
-            <ul className="flex-1 overflow-y-auto max-h-[300px] space-y-1.5 pr-2 text-[11px] hide-scrollbar border border-gray-100 p-2 rounded">
-              {(sets.slas||[]).map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2 border border-amber-100 rounded-lg shadow-sm"><span>{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-2 py-0.5 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block"><Icon name="trash" size={12}/></button></span></li>)}
-            </ul>
-            <div className="mt-4 flex gap-2 pt-3 border-t">
-              <input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} />
-              <input type="number" placeholder="วัน" className="border rounded px-2 py-1.5 text-xs w-16 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} />
-              <button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-3 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={14}/></button>
-            </div>
-          </div>
-        </div>
+
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[{k:'areas',l:'พื้นที่'},{k:'jobTypes',l:'ประเภทงาน'},{k:'locations',l:'บริเวณ'}].map(x => (
             <div key={x.k} className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-              <div className="flex justify-between items-center mb-3"><h3 className="font-bold text-xs text-[#0f2e4a]">{x.l}</h3><button type="button" onClick={()=>clearSList(x.k)} className="text-[9px] text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded flex items-center"><Icon name="trash" size={10} className="mr-1"/>ลบทั้งหมด</button></div>
-              <ul className="flex-1 overflow-y-auto max-h-48 space-y-1.5 pr-2 text-[11px] hide-scrollbar border border-gray-100 p-2 rounded">
-                {(sets[x.k]||[]).map(item=><li key={item} className="flex justify-between items-center bg-gray-50 px-3 py-2 border rounded-lg shadow-sm"><span>{item}</span><button type="button" onClick={()=>dlS(x.k,item)} className="text-red-400 hover:text-red-600"><Icon name="trash" size={12}/></button></li>)}
+              <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">{x.l}</h3><button type="button" onClick={()=>clearSList(x.k)} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
+              <ul className="flex-1 overflow-y-auto max-h-[350px] space-y-2 pr-2 text-xs hide-scrollbar border border-gray-100 p-3 rounded">
+                {(sets[x.k]||[]).map(item=><li key={item} className="flex justify-between items-center bg-gray-50 px-3 py-2 border rounded-lg shadow-sm"><span>{item}</span><button type="button" onClick={()=>dlS(x.k,item)} className="text-red-400 hover:text-red-600"><Icon name="trash" size={14}/></button></li>)}
               </ul>
-              <div className="mt-4 flex gap-2 pt-3 border-t">
-                <input type="text" placeholder="เพิ่มข้อมูลใหม่..." className="border rounded px-2 py-1.5 text-xs flex-1 min-w-0 bg-gray-50" value={sInp[x.k]||''} onChange={e=>setSInp({...sInp,[x.k]:e.target.value})} onKeyDown={e=>e.key==='Enter'&&upS(x.k,sInp[x.k])}/>
-                <button type="button" onClick={()=>upS(x.k,sInp[x.k])} className="bg-[#0f2e4a] text-white px-3 rounded shadow hover:bg-[#1a3f63]"><Icon name="plus" size={14}/></button>
+              <div className="mt-4 flex gap-2 pt-4 border-t">
+                <input type="text" placeholder="เพิ่มข้อมูลใหม่..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50" value={sInp[x.k]||''} onChange={e=>setSInp({...sInp,[x.k]:e.target.value})} onKeyDown={e=>e.key==='Enter'&&upS(x.k,sInp[x.k])}/>
+                <button type="button" onClick={()=>upS(x.k,sInp[x.k])} className="bg-[#0f2e4a] text-white px-4 rounded shadow hover:bg-[#1a3f63]"><Icon name="plus" size={16}/></button>
               </div>
             </div>
           ))}
