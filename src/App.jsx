@@ -774,7 +774,7 @@ export default function App() {
               <button type="button" onClick={addEmailMappingV2} className="bg-[#0f2e4a] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#1a3f63] text-sm font-bold w-full transition-colors mt-auto flex justify-center items-center"><Icon name="save" size={16} className="mr-2" /> บันทึกสิทธิ์รับอีเมล</button>
             </div>
           </div>
-
+        </div>
 
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
