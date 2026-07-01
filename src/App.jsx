@@ -641,6 +641,14 @@ export default function App() {
         return acc;
     }, {});
 
+    // จัดกลุ่ม SLA ตามจำนวนวัน
+    const groupedSlas = (sets.slas||[]).reduce((acc, curr) => {
+        const cat = getProjName(curr), days = getProjArea(curr);
+        if (!acc[days]) acc[days] = [];
+        acc[days].push({ fullStr: curr, name: cat });
+        return acc;
+    }, {});
+
     return (
       <div className="space-y-6 animate-in pb-10">
         <div className="bg-white p-6 rounded-xl border shadow-sm border-t-4 border-[#bca374]">
@@ -691,9 +699,24 @@ export default function App() {
           {/* 🛠️ หมวดงาน -> กรอบเวลา (SLA) ย้ายมาอยู่แถวบนแทน Email */}
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
-            <ul className="flex-1 overflow-y-auto max-h-[400px] space-y-2 pr-2 text-xs hide-scrollbar border border-gray-100 p-3 rounded">
-              {(sets.slas||[]).map(item=><li key={item} className="flex justify-between items-center bg-amber-50 px-3 py-2.5 border border-amber-100 rounded-lg shadow-sm"><span className="font-medium text-[13px]">{getProjName(item)}</span><span className="font-bold text-red-500 bg-white px-3 py-1 rounded border">{getProjArea(item)} วัน <button type="button" onClick={()=>dlS('slas',item)} className="text-red-400 ml-2 inline-block hover:text-red-600"><Icon name="trash" size={14}/></button></span></li>)}
-            </ul>
+            <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-3 rounded">
+              {Object.keys(groupedSlas).sort((a,b)=>Number(a)-Number(b)).map(days => (
+                <div key={days} className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 border-b flex justify-between items-center">
+                    <span>⏳ {days} วัน</span>
+                    <span className="bg-white text-amber-700 px-2 py-0.5 rounded text-[10px] shadow-sm">{groupedSlas[days].length} รายการ</span>
+                  </div>
+                  <div className="p-3 flex flex-wrap gap-2 bg-white">
+                    {groupedSlas[days].map(item => (
+                      <span key={item.fullStr} className="bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5 rounded text-xs flex items-center shadow-sm font-medium">
+                        {item.name}
+                        <button type="button" onClick={()=>dlS('slas', item.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={12}/></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
             <div className="mt-4 flex gap-2 pt-4 border-t">
               <input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} />
               <input type="number" placeholder="วัน" className="border rounded px-3 py-2 text-sm w-20 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} />
