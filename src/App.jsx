@@ -591,9 +591,8 @@ export default function App() {
 
   const rKanb = () => {
     const cT = tasks.filter(t => t.status === 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
-    const getBMonth = (t) => t.billingMonth || '2026-06';
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
-    const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && getBMonth(t) === gFilt.month));
+    const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && (t.billingMonth === gFilt.month || (gFilt.month === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))));
     
     return (
       <div className="space-y-4 animate-in">
