@@ -182,7 +182,7 @@ export default function App() {
       let currentStatus = t.overdueStatus || 'ปกติ';
       let needsUpdate = false;
 
-      if (t.status === 'จบงาน' && !t.workOrderNo && t.completedDate) {
+      if (t.status === 'จบงาน(รอใบงาน)' && t.completedDate) {
          const diffTime = new Date(today).getTime() - new Date(t.completedDate).getTime();
          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
          if (diffDays > 3 && currentStatus !== 'ออกใบงานช้า') {
@@ -190,14 +190,39 @@ export default function App() {
              needsUpdate = true;
          }
       } 
-      else if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') {
+      else if (!t.status?.startsWith('จบงาน') && t.status !== 'ยกเลิก') {
          if (chkOvdTimeAware(t, today) && currentStatus !== 'เกินกำหนด' && currentStatus !== 'ออกใบงานช้า') {
              currentStatus = 'เกินกำหนด';
              needsUpdate = true;
          }
       }
 
-      if (needsUpdate) updates.push({ ...t, overdueStatus: currentStatus });
+      // 🛠️ One-time Retroactive Fix: 
+      // If a task is completed but was wrongly flagged as "เกินกำหนด" because of the old logic
+      if (t.status?.startsWith('จบงาน') && currentStatus === 'เกินกำหนด') {
+          if ((t.completedDate || '') <= t.endDate) {
+              currentStatus = 'ปกติ';
+              needsUpdate = true;
+          }
+      }
+
+      // Sync lateWorkOrder flag for existing "ออกใบงานช้า" tasks
+      if (currentStatus === 'ออกใบงานช้า' && !t.lateWorkOrder) {
+          t.lateWorkOrder = true;
+          needsUpdate = true;
+      }
+
+      // Support legacy 'จบงาน' without WO -> migrate to 'จบงาน(รอใบงาน)'
+      if (t.status === 'จบงาน' && !t.workOrderNo && t.completedDate) {
+          t.status = 'จบงาน(รอใบงาน)';
+          needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+          let updatedTask = { ...t, overdueStatus: currentStatus };
+          if (currentStatus === 'ออกใบงานช้า') updatedTask.lateWorkOrder = true;
+          updates.push(updatedTask);
+      }
     });
 
     if (updates.length > 0) {
@@ -300,7 +325,7 @@ export default function App() {
 
   const chkOvdTimeAware = (t, rD = getTStr()) => { 
     if (!t.endDate || t.status === 'ยกเลิก') return false; 
-    if (t.status === 'จบงาน') return (t.completedDate || '') > t.endDate; 
+    if (t.status?.startsWith('จบงาน')) return (t.completedDate || '') > t.endDate; 
     if (rD > t.endDate) return true;
     if (rD === t.endDate) {
       const now = new Date(), cH = now.getHours(), cM = now.getMinutes();
@@ -313,7 +338,7 @@ export default function App() {
 
   const isTaskOvd = (t, checkDate = getTStr()) => {
     if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
-    if (t.status !== 'จบงาน' && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
+    if (!t.status?.startsWith('จบงาน') && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
     return false;
   };
 
@@ -514,14 +539,14 @@ export default function App() {
 
   const rDash = () => {
     const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
-    const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tS)));
+    const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tS)));
     const mt = aT.filter(t => t.startDate && t.startDate.startsWith(gFilt.month));
     const ov = mt.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
     
     const getChartData = (arr) => [
-      {name:'จบงาน(ในกำหนด)', value: arr.filter(t=>t.status==='จบงาน' && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t,tS))).length, color:THEME.success},
-      {name:'ดำเนินการ', value: arr.filter(t=>t.status!=='จบงาน' && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t,tS))).length, color:THEME.secondary},
-      {name:'ล่าช้า/เกินกำหนด', value: arr.filter(t=>t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t,tS)).length, color:THEME.danger}
+      {name:'จบงาน(ในกำหนด)', value: arr.filter(t=>t.status?.startsWith('จบงาน') && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า') && !chkOvdTimeAware(t, getTStr())).length, color:THEME.success},
+      {name:'ดำเนินการ', value: arr.filter(t=>!t.status?.startsWith('จบงาน') && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า') && !chkOvdTimeAware(t, getTStr())).length, color:THEME.secondary},
+      {name:'ล่าช้า/เกินกำหนด', value: arr.filter(t=>t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t, getTStr())).length, color:THEME.danger}
     ];
 
     return (
@@ -534,11 +559,11 @@ export default function App() {
   };
 
   const rDail = () => {
-    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && ((tD >= t.startDate && tD <= t.endDate) || (t.status !== 'จบงาน' && chkOvdTimeAware(t, tD) && tD === getTStr())));
+    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
     return (
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>openTaskModal()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
-        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, tD); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{getStdProj(t.project)}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&t.status!=='จบงาน'?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status==='จบงาน'?'bg-emerald-50 text-emerald-700 border-emerald-200':t.status==='จบงาน(รอใบงาน)'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');openTaskModal(t);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
+        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, tD); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{getStdProj(t.project)}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&!t.status?.startsWith('จบงาน')?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status?.startsWith('จบงาน')?'bg-emerald-50 text-emerald-700 border-emerald-200':t.status==='จบงาน(รอใบงาน)'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');openTaskModal(t);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
       </div>
     );
   };
@@ -550,7 +575,7 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
          <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center"><Icon name="calendar" size={20} className="mr-2 text-[#bca374]"/> ปฏิทินเดือน {gFilt.month}</h2>
-        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && dS>=(t.startDate||'') && dS<=(t.status==='จบงาน'?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status==='จบงาน'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
+        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
       </div>
     );
   };
@@ -615,7 +640,7 @@ export default function App() {
   };
 
   const rKanb = () => {
-    const cT = tasks.filter(t => t.status === 'จบงาน' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
+    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
     const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && (t.billingMonth === gFilt.month || (gFilt.month === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))));
     
@@ -658,7 +683,6 @@ export default function App() {
     const healthPct = Math.min((totalRows / 3000) * 100, 100);
     const healthColor = totalRows < 1500 ? 'bg-green-500' : (totalRows < 2500 ? 'bg-amber-500' : 'bg-red-500');
     
-    // จัดกลุ่มโครงการตามพื้นที่เพื่อแสดงผลสวยงาม
     const groupedProjects = (sets.projects||[]).reduce((acc, curr) => {
         const p = getProjName(curr), a = getProjArea(curr);
         if (!acc[a]) acc[a] = [];
@@ -666,7 +690,6 @@ export default function App() {
         return acc;
     }, {});
 
-    // จัดกลุ่ม SLA ตามจำนวนวัน
     const groupedSlas = (sets.slas||[]).reduce((acc, curr) => {
         const cat = getProjName(curr), days = getProjArea(curr);
         if (!acc[days]) acc[days] = [];
@@ -687,10 +710,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 🛠️ ดีไซน์กล่องตั้งค่าใหม่ ให้กว้างขึ้นและอ่านง่าย */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* 🛠️ หมวด โครงการ -> พื้นที่ (จัดรูปแบบใหม่ Group by Area) */}
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-sm text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
@@ -721,7 +741,6 @@ export default function App() {
             </div>
           </div>
           
-          {/* 🛠️ หมวดงาน -> กรอบเวลา (SLA) ย้ายมาอยู่แถวบนแทน Email */}
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
             <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-3 rounded">
@@ -750,7 +769,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 🛠️ หมวด อีเมลแจ้งเตือน (แยกเป็นบล็อกใหญ่เต็มความกว้างเพื่อให้อ่านง่าย) */}
         <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col lg:flex-row gap-8">
           <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r pb-6 lg:pb-0 lg:pr-8">
             <div className="flex justify-between items-center mb-4">
@@ -871,8 +889,8 @@ export default function App() {
 
     const rOd = rT.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
     const rLateWo = rT.filter(t => t.lateWorkOrder === true);
-    const rC = rT.filter(t => t.status === 'จบงาน' && !rOd.includes(t)); 
-    const rO = rT.filter(t => t.status !== 'จบงาน' && !rOd.includes(t));
+    const rC = rT.filter(t => t.status?.startsWith('จบงาน') && !rOd.includes(t)); 
+    const rO = rT.filter(t => !t.status?.startsWith('จบงาน') && !rOd.includes(t));
     
     const pSt = {}; 
     rT.forEach(t => { 
@@ -880,12 +898,12 @@ export default function App() {
       if(!pSt[pName]) pSt[pName] = { t:0, d:0, o:0, od:0 }; 
       pSt[pName].t++; 
       if(rOd.includes(t)) pSt[pName].od++; 
-      else if(t.status==='จบงาน') pSt[pName].d++; 
+      else if(t.status?.startsWith('จบงาน')) pSt[pName].d++; 
       else pSt[pName].o++; 
     });
     
     const allC = tasks.filter(t => {
-      if (t.status !== 'จบงาน') return false;
+      if (!t.status?.startsWith('จบงาน')) return false;
       if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       if (rCfg.project !== 'ทั้งหมด' && getStdName(t.project) !== rCfg.project) return false;
       return true;
