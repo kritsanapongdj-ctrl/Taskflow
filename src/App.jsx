@@ -117,6 +117,7 @@ export default function App() {
   const [tMod, setTMod] = useState(false);
   const [eTask, setETask] = useState(null);
   const [sRsn, setSReason] = useState('');
+  const [showStartReason, setShowStartReason] = useState(false);
   const [sList, setSList] = useState({ tasks: [], informs: [] });
   const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
