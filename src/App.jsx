@@ -366,6 +366,7 @@ export default function App() {
   const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
 
   const openTaskModal = (task = null) => {
+    try {
       setETask(task);
       setSReason('');
       setShowStartReason(false);
@@ -375,6 +376,9 @@ export default function App() {
           setTaskForm({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
       }
       setTMod(true);
+    } catch(err) {
+      alert("Error in openTaskModal: " + err.message);
+    }
   };
 
   const subT = (e) => {
