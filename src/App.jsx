@@ -379,6 +379,7 @@ export default function App() {
 
   const subT = (e) => {
     e.preventDefault(); 
+    if (!taskForm.slaCategory) return alert('กรุณาระบุหมวด SLA หรือเลือก "งานทั่วไป (ไม่มี SLA)"');
     let det = taskForm.details, ePl = null;
     const proj = taskForm.project;
     
@@ -959,6 +960,13 @@ export default function App() {
         {rLateWo.length > 0 && (
             <div className="print-break mt-6"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ออกใบงานช้า (เลยกำหนด 3 วัน)</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน / เลขที่ใบงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">วันที่จบงาน/วันที่ออกใบงาน</th></tr></thead><tbody>{rLateWo.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-amber-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-amber-700">{t.status}</td><td className="border p-2 text-amber-700 font-bold">จบ: {fDate(t.completedDate) || '-'}<br/><span className="text-red-500 font-normal">ออกใบงานล่าช้ากว่ากำหนด</span></td></tr>))}</tbody></table></div>
         )}
+        {(() => {
+          const rNoSla = rT.filter(t => t.slaCategory === 'งานทั่วไป (ไม่มี SLA)' || !t.slaCategory);
+          if(rNoSla.length > 0) return (
+            <div className="print-break mt-6"><h3 className="font-bold text-gray-500 mb-2 text-sm border-b pb-2">งานทั่วไป (ไม่มี SLA) <span className="font-normal text-xs text-red-500 ml-2">- สำหรับสุ่มตรวจสอบการลงงานหลีกเลี่ยง SLA</span></h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">ผู้แจ้ง / โครงการ</th></tr></thead><tbody>{rNoSla.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-gray-600">{t.workOrderNo || t.id}</td><td className="border p-2">{t.details}</td><td className="border p-2 text-gray-500">{t.status}</td><td className="border p-2 text-gray-700">{t.requester}<br/><span className="text-gray-500 text-[10px]">{getStdName(t.project)}</span></td></tr>))}</tbody></table></div>
+          );
+          return null;
+        })()}
       </div>
     );
   };
@@ -1058,7 +1066,9 @@ export default function App() {
                         <option value="">ผู้แจ้ง...</option>{REQ_TYPES.map(r=><option key={r}>{r}</option>)}
                     </select>
                     <select value={taskForm.slaCategory} onChange={e=>setTaskForm({...taskForm, slaCategory: e.target.value})} className="w-1/2 border rounded p-2 text-sm">
-                        <option value="">หมวด SLA (ถ้ามี)...</option>{(sets.slas||[]).map(s=><option key={s} value={getProjName(s)}>{getProjName(s)} ({getProjArea(s)} วัน)</option>)}
+                        <option value="">--- กรุณาเลือกหมวด SLA ---</option>
+                        <option value="งานทั่วไป (ไม่มี SLA)">งานทั่วไป (ไม่มี SLA)</option>
+                        {(sets.slas||[]).map(s=><option key={s} value={getProjName(s)}>{getProjName(s)} ({getProjArea(s)} วัน)</option>)}
                     </select>
                   </div>
 
