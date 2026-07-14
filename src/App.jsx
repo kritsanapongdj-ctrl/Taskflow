@@ -104,12 +104,12 @@ export default function App() {
   const [informs, setInforms] = useState([]);
   const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24 });
   
-  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr() });
+  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
   const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '' });
   
-  const [emForm, setEmForm] = useState({ email: '', selectedProjs: [] });
+  const [emForm, setEmForm] = useState({ name: '', email: '', selectedProjs: [] });
 
   const [iTab, setITab] = useState('form');
   const [iMod, setIMod] = useState({ isOpen: false, type: '', id: null, val: '' });
@@ -119,7 +119,7 @@ export default function App() {
   const [sRsn, setSReason] = useState('');
   const [showStartReason, setShowStartReason] = useState(false);
   const [sList, setSList] = useState({ tasks: [], informs: [] });
-  const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด' });
+  const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด', staffName: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
   const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '' });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
@@ -262,6 +262,18 @@ export default function App() {
     const clean = String(raw).split('|')[0].replace(/[\s\-]/g, '').toLowerCase();
     const found = (sets.projects || []).find(p => getProjName(p).replace(/[\s\-]/g, '').toLowerCase() === clean);
     return found ? getProjName(found) : String(raw).split('|')[0].trim();
+  };
+
+  const checkStaffMatch = (taskProj, staffNameFilter) => {
+    if (staffNameFilter === 'ทั้งหมด') return true;
+    const stdProj = getStdProj(taskProj);
+    const staffEntries = (sets.emails||[]).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === staffNameFilter);
+    if (staffEntries.length === 0) return false;
+    for (const e of staffEntries) {
+      const projs = (e.split('|')[1] || '').split(',');
+      if (projs.includes('ทั้งหมด') || projs.includes(stdProj)) return true;
+    }
+    return false;
   };
 
   const runMigration = async () => {
@@ -507,14 +519,17 @@ export default function App() {
     const idx = nEms.findIndex(x => x.startsWith(em + '|'));
     
     const projsStr = emForm.selectedProjs.join(',');
-    if (idx > -1) { nEms[idx] = `${em}|${projsStr}`; } 
-    else { nEms.push(`${em}|${projsStr}`); }
+    const staffName = emForm.name.trim() || em.split('@')[0];
+    const fullStr = `${em}|${projsStr}|${staffName}`;
+
+    if (idx > -1) { nEms[idx] = fullStr; } 
+    else { nEms.push(fullStr); }
     
     setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); 
-    setEmForm({ email: '', selectedProjs: [] });
+    setEmForm({ name: '', email: '', selectedProjs: [] });
   };
 
-  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0]; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = (sets.emails||[]).filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}`); saveD('settings', {...sets, emails: nEms}); };
+  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0], name = parts[2] || ''; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = (sets.emails||[]).filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}${name ? '|'+name : ''}`); saveD('settings', {...sets, emails: nEms}); };
   
   const subInf = (e) => { 
       e.preventDefault(); 
@@ -537,6 +552,7 @@ export default function App() {
       <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center text-sm shadow-sm z-10 sticky top-14">
         <span className="font-bold text-gray-500 mr-2"><Icon name="filter" size={16} className="inline mr-1"/> ตัวกรอง:</span>
         {tab !== 'daily' ? <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" /> : <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" />}
+        <select value={gFilt.staffName} onChange={e=>setGilt({...gFilt, staffName: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select>
         <select value={gFilt.area} onChange={e=>setGilt({...gFilt, area: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกพื้นที่</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select>
         <select value={gFilt.project} onChange={e=>setGilt({...gFilt, project: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกโครงการ</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select>
         {tab === 'inform' && iTab === 'manage' && <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกสถานะ</option><option value="รอดำเนินการ">รอดำเนินการ</option><option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option></select>}
@@ -545,7 +561,7 @@ export default function App() {
   };
 
   const rDash = () => {
-    const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
+    const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
     const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tS)));
     const mt = aT.filter(t => t.startDate && t.startDate.startsWith(gFilt.month));
     const ov = mt.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
@@ -566,7 +582,7 @@ export default function App() {
   };
 
   const rDail = () => {
-    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
+    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
     return (
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>openTaskModal()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
@@ -582,13 +598,13 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
          <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center"><Icon name="calendar" size={20} className="mr-2 text-[#bca374]"/> ปฏิทินเดือน {gFilt.month}</h2>
-        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
+        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
       </div>
     );
   };
 
   const rInf = () => {
-    const ft = informs.filter(j => j.status!=='ยกเลิก' && j.date?.startsWith(gFilt.month) && (gFilt.area==='ทั้งหมด'||j.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(j.project)===gFilt.project) && (gFilt.status==='ทั้งหมด'||j.status===gFilt.status));
+    const ft = informs.filter(j => j.status!=='ยกเลิก' && j.date?.startsWith(gFilt.month) && (gFilt.area==='ทั้งหมด'||j.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(j.project)===gFilt.project) && (gFilt.status==='ทั้งหมด'||j.status===gFilt.status) && checkStaffMatch(j.project, gFilt.staffName));
     return (
       <div className="space-y-4 animate-in">
         <div className="bg-white p-4 rounded-xl shadow-sm border flex gap-2"><button type="button" onClick={()=>setITab('form')} className={`flex-1 py-2 text-xs font-bold rounded ${iTab==='form'?'bg-[#0f2e4a] text-white shadow':'bg-gray-100 text-gray-500'}`}>แจ้งเปิดงานใหม่</button><button type="button" onClick={()=>setITab('manage')} className={`flex-1 py-2 text-xs font-bold rounded ${iTab==='manage'?'bg-[#0f2e4a] text-white shadow':'bg-gray-100 text-gray-500'}`}>จัดการสถานะ</button></div>
@@ -647,7 +663,7 @@ export default function App() {
   };
 
   const rKanb = () => {
-    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project));
+    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
     const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && (t.billingMonth === gFilt.month || (gFilt.month === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))));
     
@@ -714,6 +730,7 @@ export default function App() {
             <div><label className="text-xs font-bold block mb-1">{rCfg.type==='month'?'เดือน':'ปี'}</label>{rCfg.type==='month'?<input type="month" className="border rounded px-3 py-2 text-sm" value={rCfg.val} onChange={e=>setRConfig({...rCfg, val:e.target.value})} />:<input type="number" className="border rounded px-3 py-2 text-sm w-24" value={rCfg.val.substring(0,4)} onChange={e=>setRConfig({...rCfg, val:`${e.target.value}-01`})} />}</div>
             <div><label className="text-xs font-bold block mb-1">พื้นที่</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.area} onChange={e=>setRConfig({...rCfg, area:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select></div>
             <div><label className="text-xs font-bold block mb-1">โครงการ</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.project} onChange={e=>setRConfig({...rCfg, project:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select></div>
+            <div><label className="text-xs font-bold block mb-1">เจ้าหน้าที่</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.staffName} onChange={e=>setRConfig({...rCfg, staffName:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select></div>
             <button type="button" onClick={()=>window.print()} className="bg-[#0f2e4a] text-white px-6 py-2 rounded-lg text-sm font-bold shadow flex items-center ml-auto hover:bg-[#1a3f63]"><Icon name="download" size={16} className="mr-2"/> พิมพ์ PDF</button>
           </div>
         </div>
@@ -785,11 +802,11 @@ export default function App() {
             </div>
             <div className="flex-1 overflow-y-auto max-h-[450px] pr-2 hide-scrollbar space-y-3">
               {(sets.emails||[]).map(item => {
-                const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด'];
+                const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด'], name = parts[2] || '';
                 return (
                   <div key={item} className="border rounded-lg overflow-hidden shadow-sm">
                     <div className="bg-blue-50/50 px-4 py-2.5 flex justify-between items-center border-b border-blue-100">
-                      <span className="font-bold text-[#0f2e4a] text-sm">{em}</span>
+                      <span className="font-bold text-[#0f2e4a] text-sm">{em} {name && <span className="text-gray-500 font-normal">({name})</span>}</span>
                       <button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={14}/></button>
                     </div>
                     <div className="p-3 flex flex-wrap gap-2 bg-white">
@@ -809,6 +826,9 @@ export default function App() {
           <div className="flex-1 flex flex-col">
             <h3 className="font-bold text-sm text-[#0f2e4a] mb-4">เพิ่ม / แก้ไข สิทธิ์อีเมล</h3>
             <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
+              <label className="text-xs font-bold text-gray-700 mb-1">ชื่อเจ้าหน้าที่ (Staff Name)</label>
+              <input type="text" placeholder="ตัวอย่าง: สมชาย" className="border rounded-lg px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors mb-3 shadow-sm" value={emForm.name} onChange={e=>setEmForm({...emForm, name:e.target.value})} />
+              
               <label className="text-xs font-bold text-gray-700 mb-1">อีเมลผู้รับ</label>
               <input type="email" placeholder="ตัวอย่าง: admin@lh.co.th" className="border rounded-lg px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors mb-4 shadow-sm" value={emForm.email} onChange={e=>setEmForm({...emForm, email:e.target.value})} />
               
@@ -891,6 +911,7 @@ export default function App() {
         if(rCfg.area !== 'ทั้งหมด' && String(j.area||'').trim() !== rCfg.area) return false;
         const stdP = getStdName(j.project);
         if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
+        if(rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(j.project, rCfg.staffName)) return false;
         return true;
       });
 
@@ -924,6 +945,7 @@ export default function App() {
       if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       const stdP = getStdName(t.project);
       if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
+      if(rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(t.project, rCfg.staffName)) return false;
       return true;
     });
 
@@ -948,6 +970,7 @@ export default function App() {
       if (!t.status?.startsWith('จบงาน')) return false;
       if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
       if (rCfg.project !== 'ทั้งหมด' && getStdName(t.project) !== rCfg.project) return false;
+      if (rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(t.project, rCfg.staffName)) return false;
       return true;
     });
 
