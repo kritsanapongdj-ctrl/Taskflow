@@ -123,6 +123,7 @@ export default function App() {
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
   const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '' });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
+  const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
 
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
@@ -544,7 +545,6 @@ export default function App() {
   const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? getMStr() : '' }; saveD('task', nT); } }); };
   
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
-  const oDS = (e, groupId) => { e.dataTransfer.setData('groupId', groupId); }; const oDp = (e, st) => { e.preventDefault(); const gId = e.dataTransfer.getData('groupId'); if(gId) moveGroup(gId, st); };
 
   const GFBar = () => {
     if(tab === 'settings') return null;
@@ -669,26 +669,26 @@ export default function App() {
     
     return (
       <div className="space-y-4 animate-in">
-         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">กระดานส่งเบิก (เดือน {gFilt.month})</h2></div>
+         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">ส่งเบิก (เดือน {gFilt.month})</h2></div>
          <div className="flex flex-col md:flex-row gap-4 h-[70vh]">
-            <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border" onDragOver={e=>e.preventDefault()} onDrop={e=>oDp(e, 'รอส่งเบิก')}>
+            <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border">
               <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between"><span>รอส่งเบิก / ค้างเบิก</span><span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} กลุ่ม</span></h3>
               <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
                 {ubGrp.map(g => (
-                  <div key={g.id} draggable onDragStart={e=>oDS(e, g.id)} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-move hover:border-blue-400 relative">
-                    <div className="flex justify-between items-start mb-2"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span><button type="button" onClick={()=>moveGroup(g.id, 'ส่งเบิกแล้ว')} className="md:hidden bg-green-100 text-green-700 px-3 py-1 rounded text-[10px] font-bold shadow-sm active:bg-green-200">ส่งเบิก ➡️</button></div>
+                  <div key={g.id} onClick={()=>setBMod({isOpen: true, group: g, type: 'รอส่งเบิก'})} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all relative">
+                    <div className="flex justify-between items-start mb-2"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span></div>
                     <div className="font-bold text-[#0f2e4a] text-sm mb-1">{getStdProj(g.project)} <span className="text-xs text-gray-500 font-normal">({g.tasks.length} งาน)</span></div>
-                    <div className="space-y-1.5 mt-2">{g.tasks.map((t, i) => (<div key={t.id} className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100"><span className="text-gray-400 font-bold mr-1">#{i+1}</span>{t.details}</div>))}</div>
+                    <div className="space-y-1.5 mt-2">{g.tasks.map((t, i) => (<div key={t.id} className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"><span className="text-gray-400 font-bold mr-1">#{i+1}</span>{t.details}</div>))}</div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100" onDragOver={e=>e.preventDefault()} onDrop={e=>oDp(e, 'ส่งเบิกแล้ว')}>
-              <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between"><span>ส่งเบิกแล้ว</span><span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span></h3>
+            <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100">
+              <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between"><span>ส่งเบิกแล้ว (รอบ {gFilt.month})</span><span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span></h3>
               <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
                 {biGrp.map(g => (
-                  <div key={g.id} draggable onDragStart={e=>oDS(e, g.id)} className="bg-white p-3 rounded-lg shadow-sm border border-green-200 cursor-move hover:border-green-400 relative">
-                    <div className="flex justify-between items-start mb-2"><span className="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span><button type="button" onClick={()=>moveGroup(g.id, 'รอส่งเบิก')} className="md:hidden bg-gray-100 text-gray-600 px-3 py-1 rounded text-[10px] font-bold shadow-sm active:bg-gray-200">⬅️ ยกเลิก</button></div>
+                  <div key={g.id} onClick={()=>setBMod({isOpen: true, group: g, type: 'ส่งเบิกแล้ว'})} className="bg-white p-3 rounded-lg shadow-sm border border-green-200 cursor-pointer hover:border-green-400 hover:shadow-md transition-all relative">
+                    <div className="flex justify-between items-start mb-2"><span className="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span></div>
                     <div className="font-bold text-green-800 text-sm mb-1">{getStdProj(g.project)} <span className="text-xs text-green-600/70 font-normal">({g.tasks.length} งาน)</span></div>
                     <div className="space-y-1.5 mt-2 opacity-70">{g.tasks.map((t, i) => (<div key={t.id} className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"><span className="text-gray-400 font-bold mr-1">#{i+1}</span>{t.details}</div>))}</div>
                   </div>
@@ -697,6 +697,7 @@ export default function App() {
             </div>
          </div>
       </div>
+
     )
   };
 
@@ -1070,6 +1071,79 @@ export default function App() {
                       </button>
                     </div>
                   )})}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {bMod.isOpen && bMod.group && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] animate-in">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className={`p-4 flex justify-between text-white ${bMod.type==='ส่งเบิกแล้ว' ? 'bg-green-700' : 'bg-[#0f2e4a]'}`}>
+                  <h3 className="font-bold flex items-center">
+                    <Icon name="fileText" size={18} className="mr-2"/>
+                    {bMod.group.isWO && bMod.group.woNo ? `รายละเอียดใบงาน: ${bMod.group.woNo}` : `รายละเอียด JOB: ${bMod.group.tasks[0].id}`}
+                  </h3>
+                  <button type="button" onClick={()=>setBMod({isOpen:false,group:null,type:''})}><Icon name="x" size={18}/></button>
+                </div>
+                
+                <div className="p-5 overflow-y-auto flex-1 bg-gray-50/50">
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-500 font-bold mb-1">โครงการ</div>
+                    <div className="text-lg font-black text-[#0f2e4a]">{getStdProj(bMod.group.project)}</div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {bMod.group.tasks.map((t, i) => {
+                      const isCompleteOnTime = !t.overdueStatus || t.overdueStatus === 'ในกำหนด';
+                      const isOpenedLate = t.lateWorkOrder || t.overdueStatus === 'ออกใบงานช้า';
+                      return (
+                        <div key={t.id} className="bg-white border rounded-lg p-4 shadow-sm relative">
+                          <div className="absolute top-0 right-0 bg-gray-100 text-gray-400 text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">#{i+1}</div>
+                          
+                          <div className="text-xs text-gray-400 mb-1">ID: {t.id}</div>
+                          <div className="text-sm font-medium text-gray-800 mb-3">{t.details}</div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t pt-3 mt-3">
+                            <div>
+                              <div className="text-gray-500 mb-0.5">วันที่บันทึก</div>
+                              <div className="font-bold">{fDate(t.receivedDate)}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500 mb-0.5">กำหนดเสร็จ</div>
+                              <div className="font-bold">{fDate(t.endDate)}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500 mb-0.5">สถานะใบงาน</div>
+                              <div className={`font-bold ${isOpenedLate ? 'text-red-600' : 'text-green-600'}`}>
+                                {isOpenedLate ? 'ออกล่าช้า' : 'ปกติ'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500 mb-0.5">สถานะจบงาน</div>
+                              <div className={`font-bold flex items-center ${isCompleteOnTime ? 'text-green-600' : 'text-red-600'}`}>
+                                {isCompleteOnTime ? <Icon name="checkCircle" size={14} className="mr-1"/> : <Icon name="alertCircle" size={14} className="mr-1"/>}
+                                {isCompleteOnTime ? 'ในกำหนด' : 'ล่าช้า'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-100 border-t flex justify-end gap-3">
+                  <button type="button" onClick={()=>setBMod({isOpen:false,group:null,type:''})} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50">ปิดหน้าต่าง</button>
+                  {bMod.type === 'รอส่งเบิก' ? (
+                    <button type="button" onClick={()=>{moveGroup(bMod.group.id, 'ส่งเบิกแล้ว'); setBMod({isOpen:false,group:null,type:''});}} className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-bold shadow-md flex items-center hover:bg-green-700">
+                      <Icon name="check" size={16} className="mr-2"/> ยืนยันการส่งเบิก (เดือน {gFilt.month})
+                    </button>
+                  ) : (
+                    <button type="button" onClick={()=>{moveGroup(bMod.group.id, 'รอส่งเบิก'); setBMod({isOpen:false,group:null,type:''});}} className="px-6 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg text-sm font-bold shadow-sm flex items-center hover:bg-red-200">
+                      <Icon name="rotateCcw" size={16} className="mr-2"/> ยกเลิกการส่งเบิก
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
