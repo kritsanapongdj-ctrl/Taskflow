@@ -126,8 +126,8 @@ export default function App() {
   const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
 
-  const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
-  const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', project: '', area: '', jobType: '', location: '', details: '' });
+  const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', staffName: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
+  const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' });
 
   useEffect(() => {
     const initAuth = async () => {
@@ -538,7 +538,7 @@ export default function App() {
       const fd = { ...informForm, id: `REQ-${Date.now().toString().slice(-4)}`, status: 'รอดำเนินการ', informNo: '', cancelReason: '' }; 
       saveD('informJob', fd); 
       alert('ส่งเรื่องเรียบร้อย'); 
-      setInformForm({ date: getTStr(), requesterName: '', phone: '', project: '', area: '', jobType: '', location: '', details: '' }); 
+      setInformForm({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' }); 
       setITab('manage'); 
   };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
@@ -618,8 +618,15 @@ export default function App() {
                 <input value={informForm.phone} onChange={e=>setInformForm({...informForm, phone: e.target.value})} required placeholder="เบอร์โทร" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
               </div>
             </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold mb-1 block">เจ้าหน้าที่ดูแลโครงการ (ตัวกรอง)</label>
+              <select value={informForm.staffName} onChange={e=>setInformForm({...informForm, staffName: e.target.value, project: '', area: ''})} className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-blue-50">
+                <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
+                {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
             <div><label className="text-xs font-bold mb-1 block">โครงการ (ออโต้พื้นที่)</label>
-              <select value={informForm.project} required onChange={(e) => { const pData = (sets.projects||[]).find(p=>getProjName(p) === e.target.value); setInformForm({...informForm, project: e.target.value, area: getProjArea(pData)}); }} className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.projects||[]).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select>
+              <select value={informForm.project} required onChange={(e) => { const pData = (sets.projects||[]).find(p=>getProjName(p) === e.target.value); setInformForm({...informForm, project: e.target.value, area: getProjArea(pData)}); }} className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.projects||[]).filter(p => !informForm.staffName || checkStaffMatch(getProjName(p), informForm.staffName)).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select>
             </div>
             <div><label className="text-xs font-bold mb-1 block">พื้นที่</label><input type="text" value={informForm.area} readOnly className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-gray-100 text-gray-500" /></div>
             <div><label className="text-xs font-bold mb-1 block">ประเภทงาน</label><select value={informForm.jobType} onChange={e=>setInformForm({...informForm, jobType: e.target.value})} required className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.jobTypes||[]).map(a=><option key={a}>{a}</option>)}</select></div>
@@ -1174,9 +1181,18 @@ export default function App() {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">เจ้าหน้าที่ดูแลโครงการ (ตัวกรองโครงการ)</label>
+                    <select value={taskForm.staffName} onChange={e=>setTaskForm({...taskForm, staffName: e.target.value, project: '', area: ''})} className="w-full border rounded p-2 text-sm bg-blue-50">
+                        <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
+                        {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+
                   <div className="flex gap-2">
                     <select required value={taskForm.project} onChange={(e)=>{ const p = (sets.projects||[]).find(x=>getProjName(x)===e.target.value); setTaskForm({...taskForm, project: e.target.value, area: getProjArea(p)}); }} className="w-2/3 border rounded p-2 text-sm">
-                        <option value="">โครงการ (เลือกเพื่อดึงพื้นที่)...</option>{(sets.projects||[]).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}
+                        <option value="">โครงการ (เลือกเพื่อดึงพื้นที่)...</option>
+                        {(sets.projects||[]).filter(p => !taskForm.staffName || checkStaffMatch(getProjName(p), taskForm.staffName)).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}
                     </select>
                     <input type="text" readOnly value={taskForm.area} placeholder="พื้นที่..." className="w-1/3 border rounded p-2 text-sm bg-gray-100" />
                   </div>
