@@ -511,6 +511,33 @@ export default function App() {
      });
   };
 
+  useEffect(() => {
+    if (!sets || !sets.emails || sets.emails.length === 0) return;
+    const mapping = {
+        "kritsanapong@lh.co.th": "กฤษณพงศ์ ดลจิตต์",
+        "sataporn@lh.co.th": "สถาพร บุญนำมา",
+        "karn@lh.co.th": "กานต์ เจริญพร",
+        "luck@lh.co.th": "ลักษณ์ นัดณรงค์",
+        "podjanad@lh.co.th": "พจนาฏ ฝาระมี",
+        "boonyarit.s@lh.co.th": "บุญญฤทธิ์ แซ่ลิ้ม"
+    };
+    let changed = false;
+    const newEmails = sets.emails.map(entry => {
+        const parts = entry.split('|');
+        const email = parts[0].trim().toLowerCase();
+        let name = parts[2] || '';
+        
+        if (mapping[email] && (!name || name === email.split('@')[0])) {
+            name = mapping[email];
+            changed = true;
+        }
+        return `${parts[0]}|${parts[1]||''}|${name}`;
+    });
+    if (changed) {
+        saveD('settings', { ...sets, emails: newEmails });
+    }
+  }, [sets.emails]);
+
   const addEmailMappingV2 = () => {
     const em = emForm.email.trim();
     if (!em || !em.includes('@')) return alert('กรุณากรอกอีเมลให้ถูกต้อง');
