@@ -539,15 +539,28 @@ export default function App() {
   }, [sets.emails]);
 
   const addEmailMappingV2 = () => {
-    const em = emForm.email.trim();
+    const em = emForm.email.trim().toLowerCase();
     if (!em || !em.includes('@')) return alert('กรุณากรอกอีเมลให้ถูกต้อง');
     if (emForm.selectedProjs.length === 0) return alert('กรุณาเลือกโครงการอย่างน้อย 1 โครงการ');
     
     let nEms = [...(sets.emails||[])];
-    const idx = nEms.findIndex(x => x.startsWith(em + '|'));
+    const idx = nEms.findIndex(x => x.toLowerCase().startsWith(em + '|'));
     
-    const projsStr = emForm.selectedProjs.join(',');
-    const staffName = emForm.name.trim() || em.split('@')[0];
+    let existingProjs = [];
+    if (idx > -1) {
+       const oldParts = nEms[idx].split('|');
+       existingProjs = oldParts[1] ? oldParts[1].split(',') : [];
+    }
+
+    const allProjs = Array.from(new Set([...existingProjs, ...emForm.selectedProjs]));
+    const projsStr = allProjs.join(',');
+    
+    let staffName = emForm.name.trim();
+    if (!staffName && idx > -1) {
+        staffName = nEms[idx].split('|')[2] || '';
+    }
+    if (!staffName) staffName = em.split('@')[0];
+    
     const fullStr = `${em}|${projsStr}|${staffName}`;
 
     if (idx > -1) { nEms[idx] = fullStr; } 
