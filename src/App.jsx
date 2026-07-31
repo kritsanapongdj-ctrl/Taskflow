@@ -121,7 +121,7 @@ export default function App() {
   const [sList, setSList] = useState({ tasks: [], informs: [] });
   const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด', staffName: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
-  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '' });
+  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
   const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
@@ -434,10 +434,12 @@ export default function App() {
     const t = tasks.find(x => x.id === id);
     if(val === 'จบงาน') {
         const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
-        const isWaitingWO = t.status === 'จบงาน(รอใบงาน)';
-        setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: t.workOrderNo || '', noWO: false, forceWO: isWaitingWO, isOverdue: isOvd, overdueReason: '' });
+        setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate });
+    } else if (val === 'เลื่อนงาน') {
+        setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+    } else {
+        setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
     }
-    else { const nT = { ...t, status: val, completedDate: null }; nT.overdueStatus = (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') ? t.overdueStatus : 'ปกติ'; saveD('task', nT); }
   };
 
   const cfSt = () => {
@@ -456,6 +458,11 @@ export default function App() {
     if (t) {
         let nT = { ...t };
         if(sMod.type === 'cancel') { nT.status = 'ยกเลิก'; nT.cancelReason = sMod.reason; nT.emailAlert = { action: 'ยกเลิกงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: t.details }; }
+        else if(sMod.type === 'postpone') { 
+            nT.status = 'อยู่ระหว่างดำเนินการ'; 
+            nT.endDate = sMod.postponeDate; 
+            nT.emailAlert = { action: 'ขอเลื่อนวันจบงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: `[เดิมจบ: ${fDate(t.endDate)} -> เลื่อนเป็น: ${fDate(sMod.postponeDate)}] ${t.details}` }; 
+        }
         else if(sMod.type === 'complete') { 
             if (sMod.noWO) {
                 nT.status = 'จบงาน(รอใบงาน)';
@@ -626,7 +633,7 @@ export default function App() {
     return (
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>openTaskModal()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
-        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, tD); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{getStdProj(t.project)}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&!t.status?.startsWith('จบงาน')?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status?.startsWith('จบงาน')?'bg-emerald-50 text-emerald-700 border-emerald-200':t.status==='จบงาน(รอใบงาน)'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');openTaskModal(t);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
+        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, getTStr()); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{getStdProj(t.project)}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&!t.status?.startsWith('จบงาน')?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status?.startsWith('จบงาน')?'bg-emerald-50 text-emerald-700 border-emerald-200':t.status==='จบงาน(รอใบงาน)'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="เลื่อนงาน">เลื่อนงาน</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');openTaskModal(t);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200"><Icon name="edit2" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
       </div>
     );
   };
@@ -1263,14 +1270,26 @@ export default function App() {
           {sMod.isOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
               <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
-                <h3 className={`font-bold text-lg mb-3 ${sMod.type==='cancel'?'text-red-500':'text-green-500'}`}>
-                  {sMod.type==='cancel'?'ยกเลิกงาน':'ยืนยันจบงาน'}
+                <h3 className={`font-bold text-lg mb-3 ${sMod.type==='cancel'?'text-red-500':sMod.type==='postpone'?'text-amber-500':'text-green-500'}`}>
+                  {sMod.type==='cancel'?'ยกเลิกงาน':sMod.type==='postpone'?'เลื่อนวันจบงาน':'ยืนยันจบงาน'}
                 </h3>
                 <div className="space-y-3">
                   {sMod.type==='cancel' && (
                     <div>
                       <label className="text-xs font-bold text-red-500">เหตุผลบังคับ *</label>
                       <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-red-50" value={sMod.reason} onChange={e=>setSMod({...sMod,reason:e.target.value})}></textarea>
+                    </div>
+                  )}
+                  {sMod.type==='postpone' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-bold text-amber-600">วันที่ขอเลื่อนไป *</label>
+                        <input type="date" className="w-full border rounded p-2 text-sm bg-amber-50" value={sMod.postponeDate} onChange={e=>setSMod({...sMod,postponeDate:e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-amber-600">เหตุผลที่ขอเลื่อน *</label>
+                        <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-amber-50" placeholder="ระบุเหตุผล..." value={sMod.reason} onChange={e=>setSMod({...sMod,reason:e.target.value})}></textarea>
+                      </div>
                     </div>
                   )}
                   {sMod.type==='complete' && (
@@ -1296,8 +1315,8 @@ export default function App() {
                   )}
                 </div>
                 <div className="flex gap-2 mt-5">
-                  <button type="button" onClick={()=>setSMod({...sMod, isOpen:false, noWO:false, forceWO:false, isOverdue:false, overdueReason:''})} className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded">ปิด</button>
-                  <button type="button" onClick={cfSt} disabled={(sMod.type==='cancel'&&!sMod.reason.trim()) || (sMod.type==='complete' && !sMod.noWO && !sMod.workOrderNo.trim()) || (sMod.type==='complete' && sMod.isOverdue && !sMod.overdueReason.trim())} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50">ยืนยัน</button>
+                  <button type="button" onClick={()=>setSMod({...sMod, isOpen:false, noWO:false, forceWO:false, isOverdue:false, overdueReason:'', postponeDate: getTStr()})} className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded">ปิด</button>
+                  <button type="button" onClick={cfSt} disabled={((sMod.type==='cancel'||sMod.type==='postpone')&&!sMod.reason.trim()) || (sMod.type==='complete' && !sMod.noWO && !sMod.workOrderNo.trim()) || (sMod.type==='complete' && sMod.isOverdue && !sMod.overdueReason.trim())} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50 shadow-sm active:scale-95 transition-all">ยืนยัน</button>
                 </div>
               </div>
             </div>
