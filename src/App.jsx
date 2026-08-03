@@ -830,6 +830,96 @@ export default function App() {
   const rTeam = () => {
     const sList = sets.staffStats || [];
     const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
+    
+    const renderAnalysis = () => {
+      const u = teamForm;
+      if (!u.id && !selTeam?.isNew) return null;
+      const role = classMap[u.classId];
+      
+      const statMeta = [
+        { key: 'str', name: 'STR (พลังลุย)', desc: 'การตัดสินใจเด็ดขาด/ผลักดันงานหนัก' },
+        { key: 'agi', name: 'AGI (ความเร็ว)', desc: 'ความไวในการตอบสนอง/ปรับตัว' },
+        { key: 'dex', name: 'DEX (ความเป๊ะ)', desc: 'ความแม่นยำ/การตรวจงานที่เนี๊ยบ' },
+        { key: 'int', name: 'INT (กลยุทธ์)', desc: 'การวาง Workflow/วิเคราะห์ปัญหา' },
+        { key: 'con', name: 'CON (ความอึด)', desc: 'ความถึกทนหน้างาน/รับแรงกดดัน' },
+        { key: 'sen', name: 'SEN (บริหารระบบ)', desc: 'จัดการคิวงาน/บริหารซัพพลายเออร์' }
+      ];
+
+      let strengths = [];
+      let gaps = [];
+
+      statMeta.forEach(s => {
+        const uVal = Number(u[s.key]) || 5;
+        const rVal = role ? (Number(role[s.key]) || 5) : 5;
+        if (uVal >= 8 || (role && uVal >= rVal && uVal > 5)) strengths.push(s);
+        else if (uVal <= 4 || (role && uVal <= rVal - 2)) gaps.push(s);
+      });
+
+      let roleText = '';
+      if (role) {
+        const rName = role.name.toLowerCase();
+        let cores = [];
+        let missing = [];
+        if (rName.includes('super') || rName.includes('หัวหน้า') || rName.includes('ผู้นำ') || rName.includes('เจ้าหน้าที่')) {
+          cores = ['INT', 'STR'];
+          if(Number(u.int) < 8) missing.push('INT');
+          if(Number(u.str) < 8) missing.push('STR');
+        } else if (rName.includes('foreman') || rName.includes('โฟร์แมน') || rName.includes('หน้างาน')) {
+          cores = ['STR', 'CON', 'DEX'];
+          if(Number(u.str) < 8) missing.push('STR');
+          if(Number(u.con) < 8) missing.push('CON');
+          if(Number(u.dex) < 8) missing.push('DEX');
+        } else if (rName.includes('admin') || rName.includes('แอดมิน') || rName.includes('สนับสนุน')) {
+          cores = ['DEX', 'SEN'];
+          if(Number(u.dex) < 8) missing.push('DEX');
+          if(Number(u.sen) < 8) missing.push('SEN');
+        }
+
+        if (cores.length > 0) {
+          if (missing.length === 0) {
+             roleText = `มีคุณสมบัติโดดเด่นและเหมาะสมกับบทบาท "${role.name}" (Core Stats: ${cores.join(', ')} ถึงเกณฑ์)`;
+          } else {
+             roleText = `เพื่อเติมเต็มศักยภาพบทบาท "${role.name}" (Core Stats: ${cores.join(', ')}) ควรโฟกัสการพัฒนาด้าน: ${missing.join(', ')}`;
+          }
+        }
+      }
+
+      return (
+        <div className="mt-8 p-4 bg-[#f8fafc] rounded-xl border border-slate-200 w-full text-left shadow-sm">
+          <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
+            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> บทวิเคราะห์ประสิทธิภาพ (Dual-Layer Analysis)
+          </h4>
+          
+          {roleText && (
+             <div className="mb-3 text-[11px] bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
+               <strong className="text-[#0f2e4a]">ภาพรวมความเหมาะสม:</strong><br/>
+               <span className={roleText.includes('ควรโฟกัส') ? 'text-amber-600' : 'text-emerald-600'}>{roleText}</span>
+             </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-2.5 mt-2">
+            <div className="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100">
+              <strong className="text-emerald-700 text-xs flex items-center mb-1.5"><Icon name="trendingUp" size={14} className="mr-1.5"/> จุดแข็งเด่นชัด (Team Synergy)</strong>
+              {strengths.length > 0 ? (
+                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1">
+                  {strengths.map(s => <li key={s.key}><strong>{s.name.split(' ')[0]}</strong> - {s.desc}</li>)}
+                </ul>
+              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ค่าพลังยังอยู่ในระดับพื้นฐาน หรือยังไม่ถึงเป้าหมายของคลาส</div>}
+            </div>
+
+            <div className="bg-rose-50/50 p-2.5 rounded-lg border border-rose-100">
+              <strong className="text-rose-600 text-xs flex items-center mb-1.5"><Icon name="trendingDown" size={14} className="mr-1.5"/> จุดที่ควรพัฒนา (Skill Gap)</strong>
+              {gaps.length > 0 ? (
+                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1">
+                  {gaps.map(s => <li key={s.key}><strong>{s.name.split(' ')[0]}</strong> - ควรยกระดับ{s.desc}</li>)}
+                </ul>
+              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ไม่มีค่าพลังใดต่ำกว่าเป้าหมายมากนัก ทักษะค่อนข้างสมดุล</div>}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-full pb-10">
         <div className="w-full md:w-64 bg-white border rounded-xl shadow-sm flex flex-col h-[400px] md:h-full">
@@ -913,6 +1003,7 @@ export default function App() {
                        <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-1.5 rounded-sm opacity-50"></div> สเตตัสปัจจุบัน</div>
                        {teamForm.classId && <div className="flex items-center"><div className="w-3 h-3 bg-[#bca374] border border-dashed border-[#bca374] mr-1.5 rounded-sm opacity-20"></div> เป้าหมายของคลาส</div>}
                     </div>
+                    {renderAnalysis()}
                  </div>
                </div>
             </div>
