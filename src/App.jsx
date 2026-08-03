@@ -61,6 +61,26 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   return <Comp size={size} color={color} className={className} />;
 };
 
+const RadarChart = ({ baseStats = [], userStats = [] }) => {
+  const max = 10, size = 200, center = 100, radius = 80;
+  const getPoint = (val, index) => {
+    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+    const r = (val / max) * radius;
+    return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
+  };
+  const labels = ['STR', 'AGI', 'DEX', 'INT', 'CON', 'SEN'];
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible">
+      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
+      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
+      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="10" fontWeight="bold" fill="#6b7280" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
+      {baseStats.length === 6 && <polygon points={baseStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(188, 163, 116, 0.2)" stroke="#bca374" strokeWidth="1" strokeDasharray="4 4" />}
+      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.5)" stroke="#0f2e4a" strokeWidth="2" />}
+      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" />; })}
+    </svg>
+  );
+};
+
 const getCleanVal = (r, keys) => {
   for (let k in r) {
     const cln = String(k).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase();
@@ -102,13 +122,15 @@ export default function App() {
   
   const [tasks, setTasks] = useState([]);
   const [informs, setInforms] = useState([]);
-  const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24 });
+  const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24, staffClasses: [], staffStats: [] });
   
   const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
-  const [pwd, setPwd] = useState('');
-  const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '' });
+  const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
+  const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5 });
+  const [selTeam, setSelTeam] = useState(null);
+
   const [emForm, setEmForm] = useState({ name: '', email: '', selectedProjs: [] });
 
   const [iTab, setITab] = useState('form');
@@ -608,7 +630,7 @@ export default function App() {
   };
 
   const rDash = () => {
-    const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
+    const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
     const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tS)));
     const mt = aT.filter(t => t.startDate && t.startDate.startsWith(gFilt.month));
     const ov = mt.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
@@ -629,7 +651,7 @@ export default function App() {
   };
 
   const rDail = () => {
-    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
+    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
     return (
       <div className="space-y-4 animate-in">
         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>openTaskModal()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
@@ -645,7 +667,7 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
          <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center"><Icon name="calendar" size={20} className="mr-2 text-[#bca374]"/> ปฏิทินเดือน {gFilt.month}</h2>
-        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
+        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
       </div>
     );
   };
@@ -717,7 +739,7 @@ export default function App() {
   };
 
   const rKanb = () => {
-    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||t.project===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
+    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
     const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
     const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && (t.billingMonth === gFilt.month || (gFilt.month === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))));
     
@@ -753,6 +775,135 @@ export default function App() {
       </div>
 
     )
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 150;
+        const MAX_HEIGHT = 150;
+        let width = img.width;
+        let height = img.height;
+        if(width > height) { if(width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+        else { if(height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+        setTeamForm({...teamForm, image: canvas.toDataURL('image/webp', 0.7)});
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveTeam = () => {
+    if(!teamForm.name) return alert('กรุณาระบุชื่อพนักงาน');
+    let ns = [...(sets.staffStats||[])];
+    if(teamForm.id) {
+      const idx = ns.findIndex(x => x.id === teamForm.id);
+      if(idx > -1) ns[idx] = {...teamForm};
+    } else { ns.push({...teamForm, id: Date.now().toString()}); }
+    saveD('settings', {...sets, staffStats: ns});
+    setSelTeam({...teamForm});
+  };
+
+  const rTeam = () => {
+    const sList = sets.staffStats || [];
+    const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
+    return (
+      <div className="flex flex-col md:flex-row gap-6 animate-in h-full pb-10">
+        <div className="w-full md:w-64 bg-white border rounded-xl shadow-sm flex flex-col h-[400px] md:h-full">
+          <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+            <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
+            <button type="button" onClick={()=>{setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-xs px-2 py-1 rounded hover:bg-[#a38a5b]">+ เพิ่ม</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
+            {sList.map(s => (
+              <div key={s.id} onClick={()=>{setSelTeam(s); setTeamForm({...s});}} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
+                {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{s.name.substring(0,2)}</div>}
+                <div className="truncate">
+                  <div className="font-bold text-sm truncate">{s.name}</div>
+                  <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
+                </div>
+              </div>
+            ))}
+            {sList.length === 0 && <div className="text-center text-xs text-gray-400 p-4">ยังไม่มีรายชื่อทีมงาน<br/>กด "+ เพิ่ม" เพื่อสร้างใหม่</div>}
+          </div>
+        </div>
+
+        <div className="flex-1 bg-white border rounded-xl shadow-sm flex flex-col h-auto md:h-full overflow-hidden">
+          {(!selTeam && !teamForm.name && !teamForm.id) ? (
+             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-10">
+               <Icon name="users" size={64} className="mb-4 opacity-50" />
+               <p className="font-bold">เลือกทีมงานจากเมนูด้านซ้าย</p>
+               <p className="text-xs mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
+             </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto hide-scrollbar p-6">
+               <div className="flex flex-col md:flex-row gap-8">
+                 <div className="w-full md:w-1/2 flex flex-col items-center">
+                    <div className="relative group mb-6">
+                      <div className="w-32 h-32 rounded-full border-4 border-gray-100 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center">
+                        {teamForm.image ? <img src={teamForm.image} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-gray-300"/>}
+                      </div>
+                      <label className="absolute bottom-0 right-0 bg-[#0f2e4a] text-white p-2 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                        <Icon name="upload" size={16} />
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      </label>
+                    </div>
+                    
+                    <div className="w-full space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 mb-1 block">ชื่อ - นามสกุล</label>
+                        <input type="text" className="w-full border rounded-lg px-4 py-2 text-sm font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] outline-none" placeholder="ชื่อพนักงาน..." value={teamForm.name} onChange={e=>setTeamForm({...teamForm, name:e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 mb-1 block">คลาส (สายอาชีพ)</label>
+                        <select className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#bca374] outline-none" value={teamForm.classId} onChange={e=>setTeamForm({...teamForm, classId:e.target.value})}>
+                          <option value="">-- ไม่ระบุ --</option>
+                          {(sets.staffClasses||[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-4 border-t">
+                        {[{k:'str',l:'STR (Strength)',c:'text-red-600'},{k:'agi',l:'AGI (Agility)',c:'text-green-600'},{k:'dex',l:'DEX (Dexterity)',c:'text-yellow-600'},{k:'int',l:'INT (Intelligence)',c:'text-blue-600'},{k:'con',l:'CON (Constitution)',c:'text-orange-600'},{k:'sen',l:'SEN (Sense)',c:'text-purple-600'}].map(s=>(
+                          <div key={s.k} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
+                            <span className={`text-[10px] font-black ${s.c}`}>{s.l}</span>
+                            <input type="number" min="1" max="10" className="w-12 text-center border-b border-gray-300 bg-transparent text-sm font-bold outline-none" value={teamForm[s.k]} onChange={e=>setTeamForm({...teamForm, [s.k]: Number(e.target.value)||1})} />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
+                        <button type="button" onClick={saveTeam} className="flex-1 bg-[#0f2e4a] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#1a3f63] flex justify-center items-center"><Icon name="save" size={16} className="mr-2"/> บันทึกข้อมูล</button>
+                        {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); saveD('settings',{...sets,staffStats:ns}); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
+                      </div>
+                    </div>
+                 </div>
+
+                 <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-xl border border-slate-100 relative">
+                    <h4 className="font-black text-[#0f2e4a] mb-6 text-center">RPG PERFORMANCE MAP</h4>
+                    <div className="w-full max-w-[280px] aspect-square">
+                      <RadarChart 
+                         baseStats={classMap[teamForm.classId] ? [classMap[teamForm.classId].str, classMap[teamForm.classId].agi, classMap[teamForm.classId].dex, classMap[teamForm.classId].int, classMap[teamForm.classId].con, classMap[teamForm.classId].sen] : []}
+                         userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
+                      />
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-4 mt-6 text-[10px] font-bold">
+                       <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-1.5 rounded-sm opacity-50"></div> สเตตัสปัจจุบัน</div>
+                       {teamForm.classId && <div className="flex items-center"><div className="w-3 h-3 bg-[#bca374] border border-dashed border-[#bca374] mr-1.5 rounded-sm opacity-20"></div> เป้าหมายของคลาส</div>}
+                    </div>
+                 </div>
+               </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const rSet = () => {
@@ -902,6 +1053,40 @@ export default function App() {
           </div>
         </div>
 
+        <div className="bg-white p-6 rounded-xl border shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="users" size={20} className="mr-2 text-[#bca374]"/> ตั้งค่าคลาสและฐานสเตตัสทีมงาน (RPG Classes)</h3>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex-1 overflow-y-auto max-h-[450px] pr-2 hide-scrollbar space-y-3 border p-3 rounded bg-gray-50">
+              {(sets.staffClasses||[]).map(c => (
+                <div key={c.id} className="bg-white border rounded-lg p-3 shadow-sm flex justify-between items-center">
+                  <div>
+                    <div className="font-bold text-[#0f2e4a]">{c.name}</div>
+                    <div className="text-[10px] text-gray-500 flex gap-2 mt-1">
+                      <span>STR:{c.str}</span><span>AGI:{c.agi}</span><span>DEX:{c.dex}</span><span>INT:{c.int}</span><span>CON:{c.con}</span><span>SEN:{c.sen}</span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={()=>{let ns=(sets.staffClasses||[]).filter(x=>x.id!==c.id); saveD('settings',{...sets,staffClasses:ns});}} className="text-red-400 hover:text-red-600 p-2"><Icon name="trash" size={16}/></button>
+                </div>
+              ))}
+              {(!sets.staffClasses || sets.staffClasses.length === 0) && <div className="text-center text-gray-400 py-4 text-xs">ยังไม่มีคลาสอาชีพ</div>}
+            </div>
+            <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
+              <label className="text-xs font-bold text-gray-700 mb-1">ชื่อคลาส (Role Name)</label>
+              <input type="text" placeholder="เช่น Supervisor, Foreman" className="border rounded-lg px-4 py-2 text-sm w-full mb-3" value={sInp.className} onChange={e=>setSInp({...sInp, className:e.target.value})} />
+              <div className="grid grid-cols-2 gap-3 mb-4 text-xs font-bold">
+                <div><label className="block mb-1 text-red-600">STR (Strength)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cStr} onChange={e=>setSInp({...sInp, cStr:e.target.value})} /></div>
+                <div><label className="block mb-1 text-green-600">AGI (Agility)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cAgi} onChange={e=>setSInp({...sInp, cAgi:e.target.value})} /></div>
+                <div><label className="block mb-1 text-yellow-600">DEX (Dexterity)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cDex} onChange={e=>setSInp({...sInp, cDex:e.target.value})} /></div>
+                <div><label className="block mb-1 text-blue-600">INT (Intelligence)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cInt} onChange={e=>setSInp({...sInp, cInt:e.target.value})} /></div>
+                <div><label className="block mb-1 text-orange-600">CON (Constitution)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cCon} onChange={e=>setSInp({...sInp, cCon:e.target.value})} /></div>
+                <div><label className="block mb-1 text-purple-600">SEN (Sense)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cSen} onChange={e=>setSInp({...sInp, cSen:e.target.value})} /></div>
+              </div>
+              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className, str: Number(sInp.cStr), agi: Number(sInp.cAgi), dex: Number(sInp.cDex), int: Number(sInp.cInt), con: Number(sInp.cCon), sen: Number(sInp.cSen)}); saveD('settings', {...sets, staffClasses: ns}); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[{k:'areas',l:'พื้นที่'},{k:'jobTypes',l:'ประเภทงาน'},{k:'locations',l:'บริเวณ'}].map(x => (
@@ -1068,7 +1253,7 @@ export default function App() {
           <aside className="w-64 bg-[#0f2e4a] text-white hidden md:flex flex-col shadow-xl z-20">
             <div className="p-6 border-b border-white/10"><div className="text-xl font-bold text-[#bca374]">LH <span className="font-light text-white">TaskFlow</span></div></div>
             <nav className="p-4 space-y-1 flex-1">
-              {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
+              {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
                 <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-colors ${tab===x.i?'bg-[#bca374]':'hover:bg-white/10'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
               ))}
             </nav>
@@ -1082,11 +1267,12 @@ export default function App() {
               {tab==='monthly'&&rMont()} 
               {tab==='kanban'&&rKanb()} 
               {tab==='inform'&&rInf()} 
+              {tab==='team'&&rTeam()} 
               {tab==='settings'&&rSet()}
             </div>
           </main>
           <nav className="md:hidden fixed bottom-0 w-full bg-white border-t flex justify-around p-2 z-[999]">
-            {[{i:'dashboard',l:'ภาพรวม', icon:'layoutDashboard'},{i:'daily',l:'รายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งงาน', icon:'bell'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
+            {[{i:'dashboard',l:'ภาพรวม', icon:'layoutDashboard'},{i:'daily',l:'รายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งงาน', icon:'bell'},{i:'team',l:'ทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
               <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`flex flex-col items-center p-2 w-14 ${tab===x.i?'text-[#bca374] -translate-y-1':'text-gray-400'} transition-transform`}><Icon name={x.icon} size={20} className={tab===x.i?'fill-current/20':''} /><div className="text-[9px] font-bold mt-1 truncate w-full text-center">{x.l}</div></button>
             ))}
           </nav>
