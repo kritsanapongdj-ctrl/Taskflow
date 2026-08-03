@@ -126,6 +126,7 @@ export default function App() {
   
   const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
+  const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
   const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5 });
@@ -189,7 +190,9 @@ export default function App() {
               emails: d.emails || [],
               slas: d.slas || [],
               overdueTime: d.overdueTime || '17:30',
-              lateWorkOrderHours: d.lateWorkOrderHours || 24
+              lateWorkOrderHours: d.lateWorkOrderHours || 24,
+              staffClasses: d.staffClasses || [],
+              staffStats: d.staffStats || []
           });
       }
       setLoading(false);
@@ -807,7 +810,9 @@ export default function App() {
       const idx = ns.findIndex(x => x.id === teamForm.id);
       if(idx > -1) ns[idx] = {...teamForm};
     } else { ns.push({...teamForm, id: Date.now().toString()}); }
-    saveD('settings', {...sets, staffStats: ns});
+    const newSets = {...sets, staffStats: ns};
+    setSets(newSets);
+    saveD('settings', newSets);
     setSelTeam({...teamForm});
   };
 
@@ -880,7 +885,7 @@ export default function App() {
 
                       <div className="flex gap-2 pt-4">
                         <button type="button" onClick={saveTeam} className="flex-1 bg-[#0f2e4a] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#1a3f63] flex justify-center items-center"><Icon name="save" size={16} className="mr-2"/> บันทึกข้อมูล</button>
-                        {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); saveD('settings',{...sets,staffStats:ns}); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
+                        {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); const newSets = {...sets, staffStats: ns}; setSets(newSets); saveD('settings', newSets); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
                       </div>
                     </div>
                  </div>
@@ -1067,7 +1072,7 @@ export default function App() {
                       <span>STR:{c.str}</span><span>AGI:{c.agi}</span><span>DEX:{c.dex}</span><span>INT:{c.int}</span><span>CON:{c.con}</span><span>SEN:{c.sen}</span>
                     </div>
                   </div>
-                  <button type="button" onClick={()=>{let ns=(sets.staffClasses||[]).filter(x=>x.id!==c.id); saveD('settings',{...sets,staffClasses:ns});}} className="text-red-400 hover:text-red-600 p-2"><Icon name="trash" size={16}/></button>
+                  <button type="button" onClick={()=>{let ns=(sets.staffClasses||[]).filter(x=>x.id!==c.id); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets);}} className="text-red-400 hover:text-red-600 p-2"><Icon name="trash" size={16}/></button>
                 </div>
               ))}
               {(!sets.staffClasses || sets.staffClasses.length === 0) && <div className="text-center text-gray-400 py-4 text-xs">ยังไม่มีคลาสอาชีพ</div>}
@@ -1083,7 +1088,7 @@ export default function App() {
                 <div><label className="block mb-1 text-orange-600">CON (Constitution)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cCon} onChange={e=>setSInp({...sInp, cCon:e.target.value})} /></div>
                 <div><label className="block mb-1 text-purple-600">SEN (Sense)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cSen} onChange={e=>setSInp({...sInp, cSen:e.target.value})} /></div>
               </div>
-              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className, str: Number(sInp.cStr), agi: Number(sInp.cAgi), dex: Number(sInp.cDex), int: Number(sInp.cInt), con: Number(sInp.cCon), sen: Number(sInp.cSen)}); saveD('settings', {...sets, staffClasses: ns}); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
+              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className, str: Number(sInp.cStr), agi: Number(sInp.cAgi), dex: Number(sInp.cDex), int: Number(sInp.cInt), con: Number(sInp.cCon), sen: Number(sInp.cSen)}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
             </div>
           </div>
         </div>
