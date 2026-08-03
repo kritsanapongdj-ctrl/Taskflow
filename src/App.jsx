@@ -3,6 +3,7 @@ import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import Cropper from 'react-easy-crop';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -131,6 +132,7 @@ export default function App() {
   
   const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5 });
   const [selTeam, setSelTeam] = useState(null);
+  const [cropModal, setCropModal] = useState({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
 
   const [emForm, setEmForm] = useState({ name: '', email: '', selectedProjs: [] });
 
@@ -785,22 +787,31 @@ export default function App() {
     if(!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 150;
-        const MAX_HEIGHT = 150;
-        let width = img.width;
-        let height = img.height;
-        if(width > height) { if(width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-        else { if(height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-        setTeamForm({...teamForm, image: canvas.toDataURL('image/webp', 0.7)});
-      };
-      img.src = ev.target.result;
+      setCropModal({ isOpen: true, imageSrc: ev.target.result, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
     };
     reader.readAsDataURL(file);
+    e.target.value = null;
+  };
+
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCropModal(prev => ({ ...prev, croppedAreaPixels }));
+  };
+
+  const saveCroppedImage = () => {
+    if(!cropModal.imageSrc || !cropModal.croppedAreaPixels) return;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_SIZE = 400;
+      canvas.width = MAX_SIZE;
+      canvas.height = MAX_SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, cropModal.croppedAreaPixels.x, cropModal.croppedAreaPixels.y, cropModal.croppedAreaPixels.width, cropModal.croppedAreaPixels.height, 0, 0, MAX_SIZE, MAX_SIZE);
+      setTeamForm({...teamForm, image: canvas.toDataURL('image/jpeg', 0.9)});
+      setCropModal({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
+    };
+    img.src = cropModal.imageSrc;
   };
 
   const saveTeam = () => {
@@ -1568,6 +1579,35 @@ export default function App() {
         {/* เพิ่มโค้ดบรรทัดนี้ เพื่อวาง Report ซ่อนไว้สำหรับให้ดึงไปพิมพ์ PDF */}
         {PReport()}
         
+        {cropModal.isOpen && (
+          <div className="fixed inset-0 bg-black/90 z-[100000] flex flex-col">
+            <div className="flex justify-between items-center p-4 bg-[#0f2e4a] text-white shadow-md z-10">
+              <h3 className="font-bold">ครอบตัดรูปโปรไฟล์</h3>
+              <button type="button" onClick={() => setCropModal({ ...cropModal, isOpen: false })} className="p-2 hover:bg-white/10 rounded-lg"><Icon name="x" size={24} /></button>
+            </div>
+            <div className="flex-1 relative bg-black">
+              <Cropper
+                image={cropModal.imageSrc}
+                crop={cropModal.crop}
+                zoom={cropModal.zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={(crop) => setCropModal(prev => ({ ...prev, crop }))}
+                onCropComplete={onCropComplete}
+                onZoomChange={(zoom) => setCropModal(prev => ({ ...prev, zoom }))}
+              />
+            </div>
+            <div className="p-6 bg-white flex flex-col gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] z-10">
+              <div className="flex items-center gap-4">
+                <Icon name="zoomOut" size={20} className="text-gray-400" />
+                <input type="range" min={1} max={3} step={0.1} value={cropModal.zoom} onChange={(e) => setCropModal(prev => ({ ...prev, zoom: Number(e.target.value) }))} className="flex-1 accent-[#0f2e4a]" />
+                <Icon name="zoomIn" size={20} className="text-gray-400" />
+              </div>
+              <button type="button" onClick={saveCroppedImage} className="w-full bg-[#0f2e4a] text-white py-3 rounded-xl font-bold text-lg hover:bg-[#1a3f63] shadow-lg transition-transform active:scale-95">ยืนยันรูปโปรไฟล์</button>
+            </div>
+          </div>
+        )}
       </div>
     </React.Fragment>
   );
