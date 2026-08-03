@@ -824,7 +824,7 @@ export default function App() {
         <div className="w-full md:w-64 bg-white border rounded-xl shadow-sm flex flex-col h-[400px] md:h-full">
           <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
             <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
-            <button type="button" onClick={()=>{setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-xs px-2 py-1 rounded hover:bg-[#a38a5b]">+ เพิ่ม</button>
+            <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-xs px-2 py-1 rounded hover:bg-[#a38a5b]">+ เพิ่ม</button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
             {sList.map(s => (
