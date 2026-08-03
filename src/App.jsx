@@ -921,8 +921,8 @@ export default function App() {
     };
 
     return (
-      <div className="flex flex-col md:flex-row gap-6 animate-in h-full pb-10">
-        <div className="w-full md:w-64 bg-white border rounded-xl shadow-sm flex flex-col h-[400px] md:h-full">
+      <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
+        <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
           <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
             <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
             <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-xs px-2 py-1 rounded hover:bg-[#a38a5b]">+ เพิ่ม</button>
@@ -949,14 +949,16 @@ export default function App() {
                <p className="text-xs mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
              </div>
           ) : (
-            <div className="flex-1 overflow-y-auto hide-scrollbar p-6">
-               <div className="flex flex-col md:flex-row gap-8">
-                 <div className="w-full md:w-1/2 flex flex-col items-center">
-                    <div className="relative group mb-6">
-                      <div className="w-32 h-32 rounded-full border-4 border-gray-100 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center">
-                        {teamForm.image ? <img src={teamForm.image} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-gray-300"/>}
+            <div className="flex-1 overflow-y-auto hide-scrollbar p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+               <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
+                 <div className="w-full lg:w-1/2 flex flex-col items-center bg-white/90 p-4 md:p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#bca374] to-transparent opacity-30"></div>
+                    <div className="relative group mb-6 mt-2">
+                      <div className="w-32 h-32 rounded-full border-[3px] border-[#bca374] shadow-[0_0_20px_rgba(188,163,116,0.3)] overflow-hidden bg-[#0f2e4a] flex items-center justify-center relative z-10">
+                        {teamForm.image ? <img src={teamForm.image} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-[#bca374]/50"/>}
                       </div>
-                      <label className="absolute bottom-0 right-0 bg-[#0f2e4a] text-white p-2 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                      <div className="absolute -inset-2 border-2 border-dashed border-[#bca374]/30 rounded-full animate-[spin_20s_linear_infinite] pointer-events-none"></div>
+                      <label className="absolute bottom-0 right-0 bg-gradient-to-tr from-[#bca374] to-[#e6d0a7] text-[#0f2e4a] p-2.5 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform z-20 border border-white/50">
                         <Icon name="upload" size={16} />
                         <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                       </label>
@@ -975,11 +977,14 @@ export default function App() {
                         </select>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-4 border-t">
-                        {[{k:'str',l:'STR (Strength)',c:'text-red-600'},{k:'agi',l:'AGI (Agility)',c:'text-green-600'},{k:'dex',l:'DEX (Dexterity)',c:'text-yellow-600'},{k:'int',l:'INT (Intelligence)',c:'text-blue-600'},{k:'con',l:'CON (Constitution)',c:'text-orange-600'},{k:'sen',l:'SEN (Sense)',c:'text-purple-600'}].map(s=>(
-                          <div key={s.k} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
-                            <span className={`text-[10px] font-black ${s.c}`}>{s.l}</span>
-                            <input type="number" min="1" max="10" className="w-12 text-center border-b border-gray-300 bg-transparent text-sm font-bold outline-none" value={teamForm[s.k]} onChange={e=>setTeamForm({...teamForm, [s.k]: Number(e.target.value)||1})} />
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-4 border-t border-slate-100 mt-2">
+                        {[{k:'str',l:'STR',f:'Strength',c:'text-rose-600',bg:'bg-rose-50',b:'border-rose-200'},{k:'agi',l:'AGI',f:'Agility',c:'text-emerald-600',bg:'bg-emerald-50',b:'border-emerald-200'},{k:'dex',l:'DEX',f:'Dexterity',c:'text-amber-600',bg:'bg-amber-50',b:'border-amber-200'},{k:'int',l:'INT',f:'Intelligence',c:'text-blue-600',bg:'bg-blue-50',b:'border-blue-200'},{k:'con',l:'CON',f:'Constitution',c:'text-orange-600',bg:'bg-orange-50',b:'border-orange-200'},{k:'sen',l:'SEN',f:'Sense',c:'text-purple-600',bg:'bg-purple-50',b:'border-purple-200'}].map(s=>(
+                          <div key={s.k} className={`flex items-center justify-between ${s.bg} p-2 rounded-lg border ${s.b} shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-transform hover:scale-[1.02]`}>
+                            <div className="flex flex-col">
+                              <label className={`text-[12px] font-black ${s.c} leading-none`}>{s.l}</label>
+                              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{s.f}</label>
+                            </div>
+                            <input type="number" min="1" max="10" className={`w-10 text-center text-[14px] font-black border-b-2 border-transparent focus:${s.b} bg-transparent outline-none ${s.c}`} value={teamForm[s.k]} onChange={e=>setTeamForm({...teamForm, [s.k]: Number(e.target.value)||1})} />
                           </div>
                         ))}
                       </div>
@@ -991,8 +996,10 @@ export default function App() {
                     </div>
                  </div>
 
-                 <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-xl border border-slate-100 relative">
-                    <h4 className="font-black text-[#0f2e4a] mb-6 text-center">RPG PERFORMANCE MAP</h4>
+                 <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
+                    <h4 className="font-black text-[#0f2e4a] mb-6 text-center tracking-widest relative z-10 flex items-center"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
                     <div className="w-full max-w-[280px] aspect-square">
                       <RadarChart 
                          baseStats={classMap[teamForm.classId] ? [classMap[teamForm.classId].str, classMap[teamForm.classId].agi, classMap[teamForm.classId].dex, classMap[teamForm.classId].int, classMap[teamForm.classId].con, classMap[teamForm.classId].sen] : []}
