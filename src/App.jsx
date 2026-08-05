@@ -535,6 +535,17 @@ export default function App() {
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: (prev[k]||[]).filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
   
+  const updateStatConfig = (statKey, field, val) => {
+    setSets(prev => {
+        let nS = {...prev};
+        if (!nS.statConfigs) nS.statConfigs = {};
+        if (!nS.statConfigs[statKey]) nS.statConfigs[statKey] = {};
+        nS.statConfigs[statKey][field] = val;
+        saveD('settings', nS);
+        return nS;
+    });
+  };
+
   const toggleEmailProj = (projName) => {
      setEmForm(p => {
          const current = p.selectedProjs;
@@ -839,14 +850,22 @@ export default function App() {
       if (!u.id && !selTeam?.isNew) return null;
       const role = classMap[u.classId];
       
-      const statMeta = [
-        { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
-        { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
-        { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
-        { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
-        { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
-        { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
-      ];
+      const sc = sets.statConfigs || {};
+      const defMeta = {
+        str: { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
+        agi: { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
+        dex: { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
+        int: { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
+        con: { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
+        sen: { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
+      };
+
+      const statMeta = ['str','agi','dex','int','con','sen'].map(k => ({
+        ...defMeta[k],
+        desc: sc[k]?.desc || defMeta[k].desc,
+        detail: sc[k]?.detail || defMeta[k].detail,
+        impact: sc[k]?.impact || defMeta[k].impact
+      }));
 
       let strengths = [];
       let gaps = [];
@@ -857,13 +876,10 @@ export default function App() {
         const uVal = Number(u[s.key]) || 5;
         const rVal = role ? (Number(role[s.key]) || 5) : 5;
         
-        // Calculate relative style based on how it compares to class requirement or baseline 5
-        const diff = uVal - rVal;
-        const score = uVal + (diff * 1.5); // Add relative advantage bonus
-        
-        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += score;
-        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += score;
-        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += score;
+        // Calculate style scores by measuring absolute sums
+        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += uVal;
+        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
+        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
 
         if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal});
         else if (uVal <= 4 || (role && uVal < rVal)) gaps.push({...s, diff: rVal - uVal});
@@ -874,15 +890,25 @@ export default function App() {
 
       let mainStyle = '';
       let styleDesc = '';
-      if (workStyleScores.precision > workStyleScores.lifting && workStyleScores.precision > workStyleScores.mastermind) {
+      let styleMatchStandard = '';
+      
+      const maxScore = Math.max(workStyleScores.precision, workStyleScores.lifting, workStyleScores.mastermind);
+
+      if (maxScore === workStyleScores.precision && workStyleScores.precision > workStyleScores.lifting && workStyleScores.precision > workStyleScores.mastermind) {
         mainStyle = 'สายเน้นความเร็วและแม่นยำ (The Precision Engine)';
-        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านความไวและการลดข้อผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
-      } else if (workStyleScores.lifting > workStyleScores.precision && workStyleScores.lifting > workStyleScores.mastermind) {
+        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านความไวและการลดข้อผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
+        const rolePrecisionReq = role ? (Number(role.agi) + Number(role.dex)) : 10;
+        if(role) styleMatchStandard = workStyleScores.precision >= rolePrecisionReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
+      } else if (maxScore === workStyleScores.lifting && workStyleScores.lifting > workStyleScores.precision && workStyleScores.lifting > workStyleScores.mastermind) {
         mainStyle = 'สายบู๊รับแรงปะทะ (The Heavy Lifters)';
-        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
-      } else if (workStyleScores.mastermind > workStyleScores.precision && workStyleScores.mastermind > workStyleScores.lifting) {
+        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
+        const roleLiftingReq = role ? (Number(role.str) + Number(role.con)) : 10;
+        if(role) styleMatchStandard = workStyleScores.lifting >= roleLiftingReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
+      } else if (maxScore === workStyleScores.mastermind && workStyleScores.mastermind > workStyleScores.precision && workStyleScores.mastermind > workStyleScores.lifting) {
         mainStyle = 'สายมันสมองและระบบ (The Masterminds)';
-        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และการวางระบบ (Strategy & Management)';
+        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และการวางระบบ (Strategy & Management)';
+        const roleMasterReq = role ? (Number(role.int) + Number(role.sen)) : 10;
+        if(role) styleMatchStandard = workStyleScores.mastermind >= roleMasterReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
       } else {
         mainStyle = 'สายสมดุล (All-Rounder)';
         styleDesc = 'มีค่าพลังที่ยืดหยุ่นและบาลานซ์กันเมื่อเทียบกับเป้าหมายของคลาส สามารถทำงานได้รอบด้าน แต่อาจขาดจุดแข็งที่โดดเด่นทางใดทางหนึ่ง';
@@ -904,9 +930,9 @@ export default function App() {
           </h4>
           
           <div className="mb-3 text-[11px] bg-[#0f2e4a] text-white p-3 rounded-lg shadow-sm leading-relaxed border-l-4 border-[#bca374]">
-             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Relative Work Style Tendency):</strong>
+             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
              <span className="font-bold text-[13px] block">{mainStyle}</span>
-             <span className="text-gray-300 opacity-90 mt-1 block">{styleDesc}</span>
+             <span className="text-gray-300 opacity-90 mt-1 block">{styleDesc} {styleMatchStandard && <span className={styleMatchStandard.includes('ผ่านเกณฑ์')?'text-emerald-400 font-bold':'text-rose-400 font-bold'}> ({styleMatchStandard})</span>}</span>
           </div>
 
           {roleText && (
@@ -1243,8 +1269,45 @@ export default function App() {
             </div>
           ))}
         </div>
+
+        <div className="bg-white p-6 rounded-xl border shadow-sm mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="edit3" size={20} className="mr-2 text-[#bca374]"/> ตั้งค่าคำอธิบายสเตตัสและผลกระทบ (Stat Explanations)</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['str', 'agi', 'dex', 'int', 'con', 'sen'].map(key => {
+              const upper = key.toUpperCase();
+              const def = {
+                  str: { name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
+                  agi: { name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
+                  dex: { name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
+                  int: { name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
+                  con: { name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
+                  sen: { name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
+              }[key];
+              const conf = (sets.statConfigs && sets.statConfigs[key]) || {};
+              return (
+                <div key={key} className="border border-gray-200 rounded-lg p-3 bg-gray-50 flex flex-col space-y-3">
+                  <div className="font-bold text-sm text-[#0f2e4a]">{upper} - {def.name.split('(')[1].replace(')','')}</div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">คำอธิบายสั้น (Desc)</label>
+                    <input type="text" className="w-full border rounded px-2 py-1.5 text-xs outline-none focus:border-blue-400" placeholder={def.desc} value={conf.desc ?? ''} onChange={e => updateStatConfig(key, 'desc', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">รายละเอียด / ควรพัฒนา (Detail)</label>
+                    <textarea className="w-full border rounded px-2 py-1.5 text-xs outline-none focus:border-blue-400 min-h-[50px] resize-none" placeholder={def.detail} value={conf.detail ?? ''} onChange={e => updateStatConfig(key, 'detail', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-rose-500 mb-1 block">ผลกระทบหากต่ำกว่าเกณฑ์ (Impact)</label>
+                    <textarea className="w-full border border-rose-200 rounded px-2 py-1.5 text-xs outline-none focus:border-rose-400 min-h-[50px] resize-none" placeholder={def.impact} value={conf.impact ?? ''} onChange={e => updateStatConfig(key, 'impact', e.target.value)} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center space-y-3">
             <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
             <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
