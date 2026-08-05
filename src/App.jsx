@@ -75,7 +75,6 @@ const RadarChart = ({ baseStats = [], userStats = [] }) => {
       {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
       {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
       {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="10" fontWeight="bold" fill="#6b7280" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
-      {baseStats.length === 6 && <polygon points={baseStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(188, 163, 116, 0.2)" stroke="#bca374" strokeWidth="1" strokeDasharray="4 4" />}
       {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.5)" stroke="#0f2e4a" strokeWidth="2" />}
       {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" />; })}
     </svg>
@@ -898,30 +897,24 @@ export default function App() {
 
       statMeta.forEach(s => {
         const uVal = Number(u[s.key]) || 5;
-        const rVal = role ? (Number(role[s.key]) || 5) : 5;
         
         // Calculate style scores by measuring absolute sums
         if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += uVal;
         if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
         if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
 
-        if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal, uVal, rVal});
-        else if (uVal <= 4 || (role && uVal < rVal)) gaps.push({...s, diff: rVal - uVal, uVal, rVal});
+        if (uVal >= 8) strengths.push({...s, uVal});
+        else if (uVal <= 4) gaps.push({...s, uVal});
       });
 
-      strengths.sort((a,b) => b.diff - a.diff);
-      gaps.sort((a,b) => b.diff - a.diff);
+      strengths.sort((a,b) => b.uVal - a.uVal);
+      gaps.sort((a,b) => a.uVal - b.uVal);
 
-      const isCritical = role && gaps.length === 6;
       let mainStyle = '';
       let styleDesc = '';
 
-      if (isCritical) {
-         mainStyle = '⚠️ แจ้งเตือน: ต้องเฝ้าระวังเป็นพิเศษ (Critical Deficit)';
-         styleDesc = 'สเตตัสต่ำกว่ามาตรฐานของคลาสในทุกๆ ด้าน (ทั้ง 6 มิติ) อาจะส่งผลกระทบอย่างรุนแรงต่อการทำงานในบทบาทนี้ ควรพิจารณาแผนพัฒนาบุคลากรหรือปรับเปลี่ยนหน้าที่โดยด่วน';
-      } else {
-          const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
-          const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
+      const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
+      const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
           const archetypeMap = {
             'agi_con_dex': 'The Swift Guardian (สายผู้พิทักษ์ความเร็ว)',
             'agi_con_int': 'The Tactical Runner (สายปฏิบัติการฉับไว)',
@@ -969,35 +962,18 @@ export default function App() {
 
              styleDesc = `โดดเด่นด้าน${getDesc(top3Keys[0])} ผสานเข้ากับ${getDesc(top3Keys[1])} และเสริมด้วย${getDesc(top3Keys[2])}`;
           }
-      }
-
-      let roleText = '';
-      if (role && !isCritical) {
-         if (gaps.length === 0) {
-            roleText = `ผ่านเกณฑ์ Dual-Layer Diagnostic เหมาะสมอย่างยิ่งกับบทบาท "${role.name}" โดยผลผลิต (WHAT) และศักยภาพ (HOW) สอดคล้องหรือสูงกว่ามาตรฐานคลาสกำหนด`;
-         } else {
-            roleText = `เทียบกับมาตรฐานบทบาท "${role.name}" (Layer 2) พบว่ามีความเสี่ยงในทักษะบางด้าน (Layer 1) ที่อาจส่งผลกระทบต่อผลผลิตการทำงาน`;
-         }
-      }
 
       return (
         <div className="mt-8 p-4 bg-gradient-to-br from-[#f8fafc] to-white rounded-xl border border-slate-200 w-full text-left shadow-sm">
           <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Dual-Layer Diagnostic)
+            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
           </h4>
           
-          <div className={`mb-3 text-[11px] p-3 rounded-lg shadow-sm leading-relaxed border-l-4 ${isCritical ? 'bg-red-50 border-red-500' : 'bg-[#0f2e4a] text-white border-[#bca374]'}`}>
-             <strong className={`block mb-1 ${isCritical ? 'text-red-700' : 'text-[#bca374]'}`}>แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
-             <span className={`font-bold text-[13px] block ${isCritical ? 'text-red-600' : ''}`}>{mainStyle}</span>
-             <span className={`mt-1 block ${isCritical ? 'text-red-500 font-medium' : 'text-gray-300 opacity-90'}`}>{styleDesc}</span>
+          <div className="mb-3 text-[11px] p-3 rounded-lg shadow-sm leading-relaxed border-l-4 bg-[#0f2e4a] text-white border-[#bca374]">
+             <strong className="block mb-1 text-[#bca374]">แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
+             <span className="font-bold text-[13px] block">{mainStyle}</span>
+             <span className="mt-1 block text-gray-300 opacity-90">{styleDesc}</span>
           </div>
-
-          {roleText && (
-             <div className="mb-3 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
-               <strong className="text-[#0f2e4a]">ภาพรวมเมื่อเทียบกับมาตรฐานคลาส {role.name} (Class Benchmark):</strong><br/>
-               <span className={gaps.length > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>{roleText}</span>
-             </div>
-          )}
 
           <div className="grid grid-cols-1 gap-2.5 mt-2">
             <div className="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100 relative overflow-hidden">
@@ -1023,7 +999,7 @@ export default function App() {
                   {gaps.map(s => (
                     <li key={s.key}>
                       <strong>ขาดทักษะด้าน: {s.name}</strong>
-                      <div className="text-[10px] text-slate-500 mt-0.5">ปัจจุบัน: <span className="text-slate-700 font-bold">{s.uVal}</span> ({getStatLevelText(s.uVal)}) | เป้าหมาย: <span className="text-slate-700 font-bold">{s.rVal}</span> ({getStatLevelText(s.rVal)})</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">ปัจจุบัน: <span className="text-slate-700 font-bold">{s.uVal}</span> ({getStatLevelText(s.uVal)})</div>
                       <div className="text-gray-600 mt-1 block">ควรพัฒนา: {s.detail}</div>
                       <div className="text-rose-600/90 font-medium mt-1 p-1.5 bg-rose-100/50 rounded border border-rose-100/50 inline-block">⚠️ ผลกระทบ: {s.impact}</div>
                     </li>
@@ -1118,13 +1094,11 @@ export default function App() {
                     <h4 className="font-black text-[#0f2e4a] mb-6 text-center tracking-widest relative z-10 flex items-center"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
                     <div className="w-full max-w-[280px] aspect-square">
                       <RadarChart 
-                         baseStats={classMap[teamForm.classId] ? [classMap[teamForm.classId].str, classMap[teamForm.classId].agi, classMap[teamForm.classId].dex, classMap[teamForm.classId].int, classMap[teamForm.classId].con, classMap[teamForm.classId].sen] : []}
                          userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
                       />
                     </div>
                     <div className="flex flex-wrap justify-center gap-4 mt-6 text-[10px] font-bold">
-                       <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-1.5 rounded-sm opacity-50"></div> สเตตัสปัจจุบัน</div>
-                       {teamForm.classId && <div className="flex items-center"><div className="w-3 h-3 bg-[#bca374] border border-dashed border-[#bca374] mr-1.5 rounded-sm opacity-20"></div> เป้าหมายของคลาส</div>}
+                       <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-1.5 rounded-sm opacity-50"></div> ระดับสเตตัสพนักงาน (Absolute Scale)</div>
                     </div>
                     {renderAnalysis()}
                  </div>
@@ -1293,9 +1267,6 @@ export default function App() {
                 <div key={c.id} className="bg-white border rounded-lg p-3 shadow-sm flex justify-between items-center">
                   <div>
                     <div className="font-bold text-[#0f2e4a]">{c.name}</div>
-                    <div className="text-[10px] text-gray-500 flex gap-2 mt-1">
-                      <span>STR:{c.str}</span><span>AGI:{c.agi}</span><span>DEX:{c.dex}</span><span>INT:{c.int}</span><span>CON:{c.con}</span><span>SEN:{c.sen}</span>
-                    </div>
                   </div>
                   <button type="button" onClick={()=>{let ns=(sets.staffClasses||[]).filter(x=>x.id!==c.id); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets);}} className="text-red-400 hover:text-red-600 p-2"><Icon name="trash" size={16}/></button>
                 </div>
@@ -1304,16 +1275,8 @@ export default function App() {
             </div>
             <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
               <label className="text-xs font-bold text-gray-700 mb-1">ชื่อคลาส (Role Name)</label>
-              <input type="text" placeholder="เช่น Supervisor, Foreman" className="border rounded-lg px-4 py-2 text-sm w-full mb-3" value={sInp.className} onChange={e=>setSInp({...sInp, className:e.target.value})} />
-              <div className="grid grid-cols-2 gap-3 mb-4 text-xs font-bold">
-                <div><label className="block mb-1 text-red-600">STR (Strength)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cStr} onChange={e=>setSInp({...sInp, cStr:e.target.value})} /></div>
-                <div><label className="block mb-1 text-green-600">AGI (Agility)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cAgi} onChange={e=>setSInp({...sInp, cAgi:e.target.value})} /></div>
-                <div><label className="block mb-1 text-yellow-600">DEX (Dexterity)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cDex} onChange={e=>setSInp({...sInp, cDex:e.target.value})} /></div>
-                <div><label className="block mb-1 text-blue-600">INT (Intelligence)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cInt} onChange={e=>setSInp({...sInp, cInt:e.target.value})} /></div>
-                <div><label className="block mb-1 text-orange-600">CON (Constitution)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cCon} onChange={e=>setSInp({...sInp, cCon:e.target.value})} /></div>
-                <div><label className="block mb-1 text-purple-600">SEN (Sense)</label><input type="number" min="1" max="10" className="border rounded px-2 py-1.5 w-full" value={sInp.cSen} onChange={e=>setSInp({...sInp, cSen:e.target.value})} /></div>
-              </div>
-              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className, str: Number(sInp.cStr), agi: Number(sInp.cAgi), dex: Number(sInp.cDex), int: Number(sInp.cInt), con: Number(sInp.cCon), sen: Number(sInp.cSen)}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
+              <input type="text" placeholder="เช่น Supervisor, Foreman" className="border rounded-lg px-4 py-2 text-sm w-full mb-3" value={sInp.className} onChange={e=>setSInp({...sInp, className:e.target.value})} onKeyDown={e=>{if(e.key==='Enter') {if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''});}}} />
+              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
             </div>
           </div>
         </div>
