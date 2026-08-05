@@ -538,7 +538,7 @@ export default function App() {
   
   const updateStatConfig = (statKey, field, val) => {
     setSets(prev => {
-        let nS = {
+        return {
             ...prev,
             statConfigs: {
                 ...(prev.statConfigs || {}),
@@ -548,8 +548,14 @@ export default function App() {
                 }
             }
         };
-        saveD('settings', nS);
-        return nS;
+    });
+  };
+
+  const saveAllSettings = () => {
+    setSets(prev => {
+        saveD('settings', prev);
+        setTimeout(() => alert('บันทึกข้อมูลคำอธิบายสเตตัสเรียบร้อยแล้ว!'), 300);
+        return prev;
     });
   };
 
@@ -1280,6 +1286,7 @@ export default function App() {
         <div className="bg-white p-6 rounded-xl border shadow-sm mt-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="edit3" size={20} className="mr-2 text-[#bca374]"/> ตั้งค่าคำอธิบายสเตตัสและผลกระทบ (Stat Explanations)</h3>
+            <button type="button" onClick={saveAllSettings} className="bg-[#bca374] text-white px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-[#a38a5b] flex items-center transition-colors"><Icon name="save" size={14} className="mr-2"/> บันทึกคำอธิบาย</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {['str', 'agi', 'dex', 'int', 'con', 'sen'].map(key => {
