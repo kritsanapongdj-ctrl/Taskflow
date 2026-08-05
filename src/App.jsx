@@ -195,7 +195,8 @@ export default function App() {
               overdueTime: d.overdueTime || '17:30',
               lateWorkOrderHours: d.lateWorkOrderHours || 24,
               staffClasses: d.staffClasses || [],
-              staffStats: d.staffStats || []
+              staffStats: d.staffStats || [],
+              statConfigs: d.statConfigs || {}
           });
       }
       setLoading(false);
