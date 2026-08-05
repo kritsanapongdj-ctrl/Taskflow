@@ -537,10 +537,16 @@ export default function App() {
   
   const updateStatConfig = (statKey, field, val) => {
     setSets(prev => {
-        let nS = {...prev};
-        if (!nS.statConfigs) nS.statConfigs = {};
-        if (!nS.statConfigs[statKey]) nS.statConfigs[statKey] = {};
-        nS.statConfigs[statKey][field] = val;
+        let nS = {
+            ...prev,
+            statConfigs: {
+                ...(prev.statConfigs || {}),
+                [statKey]: {
+                    ...(prev.statConfigs?.[statKey] || {}),
+                    [field]: val
+                }
+            }
+        };
         saveD('settings', nS);
         return nS;
     });
