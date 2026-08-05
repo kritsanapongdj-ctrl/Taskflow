@@ -880,6 +880,17 @@ export default function App() {
         impact: sc[k]?.impact || defMeta[k].impact
       }));
 
+      const getStatLevelText = (val) => {
+          const v = Number(val);
+          if (v >= 9) return 'ระดับเชี่ยวชาญ';
+          if (v === 8) return 'ระดับสูงเหนือมาตรฐาน';
+          if (v === 7) return 'ระดับชำนาญ';
+          if (v === 6) return 'ระดับมาตรฐานสมดุล';
+          if (v === 5) return 'ระดับพื้นฐาน';
+          if (v === 4) return 'พอใช้แต่ต้องพัฒนา';
+          return 'เสี่ยงต่อการทำงาน';
+      };
+
       let strengths = [];
       let gaps = [];
       
@@ -894,8 +905,8 @@ export default function App() {
         if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
         if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
 
-        if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal});
-        else if (uVal <= 4 || (role && uVal < rVal)) gaps.push({...s, diff: rVal - uVal});
+        if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal, uVal, rVal});
+        else if (uVal <= 4 || (role && uVal < rVal)) gaps.push({...s, diff: rVal - uVal, uVal, rVal});
       });
 
       strengths.sort((a,b) => b.diff - a.diff);
@@ -994,7 +1005,12 @@ export default function App() {
               <strong className="text-emerald-700 text-xs flex items-center mb-2"><Icon name="checkCircle" size={14} className="mr-1.5"/> ศักยภาพเด่น (Strengths)</strong>
               {strengths.length > 0 ? (
                 <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1.5 relative z-10">
-                  {strengths.map(s => <li key={s.key}><strong>{s.name}</strong> - <span className="text-gray-600">{s.detail}</span></li>)}
+                  {strengths.map(s => (
+                    <li key={s.key}>
+                       <strong>{s.name}</strong> <span className="text-[10px] text-emerald-600">[{s.uVal}: {getStatLevelText(s.uVal)}]</span>
+                       <div className="text-gray-600 mt-0.5 block">{s.detail}</div>
+                    </li>
+                  ))}
                 </ul>
               ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ค่าพลังยังอยู่ในระดับพื้นฐานทั่วไป</div>}
             </div>
@@ -1007,6 +1023,7 @@ export default function App() {
                   {gaps.map(s => (
                     <li key={s.key}>
                       <strong>ขาดทักษะด้าน: {s.name}</strong>
+                      <div className="text-[10px] text-slate-500 mt-0.5">ปัจจุบัน: <span className="text-slate-700 font-bold">{s.uVal}</span> ({getStatLevelText(s.uVal)}) | เป้าหมาย: <span className="text-slate-700 font-bold">{s.rVal}</span> ({getStatLevelText(s.rVal)})</div>
                       <div className="text-gray-600 mt-1 block">ควรพัฒนา: {s.detail}</div>
                       <div className="text-rose-600/90 font-medium mt-1 p-1.5 bg-rose-100/50 rounded border border-rose-100/50 inline-block">⚠️ ผลกระทบ: {s.impact}</div>
                     </li>
