@@ -912,32 +912,51 @@ export default function App() {
           const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
           const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
           const archetypeMap = {
-            'agi_str': 'The Vanguard (สายทะลวงฟัน)|ผลักดันงานหนักได้อย่างรวดเร็ว เหมาะกับการบุกเบิกโปรเจ็กต์หรือแก้ปัญหาเฉพาะหน้าแบบฉับไว',
-            'dex_str': 'The Craftsman (สายช่างฝีมือ)|จัดการงานสเกลใหญ่ด้วยความละเอียดและแม่นยำสูง มั่นใจได้ในคุณภาพ',
-            'int_str': 'The Architect (สายสถาปนิก)|ผสมผสานพลังในการลุยงานหนักเข้ากับการวางกลยุทธ์และระบบอย่างเป็นขั้นตอน',
-            'con_str': 'The Juggernaut (สายรถถัง)|พลังในการผลักดันงานและการรับแรงปะทะระดับสูงสุด ไม่ย่อท้อต่ออุปสรรคและงานหนัก',
-            'sen_str': 'The Warlord (สายขุนศึก)|ลุยงานหนักพร้อมกับมีไหวพริบในการจัดการทีมหรือสถานการณ์รอบตัวได้เป็นอย่างดี',
-            'agi_dex': 'The Precision Engine (สายเครื่องจักรกล)|สปีดการทำงานเร็วจัดและไร้ข้อผิดพลาด (Zero Error Rate) ตอบสนองได้ฉับไว',
-            'agi_int': 'The Tactician (สายยุทธวิธี)|คิดเร็วทำเร็ว แก้ปัญหาระบบและวางแผนได้อย่างรวดเร็ว เหมาะกับงานด่วนและ Agile',
-            'agi_con': 'The Marathoner (สายมาราธอน)|ตอบสนองต่องานได้ไวและสามารถรับความกดดันหรือแก้ปัญหาต่อเนื่องยาวนานได้ดี',
-            'agi_sen': 'The Scout (สายสอดแนม)|เข้าถึงปัญหาไว ไหวพริบดีเยี่ยม จัดการสถานการณ์ฉุกเฉินและประสานงานได้รวดเร็ว',
-            'dex_int': 'The Engineer (สายวิศวกร)|แม่นยำในรายละเอียดและมีตรรกะการวิเคราะห์เชิงลึกที่ยอดเยี่ยม สร้างงานคุณภาพสูง',
-            'con_dex': 'The Sentinel (สายผู้พิทักษ์)|ทนทานต่อความกดดันสูงพร้อมกับรักษามาตรฐานความเป๊ะของงานไว้ได้ไม่ตกหล่น',
-            'dex_sen': 'The Sniper (สายสไนเปอร์)|ละเอียดรอบคอบและมีสัญชาตญาณแม่นยำ จับจุดบกพร่องที่คนอื่นมองข้ามได้ดี',
-            'con_int': 'The Pillar (สายเสาหลัก)|มีกระบวนการคิดเชิงลึกและทนทานต่อความเครียดทางสมองสูง เหมาะกับงานวิเคราะห์ระยะยาว',
-            'int_sen': 'The Mastermind (สายมันสมอง)|วางกลยุทธ์ยอดเยี่ยมและมีไหวพริบในการจัดการระบบและผู้คนได้อย่างสมบูรณ์แบบ',
-            'con_sen': 'The Anchor (สายสมอเรือ)|เยือกเย็น ทนทาน และมีไหวพริบในการคุมสถานการณ์ เป็นหลักพักพิงที่มั่นคงของทีม'
+            'agi_con_dex': 'The Swift Guardian (สายผู้พิทักษ์ความเร็ว)',
+            'agi_con_int': 'The Tactical Runner (สายปฏิบัติการฉับไว)',
+            'agi_con_sen': 'The Resilient Scout (สายสอดแนมทรหด)',
+            'agi_con_str': 'The Frontline Berserker (สายทะลวงฟันแนวหน้า)',
+            'agi_dex_int': 'The Cyber Ninja (สายเครื่องจักรกลสมบูรณ์แบบ)',
+            'agi_dex_sen': 'The Ghost (สายพริ้วไหวไร้ร่องรอย)',
+            'agi_dex_str': 'The Blademaster (สายนักดาบความไวแสง)',
+            'agi_int_sen': 'The Spymaster (สายข่าวกรองอัจฉริยะ)',
+            'agi_int_str': 'The Battlemage (สายนักรบเวทมนตร์)',
+            'agi_sen_str': 'The Vanguard Warlord (สายขุนศึกกองหน้า)',
+            'con_dex_int': 'The Siege Engineer (สายวิศวกรป้อมปราการ)',
+            'con_dex_sen': 'The Iron Sentinel (สายผู้เฝ้าระวังเหล็กกล้า)',
+            'con_dex_str': 'The Juggernaut Craftsman (สายช่างฝีมือทะลวงฟัน)',
+            'con_int_sen': 'The Grand Pillar (สายเสาหลักยุทธศาสตร์)',
+            'con_int_str': 'The Fortress Architect (สายสถาปนิกป้อมปราการ)',
+            'con_sen_str': 'The Unbreakable Commander (สายผู้บัญชาการไร้พ่าย)',
+            'dex_int_sen': 'The Oracle Engineer (สายวิศวกรผู้หยั่งรู้)',
+            'dex_int_str': 'The Grandmaster (สายปรมาจารย์นักรบ)',
+            'dex_sen_str': 'The Sharpshooter General (สายขุนพลแม่นปืน)',
+            'int_sen_str': 'The Supreme Tactician (สายสุดยอดยุทธวิธี)'
           };
 
           if (sortedStats[0][1] === sortedStats[5][1]) {
              mainStyle = 'The All-Rounder (สายสมดุล)';
              styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
           } else {
-             const pairKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-             const arch = archetypeMap[pairKey] || 'Hybrid (สายผสม)|มีความสามารถโดดเด่นหลากหลายด้าน';
-             const parts = arch.split('|');
-             mainStyle = parts[0];
-             styleDesc = parts[1];
+             const top3Keys = [sortedStats[0][0], sortedStats[1][0], sortedStats[2][0]];
+             const pairKey = [...top3Keys].sort().join('_');
+             mainStyle = archetypeMap[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)';
+             
+             const getDesc = (k) => {
+                 const conf = sets.statConfigs && sets.statConfigs[k];
+                 if (conf && conf.desc) return conf.desc.trim();
+                 const defaults = {
+                     str: 'พลังในการผลักดันงานหนัก',
+                     agi: 'ความรวดเร็วและคล่องตัว',
+                     dex: 'ความแม่นยำและคุณภาพงาน',
+                     int: 'การวิเคราะห์และวางระบบ',
+                     con: 'ความทนทานต่อความกดดัน',
+                     sen: 'ไหวพริบและการจัดการอารมณ์'
+                 };
+                 return defaults[k];
+             };
+
+             styleDesc = `โดดเด่นด้าน${getDesc(top3Keys[0])} ผสานเข้ากับ${getDesc(top3Keys[1])} และเสริมด้วย${getDesc(top3Keys[2])}`;
           }
       }
 
