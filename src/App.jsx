@@ -840,12 +840,12 @@ export default function App() {
       const role = classMap[u.classId];
       
       const statMeta = [
-        { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)' },
-        { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)' },
-        { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)' },
-        { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)' },
-        { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)' },
-        { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)' }
+        { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
+        { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
+        { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
+        { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
+        { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
+        { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
       ];
 
       let strengths = [];
@@ -857,13 +857,16 @@ export default function App() {
         const uVal = Number(u[s.key]) || 5;
         const rVal = role ? (Number(role[s.key]) || 5) : 5;
         
-        // Accumulate style scores
-        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += uVal;
-        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
-        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
+        // Calculate relative style based on how it compares to class requirement or baseline 5
+        const diff = uVal - rVal;
+        const score = uVal + (diff * 1.5); // Add relative advantage bonus
+        
+        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += score;
+        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += score;
+        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += score;
 
         if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal});
-        else if (uVal <= 4 || (role && uVal <= rVal - 2)) gaps.push({...s, diff: rVal - uVal});
+        else if (uVal <= 4 || (role && uVal < rVal)) gaps.push({...s, diff: rVal - uVal});
       });
 
       strengths.sort((a,b) => b.diff - a.diff);
@@ -873,24 +876,24 @@ export default function App() {
       let styleDesc = '';
       if (workStyleScores.precision > workStyleScores.lifting && workStyleScores.precision > workStyleScores.mastermind) {
         mainStyle = 'สายเน้นความเร็วและแม่นยำ (The Precision Engine)';
-        styleDesc = 'มีจุดเด่นเรื่องความไวและลดความผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
+        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านความไวและการลดข้อผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
       } else if (workStyleScores.lifting > workStyleScores.precision && workStyleScores.lifting > workStyleScores.mastermind) {
         mainStyle = 'สายบู๊รับแรงปะทะ (The Heavy Lifters)';
-        styleDesc = 'โดดเด่นด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
+        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
       } else if (workStyleScores.mastermind > workStyleScores.precision && workStyleScores.mastermind > workStyleScores.lifting) {
         mainStyle = 'สายมันสมองและระบบ (The Masterminds)';
-        styleDesc = 'มีทักษะโดดเด่นด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และวางระบบ (Strategy & Management)';
+        styleDesc = 'โดดเด่นกว่าค่ามาตรฐานของคลาสในด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และการวางระบบ (Strategy & Management)';
       } else {
         mainStyle = 'สายสมดุล (All-Rounder)';
-        styleDesc = 'มีค่าพลังที่ยืดหยุ่นและบาลานซ์กัน สามารถปรับตัวทำงานได้หลายรูปแบบ แต่ยังขาดจุดแข็งที่โดดเด่นเฉพาะทาง';
+        styleDesc = 'มีค่าพลังที่ยืดหยุ่นและบาลานซ์กันเมื่อเทียบกับเป้าหมายของคลาส สามารถทำงานได้รอบด้าน แต่อาจขาดจุดแข็งที่โดดเด่นทางใดทางหนึ่ง';
       }
 
       let roleText = '';
       if (role) {
          if (gaps.length === 0) {
-            roleText = `ผ่านเกณฑ์ Dual-Layer Diagnostic เหมาะสมอย่างยิ่งกับบทบาท "${role.name}" โดยผลผลิต (WHAT) และศักยภาพ (HOW) สอดคล้องตามมาตรฐาน`;
+            roleText = `ผ่านเกณฑ์ Dual-Layer Diagnostic เหมาะสมอย่างยิ่งกับบทบาท "${role.name}" โดยผลผลิต (WHAT) และศักยภาพ (HOW) สอดคล้องหรือสูงกว่ามาตรฐานคลาสกำหนด`;
          } else {
-            roleText = `เทียบกับมาตรฐานบทบาท "${role.name}" (Layer 2) ควรปรับปรุงศักยภาพภายใน (Layer 1) บางด้าน เพื่อให้ได้ผลผลิตตามเกณฑ์`;
+            roleText = `เทียบกับมาตรฐานบทบาท "${role.name}" (Layer 2) พบว่ามีความเสี่ยงในทักษะบางด้าน (Layer 1) ที่อาจส่งผลกระทบต่อผลผลิตการทำงาน`;
          }
       }
 
@@ -901,14 +904,14 @@ export default function App() {
           </h4>
           
           <div className="mb-3 text-[11px] bg-[#0f2e4a] text-white p-3 rounded-lg shadow-sm leading-relaxed border-l-4 border-[#bca374]">
-             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Work Style Tendency):</strong>
+             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Relative Work Style Tendency):</strong>
              <span className="font-bold text-[13px] block">{mainStyle}</span>
              <span className="text-gray-300 opacity-90 mt-1 block">{styleDesc}</span>
           </div>
 
           {roleText && (
              <div className="mb-3 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
-               <strong className="text-[#0f2e4a]">ภาพรวมเมื่อเทียบกับค่ามาตรฐาน (Standard Benchmark):</strong><br/>
+               <strong className="text-[#0f2e4a]">ภาพรวมเมื่อเทียบกับมาตรฐานคลาส {role.name} (Class Benchmark):</strong><br/>
                <span className={gaps.length > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>{roleText}</span>
              </div>
           )}
@@ -926,10 +929,16 @@ export default function App() {
 
             <div className="bg-rose-50/50 p-2.5 rounded-lg border border-rose-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-1 opacity-10"><Icon name="alertTriangle" size={40}/></div>
-              <strong className="text-rose-600 text-xs flex items-center mb-2"><Icon name="target" size={14} className="mr-1.5"/> จุดที่ต้องปรับปรุงเทียบค่ามาตรฐาน (Gaps)</strong>
+              <strong className="text-rose-600 text-xs flex items-center mb-2"><Icon name="target" size={14} className="mr-1.5"/> ความเสี่ยงและผลกระทบจากค่าพลังที่ต่ำกว่าเกณฑ์ (Gaps & Impacts)</strong>
               {gaps.length > 0 ? (
-                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1.5 relative z-10">
-                  {gaps.map(s => <li key={s.key}><strong>{s.name}</strong> - <span className="text-gray-600">ควรพัฒนาด้าน: {s.detail}</span></li>)}
+                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-3 relative z-10">
+                  {gaps.map(s => (
+                    <li key={s.key}>
+                      <strong>ขาดทักษะด้าน: {s.name}</strong>
+                      <div className="text-gray-600 mt-1 block">ควรพัฒนา: {s.detail}</div>
+                      <div className="text-rose-600/90 font-medium mt-1 p-1.5 bg-rose-100/50 rounded border border-rose-100/50 inline-block">⚠️ ผลกระทบ: {s.impact}</div>
+                    </li>
+                  ))}
                 </ul>
               ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ไม่มีค่าสเตตัสใดต่ำกว่าเกณฑ์มาตรฐาน ทักษะสมดุลดีเยี่ยม</div>}
             </div>
