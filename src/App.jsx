@@ -127,6 +127,7 @@ export default function App() {
   
   const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
+  const [teamUnlk, setTeamUnlk] = useState(false);
   const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
@@ -828,6 +829,8 @@ export default function App() {
   };
 
   const rTeam = () => {
+    if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
+
     const sList = sets.staffStats || [];
     const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
     
@@ -837,83 +840,98 @@ export default function App() {
       const role = classMap[u.classId];
       
       const statMeta = [
-        { key: 'str', name: 'STR (พลังลุย)', desc: 'การตัดสินใจเด็ดขาด/ผลักดันงานหนัก' },
-        { key: 'agi', name: 'AGI (ความเร็ว)', desc: 'ความไวในการตอบสนอง/ปรับตัว' },
-        { key: 'dex', name: 'DEX (ความเป๊ะ)', desc: 'ความแม่นยำ/การตรวจงานที่เนี๊ยบ' },
-        { key: 'int', name: 'INT (กลยุทธ์)', desc: 'การวาง Workflow/วิเคราะห์ปัญหา' },
-        { key: 'con', name: 'CON (ความอึด)', desc: 'ความถึกทนหน้างาน/รับแรงกดดัน' },
-        { key: 'sen', name: 'SEN (บริหารระบบ)', desc: 'จัดการคิวงาน/บริหารซัพพลายเออร์' }
+        { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)' },
+        { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)' },
+        { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)' },
+        { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)' },
+        { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)' },
+        { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)' }
       ];
 
       let strengths = [];
       let gaps = [];
+      
+      let workStyleScores = { precision: 0, lifting: 0, mastermind: 0 };
 
       statMeta.forEach(s => {
         const uVal = Number(u[s.key]) || 5;
         const rVal = role ? (Number(role[s.key]) || 5) : 5;
-        if (uVal >= 8 || (role && uVal >= rVal && uVal > 5)) strengths.push(s);
-        else if (uVal <= 4 || (role && uVal <= rVal - 2)) gaps.push(s);
+        
+        // Accumulate style scores
+        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += uVal;
+        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
+        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
+
+        if (uVal >= 8 || (role && uVal >= rVal + 1)) strengths.push({...s, diff: uVal - rVal});
+        else if (uVal <= 4 || (role && uVal <= rVal - 2)) gaps.push({...s, diff: rVal - uVal});
       });
+
+      strengths.sort((a,b) => b.diff - a.diff);
+      gaps.sort((a,b) => b.diff - a.diff);
+
+      let mainStyle = '';
+      let styleDesc = '';
+      if (workStyleScores.precision > workStyleScores.lifting && workStyleScores.precision > workStyleScores.mastermind) {
+        mainStyle = 'สายเน้นความเร็วและแม่นยำ (The Precision Engine)';
+        styleDesc = 'มีจุดเด่นเรื่องความไวและลดความผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
+      } else if (workStyleScores.lifting > workStyleScores.precision && workStyleScores.lifting > workStyleScores.mastermind) {
+        mainStyle = 'สายบู๊รับแรงปะทะ (The Heavy Lifters)';
+        styleDesc = 'โดดเด่นด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
+      } else if (workStyleScores.mastermind > workStyleScores.precision && workStyleScores.mastermind > workStyleScores.lifting) {
+        mainStyle = 'สายมันสมองและระบบ (The Masterminds)';
+        styleDesc = 'มีทักษะโดดเด่นด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และวางระบบ (Strategy & Management)';
+      } else {
+        mainStyle = 'สายสมดุล (All-Rounder)';
+        styleDesc = 'มีค่าพลังที่ยืดหยุ่นและบาลานซ์กัน สามารถปรับตัวทำงานได้หลายรูปแบบ แต่ยังขาดจุดแข็งที่โดดเด่นเฉพาะทาง';
+      }
 
       let roleText = '';
       if (role) {
-        const rName = role.name.toLowerCase();
-        let cores = [];
-        let missing = [];
-        if (rName.includes('super') || rName.includes('หัวหน้า') || rName.includes('ผู้นำ') || rName.includes('เจ้าหน้าที่')) {
-          cores = ['INT', 'STR'];
-          if(Number(u.int) < 8) missing.push('INT');
-          if(Number(u.str) < 8) missing.push('STR');
-        } else if (rName.includes('foreman') || rName.includes('โฟร์แมน') || rName.includes('หน้างาน')) {
-          cores = ['STR', 'CON', 'DEX'];
-          if(Number(u.str) < 8) missing.push('STR');
-          if(Number(u.con) < 8) missing.push('CON');
-          if(Number(u.dex) < 8) missing.push('DEX');
-        } else if (rName.includes('admin') || rName.includes('แอดมิน') || rName.includes('สนับสนุน')) {
-          cores = ['DEX', 'SEN'];
-          if(Number(u.dex) < 8) missing.push('DEX');
-          if(Number(u.sen) < 8) missing.push('SEN');
-        }
-
-        if (cores.length > 0) {
-          if (missing.length === 0) {
-             roleText = `มีคุณสมบัติโดดเด่นและเหมาะสมกับบทบาท "${role.name}" (Core Stats: ${cores.join(', ')} ถึงเกณฑ์)`;
-          } else {
-             roleText = `เพื่อเติมเต็มศักยภาพบทบาท "${role.name}" (Core Stats: ${cores.join(', ')}) ควรโฟกัสการพัฒนาด้าน: ${missing.join(', ')}`;
-          }
-        }
+         if (gaps.length === 0) {
+            roleText = `ผ่านเกณฑ์ Dual-Layer Diagnostic เหมาะสมอย่างยิ่งกับบทบาท "${role.name}" โดยผลผลิต (WHAT) และศักยภาพ (HOW) สอดคล้องตามมาตรฐาน`;
+         } else {
+            roleText = `เทียบกับมาตรฐานบทบาท "${role.name}" (Layer 2) ควรปรับปรุงศักยภาพภายใน (Layer 1) บางด้าน เพื่อให้ได้ผลผลิตตามเกณฑ์`;
+         }
       }
 
       return (
-        <div className="mt-8 p-4 bg-[#f8fafc] rounded-xl border border-slate-200 w-full text-left shadow-sm">
+        <div className="mt-8 p-4 bg-gradient-to-br from-[#f8fafc] to-white rounded-xl border border-slate-200 w-full text-left shadow-sm">
           <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> บทวิเคราะห์ประสิทธิภาพ (Dual-Layer Analysis)
+            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Dual-Layer Diagnostic)
           </h4>
           
+          <div className="mb-3 text-[11px] bg-[#0f2e4a] text-white p-3 rounded-lg shadow-sm leading-relaxed border-l-4 border-[#bca374]">
+             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Work Style Tendency):</strong>
+             <span className="font-bold text-[13px] block">{mainStyle}</span>
+             <span className="text-gray-300 opacity-90 mt-1 block">{styleDesc}</span>
+          </div>
+
           {roleText && (
-             <div className="mb-3 text-[11px] bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
-               <strong className="text-[#0f2e4a]">ภาพรวมความเหมาะสม:</strong><br/>
-               <span className={roleText.includes('ควรโฟกัส') ? 'text-amber-600' : 'text-emerald-600'}>{roleText}</span>
+             <div className="mb-3 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-100 shadow-sm leading-relaxed">
+               <strong className="text-[#0f2e4a]">ภาพรวมเมื่อเทียบกับค่ามาตรฐาน (Standard Benchmark):</strong><br/>
+               <span className={gaps.length > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>{roleText}</span>
              </div>
           )}
 
           <div className="grid grid-cols-1 gap-2.5 mt-2">
-            <div className="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100">
-              <strong className="text-emerald-700 text-xs flex items-center mb-1.5"><Icon name="trendingUp" size={14} className="mr-1.5"/> จุดแข็งเด่นชัด (Team Synergy)</strong>
+            <div className="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-1 opacity-10"><Icon name="trendingUp" size={40}/></div>
+              <strong className="text-emerald-700 text-xs flex items-center mb-2"><Icon name="checkCircle" size={14} className="mr-1.5"/> ศักยภาพเด่น (Strengths)</strong>
               {strengths.length > 0 ? (
-                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1">
-                  {strengths.map(s => <li key={s.key}><strong>{s.name.split(' ')[0]}</strong> - {s.desc}</li>)}
+                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1.5 relative z-10">
+                  {strengths.map(s => <li key={s.key}><strong>{s.name}</strong> - <span className="text-gray-600">{s.detail}</span></li>)}
                 </ul>
-              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ค่าพลังยังอยู่ในระดับพื้นฐาน หรือยังไม่ถึงเป้าหมายของคลาส</div>}
+              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ค่าพลังยังอยู่ในระดับพื้นฐานทั่วไป</div>}
             </div>
 
-            <div className="bg-rose-50/50 p-2.5 rounded-lg border border-rose-100">
-              <strong className="text-rose-600 text-xs flex items-center mb-1.5"><Icon name="trendingDown" size={14} className="mr-1.5"/> จุดที่ควรพัฒนา (Skill Gap)</strong>
+            <div className="bg-rose-50/50 p-2.5 rounded-lg border border-rose-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-1 opacity-10"><Icon name="alertTriangle" size={40}/></div>
+              <strong className="text-rose-600 text-xs flex items-center mb-2"><Icon name="target" size={14} className="mr-1.5"/> จุดที่ต้องปรับปรุงเทียบค่ามาตรฐาน (Gaps)</strong>
               {gaps.length > 0 ? (
-                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1">
-                  {gaps.map(s => <li key={s.key}><strong>{s.name.split(' ')[0]}</strong> - ควรยกระดับ{s.desc}</li>)}
+                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1.5 relative z-10">
+                  {gaps.map(s => <li key={s.key}><strong>{s.name}</strong> - <span className="text-gray-600">ควรพัฒนาด้าน: {s.detail}</span></li>)}
                 </ul>
-              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ไม่มีค่าพลังใดต่ำกว่าเป้าหมายมากนัก ทักษะค่อนข้างสมดุล</div>}
+              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ไม่มีค่าสเตตัสใดต่ำกว่าเกณฑ์มาตรฐาน ทักษะสมดุลดีเยี่ยม</div>}
             </div>
           </div>
         </div>
