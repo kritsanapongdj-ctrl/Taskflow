@@ -901,34 +901,48 @@ export default function App() {
       strengths.sort((a,b) => b.diff - a.diff);
       gaps.sort((a,b) => b.diff - a.diff);
 
+      const isCritical = role && gaps.length === 6;
       let mainStyle = '';
       let styleDesc = '';
-      let styleMatchStandard = '';
-      
-      const maxScore = Math.max(workStyleScores.precision, workStyleScores.lifting, workStyleScores.mastermind);
 
-      if (maxScore === workStyleScores.precision && workStyleScores.precision > workStyleScores.lifting && workStyleScores.precision > workStyleScores.mastermind) {
-        mainStyle = 'สายเน้นความเร็วและแม่นยำ (The Precision Engine)';
-        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านความไวและการลดข้อผิดพลาด (Zero Error Rate) เหมาะกับงานที่ต้องการความเป๊ะและฉับไว';
-        const rolePrecisionReq = role ? (Number(role.agi) + Number(role.dex)) : 10;
-        if(role) styleMatchStandard = workStyleScores.precision >= rolePrecisionReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
-      } else if (maxScore === workStyleScores.lifting && workStyleScores.lifting > workStyleScores.precision && workStyleScores.lifting > workStyleScores.mastermind) {
-        mainStyle = 'สายบู๊รับแรงปะทะ (The Heavy Lifters)';
-        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านความอึดและการผลักดันงาน (Execution & Drive) ทนทานต่อความเครียดสูงและปิดงานยากได้ดี';
-        const roleLiftingReq = role ? (Number(role.str) + Number(role.con)) : 10;
-        if(role) styleMatchStandard = workStyleScores.lifting >= roleLiftingReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
-      } else if (maxScore === workStyleScores.mastermind && workStyleScores.mastermind > workStyleScores.precision && workStyleScores.mastermind > workStyleScores.lifting) {
-        mainStyle = 'สายมันสมองและระบบ (The Masterminds)';
-        styleDesc = 'มีคะแนนรวมสุทธิโดดเด่นด้านการจัดการ วิเคราะห์ปัญหาเชิงลึก และการวางระบบ (Strategy & Management)';
-        const roleMasterReq = role ? (Number(role.int) + Number(role.sen)) : 10;
-        if(role) styleMatchStandard = workStyleScores.mastermind >= roleMasterReq ? 'และค่าสเตตัสในกลุ่มนี้ผ่านเกณฑ์ของคลาส' : 'แต่ค่าสเตตัสในกลุ่มนี้ยังต่ำกว่ามาตรฐานของคลาส';
+      if (isCritical) {
+         mainStyle = '⚠️ แจ้งเตือน: ต้องเฝ้าระวังเป็นพิเศษ (Critical Deficit)';
+         styleDesc = 'สเตตัสต่ำกว่ามาตรฐานของคลาสในทุกๆ ด้าน (ทั้ง 6 มิติ) อาจะส่งผลกระทบอย่างรุนแรงต่อการทำงานในบทบาทนี้ ควรพิจารณาแผนพัฒนาบุคลากรหรือปรับเปลี่ยนหน้าที่โดยด่วน';
       } else {
-        mainStyle = 'สายสมดุล (All-Rounder)';
-        styleDesc = 'มีค่าพลังที่ยืดหยุ่นและบาลานซ์กันเมื่อเทียบกับเป้าหมายของคลาส สามารถทำงานได้รอบด้าน แต่อาจขาดจุดแข็งที่โดดเด่นทางใดทางหนึ่ง';
+          const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
+          const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
+          const archetypeMap = {
+            'agi_str': 'The Vanguard (สายทะลวงฟัน)|ผลักดันงานหนักได้อย่างรวดเร็ว เหมาะกับการบุกเบิกโปรเจ็กต์หรือแก้ปัญหาเฉพาะหน้าแบบฉับไว',
+            'dex_str': 'The Craftsman (สายช่างฝีมือ)|จัดการงานสเกลใหญ่ด้วยความละเอียดและแม่นยำสูง มั่นใจได้ในคุณภาพ',
+            'int_str': 'The Architect (สายสถาปนิก)|ผสมผสานพลังในการลุยงานหนักเข้ากับการวางกลยุทธ์และระบบอย่างเป็นขั้นตอน',
+            'con_str': 'The Juggernaut (สายรถถัง)|พลังในการผลักดันงานและการรับแรงปะทะระดับสูงสุด ไม่ย่อท้อต่ออุปสรรคและงานหนัก',
+            'sen_str': 'The Warlord (สายขุนศึก)|ลุยงานหนักพร้อมกับมีไหวพริบในการจัดการทีมหรือสถานการณ์รอบตัวได้เป็นอย่างดี',
+            'agi_dex': 'The Precision Engine (สายเครื่องจักรกล)|สปีดการทำงานเร็วจัดและไร้ข้อผิดพลาด (Zero Error Rate) ตอบสนองได้ฉับไว',
+            'agi_int': 'The Tactician (สายยุทธวิธี)|คิดเร็วทำเร็ว แก้ปัญหาระบบและวางแผนได้อย่างรวดเร็ว เหมาะกับงานด่วนและ Agile',
+            'agi_con': 'The Marathoner (สายมาราธอน)|ตอบสนองต่องานได้ไวและสามารถรับความกดดันหรือแก้ปัญหาต่อเนื่องยาวนานได้ดี',
+            'agi_sen': 'The Scout (สายสอดแนม)|เข้าถึงปัญหาไว ไหวพริบดีเยี่ยม จัดการสถานการณ์ฉุกเฉินและประสานงานได้รวดเร็ว',
+            'dex_int': 'The Engineer (สายวิศวกร)|แม่นยำในรายละเอียดและมีตรรกะการวิเคราะห์เชิงลึกที่ยอดเยี่ยม สร้างงานคุณภาพสูง',
+            'con_dex': 'The Sentinel (สายผู้พิทักษ์)|ทนทานต่อความกดดันสูงพร้อมกับรักษามาตรฐานความเป๊ะของงานไว้ได้ไม่ตกหล่น',
+            'dex_sen': 'The Sniper (สายสไนเปอร์)|ละเอียดรอบคอบและมีสัญชาตญาณแม่นยำ จับจุดบกพร่องที่คนอื่นมองข้ามได้ดี',
+            'con_int': 'The Pillar (สายเสาหลัก)|มีกระบวนการคิดเชิงลึกและทนทานต่อความเครียดทางสมองสูง เหมาะกับงานวิเคราะห์ระยะยาว',
+            'int_sen': 'The Mastermind (สายมันสมอง)|วางกลยุทธ์ยอดเยี่ยมและมีไหวพริบในการจัดการระบบและผู้คนได้อย่างสมบูรณ์แบบ',
+            'con_sen': 'The Anchor (สายสมอเรือ)|เยือกเย็น ทนทาน และมีไหวพริบในการคุมสถานการณ์ เป็นหลักพักพิงที่มั่นคงของทีม'
+          };
+
+          if (sortedStats[0][1] === sortedStats[5][1]) {
+             mainStyle = 'The All-Rounder (สายสมดุล)';
+             styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
+          } else {
+             const pairKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
+             const arch = archetypeMap[pairKey] || 'Hybrid (สายผสม)|มีความสามารถโดดเด่นหลากหลายด้าน';
+             const parts = arch.split('|');
+             mainStyle = parts[0];
+             styleDesc = parts[1];
+          }
       }
 
       let roleText = '';
-      if (role) {
+      if (role && !isCritical) {
          if (gaps.length === 0) {
             roleText = `ผ่านเกณฑ์ Dual-Layer Diagnostic เหมาะสมอย่างยิ่งกับบทบาท "${role.name}" โดยผลผลิต (WHAT) และศักยภาพ (HOW) สอดคล้องหรือสูงกว่ามาตรฐานคลาสกำหนด`;
          } else {
@@ -942,10 +956,10 @@ export default function App() {
             <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Dual-Layer Diagnostic)
           </h4>
           
-          <div className="mb-3 text-[11px] bg-[#0f2e4a] text-white p-3 rounded-lg shadow-sm leading-relaxed border-l-4 border-[#bca374]">
-             <strong className="text-[#bca374] block mb-1">แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
-             <span className="font-bold text-[13px] block">{mainStyle}</span>
-             <span className="text-gray-300 opacity-90 mt-1 block">{styleDesc} {styleMatchStandard && <span className={styleMatchStandard.includes('ผ่านเกณฑ์')?'text-emerald-400 font-bold':'text-rose-400 font-bold'}> ({styleMatchStandard})</span>}</span>
+          <div className={`mb-3 text-[11px] p-3 rounded-lg shadow-sm leading-relaxed border-l-4 ${isCritical ? 'bg-red-50 border-red-500' : 'bg-[#0f2e4a] text-white border-[#bca374]'}`}>
+             <strong className={`block mb-1 ${isCritical ? 'text-red-700' : 'text-[#bca374]'}`}>แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
+             <span className={`font-bold text-[13px] block ${isCritical ? 'text-red-600' : ''}`}>{mainStyle}</span>
+             <span className={`mt-1 block ${isCritical ? 'text-red-500 font-medium' : 'text-gray-300 opacity-90'}`}>{styleDesc}</span>
           </div>
 
           {roleText && (
