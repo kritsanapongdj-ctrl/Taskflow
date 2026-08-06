@@ -938,13 +938,20 @@ export default function App() {
             'int_sen_str': 'Supreme Tactician (สายบริหารจัดการเชิงกลยุทธ์)'
           };
 
+          const maxStat = sortedStats[0][1];
+          let prefix = '';
+          if (maxStat >= 9) prefix = 'Elite ';
+          else if (maxStat >= 7) prefix = 'Veteran ';
+          else if (maxStat >= 5) prefix = 'Adept ';
+          else prefix = 'Trainee ';
+
           if (sortedStats[0][1] === sortedStats[5][1]) {
-             mainStyle = 'The All-Rounder (สายสมดุล)';
+             mainStyle = prefix + 'All-Rounder (สายสมดุล)';
              styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
           } else {
              const top3Keys = [sortedStats[0][0], sortedStats[1][0], sortedStats[2][0]];
              const pairKey = [...top3Keys].sort().join('_');
-             mainStyle = archetypeMap[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)';
+             mainStyle = prefix + (archetypeMap[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)');
              
              const getDesc = (k) => {
                  const conf = sets.statConfigs && sets.statConfigs[k];
