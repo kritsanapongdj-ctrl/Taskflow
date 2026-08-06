@@ -916,26 +916,26 @@ export default function App() {
       const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
       const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
           const archetypeMap = {
-            'agi_con_dex': 'The Swift Guardian (สายผู้พิทักษ์ความเร็ว)',
-            'agi_con_int': 'The Tactical Runner (สายปฏิบัติการฉับไว)',
-            'agi_con_sen': 'The Resilient Scout (สายสอดแนมทรหด)',
-            'agi_con_str': 'The Frontline Berserker (สายทะลวงฟันแนวหน้า)',
-            'agi_dex_int': 'The Cyber Ninja (สายเครื่องจักรกลสมบูรณ์แบบ)',
-            'agi_dex_sen': 'The Ghost (สายพริ้วไหวไร้ร่องรอย)',
-            'agi_dex_str': 'The Blademaster (สายนักดาบความไวแสง)',
-            'agi_int_sen': 'The Spymaster (สายข่าวกรองอัจฉริยะ)',
-            'agi_int_str': 'The Battlemage (สายนักรบเวทมนตร์)',
-            'agi_sen_str': 'The Vanguard Warlord (สายขุนศึกกองหน้า)',
-            'con_dex_int': 'The Siege Engineer (สายวิศวกรป้อมปราการ)',
-            'con_dex_sen': 'The Iron Sentinel (สายผู้เฝ้าระวังเหล็กกล้า)',
-            'con_dex_str': 'The Juggernaut Craftsman (สายช่างฝีมือทะลวงฟัน)',
-            'con_int_sen': 'The Grand Pillar (สายเสาหลักยุทธศาสตร์)',
-            'con_int_str': 'The Fortress Architect (สายสถาปนิกป้อมปราการ)',
-            'con_sen_str': 'The Unbreakable Commander (สายผู้บัญชาการไร้พ่าย)',
-            'dex_int_sen': 'The Oracle Engineer (สายวิศวกรผู้หยั่งรู้)',
-            'dex_int_str': 'The Grandmaster (สายปรมาจารย์นักรบ)',
-            'dex_sen_str': 'The Sharpshooter General (สายขุนพลแม่นปืน)',
-            'int_sen_str': 'The Supreme Tactician (สายสุดยอดยุทธวิธี)'
+            'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)',
+            'agi_con_int': 'Tactical Runner (สายปฏิบัติการเชิงรุกฉับไว)',
+            'agi_con_sen': 'Resilient Scout (สายสำรวจและประเมินสถานการณ์)',
+            'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)',
+            'agi_dex_int': 'Cyber Ninja (สายจัดระบบงานเนี้ยบและไว)',
+            'agi_dex_sen': 'Ghost (สายจัดการปัญหาไร้ร่องรอย)',
+            'agi_dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาดว่องไว)',
+            'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)',
+            'agi_int_str': 'Battlemage (สายผสานกลยุทธ์และการลงมือทำ)',
+            'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)',
+            'con_dex_int': 'Siege Engineer (สายวางรากฐานและแก้ปัญหาระบบ)',
+            'con_dex_sen': 'Iron Sentinel (สายคุมมาตรฐานงานสุดแกร่ง)',
+            'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)',
+            'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)',
+            'con_int_str': 'Fortress Architect (สายออกแบบโครงสร้างงานมั่นคง)',
+            'con_sen_str': 'Unbreakable Commander (สายผู้นำทีมสุดแกร่ง)',
+            'dex_int_sen': 'Oracle Engineer (สายที่ปรึกษาและคาดการณ์แม่นยำ)',
+            'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
+            'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)',
+            'int_sen_str': 'Supreme Tactician (สายบริหารจัดการเชิงกลยุทธ์)'
           };
 
           if (sortedStats[0][1] === sortedStats[5][1]) {
