@@ -1004,48 +1004,52 @@ export default function App() {
       }
 
       return (
-        <div className="mt-6 pt-4 w-full text-left relative z-10">
+        <div className="mt-6 pt-4 w-full text-left relative z-10 font-sans">
           <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
+            <Icon name="user" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
           </h4>
           
-          <div className="mb-3 text-[11px] p-3 rounded-lg shadow-sm leading-relaxed border-l-4 bg-[#0f2e4a] text-white border-[#bca374]">
-             <strong className="block mb-1 text-[#bca374]">แนวโน้มการทำงาน (Absolute Work Style Tendency):</strong>
-             <span className="font-bold text-[13px] block">{mainStyle}</span>
-             <span className="mt-1 block text-gray-300 opacity-90">{styleDesc}</span>
+          <div className="mb-4 text-[12px] p-3 rounded bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-sm relative z-10">
+             <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ แนวโน้มการทำงาน (Work Style Tendency):</strong>
+             <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{mainStyle}</span>
+             <span className="block text-slate-600 leading-relaxed ml-3">{styleDesc}</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5 mt-2">
-            <div className="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-1 opacity-10"><Icon name="trendingUp" size={40}/></div>
-              <strong className="text-emerald-700 text-xs flex items-center mb-2"><Icon name="checkCircle" size={14} className="mr-1.5"/> ศักยภาพเด่น (Strengths)</strong>
+          <div className="grid grid-cols-1 gap-3 mt-2 relative z-10">
+            <div className="bg-emerald-50/70 p-3 rounded border border-emerald-200 relative overflow-hidden">
+              <strong className="text-emerald-800 text-[13px] flex items-center mb-2"><Icon name="trendingUp" size={14} className="mr-1.5 text-emerald-600"/> จุดเด่น (Strengths)</strong>
               {strengths.length > 0 ? (
-                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-1.5 relative z-10">
+                <ul className="text-[12px] text-slate-700 space-y-1.5 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
                   {strengths.map(s => (
-                    <li key={s.key}>
-                       <strong>{s.name}</strong> <span className="text-[10px] text-emerald-600">[{s.uVal}: {getStatLevelText(s.uVal)}]</span>
-                       <div className="text-gray-600 mt-0.5 block">{s.detail}</div>
+                    <li key={s.key} className="flex items-center justify-between">
+                      <span className="font-medium">{s.name}</span>
+                      <span className="font-bold text-emerald-700">
+                        {s.uVal} <span className="text-slate-400 font-normal ml-1">({getStatLevelText(s.uVal)})</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
-              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ค่าพลังยังอยู่ในระดับพื้นฐานทั่วไป</div>}
+              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่มีสเตตัสระดับสูง</div>}
             </div>
 
-            <div className="bg-rose-50/50 p-2.5 rounded-lg border border-rose-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-1 opacity-10"><Icon name="alertTriangle" size={40}/></div>
-              <strong className="text-rose-600 text-xs flex items-center mb-2"><Icon name="target" size={14} className="mr-1.5"/> ความเสี่ยงและผลกระทบจากค่าพลังที่ต่ำกว่าเกณฑ์ (Gaps & Impacts)</strong>
+            <div className="bg-orange-50/70 p-3 rounded border border-orange-200 relative overflow-hidden mt-1">
+              <strong className="text-orange-800 text-[13px] flex items-center mb-2"><Icon name="alertCircle" size={14} className="mr-1.5 text-orange-600"/> สิ่งที่ควรพัฒนา (Gaps & Impacts)</strong>
               {gaps.length > 0 ? (
-                <ul className="list-disc pl-5 text-[11px] text-slate-700 space-y-3 relative z-10">
+                <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-orange-300 ml-1">
                   {gaps.map(s => (
-                    <li key={s.key}>
-                      <strong>ขาดทักษะด้าน: {s.name}</strong>
-                      <div className="text-[10px] text-slate-500 mt-0.5">ปัจจุบัน: <span className="text-slate-700 font-bold">{s.uVal}</span> ({getStatLevelText(s.uVal)})</div>
-                      <div className="text-gray-600 mt-1 block">ควรพัฒนา: {s.detail}</div>
-                      <div className="text-rose-600/90 font-medium mt-1 p-1.5 bg-rose-100/50 rounded border border-rose-100/50 inline-block">⚠️ ผลกระทบ: {s.impact}</div>
+                    <li key={s.key} className="text-slate-700 text-[12px]">
+                      <div className="flex justify-between items-center mb-1">
+                        <strong className="text-[#0f2e4a]">{s.name}</strong>
+                        <span className="font-bold text-orange-600">{s.uVal}</span>
+                      </div>
+                      <div className="text-slate-600 mt-1 block">เป้าหมาย: {s.detail}</div>
+                      <div className="text-orange-700 font-medium mt-1.5 text-[11px]">
+                        * ผลกระทบ: {s.impact}
+                      </div>
                     </li>
                   ))}
                 </ul>
-              ) : <div className="text-[11px] text-slate-500 pl-5 italic">- ไม่มีค่าสเตตัสใดต่ำกว่าเกณฑ์มาตรฐาน ทักษะสมดุลดีเยี่ยม</div>}
+              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่พบความเสี่ยงที่น่ากังวล</div>}
             </div>
           </div>
         </div>
