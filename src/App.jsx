@@ -71,21 +71,12 @@ const RadarChart = ({ baseStats = [], userStats = [] }) => {
   };
   const labels = ['STR', 'AGI', 'DEX', 'INT', 'CON', 'SEN'];
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible" style={{ filter: 'drop-shadow(0 0 8px rgba(188,163,116,0.3))' }}>
-      <defs>
-        <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="rgba(188,163,116,0.15)" strokeWidth="1" />)}
-      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="rgba(188,163,116,0.2)" strokeWidth="1" />)}
-      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="10" fontWeight="bold" fill="#bca374" textAnchor="middle" dominantBaseline="middle" className="font-mono tracking-widest">{l}</text>; })}
-      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15,46,74,0.6)" stroke="#00f0ff" strokeWidth="1.5" filter="url(#neonGlow)" />}
-      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#00f0ff" filter="url(#neonGlow)" />; })}
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible">
+      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
+      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
+      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="11" fontWeight="bold" fill="#4b5563" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
+      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.4)" stroke="#0f2e4a" strokeWidth="2" />}
+      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" />; })}
     </svg>
   );
 };
@@ -1140,18 +1131,17 @@ export default function App() {
                  <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
-                    <div className="w-full mt-6 bg-[#0a1526] rounded-2xl p-6 border border-[#bca374]/30 shadow-[0_0_20px_rgba(15,46,74,0.3)] relative overflow-hidden flex flex-col items-center">
-                       <div className="absolute inset-0 bg-[linear-gradient(rgba(188,163,116,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(188,163,116,0.05)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none opacity-50"></div>
-                       <h4 className="font-black text-[#bca374] mb-8 text-center tracking-widest relative z-10 flex items-center justify-center font-mono text-sm"><Icon name="target" size={18} className="mr-2 text-cyan-400"/> PERFORMANCE MATRIX</h4>
-                       <div className="w-full max-w-[280px] aspect-square relative z-10">
+                    <div className="w-full mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
+                       <h4 className="font-bold text-[#0f2e4a] mb-6 text-center tracking-wider flex items-center justify-center text-sm"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
+                       <div className="w-full max-w-[280px] aspect-square">
                          <RadarChart 
                             userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
                          />
                        </div>
-                       <div className="flex flex-wrap justify-center gap-4 mt-8 text-[10px] font-bold relative z-10 font-mono tracking-widest text-[#bca374]">
-                          <div className="flex items-center"><div className="w-3 h-3 bg-[#00f0ff] mr-2 rounded-sm shadow-[0_0_5px_#00f0ff]"></div> ABSOLUTE STATS</div>
+                       <div className="flex flex-wrap justify-center gap-4 mt-6 text-[11px] font-bold text-slate-500">
+                          <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-2 rounded-sm opacity-60"></div> ระดับสเตตัสพนักงาน</div>
                        </div>
-                       <div className="w-full mt-4 border-t border-[#bca374]/20 relative z-10"></div>
+                       <div className="w-full mt-6 border-t border-slate-100"></div>
                        {renderAnalysis()}
                     </div>
                  </div>
