@@ -71,12 +71,21 @@ const RadarChart = ({ baseStats = [], userStats = [] }) => {
   };
   const labels = ['STR', 'AGI', 'DEX', 'INT', 'CON', 'SEN'];
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible">
-      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
-      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
-      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="10" fontWeight="bold" fill="#6b7280" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
-      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.5)" stroke="#0f2e4a" strokeWidth="2" />}
-      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" />; })}
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible" style={{ filter: 'drop-shadow(0 0 8px rgba(188,163,116,0.3))' }}>
+      <defs>
+        <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="rgba(188,163,116,0.15)" strokeWidth="1" />)}
+      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="rgba(188,163,116,0.2)" strokeWidth="1" />)}
+      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="10" fontWeight="bold" fill="#bca374" textAnchor="middle" dominantBaseline="middle" className="font-mono tracking-widest">{l}</text>; })}
+      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15,46,74,0.6)" stroke="#00f0ff" strokeWidth="1.5" filter="url(#neonGlow)" />}
+      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#00f0ff" filter="url(#neonGlow)" />; })}
     </svg>
   );
 };
@@ -913,65 +922,98 @@ export default function App() {
       let mainStyle = '';
       let styleDesc = '';
 
-      const statsObj = { str: Number(u.str)||5, agi: Number(u.agi)||5, dex: Number(u.dex)||5, int: Number(u.int)||5, con: Number(u.con)||5, sen: Number(u.sen)||5 };
+      const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
-          const archetypeMap = {
-            'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)',
-            'agi_con_int': 'Tactical Runner (สายปฏิบัติการเชิงรุกฉับไว)',
-            'agi_con_sen': 'Resilient Scout (สายสำรวจและประเมินสถานการณ์)',
-            'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)',
-            'agi_dex_int': 'Cyber Ninja (สายจัดระบบงานเนี้ยบและไว)',
-            'agi_dex_sen': 'Ghost (สายจัดการปัญหาไร้ร่องรอย)',
-            'agi_dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาดว่องไว)',
-            'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)',
-            'agi_int_str': 'Battlemage (สายผสานกลยุทธ์และการลงมือทำ)',
-            'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)',
-            'con_dex_int': 'Siege Engineer (สายวางรากฐานและแก้ปัญหาระบบ)',
-            'con_dex_sen': 'Iron Sentinel (สายคุมมาตรฐานงานสุดแกร่ง)',
-            'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)',
-            'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)',
-            'con_int_str': 'Fortress Architect (สายออกแบบโครงสร้างงานมั่นคง)',
-            'con_sen_str': 'Unbreakable Commander (สายผู้นำทีมสุดแกร่ง)',
-            'dex_int_sen': 'Oracle Engineer (สายที่ปรึกษาและคาดการณ์แม่นยำ)',
-            'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
-            'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)',
-            'int_sen_str': 'Supreme Tactician (สายบริหารจัดการเชิงกลยุทธ์)'
-          };
+      
+      const archetypeMapTop2 = {
+        'agi_str': 'Striker (สายจู่โจมความเร็วสูง)',
+        'dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาด)',
+        'int_str': 'Battlemage (สายผสานแผนและการลงมือทำ)',
+        'con_str': 'Juggernaut (สายลุยงานหนักทรหด)',
+        'sen_str': 'Warlord (สายผู้นำบุกเบิก)',
+        'agi_dex': 'Phantom Operative (สายปฏิบัติการไร้ร่องรอย)',
+        'agi_int': 'Tactical Runner (สายรุกฉับไวด้วยกลยุทธ์)',
+        'agi_con': 'Resilient Scout (สายสำรวจและแก้ปัญหาด่วน)',
+        'agi_sen': 'Pathfinder (สายประสานงานรวดเร็ว)',
+        'dex_int': 'System Artisan (สายสร้างสรรค์ระบบสุดเนี้ยบ)',
+        'con_dex': 'Iron Sentinel (สายคุมมาตรฐานสุดแกร่ง)',
+        'dex_sen': 'Sniper (สายจับเป้าหมายแม่นยำ)',
+        'con_int': 'Fortress Architect (สายออกแบบโครงสร้างมั่นคง)',
+        'int_sen': 'Supreme Tactician (สายเจรจาและวางกลยุทธ์)',
+        'con_sen': 'Unbreakable Commander (สายผู้บัญชาการรับแรงกดดัน)'
+      };
 
-          const maxStat = sortedStats[0][1];
-          let prefix = '';
-          if (maxStat >= 9) prefix = 'Elite ';
-          else if (maxStat >= 7) prefix = 'Veteran ';
-          else if (maxStat >= 5) prefix = 'Adept ';
-          else prefix = 'Trainee ';
+      const archetypeMapTop3 = {
+        'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)',
+        'agi_con_int': 'Blitz Strategist (สายปฏิบัติการเชิงรุกฉับไว)',
+        'agi_con_sen': 'Vanguard Tracker (สายสำรวจและประเมินสถานการณ์)',
+        'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)',
+        'agi_dex_int': 'Digital Ronin (สายจัดระบบงานเนี้ยบและไว)',
+        'agi_dex_sen': 'Mirage Walker (สายจัดการปัญหาไร้ร่องรอย)',
+        'agi_dex_str': 'Swift Duelist (สายปฏิบัติการเฉียบขาดว่องไว)',
+        'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)',
+        'agi_int_str': 'Arcane Vanguard (สายผสานกลยุทธ์และการลงมือทำ)',
+        'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)',
+        'con_dex_int': 'Foundation Maestro (สายวางรากฐานและแก้ปัญหาระบบ)',
+        'con_dex_sen': 'Titan Warden (สายคุมมาตรฐานงานสุดแกร่ง)',
+        'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)',
+        'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)',
+        'con_int_str': 'Citadel Builder (สายออกแบบโครงสร้างงานมั่นคง)',
+        'con_sen_str': 'Indomitable Chief (สายผู้นำทีมสุดแกร่ง)',
+        'dex_int_sen': 'Visionary Consultant (สายที่ปรึกษาและคาดการณ์แม่นยำ)',
+        'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
+        'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)',
+        'int_sen_str': 'Mastermind Overseer (สายบริหารจัดการเชิงกลยุทธ์)'
+      };
 
-          if (sortedStats[0][1] === sortedStats[5][1]) {
-             mainStyle = prefix + 'All-Rounder (สายสมดุล)';
-             styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
-          } else {
-             const top3Keys = [sortedStats[0][0], sortedStats[1][0], sortedStats[2][0]];
-             const pairKey = [...top3Keys].sort().join('_');
-             mainStyle = prefix + (archetypeMap[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)');
-             
-             const getDesc = (k) => {
-                 const conf = sets.statConfigs && sets.statConfigs[k];
-                 if (conf && conf.desc) return conf.desc.trim();
-                 const defaults = {
-                     str: 'พลังในการผลักดันงานหนัก',
-                     agi: 'ความรวดเร็วและคล่องตัว',
-                     dex: 'ความแม่นยำและคุณภาพงาน',
-                     int: 'การวิเคราะห์และวางระบบ',
-                     con: 'ความทนทานต่อความกดดัน',
-                     sen: 'ไหวพริบและการจัดการอารมณ์'
-                 };
-                 return defaults[k];
-             };
+      const validStats = sortedStats.filter(s => s[1] >= 5);
+      const maxStat = validStats.length > 0 ? validStats[0][1] : 0;
+      
+      let prefix = '';
+      if (maxStat >= 9) prefix = 'Elite ';
+      else if (maxStat >= 7) prefix = 'Veteran ';
+      else if (maxStat >= 5) prefix = 'Adept ';
+      else prefix = 'Trainee ';
 
-             styleDesc = `โดดเด่นด้าน${getDesc(top3Keys[0])} ผสานเข้ากับ${getDesc(top3Keys[1])} และเสริมด้วย${getDesc(top3Keys[2])}`;
-          }
+      const getDesc = (k) => {
+         const conf = sets.statConfigs && sets.statConfigs[k];
+         if (conf && conf.desc) return conf.desc.trim();
+         const defaults = {
+             str: 'พลังในการผลักดันงานหนัก', agi: 'ความรวดเร็วและคล่องตัว', dex: 'ความแม่นยำและคุณภาพงาน',
+             int: 'การวิเคราะห์และวางระบบ', con: 'ความทนทานต่อความกดดัน', sen: 'ไหวพริบและการจัดการอารมณ์'
+         };
+         return defaults[k];
+      };
+
+      if (validStats.length < 2) {
+         mainStyle = prefix + 'Novice (สายเริ่มต้น)';
+         styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้ประเมินความสามารถเพื่อวางแผนพัฒนาศักยภาพเพิ่มเติม';
+      } else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+         mainStyle = prefix + 'All-Rounder (สายสมดุล)';
+         styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
+      } else {
+         let useTop3 = false;
+         if (validStats.length >= 3) {
+            if (validStats.length === 3 || validStats[2][1] > validStats[3][1]) {
+               useTop3 = true;
+            }
+         }
+
+         if (useTop3) {
+            const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
+            const pairKey = [...topKeys].sort().join('_');
+            mainStyle = prefix + (archetypeMapTop3[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)');
+            styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} ผสานเข้ากับ${getDesc(topKeys[1])} และเสริมด้วย${getDesc(topKeys[2])}`;
+         } else {
+            const topKeys = [validStats[0][0], validStats[1][0]];
+            const pairKey = [...topKeys].sort().join('_');
+            mainStyle = prefix + (archetypeMapTop2[pairKey] || 'Specialist (สายเฉพาะทาง)');
+            styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} และผสานเข้ากับ${getDesc(topKeys[1])} ได้อย่างยอดเยี่ยม`;
+         }
+      }
 
       return (
-        <div className="mt-8 p-4 bg-gradient-to-br from-[#f8fafc] to-white rounded-xl border border-slate-200 w-full text-left shadow-sm">
+        <div className="mt-6 pt-4 w-full text-left relative z-10">
           <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
             <Icon name="brainCircuit" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
           </h4>
@@ -1098,16 +1140,20 @@ export default function App() {
                  <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
-                    <h4 className="font-black text-[#0f2e4a] mb-6 text-center tracking-widest relative z-10 flex items-center"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
-                    <div className="w-full max-w-[280px] aspect-square">
-                      <RadarChart 
-                         userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
-                      />
+                    <div className="w-full mt-6 bg-[#0a1526] rounded-2xl p-6 border border-[#bca374]/30 shadow-[0_0_20px_rgba(15,46,74,0.3)] relative overflow-hidden flex flex-col items-center">
+                       <div className="absolute inset-0 bg-[linear-gradient(rgba(188,163,116,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(188,163,116,0.05)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none opacity-50"></div>
+                       <h4 className="font-black text-[#bca374] mb-8 text-center tracking-widest relative z-10 flex items-center justify-center font-mono text-sm"><Icon name="target" size={18} className="mr-2 text-cyan-400"/> PERFORMANCE MATRIX</h4>
+                       <div className="w-full max-w-[280px] aspect-square relative z-10">
+                         <RadarChart 
+                            userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
+                         />
+                       </div>
+                       <div className="flex flex-wrap justify-center gap-4 mt-8 text-[10px] font-bold relative z-10 font-mono tracking-widest text-[#bca374]">
+                          <div className="flex items-center"><div className="w-3 h-3 bg-[#00f0ff] mr-2 rounded-sm shadow-[0_0_5px_#00f0ff]"></div> ABSOLUTE STATS</div>
+                       </div>
+                       <div className="w-full mt-4 border-t border-[#bca374]/20 relative z-10"></div>
+                       {renderAnalysis()}
                     </div>
-                    <div className="flex flex-wrap justify-center gap-4 mt-6 text-[10px] font-bold">
-                       <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-1.5 rounded-sm opacity-50"></div> ระดับสเตตัสพนักงาน (Absolute Scale)</div>
-                    </div>
-                    {renderAnalysis()}
                  </div>
                </div>
             </div>
