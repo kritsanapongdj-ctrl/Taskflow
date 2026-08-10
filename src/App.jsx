@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import Cropper from 'react-easy-crop';
+import * as XLSX from 'xlsx';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -835,6 +836,62 @@ export default function App() {
     const sList = sets.staffStats || [];
     const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
     
+    const handleExcelUpload = (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = evt.target.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames.includes('ประเมินผลทีม') ? 'ประเมินผลทีม' : workbook.SheetNames[1] || workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          let ns = [...(sets.staffStats||[])];
+          let addedCount = 0;
+          for(let i=2; i<rows.length; i++) {
+            const row = rows[i];
+            if(!row || !row[0] || row[0].toString().trim() === '') continue;
+            
+            const name = row[0].toString().trim();
+            const avg = (arr) => {
+               const valid = arr.filter(v => typeof v === 'number');
+               if(valid.length === 0) return 5;
+               const sum = valid.reduce((a,b)=>a+b,0);
+               return parseFloat((sum/valid.length).toFixed(1));
+            };
+            const str = avg([row[10], row[11], row[12]]);
+            const agi = avg([row[13], row[14], row[15]]);
+            const dex = avg([row[16], row[17], row[18]]);
+            const int = avg([row[19], row[20], row[21], row[22]]);
+            const con = avg([row[23], row[24], row[25]]);
+            const sen = avg([row[26], row[27], row[28]]);
+            
+            const existingIdx = ns.findIndex(x => x.name === name);
+            const newObj = {
+              name: name, str, agi, dex, int, con, sen
+            };
+            if(existingIdx > -1) {
+              ns[existingIdx] = {...ns[existingIdx], ...newObj};
+            } else {
+              ns.push({ id: Date.now().toString() + i, classId: '', image: '', ...newObj });
+            }
+            addedCount++;
+          }
+          const newSets = {...sets, staffStats: ns};
+          setSets(newSets);
+          saveD('settings', newSets);
+          alert(`นำเข้าข้อมูลพนักงานสำเร็จจำนวน ${addedCount} รายการ!`);
+        } catch (err) {
+          console.error(err);
+          alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel กรุณาตรวจสอบว่าเลือกไฟล์ที่ถูกต้อง');
+        }
+      };
+      reader.readAsBinaryString(file);
+      e.target.value = null;
+    };
+    
     const renderAnalysis = () => {
       const u = teamForm;
       if (!u.id && !selTeam?.isNew) return null;
@@ -1168,7 +1225,13 @@ export default function App() {
         <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
           <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
             <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
-            <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-xs px-2 py-1 rounded hover:bg-[#a38a5b]">+ เพิ่ม</button>
+            <div className="flex gap-2">
+               <label className="bg-indigo-600 text-white text-[11px] px-2 py-1 rounded hover:bg-indigo-700 cursor-pointer flex items-center transition shadow-sm">
+                 <Icon name="upload" size={12} className="mr-1" /> Excel
+                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
+               </label>
+               <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-[11px] px-2 py-1 rounded hover:bg-[#a38a5b] transition shadow-sm">+ เพิ่ม</button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
             {sList.map(s => (
