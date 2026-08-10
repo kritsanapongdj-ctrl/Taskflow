@@ -130,7 +130,7 @@ export default function App() {
   const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
-  const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5 });
+  const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5, cx: null, tech: null, sla: null, crisis: null, resource: null, innovation: null });
   const [selTeam, setSelTeam] = useState(null);
   const [cropModal, setCropModal] = useState({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
 
@@ -535,28 +535,6 @@ export default function App() {
   const dlS = (k, v) => { setSets(prev => { let nS = {...prev, [k]: (prev[k]||[]).filter(x => x !== v)}; saveD('settings', nS); return nS; }); };
   const clearSList = (k) => { if(window.confirm('⚠️ ยืนยันการลบข้อมูล "ทั้งหมด" ในหมวดหมู่นี้ใช่หรือไม่?')) { setSets(prev => { let nS = {...prev, [k]: []}; saveD('settings', nS); return nS; }); } };
   
-  const updateStatConfig = (statKey, field, val) => {
-    setSets(prev => {
-        return {
-            ...prev,
-            statConfigs: {
-                ...(prev.statConfigs || {}),
-                [statKey]: {
-                    ...(prev.statConfigs?.[statKey] || {}),
-                    [field]: val
-                }
-            }
-        };
-    });
-  };
-
-  const saveAllSettings = () => {
-    setSets(prev => {
-        saveD('settings', prev);
-        setTimeout(() => alert('บันทึกข้อมูลคำอธิบายสเตตัสเรียบร้อยแล้ว!'), 300);
-        return prev;
-    });
-  };
 
   const toggleEmailProj = (projName) => {
      setEmForm(p => {
@@ -864,30 +842,81 @@ export default function App() {
       
       const sc = sets.statConfigs || {};
       const defMeta = {
-        str: { key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
-        agi: { key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
-        dex: { key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
-        int: { key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
-        con: { key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
-        sen: { key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
+        str: { 
+          key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'Execution & Impact', 
+          rubric: {
+            basic: 'ลังเล ต้องรอคำสั่งจากหัวหน้าเสมอ',
+            intermediate: 'ตัดสินใจเองได้เฉพาะงาน Routine / ปิดเคสยากได้ตามมาตรฐานบริษัท',
+            advanced: 'กล้าตัดสินใจในเคสพิพาทที่ซับซ้อน / มีความสม่ำเสมอในการเจรจารักษาสัมพันธ์ลูกค้า',
+            mastery: 'อนุมัติงบพิเศษหรือมาตรการเยียวยาเพื่อจบวิกฤตได้ทันที / ปิดเคสระดับวิกฤตได้สำเร็จ'
+          }
+        },
+        agi: { 
+          key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'Speed & Adaptability', 
+          rubric: {
+            basic: 'ตอบกลับล่าช้ากว่า SLA / รับมือล่าช้าหรือไม่รู้ขั้นตอนปฏิบัติ',
+            intermediate: 'ตอบกลับตามมาตรฐานเวลา / ตอบสนองเหตุการณ์ตามขั้นตอน',
+            advanced: 'ตอบกลับเร็วกว่าค่าเฉลี่ย / ระงับเหตุและประสานงานแก้วิกฤตได้เร็ว',
+            mastery: 'ตอบกลับทันทีและเตรียมทางออกล่วงหน้า / คาดการณ์ความเสี่ยงและเข้าถึงหน้างานก่อนเกิดเหตุบานปลาย'
+          }
+        },
+        dex: { 
+          key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'Precision & Quality', 
+          rubric: {
+            basic: 'พบข้อผิดพลาดบ่อย / มองไม่เห็นจุด Defect พื้นฐาน',
+            intermediate: 'ข้อมูลถูกต้องตามมาตรฐาน / ตรวจพบ Defect ทั่วไปตาม Check-list',
+            advanced: 'ข้อมูลแม่นยำสูง / ตรวจพบจุดบกพร่องที่ซ่อนเร้นเชิงเทคนิค',
+            mastery: 'ข้อมูลและตัวเลขสมบูรณ์ 100% ไร้ที่ติ / ชี้จุดผิดพลาดที่ส่งผลต่ออายุการใช้งานได้อย่างเป๊ะ'
+          }
+        },
+        int: { 
+          key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'Strategy & Knowledge', 
+          rubric: {
+            basic: 'แก้ปัญหาเฉพาะหน้าแบบขอไปที / ทำงานเชิงรับ (Reactive) ตลอดเวลา',
+            intermediate: 'วิเคราะห์สาเหตุพื้นฐานได้ถูกต้อง / เข้าใจความเชื่อมโยงของแต่ละแผนก',
+            advanced: 'วิเคราะห์ปัญหาเชิงระบบที่ซับซ้อนได้ / เสนอแผนงานเชิงรุกเพื่อลดอุบัติการณ์',
+            mastery: 'ออกแบบโมเดลเพื่อแก้ปัญหาถาวร (Permanent Fix) / สร้างระบบ Monitoring แจ้งเตือนล่วงหน้า'
+          }
+        },
+        con: { 
+          key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'Resilience & Mental Toughness', 
+          rubric: {
+            basic: 'สติแตกหรือแสดงอาการไม่พอใจลูกค้า / ประสิทธิภาพลดลงเมื่อกดดัน',
+            intermediate: 'คุมอารมณ์ได้ตามมารยาทวิชาชีพ / ทำงานได้ต่อเนื่องแม้งานมีปริมาณมาก',
+            advanced: 'ใจเย็นและเจรจาไกล่เกลี่ยลูกค้าได้นุ่มนวล / มาตรฐานงานไม่ตกแม้เผชิญวิกฤตรอบด้าน',
+            mastery: 'เปลี่ยนลูกค้าที่โกรธจัดให้กลับมาเป็น Brand Advocate ได้ / เป็นที่พึ่งที่หนักแน่นในภาวะวิกฤต'
+          }
+        },
+        sen: { 
+          key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'Innovation & Automation', 
+          rubric: {
+            basic: 'รอการจัดสรรคิวงานจากหัวหน้า / ใช้เครื่องมือพื้นฐานได้ไม่คล่องตัว',
+            intermediate: 'จัดคิวงานตนเองได้ตามลำดับสำคัญ / ใช้ CRM/Excel ติดตามงานสม่ำเสมอ',
+            advanced: 'จัดสรรคิวงานและกำลังคนในทีมได้อย่างสมดุล / สร้าง Dashboard ส่วนตัวเพื่อวิเคราะห์งาน',
+            mastery: 'บริหาร Resource ภาพรวมเพื่อ Productivity สูงสุด / ผสาน AI/Automation เข้ากับงาน'
+          }
+        }
       };
 
       const statMeta = ['str','agi','dex','int','con','sen'].map(k => ({
-        ...defMeta[k],
-        desc: sc[k]?.desc || defMeta[k].desc,
-        detail: sc[k]?.detail || defMeta[k].detail,
-        impact: sc[k]?.impact || defMeta[k].impact
+        ...defMeta[k]
       }));
 
       const getStatLevelText = (val) => {
           const v = Number(val);
-          if (v >= 9) return 'ระดับเชี่ยวชาญ';
-          if (v === 8) return 'ระดับสูงเหนือมาตรฐาน';
-          if (v === 7) return 'ระดับชำนาญ';
-          if (v === 6) return 'ระดับมาตรฐานสมดุล';
-          if (v === 5) return 'ระดับพื้นฐาน';
-          if (v === 4) return 'พอใช้แต่ต้องพัฒนา';
-          return 'เสี่ยงต่อการทำงาน';
+          if (v >= 9) return 'ระดับเชี่ยวชาญ/วิกฤต (Mastery)';
+          if (v >= 7) return 'ระดับสูง (Advanced)';
+          if (v === 6) return 'ระดับมาตรฐาน (Standard)';
+          if (v >= 4) return 'ระดับปานกลาง (Intermediate)';
+          return 'ระดับพื้นฐาน (Basic)';
+      };
+
+      const getRubricText = (stat, val) => {
+          const v = Number(val);
+          if (v >= 9) return stat.rubric.mastery;
+          if (v >= 7) return stat.rubric.advanced;
+          if (v >= 4) return stat.rubric.intermediate;
+          return stat.rubric.basic;
       };
 
       let strengths = [];
@@ -1021,11 +1050,14 @@ export default function App() {
               {strengths.length > 0 ? (
                 <ul className="text-[12px] text-slate-700 space-y-1.5 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
                   {strengths.map(s => (
-                    <li key={s.key} className="flex items-center justify-between">
-                      <span className="font-medium">{s.name}</span>
-                      <span className="font-bold text-emerald-700">
-                        {s.uVal} <span className="text-slate-400 font-normal ml-1">({getStatLevelText(s.uVal)})</span>
-                      </span>
+                    <li key={s.key} className="py-1">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-medium">{s.name}</span>
+                        <span className="font-bold text-emerald-700">
+                          {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
+                        </span>
+                      </div>
+                      <div className="text-slate-600 leading-snug">▶ {getRubricText(s, s.uVal)}</div>
                     </li>
                   ))}
                 </ul>
@@ -1033,24 +1065,99 @@ export default function App() {
             </div>
 
             <div className="bg-orange-50/70 p-3 rounded border border-orange-200 relative overflow-hidden mt-1">
-              <strong className="text-orange-800 text-[13px] flex items-center mb-2"><Icon name="alertCircle" size={14} className="mr-1.5 text-orange-600"/> สิ่งที่ควรพัฒนา (Gaps & Impacts)</strong>
+              <strong className="text-orange-800 text-[13px] flex items-center mb-2"><Icon name="alertCircle" size={14} className="mr-1.5 text-orange-600"/> สิ่งที่ควรพัฒนา (Gaps)</strong>
               {gaps.length > 0 ? (
                 <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-orange-300 ml-1">
-                  {gaps.map(s => (
-                    <li key={s.key} className="text-slate-700 text-[12px]">
+                  {gaps.map(s => {
+                    const baseTarget = role?.baseStats?.[s.key] ? Number(role.baseStats[s.key]) : null;
+                    const isBelowTarget = baseTarget && s.uVal < baseTarget;
+                    return (
+                    <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-orange-100 last:border-0 last:pb-0">
                       <div className="flex justify-between items-center mb-1">
                         <strong className="text-[#0f2e4a]">{s.name}</strong>
-                        <span className="font-bold text-orange-600">{s.uVal}</span>
+                        <span className="font-bold text-orange-600">
+                           {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
+                        </span>
                       </div>
-                      <div className="text-slate-600 mt-1 block">เป้าหมาย: {s.detail}</div>
-                      <div className="text-orange-700 font-medium mt-1.5 text-[11px]">
-                        * ผลกระทบ: {s.impact}
+                      <div className="text-orange-700 leading-snug mb-1">
+                        ▶ {getRubricText(s, s.uVal)}
                       </div>
+                      {isBelowTarget && (
+                        <div className="text-[10px] text-rose-600 font-medium bg-rose-50 p-1 rounded inline-block mt-0.5">
+                           * เป้าหมายของตำแหน่ง {role.name} คือระดับ {baseTarget}
+                        </div>
+                      )}
                     </li>
-                  ))}
+                  )})}
                 </ul>
               ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่พบความเสี่ยงที่น่ากังวล</div>}
             </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-slate-200 relative z-10">
+             <h4 className="font-bold text-[#0f2e4a] text-[13px] flex items-center mb-1">
+                <Icon name="layers" size={14} className="mr-2 text-indigo-500" />
+                6 แกนสมรรถนะผลงาน (The Outer Layer)
+             </h4>
+             <p className="text-[10px] text-slate-500 mb-3 leading-snug">
+                * ระบบวิเคราะห์ค่าจากศักยภาพตั้งต้น (HOW) หัวหน้างานสามารถสไลด์ปรับเพิ่ม/ลดคะแนนเพื่อสะท้อนผลลัพธ์หน้างานจริง (WHAT)
+             </p>
+             <div className="grid grid-cols-2 gap-3">
+                {[
+                  { k: 'cx', n: 'Customer Exp.', d: 'ความพึงพอใจลูกค้า' },
+                  { k: 'tech', n: 'Tech. Expertise', d: 'ทักษะเชิงลึก' },
+                  { k: 'sla', n: 'Ops & SLA', d: 'เวลาและความเป๊ะ' },
+                  { k: 'crisis', n: 'Crisis Resolv.', d: 'แก้ปัญหาวิกฤต' },
+                  { k: 'resource', n: 'Resource Ctrl.', d: 'บริหารทรัพยากร' },
+                  { k: 'innovation', n: 'Innovation', d: 'สร้างระบบใหม่' }
+                ].map(out => {
+                   const autoVal = Math.round(
+                      out.k === 'cx' ? (statsObj.con + statsObj.sen)/2 :
+                      out.k === 'tech' ? (statsObj.int + statsObj.dex)/2 :
+                      out.k === 'sla' ? (statsObj.agi + statsObj.dex)/2 :
+                      out.k === 'crisis' ? (statsObj.str + statsObj.con)/2 :
+                      out.k === 'resource' ? (statsObj.str + statsObj.sen)/2 :
+                      (statsObj.int + statsObj.sen)/2
+                   );
+                   const actualVal = (u[out.k] !== null && u[out.k] !== undefined) ? u[out.k] : autoVal;
+                   const isOverride = u[out.k] !== null && u[out.k] !== undefined && u[out.k] !== autoVal;
+                   const gap = actualVal - autoVal;
+                   
+                   return (
+                     <div key={out.k} className={`bg-white p-2.5 rounded-lg border ${isOverride ? 'border-indigo-200 bg-indigo-50/20' : 'border-slate-200'} shadow-sm flex flex-col justify-between`}>
+                        <div className="flex justify-between items-start mb-1">
+                           <div>
+                              <strong className="text-[11px] text-indigo-900 block">{out.n}</strong>
+                              <span className="text-[9px] text-slate-400">{out.d}</span>
+                           </div>
+                           <span className={`font-bold text-[12px] ${isOverride ? 'text-indigo-600' : 'text-slate-500'}`}>
+                             {actualVal}<span className="text-[9px] text-slate-400">/10</span>
+                           </span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between">
+                           <input type="range" min="1" max="10" step="1" 
+                              className="w-[70%] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
+                              value={actualVal} 
+                              onChange={e => setTeamForm({...teamForm, [out.k]: Number(e.target.value)})} 
+                           />
+                           {isOverride && (
+                             <button type="button" className="text-[9px] text-slate-400 hover:text-indigo-500 underline ml-1" onClick={() => setTeamForm({...teamForm, [out.k]: null})}>คืนค่า</button>
+                           )}
+                        </div>
+                        {gap <= -2 && (
+                           <div className="mt-2 text-[10px] text-rose-700 bg-rose-50 p-1.5 rounded font-medium leading-tight border border-rose-100">
+                              ⚠️ ศักยภาพ {autoVal} แต่ผลงาน {actualVal} (Low Result) → ขาดประสบการณ์หน้างาน ควรทำ OJT ด่วน
+                           </div>
+                        )}
+                        {gap >= 2 && (
+                           <div className="mt-2 text-[10px] text-emerald-700 bg-emerald-50 p-1.5 rounded font-medium leading-tight border border-emerald-100">
+                              ⭐ ผลงาน {actualVal} แซงศักยภาพ {autoVal} → ค้นพบ Best Practice ควรแชร์ต่อในทีม
+                           </div>
+                        )}
+                     </div>
+                   );
+                })}
+             </div>
           </div>
         </div>
       );
@@ -1343,43 +1450,6 @@ export default function App() {
           ))}
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm mt-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="edit3" size={20} className="mr-2 text-[#bca374]"/> ตั้งค่าคำอธิบายสเตตัสและผลกระทบ (Stat Explanations)</h3>
-            <button type="button" onClick={saveAllSettings} className="bg-[#bca374] text-white px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-[#a38a5b] flex items-center transition-colors"><Icon name="save" size={14} className="mr-2"/> บันทึกคำอธิบาย</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {['str', 'agi', 'dex', 'int', 'con', 'sen'].map(key => {
-              const upper = key.toUpperCase();
-              const def = {
-                  str: { name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'พลังในการผลักดันงานหนัก', detail: 'ลุยแก้ปัญหาเฉพาะหน้า จัดการสเกลงานใหญ่ และความเด็ดขาดในการปิดเคสยาก (Execution & Drive)', impact: 'อาจส่งผลให้งานสเกลใหญ่หรือเคสยากเกิดความล่าช้า ไม่สามารถปิดจบเคสได้ทันท่วงที' },
-                  agi: { name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'ความรวดเร็วและคล่องตัว', detail: 'สปีดในการตอบสนอง (Response Time) การเข้าถึงหน้างานไว และความยืดหยุ่น (Speed & Adaptability)', impact: 'อาจทำให้การตอบสนองต่อปัญหาหน้างานล่าช้า และปรับตัวตามสถานการณ์ฉุกเฉินได้ช้าเกินไป' },
-                  dex: { name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'ความแม่นยำและละเอียด', detail: 'คุณภาพงานที่ไร้ข้อผิดพลาด (Zero Error Rate) ความเป๊ะในการตรวจ QC (Precision & Detail)', impact: 'อาจทำให้มีข้อผิดพลาด (Defect) หลุดรอดไปถึงลูกค้า หรือต้องสูญเสียเวลาและทรัพยากรในการแก้งานซ้ำซ้อน' },
-                  int: { name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'การวิเคราะห์และกลยุทธ์', detail: 'การวาง Workflow วิเคราะห์ปัญหาเชิงลึก และแก้ปัญหาระบบ (Strategy & Analysis)', impact: 'อาจทำให้ขาดการวางแผนที่ดีในการทำงาน การแก้ปัญหาที่ไม่ได้มองถึงรากฐาน (Root Cause) ทำให้ระบบสะดุด' },
-                  con: { name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'ความอึดและการรับแรงกดดัน', detail: 'การทนต่อความเครียดสะสม รับมือลูกค้าที่กำลังโกรธ (EQ) และไม่ Burnout (Resilience & Mental Toughness)', impact: 'อาจทำให้เกิดภาวะหมดไฟ (Burnout) ได้ง่าย หรือไม่สามารถควบคุมอารมณ์ได้เมื่อเจอแรงกดดันจากลูกค้าหรือเนื้องาน' },
-                  sen: { name: 'SEN (Sense)', group: 'The Mastermind', desc: 'ไหวพริบและการจัดการ', detail: 'จัดการคิวงาน เจรจาซัพพลายเออร์ และสัญชาตญาณในการประเมินสถานการณ์ (Management & Intuition)', impact: 'อาจทำให้การจัดลำดับความสำคัญของงาน (Prioritization) คลาดเคลื่อน และการติดต่อประสานงานต่างๆ ขาดความลื่นไหล' }
-              }[key];
-              const conf = (sets.statConfigs && sets.statConfigs[key]) || {};
-              return (
-                <div key={key} className="border border-gray-200 rounded-lg p-3 bg-gray-50 flex flex-col space-y-3">
-                  <div className="font-bold text-sm text-[#0f2e4a]">{upper} - {def.name.split('(')[1].replace(')','')}</div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">คำอธิบายสั้น (Desc)</label>
-                    <input type="text" className="w-full border rounded px-2 py-1.5 text-xs outline-none focus:border-blue-400" placeholder={def.desc} value={conf.desc ?? ''} onChange={e => updateStatConfig(key, 'desc', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">รายละเอียด / ควรพัฒนา (Detail)</label>
-                    <textarea className="w-full border rounded px-2 py-1.5 text-xs outline-none focus:border-blue-400 min-h-[50px] resize-none" placeholder={def.detail} value={conf.detail ?? ''} onChange={e => updateStatConfig(key, 'detail', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-rose-500 mb-1 block">ผลกระทบหากต่ำกว่าเกณฑ์ (Impact)</label>
-                    <textarea className="w-full border border-rose-200 rounded px-2 py-1.5 text-xs outline-none focus:border-rose-400 min-h-[50px] resize-none" placeholder={def.impact} value={conf.impact ?? ''} onChange={e => updateStatConfig(key, 'impact', e.target.value)} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center space-y-3">
