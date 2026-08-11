@@ -902,16 +902,16 @@ export default function App() {
       const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
       
       const archetypeMapTop2 = {
-        'agi_str': 'Striker (สายจู่โจมความเร็วสูง)', 'dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาด)', 'int_str': 'Battlemage (สายผสานแผน)', 'con_str': 'Juggernaut (สายลุยงานหนัก)', 'sen_str': 'Warlord (สายผู้นำบุกเบิก)',
-        'agi_dex': 'Phantom (สายไร้ร่องรอย)', 'agi_int': 'Tactical Runner (สายรุกฉับไว)', 'agi_con': 'Resilient Scout (สายสำรวจด่วน)', 'agi_sen': 'Pathfinder (สายประสานงาน)', 'dex_int': 'System Artisan (สายสร้างสรรค์)',
-        'con_dex': 'Iron Sentinel (สายคุมมาตรฐาน)', 'dex_sen': 'Sniper (สายจับเป้าหมาย)', 'con_int': 'Fortress Architect (สายวางโครงสร้าง)', 'int_sen': 'Supreme Tactician (สายเจรจา)', 'con_sen': 'Unbreakable (สายรับแรงกดดัน)'
+        'agi_str': 'Striker (สายจู่โจมความเร็วสูง)', 'dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาด)', 'int_str': 'Battlemage (สายผสานแผนและการลงมือทำ)', 'con_str': 'Juggernaut (สายลุยงานหนักทรหด)', 'sen_str': 'Warlord (สายผู้นำบุกเบิก)',
+        'agi_dex': 'Phantom Operative (สายปฏิบัติการไร้ร่องรอย)', 'agi_int': 'Tactical Runner (สายรุกฉับไวด้วยกลยุทธ์)', 'agi_con': 'Resilient Scout (สายสำรวจและแก้ปัญหาด่วน)', 'agi_sen': 'Pathfinder (สายประสานงานรวดเร็ว)', 'dex_int': 'System Artisan (สายสร้างสรรค์ระบบสุดเนี้ยบ)',
+        'con_dex': 'Iron Sentinel (สายคุมมาตรฐานสุดแกร่ง)', 'dex_sen': 'Sniper (สายจับเป้าหมายแม่นยำ)', 'con_int': 'Fortress Architect (สายออกแบบโครงสร้างมั่นคง)', 'int_sen': 'Supreme Tactician (สายเจรจาและวางกลยุทธ์)', 'con_sen': 'Unbreakable Commander (สายผู้บัญชาการรับแรงกดดัน)'
       };
 
       const archetypeMapTop3 = {
-        'agi_con_dex': 'Swift Guardian', 'agi_con_int': 'Blitz Strategist', 'agi_con_sen': 'Vanguard Tracker', 'agi_con_str': 'Frontline Berserker', 'agi_dex_int': 'Digital Ronin', 'agi_dex_sen': 'Mirage Walker',
-        'agi_dex_str': 'Swift Duelist', 'agi_int_sen': 'Spymaster', 'agi_int_str': 'Arcane Vanguard', 'agi_sen_str': 'Vanguard Warlord', 'con_dex_int': 'Foundation Maestro', 'con_dex_sen': 'Titan Warden',
-        'con_dex_str': 'Juggernaut Craftsman', 'con_int_sen': 'Grand Pillar', 'con_int_str': 'Citadel Builder', 'con_sen_str': 'Indomitable Chief', 'dex_int_sen': 'Visionary Consultant', 'dex_int_str': 'Grandmaster',
-        'dex_sen_str': 'Sharpshooter', 'int_sen_str': 'Mastermind Overseer'
+        'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)', 'agi_con_int': 'Blitz Strategist (สายปฏิบัติการเชิงรุกฉับไว)', 'agi_con_sen': 'Vanguard Tracker (สายสำรวจและประเมินสถานการณ์)', 'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)', 'agi_dex_int': 'Digital Ronin (สายจัดระบบงานเนี้ยบและไว)', 'agi_dex_sen': 'Mirage Walker (สายจัดการปัญหาไร้ร่องรอย)',
+        'agi_dex_str': 'Swift Duelist (สายปฏิบัติการเฉียบขาดว่องไว)', 'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)', 'agi_int_str': 'Arcane Vanguard (สายผสานกลยุทธ์และการลงมือทำ)', 'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)', 'con_dex_int': 'Foundation Maestro (สายวางรากฐานและแก้ปัญหาระบบ)', 'con_dex_sen': 'Titan Warden (สายคุมมาตรฐานงานสุดแกร่ง)',
+        'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)', 'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)', 'con_int_str': 'Citadel Builder (สายออกแบบโครงสร้างงานมั่นคง)', 'con_sen_str': 'Indomitable Chief (สายผู้นำทีมสุดแกร่ง)', 'dex_int_sen': 'Visionary Consultant (สายที่ปรึกษาและคาดการณ์แม่นยำ)', 'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
+        'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)', 'int_sen_str': 'Mastermind Overseer (สายบริหารจัดการเชิงกลยุทธ์)'
       };
 
       const validStats = sortedStats.filter(s => s[1] >= 5);
@@ -1038,7 +1038,7 @@ export default function App() {
               
               <div className="relative z-10 w-full h-full flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
                 {u.image ? (
-                   <img src={u.image} className="max-w-[85%] max-h-[85%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-100" style={{maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 75%)'}} alt="Character" />
+                   <img src={u.image} className="max-w-[85%] max-h-[85%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-110" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
                 ) : (
                    <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                      <Icon name="user" size={64} className="text-slate-600" />
