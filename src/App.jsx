@@ -806,13 +806,13 @@ export default function App() {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_SIZE = 1000;
+      const MAX_SIZE = 500;
       canvas.width = MAX_SIZE;
       canvas.height = MAX_SIZE;
       const ctx = canvas.getContext('2d');
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, cropModal.croppedAreaPixels.x, cropModal.croppedAreaPixels.y, cropModal.croppedAreaPixels.width, cropModal.croppedAreaPixels.height, 0, 0, MAX_SIZE, MAX_SIZE);
-      setTeamForm({...teamForm, image: canvas.toDataURL('image/png')});
+      setTeamForm({...teamForm, image: canvas.toDataURL('image/webp', 0.85)});
       setCropModal({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
     };
     img.src = cropModal.imageSrc;
@@ -829,6 +829,7 @@ export default function App() {
     setSets(newSets);
     saveD('settings', newSets);
     setSelTeam({...teamForm});
+    setTeamEditMode(false);
   };
 
   const rTeam = () => {
