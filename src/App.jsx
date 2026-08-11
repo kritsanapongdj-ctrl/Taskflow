@@ -961,7 +961,7 @@ export default function App() {
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
-           <div className="w-full md:w-1/2 p-8 md:p-12 z-10 flex flex-col justify-center border-r border-white/10 relative h-full">
+           <div className="w-full md:w-1/2 p-6 md:p-10 z-10 flex flex-col justify-center border-r border-white/10 relative h-full overflow-y-auto hide-scrollbar">
               <div className="absolute top-4 right-4 z-20">
                 <button type="button" onClick={() => setTeamEditMode(true)} className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
                   <Icon name="settings" size={20} />
@@ -972,12 +972,17 @@ export default function App() {
                 <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-2 drop-shadow-md">
                    {role?.name || 'ไม่ระบุสายอาชีพ'}
                 </h5>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                <h1 className="text-3xl md:text-4xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
                    {mainStyle}
                 </h1>
-                <p className="text-lg text-slate-300 font-light mb-8 max-w-md border-l-4 border-[#bca374] pl-4">
-                   "{styleDesc}"
-                </p>
+                <div className="mb-8 border-l-4 border-[#bca374] pl-4">
+                  <p className="text-sm md:text-base text-slate-300 font-light italic mb-1">
+                     "{styleDesc}"
+                  </p>
+                  <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
+                     รูปแบบการทำงานนี้สะท้อนถึงการผสมผสานจุดแข็งหลักของคุณ ซึ่งสามารถนำไปประยุกต์ใช้เพื่อสร้างสรรค์ผลงานที่ยอดเยี่ยมในสถานการณ์ต่างๆ ได้อย่างมีประสิทธิภาพ และยังเป็นแนวทางให้เพื่อนร่วมทีมเข้าใจวิธีการทำงานของคุณมากยิ่งขึ้น
+                  </p>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-x-8 gap-y-5 mb-10">
                    {[
@@ -1016,7 +1021,7 @@ export default function App() {
               
               <div className="relative z-10 w-full h-full flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
                 {u.image ? (
-                   <img src={u.image} className="max-w-full max-h-full object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-110" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
+                   <img src={u.image} className="max-w-[85%] max-h-[85%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-100" style={{maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 75%)'}} alt="Character" />
                 ) : (
                    <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                      <Icon name="user" size={64} className="text-slate-600" />
