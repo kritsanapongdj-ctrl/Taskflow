@@ -928,24 +928,37 @@ export default function App() {
          return defaults[k];
       };
 
-      let mainStyle = ''; let styleDesc = '';
+      let mainStyleRaw = ''; let styleDesc = '';
       if (validStats.length < 2) {
-         mainStyle = prefix + 'Novice'; styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้พัฒนาศักยภาพเพิ่มเติม';
+         mainStyleRaw = 'Novice (ระดับเริ่มต้น)'; styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้มุ่งเน้นการพัฒนาศักยภาพเพิ่มเติม';
       } else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-         mainStyle = prefix + 'All-Rounder'; styleDesc = 'สมดุลในทุกมิติ ปรับตัวได้กับทุกสถานการณ์';
+         mainStyleRaw = 'All-Rounder (สายสมดุล)'; styleDesc = 'สมดุลในทุกมิติ ปรับตัวได้กับทุกสถานการณ์และแก้ไขปัญหาได้ทุกรูปแบบ';
       } else {
          let useTop3 = false;
          if (validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1])) useTop3 = true;
          if (useTop3) {
             const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
-            mainStyle = prefix + (archetypeMapTop3[topKeys.sort().join('_')] || 'Hybrid');
-            styleDesc = `โดดเด่นด้าน ${getDesc(topKeys[0])}, ${getDesc(topKeys[1])} และ ${getDesc(topKeys[2])}`;
+            mainStyleRaw = (archetypeMapTop3[topKeys.sort().join('_')] || 'Hybrid (สายผสมผสาน)');
+            styleDesc = `โดดเด่นอย่างมากด้าน ${getDesc(topKeys[0])}, ${getDesc(topKeys[1])} และ ${getDesc(topKeys[2])}`;
          } else {
             const topKeys = [validStats[0][0], validStats[1][0]];
-            mainStyle = prefix + (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist');
-            styleDesc = `ความเชี่ยวชาญด้าน ${getDesc(topKeys[0])} ผสานกับ ${getDesc(topKeys[1])}`;
+            mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
+            styleDesc = `ความเชี่ยวชาญพิเศษด้าน ${getDesc(topKeys[0])} ผสานกับ ${getDesc(topKeys[1])}`;
          }
       }
+
+      const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
+      const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
+      const thTitle = nameMatch ? nameMatch[2].trim() : '';
+
+      const flavorMap = {
+        'Elite': 'ระดับผู้เชี่ยวชาญสูงสุด สามารถเป็นแบบอย่างและนำทีมขับเคลื่อนผลงานได้อย่างไร้ที่ติ',
+        'Veteran': 'ระดับชำนาญการ มีประสบการณ์สูงและรับมือกับสถานการณ์หน้างานได้อย่างยอดเยี่ยม',
+        'Adept': 'ระดับผู้มีความสามารถ สามารถประยุกต์ใช้ทักษะเพื่อแก้ไขปัญหาและปฏิบัติงานได้ดีเยี่ยม',
+        'Trainee': 'ระดับผู้ฝึกฝนกำลังพัฒนาศักยภาพ มีความมุ่งมั่นในการเรียนรู้เพื่อเติบโตในสายงานนี้'
+      };
+      const prefixText = prefix.trim();
+      const flavorText = flavorMap[prefixText] || '';
 
       const outers = [
         { k: 'cx', n: 'Customer Exp.', val: Math.round((statsObj.con + statsObj.sen)/2) },
@@ -969,18 +982,22 @@ export default function App() {
               </div>
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto">
-                <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-2 drop-shadow-md">
-                   {role?.name || 'ไม่ระบุสายอาชีพ'}
+                <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex items-center">
+                   <span className="mr-3">{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
+                   {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-xs border border-[#bca374]/30">{prefixText}</span>}
                 </h5>
-                <h1 className="text-3xl md:text-4xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
-                   {mainStyle}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                   {enTitle}
                 </h1>
                 <div className="mb-8 border-l-4 border-[#bca374] pl-4">
-                  <p className="text-sm md:text-base text-slate-300 font-light italic mb-1">
+                  <p className="text-sm md:text-base text-slate-300 font-light italic mb-2">
                      "{styleDesc}"
                   </p>
+                  <p className="text-[12px] md:text-sm text-slate-400 leading-relaxed font-bold mb-1">
+                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span>
+                  </p>
                   <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
-                     รูปแบบการทำงานนี้สะท้อนถึงการผสมผสานจุดแข็งหลักของคุณ ซึ่งสามารถนำไปประยุกต์ใช้เพื่อสร้างสรรค์ผลงานที่ยอดเยี่ยมในสถานการณ์ต่างๆ ได้อย่างมีประสิทธิภาพ และยังเป็นแนวทางให้เพื่อนร่วมทีมเข้าใจวิธีการทำงานของคุณมากยิ่งขึ้น
+                     {flavorText}
                   </p>
                 </div>
                 
