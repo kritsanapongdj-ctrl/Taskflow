@@ -929,13 +929,12 @@ export default function App() {
          return defaults[k];
       };
 
-      let mainStyleRaw = ''; let styleDesc = '';
+      let mainStyleRaw = ''; let styleDesc = ''; let useTop3 = false;
       if (validStats.length < 2) {
          mainStyleRaw = 'Novice (ระดับเริ่มต้น)'; styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้มุ่งเน้นการพัฒนาศักยภาพเพิ่มเติม';
       } else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
          mainStyleRaw = 'All-Rounder (สายสมดุล)'; styleDesc = 'สมดุลในทุกมิติ ปรับตัวได้กับทุกสถานการณ์และแก้ไขปัญหาได้ทุกรูปแบบ';
       } else {
-         let useTop3 = false;
          if (validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1])) useTop3 = true;
          if (useTop3) {
             const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
