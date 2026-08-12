@@ -117,121 +117,308 @@ const SimplePieChart = ({ data, title }) => {
 };
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
   const crests = {
-    'agi_str': ( // Musa/Maehwa: Katana + Gale
-       <g><path d="M -35 35 Q 0 10 35 -35 M -15 15 L -10 20 M 15 -15 L 20 -10" strokeWidth={2}/><path d="M -25 -10 C -15 -25 15 -25 25 -10 C 35 5 15 25 5 25 C -5 25 -15 5 -25 -10" strokeWidth={1} strokeDasharray="3 5"/></g>
-    ),
-    'dex_str': ( // Striker: Heavy Gauntlet + Aura
-       <g><path d="M -15 -20 L 15 -20 L 25 10 L 15 35 L -15 35 L -25 10 Z" strokeWidth={1.5}/><path d="M -10 -20 L -10 35 M 0 -20 L 0 35 M 10 -20 L 10 35" opacity={0.5}/><circle cx="0" cy="5" r="30" strokeDasharray="2 4" strokeWidth={1.5}/></g>
-    ),
-    'int_str': ( // Dark Knight: Kriegsmesser + Runes
-       <g><path d="M 0 -45 L 8 -15 L 2 0 L 2 45 L -2 45 L -2 0 L -8 -15 Z" strokeWidth={1.5}/><path d="M -15 -5 L 15 -5 M -8 -10 L 8 -10" strokeWidth={1.5}/><circle cx="0" cy="0" r="28" strokeDasharray="2 6" strokeWidth={1.5}/><circle cx="-28" cy="0" r="2" fill="currentColor"/><circle cx="28" cy="0" r="2" fill="currentColor"/></g>
-    ),
-    'con_str': ( // Berserker/Crusader: Cross Shield + Dual Axes (User requested)
+    'agi_str': (
        <g>
-         <path d="M -25 -25 L 25 -25 L 25 10 C 25 35 0 45 0 45 C 0 45 -25 35 -25 10 Z" strokeWidth={1.5} opacity={0.6}/>
-         <path d="M -15 -5 L 15 -5 M 0 -15 L 0 25" strokeWidth={2}/>
-         <path d="M -35 35 L 15 -15 M 15 -25 C 15 -25 35 -15 25 5 C 25 5 10 -5 15 -25" strokeWidth={1.5}/>
-         <path d="M 35 35 L -15 -15 M -15 -25 C -15 -25 -35 -15 -25 5 C -25 5 -10 -5 -15 -25" strokeWidth={1.5}/>
+         <path d="M -30 35 Q -10 30 30 -35 L 32 -33 Q -8 32 -28 37 Z" fill="currentColor"/>
+         <path d="M -25 32 L -33 39" strokeWidth={2.5} strokeLinecap="round"/>
+         <path d="M -30 37 L -40 47" strokeWidth={2.5}/>
+         <circle cx="-41" cy="48" r="1.5" fill="currentColor"/>
+         <path d="M -10 -10 C -20 -30 20 -30 25 -10 C 30 10 0 20 -10 5" strokeWidth={1.5} fill="none" strokeDasharray="4 4"/>
        </g>
     ),
-    'sen_str': ( // Warlord: Crown + Broadsword
-       <g><path d="M -25 -30 L -15 -15 L 0 -30 L 15 -15 L 25 -30 L 20 0 L -20 0 Z" strokeWidth={1.5}/><path d="M 0 -15 L 0 45 M -12 5 L 12 5 M -6 10 L 6 10" strokeWidth={2}/></g>
+    'dex_str': (
+       <g>
+         <path d="M -15 -10 L -15 15 C -15 25 15 25 15 15 L 15 -10 Z" strokeWidth={2} fill="none"/>
+         <path d="M -15 -10 C -10 -20 -5 -10 0 -10 C 5 -10 10 -20 15 -10" strokeWidth={2} fill="none"/>
+         <path d="M -10 5 L 10 5 M -10 15 L 10 15" strokeWidth={1.5}/>
+         <circle cx="0" cy="5" r="30" strokeWidth={1.5} strokeDasharray="6 4" fill="none"/>
+         <path d="M -40 5 C -40 -15 -20 -35 0 -40 M 40 5 C 40 -15 20 -35 0 -40" strokeWidth={1.5} fill="none" opacity="0.5"/>
+       </g>
     ),
-    'agi_dex': ( // Phantom Operative: Shuriken + Smoke
-       <g><path d="M 0 -30 L 5 -5 L 30 0 L 5 5 L 0 30 L -5 5 L -30 0 L -5 -5 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="12" strokeWidth={1.5}/><path d="M -20 20 C -35 5 -10 -15 -25 -30" strokeDasharray="3 4"/><path d="M 20 20 C 35 5 10 -15 25 -30" strokeDasharray="3 4"/></g>
+    'int_str': (
+       <g>
+         <path d="M 0 -40 L 8 -10 L 6 20 L -6 20 L -8 -10 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M 0 -35 L 0 15 M -15 -10 L 15 -10 L 12 -5 L -12 -5 Z" strokeWidth={1.5} fill="currentColor"/>
+         <path d="M -3 -5 L -3 30 L 3 30 L 3 -5 Z" fill="none" strokeWidth={1.5}/>
+         <circle cx="0" cy="32" r="3" fill="currentColor"/>
+         <circle cx="0" cy="-5" r="35" strokeWidth={1} strokeDasharray="1 8" fill="none"/>
+         <path d="M -25 -15 L -35 -20 L -30 -10 M 25 -15 L 35 -20 L 30 -10" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'agi_int': ( // Sorceress: Amulet + Raven Wings
-       <g><path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="6"/><path d="M -15 0 C -35 -20 -45 -10 -45 10 C -45 25 -25 15 -15 0" strokeWidth={1.5}/><path d="M 15 0 C 35 -20 45 -10 45 10 C 45 25 25 15 15 0" strokeWidth={1.5}/></g>
+    'con_str': (
+       <g>
+         <path d="M -25 -20 L 25 -20 L 25 15 C 25 35 0 45 0 45 C 0 45 -25 35 -25 15 Z" strokeWidth={1.5} fill="none" opacity="0.6"/>
+         <path d="M -15 0 L 15 0 M 0 -10 L 0 25" strokeWidth={3} strokeLinecap="round" opacity="0.6"/>
+         <g transform="rotate(45)"><path d="M 0 -35 L 0 35" strokeWidth={2}/><path d="M 0 -20 C -25 -25 -25 5 0 0 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/></g>
+         <g transform="rotate(-45)"><path d="M 0 -35 L 0 35" strokeWidth={2}/><path d="M 0 -20 C 25 -25 25 5 0 0 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/></g>
+       </g>
     ),
-    'agi_con': ( // Corsair: Cutlass + Rope
-       <g><path d="M -30 30 Q 15 15 35 -25 M -10 15 L -5 20 M 20 -5 L 25 0" strokeWidth={2}/><path d="M -25 -15 C -5 -35 25 -15 5 15 C -15 45 -45 15 -25 -15 Z" strokeDasharray="4 4" strokeWidth={1.5}/></g>
+    'sen_str': (
+       <g>
+         <path d="M 0 -45 L 6 -20 L 4 10 L -4 10 L -6 -20 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M -12 -20 L 12 -20 L 10 -15 L -10 -15 Z" fill="currentColor"/>
+         <path d="M -2 -15 L -2 25 L 2 25 L 2 -15 Z" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="27" r="3" fill="currentColor"/>
+         <path d="M -25 0 L -15 -20 L 0 -5 L 15 -20 L 25 0 L 20 20 L -20 20 Z" strokeWidth={2} fill="none"/>
+         <circle cx="-15" cy="-22" r="2" fill="currentColor"/><circle cx="0" cy="-7" r="2" fill="currentColor"/><circle cx="15" cy="-22" r="2" fill="currentColor"/>
+         <path d="M -15 10 L 15 10" strokeWidth={2}/>
+       </g>
     ),
-    'agi_sen': ( // Pathfinder: Compass + Falcon Wings
-       <g><circle cx="0" cy="0" r="20" strokeDasharray="4 6"/><path d="M 0 -25 L 0 -10 M 0 10 L 0 25 M -25 0 L -10 0 M 10 0 L 25 0" strokeWidth={2}/><path d="M -15 -15 C -35 -35 -50 -10 -30 10" strokeWidth={1.5}/><path d="M 15 -15 C 35 -35 50 -10 30 10" strokeWidth={1.5}/></g>
+    'agi_dex': (
+       <g>
+         <path d="M 0 -25 L 5 -5 L 25 0 L 5 5 L 0 25 L -5 5 L -25 0 L -5 -5 Z" strokeWidth={2} fill="none"/>
+         <circle cx="0" cy="0" r="10" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="3" fill="currentColor"/>
+         <path d="M -20 20 C -40 10 -20 -15 -5 -10 C 15 -5 10 -25 25 -20" strokeWidth={1.5} strokeDasharray="4 4" fill="none"/>
+         <path d="M -25 -20 C -15 -35 5 -20 15 -30" strokeWidth={1.5} strokeDasharray="2 4" fill="none"/>
+       </g>
     ),
-    'dex_int': ( // System Artisan (Sage): Kyve Cube + Runes
-       <g><path d="M 0 -25 L 20 -10 L 20 15 L 0 30 L -20 15 L -20 -10 Z" strokeWidth={1.5}/><path d="M 0 -25 L 0 0 L 20 15 M 0 0 L -20 15 M -20 -10 L 20 -10" opacity={0.6}/><circle cx="0" cy="0" r="35" strokeDasharray="2 8" strokeWidth={1.5}/></g>
+    'agi_int': (
+       <g>
+         <path d="M -10 -5 C -30 -30 -50 -10 -30 15 C -25 5 -15 0 -10 5 Z M 10 -5 C 30 -30 50 -10 30 15 C 25 5 15 0 10 5 Z" strokeWidth={1.5} fill="currentColor" opacity="0.3"/>
+         <path d="M -10 -5 C -30 -20 -40 5 -20 25 M 10 -5 C 30 -20 40 5 20 25" strokeWidth={1.5} fill="none"/>
+         <path d="M 0 -20 L 15 0 L 0 20 L -15 0 Z" strokeWidth={2} fill="none"/>
+         <circle cx="0" cy="0" r="6" fill="currentColor"/><path d="M 0 -20 L 0 -35 M -5 -35 L 5 -35" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'con_dex': ( // Guardian/Peltasta: Heavy Battleaxe + Round Shield
-       <g><circle cx="0" cy="0" r="25" strokeWidth={2}/><circle cx="0" cy="0" r="15" opacity={0.5}/><path d="M -35 35 L 15 -15 M 5 -25 C 15 -35 35 -15 25 -5 Z" strokeWidth={1.5}/></g>
+    'agi_con': (
+       <g>
+         <path d="M -25 25 Q 15 15 35 -25 L 32 -28 Q 10 10 -28 22 Z" fill="currentColor"/>
+         <path d="M -15 10 L -5 20 L 0 15 L -10 5 Z" fill="none" strokeWidth={1.5}/>
+         <path d="M -28 22 L -35 30 M -10 5 C 0 -5 15 5 5 20" strokeWidth={2} fill="none"/>
+         <path d="M -20 -15 C 10 -40 30 0 10 25 C -10 50 -40 10 -20 -15" strokeWidth={2} strokeDasharray="5 3" fill="none"/>
+       </g>
     ),
-    'dex_sen': ( // Sniper: Musket / Crossbow Target
-       <g><circle cx="0" cy="0" r="25" strokeDasharray="3 5"/><path d="M 0 -35 L 0 -15 M 0 15 L 0 35 M -35 0 L -15 0 M 15 0 L 35 0" strokeWidth={2}/><circle cx="0" cy="0" r="2" fill="currentColor"/></g>
+    'agi_sen': (
+       <g>
+         <path d="M -15 -5 C -35 -20 -45 5 -25 25 C -20 15 -15 15 -10 20 Z M 15 -5 C 35 -20 45 5 25 25 C 20 15 15 15 10 20 Z" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="0" r="18" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="14" strokeWidth={1} strokeDasharray="2 4" fill="none"/>
+         <path d="M 0 -22 L 0 -14 M 0 14 L 0 22 M -22 0 L -14 0 M 14 0 L 22 0" strokeWidth={2}/>
+         <path d="M -6 6 L 0 -10 L 6 6 Z" fill="currentColor"/>
+       </g>
     ),
-    'con_int': ( // Fortress Architect: Morning Star + Tower Shield
-       <g><path d="M -20 -30 L 20 -30 L 20 30 C 20 40 0 45 0 45 C 0 45 -20 40 -20 30 Z" strokeWidth={1.5} opacity={0.7}/><path d="M -15 -20 L 15 -20 M -15 0 L 15 0 M -15 20 L 15 20" opacity={0.4}/><path d="M 0 45 L 0 -40 M -10 -40 L 10 -40" strokeWidth={2}/><circle cx="0" cy="-40" r="8" strokeDasharray="2 2" strokeWidth={2}/></g>
+    'dex_int': (
+       <g>
+         <path d="M 0 -20 L 18 -10 L 18 10 L 0 20 L -18 10 L -18 -10 Z" strokeWidth={2} fill="none"/>
+         <path d="M 0 -20 L 0 0 L 18 10 M 0 0 L -18 10 M -18 -10 L 18 -10" strokeWidth={1.5} fill="none" opacity="0.6"/>
+         <circle cx="0" cy="0" r="4" fill="currentColor"/><circle cx="0" cy="0" r="32" strokeWidth={1} strokeDasharray="4 8" fill="none"/>
+         <rect x="-35" y="-5" width="4" height="10" fill="currentColor"/><rect x="31" y="-5" width="4" height="10" fill="currentColor"/>
+         <circle cx="0" cy="-32" r="3" fill="currentColor"/><circle cx="0" cy="32" r="3" fill="currentColor"/>
+       </g>
     ),
-    'int_sen': ( // Supreme Tactician: Staff + Tome
-       <g><path d="M -25 15 L -5 35 M -5 5 L 15 25 M -25 5 L -25 25 M 15 5 L 15 25" strokeWidth={1.5}/><path d="M 0 -15 C -20 -35 20 -35 0 -15 Z" strokeWidth={2}/><path d="M 0 -15 L 0 45" strokeWidth={2}/></g>
+    'con_dex': (
+       <g>
+         <circle cx="0" cy="0" r="25" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="20" strokeWidth={1} fill="none"/>
+         <circle cx="0" cy="0" r="6" fill="currentColor"/><circle cx="-15" cy="0" r="2" fill="currentColor"/><circle cx="15" cy="0" r="2" fill="currentColor"/>
+         <circle cx="0" cy="-15" r="2" fill="currentColor"/><circle cx="0" cy="15" r="2" fill="currentColor"/>
+         <path d="M -35 35 L 30 -30" strokeWidth={3} strokeLinecap="round"/>
+         <path d="M 10 -10 C 20 -30 40 -10 30 10 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/>
+         <path d="M 15 -15 L 5 -5" strokeWidth={4}/>
+       </g>
     ),
-    'con_sen': ( // Valkyrie: Lance + Kite Shield + Wings
-       <g><path d="M 0 -25 L 20 -10 L 20 15 L 0 35 L -20 15 L -20 -10 Z" strokeWidth={1.5}/><path d="M 0 -45 L 5 -20 L 0 45 L -5 -20 Z" fill="currentColor" fillOpacity={0.4}/><path d="M -20 -10 C -40 -30 -40 10 -20 25 M 20 -10 C 40 -30 40 10 20 25" strokeWidth={1.5}/></g>
+    'dex_sen': (
+       <g>
+         <circle cx="0" cy="0" r="25" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="18" strokeWidth={1} strokeDasharray="4 4" fill="none"/>
+         <path d="M 0 -35 L 0 -10 M 0 10 L 0 35 M -35 0 L -10 0 M 10 0 L 35 0" strokeWidth={2} strokeLinecap="round"/>
+         <path d="M -25 25 L 25 -25 L 28 -22 L -22 28 Z" fill="currentColor" opacity="0.4"/>
+         <path d="M -25 25 L -35 30 L -30 35 L -22 28" fill="currentColor"/>
+       </g>
     ),
-    'agi_con_dex': ( // Swift Guardian (Lahn): Crescent Pendulum + Chain
-       <g><path d="M 0 -35 C 25 -35 35 -15 35 0 C 35 15 25 35 0 35" strokeWidth={2}/><path d="M -15 -20 C 5 -20 15 -10 15 0 C 15 10 5 20 -15 20" strokeWidth={1.5}/><circle cx="-25" cy="0" r="10" strokeDasharray="4 4"/><path d="M -15 0 L 5 0" strokeDasharray="2 2"/></g>
+    'con_int': (
+       <g>
+         <path d="M -20 -30 L 20 -30 L 20 25 C 20 40 0 45 0 45 C 0 45 -20 40 -20 25 Z" strokeWidth={2} fill="none"/>
+         <path d="M -15 -25 L 15 -25 L 15 20 C 15 30 0 38 0 38 C 0 38 -15 30 -15 20 Z" strokeWidth={1} fill="none"/>
+         <path d="M 0 -30 L 0 40 M -20 -5 L 20 -5 M 25 35 L 45 -5" strokeWidth={1.5}/>
+         <circle cx="45" cy="-5" r="8" fill="none" strokeWidth={2}/>
+         <path d="M 45 -18 L 45 -13 M 45 3 L 45 8 M 32 -5 L 37 -5 M 53 -5 L 58 -5 M 37 -13 L 40 -10 M 50 0 L 53 3 M 37 3 L 40 0 M 50 -10 L 53 -13" strokeWidth={2}/>
+       </g>
     ),
-    'agi_con_int': ( // Blitz Strategist (Drakania): Slayer + Lightning Wings
-       <g><path d="M 0 -45 L 8 -15 L 6 35 L -6 35 L -8 -15 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/><path d="M -8 10 L -30 -10 L -15 0 L -35 10" strokeWidth={1.5}/><path d="M 8 10 L 30 -10 L 15 0 L 35 10" strokeWidth={1.5}/></g>
+    'int_sen': (
+       <g>
+         <path d="M 0 5 C -15 -5 -25 0 -25 0 L -25 25 C -25 25 -15 20 0 30 C 15 20 25 25 25 25 L 25 0 C 25 0 15 -5 0 5 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M 0 5 L 0 30 M -20 10 L -10 5 M -20 15 L -10 10 M 20 10 L 10 5 M 20 15 L 10 10" strokeWidth={1}/>
+         <path d="M 0 5 L 0 -25" strokeWidth={2.5}/>
+         <circle cx="0" cy="-32" r="7" fill="none" strokeWidth={2}/>
+         <path d="M -10 -40 C 0 -50 10 -40 10 -30" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'agi_con_sen': ( // Vanguard Tracker (Hashashin): Shamshir + Sand Tornado
-       <g><path d="M -20 30 Q 15 25 25 -35 M -5 15 L 5 20" strokeWidth={2}/><path d="M -30 -20 C 0 -40 30 -10 0 10 C -30 30 10 40 20 20" strokeDasharray="6 4" strokeWidth={1.5}/></g>
+    'con_sen': (
+       <g>
+         <path d="M -20 -10 C -40 -30 -45 5 -25 25 M 20 -10 C 40 -30 45 5 25 25" strokeWidth={1.5} fill="none"/>
+         <path d="M -15 -10 L 15 -10 L 15 15 C 15 30 0 40 0 40 C 0 40 -15 30 -15 15 Z" strokeWidth={1.5} fill="currentColor" opacity="0.3"/>
+         <path d="M 0 -10 L 0 35 M -15 5 L 15 5" strokeWidth={1.5} fill="none"/>
+         <path d="M 0 10 L -30 40 M 0 -45 L -10 10 L 10 10 Z" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'agi_con_str': ( // Doppelsoeldner: Zweihander + Spikes
-       <g><path d="M -35 35 L 20 -20 M 10 -25 L 30 -5" strokeWidth={2}/><path d="M 35 35 L -20 -20 M -10 -25 L -30 -5" strokeWidth={2}/><circle cx="0" cy="0" r="12" opacity={0.6}/></g>
+    'agi_con_dex': (
+       <g>
+         <path d="M 0 -35 C 30 -35 40 -5 40 15 C 40 30 25 40 0 40 C 30 25 25 -15 0 -35 Z" strokeWidth={1.5} fill="currentColor" opacity="0.7"/>
+         <path d="M 5 -15 L 15 -10 L 10 0 Z" fill="none" strokeWidth={1.5}/>
+         <path d="M 10 0 C 0 10 -15 0 -25 15 C -35 30 -15 35 -20 45" strokeWidth={2} strokeDasharray="3 3" fill="none"/>
+         <circle cx="-25" cy="15" r="3" fill="none" strokeWidth={1.5}/>
+       </g>
     ),
-    'agi_dex_int': ( // Digital Ronin (Woosa): Swallowtail Fan + Clouds
-       <g><path d="M 0 35 L -35 -15 C -15 -30 15 -30 35 -15 Z" strokeWidth={1.5}/><path d="M 0 35 L -20 -20 M 0 35 L 0 -25 M 0 35 L 20 -20" opacity={0.5}/><path d="M -25 15 C -40 -5 -10 -5 0 10 C 10 -5 40 -5 25 15" strokeDasharray="3 3"/></g>
+    'agi_con_int': (
+       <g>
+         <path d="M -10 -5 L -35 -25 L -25 -10 L -45 5 L -20 10 L -30 30 L -10 15 M 10 -5 L 35 -25 L 25 -10 L 45 5 L 20 10 L 30 30 L 10 15" strokeWidth={1.5} fill="none" strokeLinejoin="miter"/>
+         <path d="M 0 -45 L 10 -15 L 8 40 L -8 40 L -10 -15 Z" strokeWidth={2} fill="currentColor" opacity="0.4"/>
+         <path d="M 0 -40 L 0 35 M -15 -10 L 15 -10 M -5 -15 L 5 -15" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'agi_dex_sen': ( // Mirage Walker (Maegu): Fox Charm + Spectral Tails
-       <g><path d="M -15 -25 L 15 -25 L 15 20 L 0 35 L -15 20 Z" strokeWidth={1.5}/><circle cx="0" cy="-5" r="4"/><path d="M 0 -5 L 0 15" strokeWidth={1.5}/><path d="M -15 -5 C -35 15 -35 -25 -15 -35 M 15 -5 C 35 15 35 -25 15 -35" strokeWidth={1.5}/></g>
+    'agi_con_sen': (
+       <g>
+         <path d="M -20 30 C 0 40 20 30 25 15 C 30 -5 -25 -5 -15 -25 C -5 -40 15 -35 20 -20" strokeWidth={1.5} fill="none" strokeDasharray="5 4"/>
+         <path d="M -20 35 Q 20 40 30 -30 L 25 -32 Q 10 30 -25 28 Z" fill="currentColor"/>
+         <path d="M -20 35 L -30 45" strokeWidth={3}/>
+         <path d="M -30 30 L -15 40" strokeWidth={2}/>
+       </g>
     ),
-    'agi_dex_str': ( // Swift Duelist (Rogue): Dual Daggers (Elegant)
-       <g><path d="M -35 25 C -15 5 -10 -15 0 -35 C -5 -10 -25 0 -35 25 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/><path d="M 35 25 C 15 5 10 -15 0 -35 C 5 -10 25 0 35 25 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/></g>
+    'agi_con_str': (
+       <g>
+         <g transform="rotate(25)"><path d="M 0 -45 L 6 -15 L 4 30 L -4 30 L -6 -15 Z" strokeWidth={1.5} fill="none"/><path d="M -12 -15 L 12 -15 M -8 -25 L 8 -25 M 0 30 L 0 45" strokeWidth={2}/></g>
+         <g transform="rotate(-25)"><path d="M 0 -45 L 6 -15 L 4 30 L -4 30 L -6 -15 Z" strokeWidth={1.5} fill="currentColor" opacity="0.5"/><path d="M -12 -15 L 12 -15 M -8 -25 L 8 -25 M 0 30 L 0 45" strokeWidth={2}/></g>
+       </g>
     ),
-    'agi_int_sen': ( // Spymaster: Domino Mask + Third Eye
-       <g><path d="M -35 -10 C -20 -30 0 -10 0 0 C 0 -10 20 -30 35 -10 C 40 10 20 20 0 10 C -20 20 -40 10 -35 -10 Z" strokeWidth={1.5}/><circle cx="-15" cy="-2" r="3" fill="currentColor"/><circle cx="15" cy="-2" r="3" fill="currentColor"/><path d="M -8 -25 C 0 -35 8 -25 0 -15 Z" strokeWidth={1.5}/></g>
+    'agi_dex_int': (
+       <g>
+         <path d="M -30 10 C -40 0 -20 -15 -10 -5 C 0 -20 20 -15 25 -5 C 40 -5 35 15 20 15 C 5 15 0 25 -10 15 C -20 20 -30 20 -30 10 Z" strokeWidth={1.5} fill="none" strokeDasharray="4 3"/>
+         <path d="M 0 35 L -40 -10 C -15 -30 15 -30 40 -10 Z" strokeWidth={1.5} fill="currentColor" opacity="0.4"/>
+         <path d="M 0 35 L -25 -15 M 0 35 L -10 -25 M 0 35 L 10 -25 M 0 35 L 25 -15" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'agi_int_str': ( // Arcane Vanguard (Scholar): Dual Hammers + Sparks
-       <g><path d="M -25 -25 L -5 -5 M -35 -15 L -15 -35 L -5 -25 L -25 -5 Z" strokeWidth={1.5}/><path d="M 25 -25 L 5 -5 M 35 -15 L 15 -35 L 5 -25 L 25 -5 Z" strokeWidth={1.5}/><circle cx="0" cy="15" r="20" strokeDasharray="2 4"/></g>
+    'agi_dex_sen': (
+       <g>
+         <path d="M -10 15 C -35 5 -45 -25 -25 -35 C -15 -40 -5 -25 -10 -15 M 0 15 C 0 -15 -15 -35 0 -45 C 15 -35 0 -15 0 -5 M 10 15 C 35 5 45 -25 25 -35 C 15 -40 5 -25 10 -15" strokeWidth={1.5} fill="none"/>
+         <path d="M -12 -15 L 12 -15 L 12 25 L 0 35 L -12 25 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/>
+         <path d="M -6 -5 L 6 -5 M -6 5 L 6 5 M 0 -10 L 0 15" strokeWidth={1.5} fill="none" stroke="#08080c"/>
+       </g>
     ),
-    'agi_sen_str': ( // Vanguard Warlord (High Priest/Templar) - User requested Halberd + Cross + Crown
-       <g><path d="M 0 -45 L 0 45 M -15 -15 L 15 -15 M -8 -30 L 8 -30" strokeWidth={2}/><path d="M -25 -5 L -15 -25 L 0 -10 L 15 -25 L 25 -5 L 15 15 L -15 15 Z" strokeWidth={1.5} opacity={0.6}/></g>
+    'agi_dex_str': (
+       <g>
+         <g transform="translate(-10, 0) rotate(45)"><path d="M 0 -30 L 4 -10 L 0 -5 L -4 -10 Z" strokeWidth={1.5} fill="none"/><path d="M -8 -5 L 8 -5 M 0 -5 L 0 12" strokeWidth={2} strokeLinecap="round"/><circle cx="0" cy="14" r="2" fill="currentColor"/></g>
+         <g transform="translate(10, 0) rotate(-45)"><path d="M 0 -30 L 4 -10 L 0 -5 L -4 -10 Z" strokeWidth={1.5} fill="none"/><path d="M -8 -5 L 8 -5 M 0 -5 L 0 12" strokeWidth={2} strokeLinecap="round"/><circle cx="0" cy="14" r="2" fill="currentColor"/></g>
+       </g>
     ),
-    'con_dex_int': ( // Foundation Maestro: Heavy Anvil + Gear
-       <g><path d="M -25 10 L 25 10 L 30 35 L -30 35 Z M -15 10 L -25 -10 L 25 -10 L 15 10" strokeWidth={1.5}/><circle cx="0" cy="-10" r="10" strokeDasharray="3 4" strokeWidth={2}/></g>
+    'agi_int_sen': (
+       <g>
+         <path d="M -35 -10 C -25 -30 -5 -15 0 0 C 5 -15 25 -30 35 -10 C 45 10 20 25 0 10 C -20 25 -45 10 -35 -10 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M -22 -2 C -15 -8 -8 -2 -15 5 C -22 -2 -15 -8 -22 -2 Z M 22 -2 C 15 -8 8 -2 15 5 C 22 -2 15 -8 22 -2 Z" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="-25" r="8" strokeWidth={1.5} fill="currentColor" opacity="0.5"/><path d="M -5 -25 C 0 -30 5 -25 0 -20 Z" fill="white"/>
+       </g>
     ),
-    'con_dex_sen': ( // Titan Warden (Shai Florang): Giant Boomerang + Leaf
-       <g><path d="M -30 20 C -40 -30 40 -30 30 20 C 15 -10 -15 -10 -30 20 Z" strokeWidth={1.5}/><path d="M 0 -10 C -10 -25 10 -25 0 -10 Z" fill="currentColor"/></g>
+    'agi_int_str': (
+       <g>
+         <circle cx="0" cy="0" r="30" strokeWidth={1} strokeDasharray="2 6" fill="none"/><circle cx="0" cy="0" r="20" strokeWidth={1.5} strokeDasharray="5 5" fill="none"/>
+         <g transform="translate(-10, 10) rotate(45)"><path d="M -5 -35 L 5 -35 L 5 -15 L -5 -15 Z" strokeWidth={1.5} fill="currentColor"/><path d="M 0 -15 L 0 25" strokeWidth={2.5}/></g>
+         <g transform="translate(10, 10) rotate(-45)"><path d="M -5 -35 L 5 -35 L 5 -15 L -5 -15 Z" strokeWidth={1.5} fill="none"/><path d="M 0 -15 L 0 25" strokeWidth={2.5}/></g>
+       </g>
     ),
-    'con_dex_str': ( // Juggernaut Craftsman (Mechanic): Wrench / Robot Arm
-       <g><path d="M -25 35 L 15 -5 M 5 -15 L 25 -35 M 25 -5 L 35 -15" strokeWidth={2}/><circle cx="15" cy="-15" r="12" strokeDasharray="6 4"/></g>
+    'agi_sen_str': (
+       <g>
+         <path d="M 0 -45 L 0 45" strokeWidth={3}/>
+         <path d="M -15 -25 C 0 -35 0 -35 0 -45 C 0 -35 15 -25 15 -25 C 5 -25 5 -15 0 -15 C -5 -15 -5 -25 -15 -25 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/>
+         <path d="M -20 -15 C -10 -25 0 -15 0 -15 C 0 -15 -10 -5 -20 -15 Z M -25 10 L 25 10 M 0 -10 L 0 35" strokeWidth={1.5} fill="none" strokeDasharray="4 4"/>
+         <path d="M -15 -40 L -10 -50 L 0 -42 L 10 -50 L 15 -40" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'con_int_sen': ( // Grand Pillar (Bishop): Pillar + Holy Light
-       <g><path d="M -15 -35 L 15 -35 L 10 -20 L 10 20 L 15 35 L -15 35 L -10 20 L -10 -20 Z" strokeWidth={1.5}/><path d="M 0 0 L 0 45 M -25 -10 L 25 20 M 25 -10 L -25 20" strokeWidth={1} strokeDasharray="2 3"/></g>
+    'con_dex_int': (
+       <g>
+         <path d="M 0 -30 A 30 30 0 1 1 -0.1 -30" strokeDasharray="8 6" strokeWidth={3} fill="none"/>
+         <circle cx="0" cy="0" r="18" strokeWidth={1.5} fill="none"/>
+         <path d="M -15 5 L 15 5 L 20 25 L -20 25 Z" strokeWidth={1.5} fill="currentColor" opacity="0.5"/>
+         <path d="M -15 5 C -25 5 -30 -10 -30 -10 L 25 -10 L 20 5 Z" strokeWidth={1.5} fill="currentColor"/>
+         <path d="M -15 25 L -25 35 L 25 35 L 15 25 Z" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'con_int_str': ( // Citadel Builder (Murmillo): Gladiator Helmet + Shield
-       <g><path d="M -20 -10 C -20 -35 20 -35 20 -10 L 20 20 L 5 15 L 5 35 L -5 35 L -5 15 L -20 20 Z" strokeWidth={1.5}/><path d="M 0 -35 L 0 -15 M -15 5 L 15 5" strokeWidth={2}/></g>
+    'con_dex_sen': (
+       <g>
+         <path d="M -35 25 C -50 -40 50 -40 35 25 C 20 -15 -20 -15 -35 25 Z" strokeWidth={2} fill="none"/>
+         <path d="M -25 10 C -35 -20 35 -20 25 10 C 15 -5 -15 -5 -25 10 Z" strokeWidth={1.5} fill="currentColor" opacity="0.3"/>
+         <circle cx="-15" cy="-10" r="3" fill="currentColor"/><circle cx="15" cy="-10" r="3" fill="currentColor"/>
+         <path d="M 0 5 C -15 -10 0 -25 0 -25 C 0 -25 15 -10 0 5 Z" strokeWidth={1.5} fill="currentColor"/>
+         <path d="M 0 -20 L 0 15" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'con_sen_str': ( // Indomitable Chief (Lord Knight): Lion Head + Sword
-       <g><path d="M 0 -40 L 0 40 M -15 -5 L 15 -5" strokeWidth={2}/><path d="M -20 0 C -35 15 -15 35 0 25 C 15 35 35 15 20 0 C 10 -15 -10 -15 -20 0 Z" strokeWidth={1.5} opacity={0.8}/></g>
+    'con_dex_str': (
+       <g>
+         <path d="M 0 40 L 0 10 L 15 -10 L 15 -25" strokeWidth={5} strokeLinejoin="round" fill="none"/>
+         <circle cx="0" cy="10" r="6" fill="currentColor"/><circle cx="15" cy="-10" r="6" fill="currentColor"/>
+         <path d="M 5 -35 C -5 -35 -5 -25 5 -25 L 15 -25 L 15 -35 Z M 25 -35 C 35 -35 35 -25 25 -25 L 15 -25 L 15 -35 Z" strokeWidth={2} fill="none"/>
+         <circle cx="0" cy="0" r="35" strokeWidth={1} strokeDasharray="3 5" fill="none"/>
+       </g>
     ),
-    'dex_int_sen': ( // Visionary Consultant (Chronomancer): Astrolabe
-       <g><circle cx="0" cy="0" r="25" strokeWidth={1.5}/><ellipse cx="0" cy="0" rx="35" ry="10" transform="rotate(30)" strokeWidth={1.5}/><ellipse cx="0" cy="0" rx="35" ry="10" transform="rotate(-30)" strokeWidth={1.5}/><circle cx="0" cy="0" r="4" fill="currentColor"/></g>
+    'con_int_sen': (
+       <g>
+         <path d="M 0 -45 L 0 45 M -35 -10 L 35 10 M 35 -10 L -35 10 M -20 -30 L 20 30 M 20 -30 L -20 30" strokeWidth={1} strokeDasharray="2 6" fill="none"/>
+         <path d="M -15 -25 L 15 -25 L 10 -15 L 10 25 L 15 35 L -15 35 L -10 25 L -10 -15 Z" strokeWidth={2} fill="currentColor" opacity="0.8"/>
+         <path d="M -5 -15 L -5 25 M 5 -15 L 5 25 M -20 -25 L 20 -25 L 20 -35 L -20 -35 Z" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'dex_int_str': ( // Grandmaster (Fencer): Rapier + Rose
-       <g><path d="M -30 30 L 35 -35 M 15 -35 L 35 -15 M 15 -15 C 25 -15 25 -25 15 -25" strokeWidth={1.5}/><path d="M -10 10 C -20 0 -5 -15 5 -5 C 15 -15 30 0 20 10 C 30 20 15 35 5 25 C -5 35 -20 20 -10 10 Z" strokeWidth={1} opacity={0.7}/></g>
+    'con_int_str': (
+       <g>
+         <path d="M -25 -20 L 25 -20 L 20 35 C 10 45 -10 45 -20 35 Z" strokeWidth={1.5} fill="none" opacity="0.5"/>
+         <path d="M -15 -10 C -15 -30 15 -30 15 -10 L 15 15 L 5 10 L 5 25 L -5 25 L -5 10 L -15 15 Z" strokeWidth={2} fill="currentColor"/>
+         <path d="M 0 -30 L 0 -15 M -10 -5 L 10 -5 M -10 5 L 10 5" strokeWidth={1.5} fill="none" stroke="#08080c"/>
+         <path d="M -10 -30 C -10 -45 10 -45 10 -30 Z" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'dex_sen_str': ( // Sharpshooter General (Fletcher): Longbow + Crown
-       <g><path d="M -20 -35 C 30 -20 30 20 -20 35" strokeWidth={2}/><path d="M -20 -35 L -20 35" strokeWidth={0.5}/><path d="M -35 0 L 15 0 M 5 -5 L 15 0 L 5 5" strokeWidth={1.5}/><path d="M 0 -25 L 5 -35 L 10 -25 Z" fill="currentColor"/></g>
+    'con_sen_str': (
+       <g>
+         <path d="M 0 -45 L 4 -20 L 2 30 L -2 30 L -4 -20 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M -20 -5 C -35 15 -15 35 0 25 C 15 35 35 15 20 -5 C 10 -20 -10 -20 -20 -5 Z" strokeWidth={2} fill="currentColor" opacity="0.9"/>
+         <path d="M -10 0 L -5 5 M 10 0 L 5 5 M 0 10 L 0 15 M -5 15 C 0 20 5 15 5 15" strokeWidth={1.5} fill="none" stroke="#08080c"/>
+         <path d="M -25 0 L -30 -5 M 25 0 L 30 -5 M -20 20 L -25 25 M 20 20 L 25 25" strokeWidth={1.5} fill="none"/>
+       </g>
     ),
-    'int_sen_str': ( // Mastermind Overseer (Puppeteer): Cross + Strings + Eye
-       <g><path d="M 0 -40 L 0 5 M -30 -15 L 30 -15" strokeWidth={2}/><path d="M -25 -15 L -25 35 M 25 -15 L 25 35 M -8 -5 L -8 25 M 8 -5 L 8 25" strokeDasharray="3 4" strokeWidth={1}/><path d="M -15 25 C -5 15 5 15 15 25 C 5 35 -5 35 -15 25 Z" strokeWidth={1.5}/><circle cx="0" cy="25" r="3" fill="currentColor"/></g>
+    'dex_int_sen': (
+       <g>
+         <circle cx="0" cy="0" r="25" strokeWidth={2} fill="none"/>
+         <ellipse cx="0" cy="0" rx="35" ry="8" transform="rotate(30)" strokeWidth={1.5} fill="none"/>
+         <ellipse cx="0" cy="0" rx="35" ry="8" transform="rotate(-30)" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="0" r="12" strokeWidth={1.5} fill="currentColor" opacity="0.3"/><circle cx="0" cy="0" r="4" fill="currentColor"/>
+         <path d="M 0 -25 L 0 -32 M 0 25 L 0 32 M -25 0 L -32 0 M 25 0 L 32 0" strokeWidth={2} fill="none"/>
+         <circle cx="-25" cy="-20" r="1.5" fill="currentColor"/><circle cx="20" cy="-25" r="1.5" fill="currentColor"/><circle cx="15" cy="25" r="1.5" fill="currentColor"/>
+       </g>
+    ),
+    'dex_int_str': (
+       <g>
+         <path d="M -30 30 L 35 -35 M 10 -35 L 35 -10" strokeWidth={2} fill="none"/>
+         <path d="M 12 -12 C 25 -12 28 -25 18 -28 C 8 -31 0 -20 12 -12 Z" strokeWidth={1.5} fill="none"/>
+         <path d="M -30 30 L -40 40" strokeWidth={2.5} fill="none"/><circle cx="-42" cy="42" r="2.5" fill="currentColor"/>
+         <path d="M -10 10 C -25 0 -5 -20 5 -5 C 20 -15 35 5 20 15 C 30 30 10 40 0 25 C -15 35 -30 20 -10 10 Z" strokeWidth={1.5} fill="currentColor" opacity="0.6"/>
+         <path d="M 5 5 C 0 -5 -10 5 0 15 C 10 5 0 -5 5 5 Z" strokeWidth={1} fill="none" stroke="#08080c"/>
+       </g>
+    ),
+    'dex_sen_str': (
+       <g>
+         <path d="M -20 -35 C 35 -20 35 20 -20 35" strokeWidth={3} fill="none" strokeLinecap="round"/>
+         <path d="M -20 -35 L -20 35" strokeWidth={1} fill="none"/>
+         <path d="M -35 0 L 15 0" strokeWidth={1.5} fill="none"/><path d="M 15 0 L 5 -5 L 10 0 L 5 5 Z" fill="currentColor"/>
+         <path d="M -35 0 L -25 -5 M -35 0 L -25 5" strokeWidth={1.5} fill="none"/>
+         <path d="M -15 -15 L -10 -25 L 0 -15 L 10 -25 L 15 -15 L 10 5 L -10 5 Z" strokeWidth={1.5} fill="currentColor" opacity="0.7"/>
+       </g>
+    ),
+    'int_sen_str': (
+       <g>
+         <path d="M 0 -35 L 0 15 M -25 -15 L 25 -15 M -15 0 L 15 0" strokeWidth={2} strokeLinecap="round"/>
+         <path d="M -25 -15 L -25 35 M 25 -15 L 25 35 M -15 0 L -15 35 M 15 0 L 15 35 M 0 15 L 0 35" strokeWidth={1} strokeDasharray="2 3"/>
+         <path d="M -15 25 C -5 15 5 15 15 25 C 5 35 -5 35 -15 25 Z" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="25" r="4" fill="currentColor"/>
+         <circle cx="0" cy="-35" r="2" fill="currentColor"/><circle cx="-25" cy="-15" r="2" fill="currentColor"/><circle cx="25" cy="-15" r="2" fill="currentColor"/>
+       </g>
     ),
     'novice': (
-       <g><circle cx="0" cy="0" r="20" strokeDasharray="4 6"/><path d="M 0 -30 L 5 -5 L 30 0 L 5 5 L 0 30 L -5 5 L -30 0 L -5 -5 Z" strokeWidth={1.5}/></g>
+       <g>
+         <circle cx="0" cy="0" r="20" strokeWidth={1.5} strokeDasharray="4 6" fill="none"/>
+         <path d="M 0 -30 L 5 -5 L 30 0 L 5 5 L 0 30 L -5 5 L -30 0 L -5 -5 Z" strokeWidth={1.5} fill="currentColor" opacity="0.5"/>
+       </g>
     ),
     'all_rounder': (
-       <g><circle cx="0" cy="0" r="28" strokeDasharray="3 6"/><path d="M -20 -10 L -10 -25 L 0 -10 L 10 -25 L 20 -10 L 15 15 L -15 15 Z" strokeWidth={1.5}/></g>
+       <g>
+         <circle cx="0" cy="0" r="28" strokeWidth={1.5} strokeDasharray="3 6" fill="none"/>
+         <path d="M -20 -10 L -10 -25 L 0 -10 L 10 -25 L 20 -10 L 15 15 L -15 15 Z" strokeWidth={1.5} fill="none"/>
+         <circle cx="0" cy="0" r="8" fill="currentColor" opacity="0.8"/>
+         <path d="M 0 -8 L 0 8 M -8 0 L 8 0" strokeWidth={1.5} stroke="#08080c"/>
+       </g>
     )
   };
 
