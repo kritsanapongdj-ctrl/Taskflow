@@ -1351,22 +1351,22 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto">
-                <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-2 drop-shadow-md flex items-center">
-                   <span className="mr-3">{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
-                   {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-xs border border-[#bca374]/30">{prefixText}</span>}
-                </h5>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
-                   {enTitle}
-                   <span className="inline-flex items-center justify-center relative w-[1.2em] h-[1.2em] ml-2 md:ml-4 -mt-2 align-middle group cursor-default">
-                     <div className="absolute inset-0 bg-white/20 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-                     <ClassEmblem 
-                       archetypeKey={archetypeKey} 
-                       size="100%" 
-                       className="text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-transform duration-700 group-hover:scale-110" 
-                     />
-                   </span>
-                </h1>
+              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto pt-12">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
+                  <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
+                    <div className="absolute inset-0 bg-white/10 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                    <ClassEmblem archetypeKey={archetypeKey} size="100%" className="text-white transition-transform duration-700 group-hover:scale-110" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h5 className="text-[#bca374] text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 sm:mb-2 drop-shadow-md flex flex-wrap items-center gap-2">
+                       <span>{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
+                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[10px] sm:text-xs border border-[#bca374]/30">{prefixText}</span>}
+                    </h5>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                       {enTitle}
+                    </h1>
+                  </div>
+                </div>
                 <div className="mb-8 border-l-4 border-[#bca374] pl-4">
                   <p className="text-sm md:text-base text-slate-300 font-light italic mb-2">
                      "{styleDesc}"
