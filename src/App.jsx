@@ -115,6 +115,83 @@ const SimplePieChart = ({ data, title }) => {
     </div>
   );
 };
+const ClassEmblem = ({ topKeys, className = "", size = 100 }) => {
+  const has = (k) => topKeys.includes(k);
+  return (
+    <svg viewBox="-50 -50 100 100" width={size} height={size} className={className}>
+       <defs>
+         <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+         </filter>
+       </defs>
+       
+       <g stroke="currentColor" fill="none" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" filter="url(#glow)">
+         <circle cx="0" cy="0" r="2.5" fill="currentColor" />
+         <path d="M 0 -8 L 0 8 M -8 0 L 8 0" opacity={0.4}/>
+
+         {has('con') && (
+            <g>
+               <path d="M 0 -38 L 32 -18 L 32 18 L 0 38 L -32 18 L -32 -18 Z" strokeWidth={1.5} opacity={0.8}/>
+               <path d="M 0 -44 L 38 -21 L 38 21 L 0 44 L -38 21 L -38 -21 Z" strokeWidth={0.5} opacity={0.4}/>
+            </g>
+         )}
+
+         {has('str') && (
+            <g>
+               <path d="M 0 -46 L 8 -15 L 0 -5 L -8 -15 Z" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5}/>
+               <path d="M 0 46 L 8 15 L 0 5 L -8 15 Z" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5}/>
+               <path d="M 0 -46 L 0 -5 M 0 5 L 0 46" strokeWidth={2}/>
+            </g>
+         )}
+
+         {has('agi') && (
+            <g>
+               <path d="M -5 0 C -25 -25 -48 -28 -48 -5 C -48 12 -28 15 -10 5" strokeWidth={1.5}/>
+               <path d="M -10 5 C -22 15 -38 18 -38 28 C -38 35 -28 30 -15 15" strokeWidth={1} opacity={0.7}/>
+               
+               <path d="M 5 0 C 25 -25 48 -28 48 -5 C 48 12 28 15 10 5" strokeWidth={1.5}/>
+               <path d="M 10 5 C 22 15 38 18 38 28 C 38 35 28 30 15 15" strokeWidth={1} opacity={0.7}/>
+            </g>
+         )}
+
+         {has('dex') && (
+            <g>
+               <path d="M 0 -32 L 28 0 L 0 32 L -28 0 Z" strokeWidth={1}/>
+               <path d="M 0 -16 L 14 0 L 0 16 L -14 0 Z" strokeWidth={1.5}/>
+               <path d="M -18 -18 L 18 18 M -18 18 L 18 -18" strokeWidth={0.5} opacity={0.6}/>
+            </g>
+         )}
+
+         {has('int') && (
+            <g>
+               <circle cx="0" cy="0" r="24" strokeWidth={1} strokeDasharray="2 6" opacity={0.8}/>
+               <circle cx="0" cy="0" r="14" strokeWidth={1}/>
+               <circle cx="-30" cy="-22" r="2.5" fill="currentColor"/>
+               <circle cx="30" cy="-22" r="2.5" fill="currentColor"/>
+               <circle cx="-30" cy="22" r="2.5" fill="currentColor"/>
+               <circle cx="30" cy="22" r="2.5" fill="currentColor"/>
+               <path d="M -30 -22 A 38 38 0 0 1 30 -22" strokeWidth={0.5} opacity={0.5} strokeDasharray="4 4"/>
+               <path d="M -30 22 A 38 38 0 0 0 30 22" strokeWidth={0.5} opacity={0.5} strokeDasharray="4 4"/>
+            </g>
+         )}
+
+         {has('sen') && (
+            <g>
+               <path d="M 0 -30 C 18 -30 28 -15 28 0 C 28 15 12 5 5 10" strokeWidth={1.5}/>
+               <path d="M 0 -30 C -18 -30 -28 -15 -28 0 C -28 15 -12 5 -5 10" strokeWidth={1.5}/>
+               <path d="M 0 30 C 18 30 22 18 12 18" strokeWidth={1} opacity={0.8}/>
+               <path d="M 0 30 C -18 30 -22 18 -12 18" strokeWidth={1} opacity={0.8}/>
+            </g>
+         )}
+         
+         {topKeys.length === 0 && (
+             <path d="M 0 -25 L 25 0 L 0 25 L -25 0 Z" strokeWidth={1.5}/>
+         )}
+       </g>
+    </svg>
+  );
+};
 
 export default function App() {
   const [tab, setTab] = useState('dashboard');
@@ -985,20 +1062,14 @@ export default function App() {
         'int_sen_str': 'ผู้บงการเชิงกลยุทธ์ที่สามารถวิเคราะห์ ตัดสินใจด้วยไหวพริบ และผลักดันแผนงานให้เกิดขึ้นจริง'
       };
 
-      const archetypeIconMap = {
-        'agi_str': 'Zap', 'dex_str': 'Crosshair', 'int_str': 'Wand', 'con_str': 'Mountain', 'sen_str': 'Crown',
-        'agi_dex': 'Ghost', 'agi_int': 'Compass', 'agi_con': 'Activity', 'agi_sen': 'Radar', 'dex_int': 'Cog',
-        'con_dex': 'ShieldCheck', 'dex_sen': 'Target', 'con_int': 'Castle', 'int_sen': 'Eye', 'con_sen': 'Anchor',
-        'agi_con_dex': 'Shield', 'agi_con_int': 'Zap', 'agi_con_sen': 'Radar', 'agi_con_str': 'Flame', 'agi_dex_int': 'Terminal', 'agi_dex_sen': 'Ghost',
-        'agi_dex_str': 'Sword', 'agi_int_sen': 'VenetianMask', 'agi_int_str': 'Sparkles', 'agi_sen_str': 'Crown', 'con_dex_int': 'Gavel', 'con_dex_sen': 'ShieldAlert',
-        'con_dex_str': 'Hammer', 'con_int_sen': 'Landmark', 'con_int_str': 'Castle', 'con_sen_str': 'Anchor', 'dex_int_sen': 'Lightbulb', 'dex_int_str': 'Award',
-        'dex_sen_str': 'Target', 'int_sen_str': 'Brain'
-      };
-
-      let mainIcon = 'Hexagon';
-      if (validStats.length < 2) mainIcon = 'Sprout';
-      else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) mainIcon = 'Infinity';
-      else mainIcon = archetypeIconMap[validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_')] || 'Hexagon';
+      let activeTopKeys = [];
+      if (validStats.length >= 2) {
+         if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+            activeTopKeys = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
+         } else {
+            activeTopKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]);
+         }
+      }
 
       const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
       const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
@@ -1038,11 +1109,10 @@ export default function App() {
                 <div className="mb-4 flex items-center justify-start group">
                   <div className="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20">
                     <div className="absolute inset-0 bg-white/20 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-                    <Icon 
-                      name={mainIcon} 
+                    <ClassEmblem 
+                      topKeys={activeTopKeys} 
                       size={64} 
                       className="text-white/80 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-700 group-hover:scale-110 group-hover:text-white group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" 
-                      strokeWidth={1} 
                     />
                   </div>
                 </div>
