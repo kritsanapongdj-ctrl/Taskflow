@@ -1344,42 +1344,42 @@ export default function App() {
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
-           <div className="w-full md:w-1/2 p-6 md:p-10 z-10 flex flex-col justify-center border-r border-white/10 relative h-full overflow-y-auto hide-scrollbar">
+           <div className="w-full md:w-1/2 p-6 md:p-8 z-10 flex flex-col border-r border-white/10 relative h-full overflow-y-auto hide-scrollbar">
               <div className="absolute top-4 right-4 z-20">
                 <button type="button" onClick={() => setTeamEditMode(true)} className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
                   <Icon name="settings" size={20} />
                 </button>
               </div>
 
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto pt-12">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
-                  <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
+              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 mb-5">
+                  <div className="flex-shrink-0 w-16 h-16 sm:w-16 sm:h-16 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
                     <div className="absolute inset-0 bg-white/10 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
                     <ClassEmblem archetypeKey={archetypeKey} size="100%" className="text-white transition-transform duration-700 group-hover:scale-110" />
                   </div>
                   <div className="flex flex-col">
-                    <h5 className="text-[#bca374] text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 sm:mb-2 drop-shadow-md flex flex-wrap items-center gap-2">
+                    <h5 className="text-[#bca374] text-xs sm:text-sm font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex flex-wrap items-center gap-2">
                        <span>{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
-                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[10px] sm:text-xs border border-[#bca374]/30">{prefixText}</span>}
+                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[10px] border border-[#bca374]/30">{prefixText}</span>}
                     </h5>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
                        {enTitle}
                     </h1>
                   </div>
                 </div>
-                <div className="mb-8 border-l-4 border-[#bca374] pl-4">
-                  <p className="text-sm md:text-base text-slate-300 font-light italic mb-2">
+                <div className="mb-5 border-l-4 border-[#bca374] pl-3 sm:pl-4">
+                  <p className="text-xs sm:text-sm md:text-base text-slate-300 font-light italic mb-1.5 sm:mb-2">
                      "{styleDesc}"
                   </p>
-                  <p className="text-[12px] md:text-sm text-slate-400 leading-relaxed font-bold mb-1">
-                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[10px] text-slate-500 font-normal ml-1">({flavorText})</span>}
+                  <p className="text-[11px] sm:text-[12px] md:text-sm text-slate-400 leading-relaxed font-bold mb-1">
+                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] sm:text-[10px] text-slate-500 font-normal ml-1">({flavorText})</span>}
                   </p>
-                  <p className="text-[11px] md:text-xs text-slate-300 leading-relaxed drop-shadow-md">
+                  <p className="text-[10px] sm:text-[11px] md:text-xs text-slate-300 leading-relaxed drop-shadow-md">
                      {validStats.length >= 2 ? archetypeDescMap[validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_')] || 'ทำงานได้โดดเด่นและมีเอกลักษณ์เฉพาะตัว' : styleDesc}
                   </p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-5 mb-10">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:gap-y-4 mb-6">
                    {[
                      { l: 'STR', val: statsObj.str, c: 'from-rose-600 to-rose-400' },
                      { l: 'AGI', val: statsObj.agi, c: 'from-emerald-600 to-emerald-400' },
@@ -1389,9 +1389,9 @@ export default function App() {
                      { l: 'SEN', val: statsObj.sen, c: 'from-purple-600 to-purple-400' }
                    ].map(s => (
                      <div key={s.l} className="flex flex-col">
-                        <div className="flex justify-between items-end mb-1.5">
-                           <span className="text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
-                           <span className="text-sm font-bold text-white">{s.val}</span>
+                        <div className="flex justify-between items-end mb-1">
+                           <span className="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
+                           <span className="text-xs sm:text-sm font-bold text-white">{s.val}</span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                            <div className={`h-full bg-gradient-to-r ${s.c} rounded-full`} style={{width: `${(s.val/10)*100}%`, boxShadow: '0 0 10px currentColor'}}></div>
@@ -1402,9 +1402,9 @@ export default function App() {
 
                 <div className="flex flex-wrap gap-2">
                    {outers.map(o => (
-                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 flex flex-col backdrop-blur-md">
-                         <span className="text-[10px] text-slate-400 uppercase tracking-wider">{o.n}</span>
-                         <span className="text-white font-bold text-sm">{o.finalVal} <span className="text-slate-500 text-[10px] font-normal">/10</span></span>
+                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-md px-2 py-1.5 flex flex-col backdrop-blur-md">
+                         <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider">{o.n}</span>
+                         <span className="text-white font-bold text-xs sm:text-sm">{o.finalVal} <span className="text-slate-500 text-[9px] sm:text-[10px] font-normal">/10</span></span>
                       </div>
                    ))}
                 </div>
