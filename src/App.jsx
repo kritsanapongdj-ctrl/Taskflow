@@ -127,66 +127,69 @@ const ClassEmblem = ({ topKeys, className = "", size = 100 }) => {
        </defs>
        
        <g stroke="currentColor" fill="none" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" filter="url(#glow)">
-         <circle cx="0" cy="0" r="2.5" fill="currentColor" />
-         <path d="M 0 -8 L 0 8 M -8 0 L 8 0" opacity={0.4}/>
+         {/* Core gem */}
+         <path d="M 0 -5 L 4 0 L 0 5 L -4 0 Z" fill="currentColor" />
 
+         {/* CON: Heavy Kite Shield */}
          {has('con') && (
             <g>
-               <path d="M 0 -38 L 32 -18 L 32 18 L 0 38 L -32 18 L -32 -18 Z" strokeWidth={1.5} opacity={0.8}/>
-               <path d="M 0 -44 L 38 -21 L 38 21 L 0 44 L -38 21 L -38 -21 Z" strokeWidth={0.5} opacity={0.4}/>
+               <path d="M 0 -38 C 15 -38 28 -20 28 0 C 28 20 15 35 0 45 C -15 35 -28 20 -28 0 C -28 -20 -15 -38 0 -38 Z" strokeWidth={1.5} opacity={0.8}/>
+               <path d="M 0 -45 L 0 45" strokeWidth={0.5} opacity={0.3}/>
             </g>
          )}
 
+         {/* STR: Curved Broadsword / Great-axe motif */}
          {has('str') && (
             <g>
-               <path d="M 0 -46 L 8 -15 L 0 -5 L -8 -15 Z" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5}/>
-               <path d="M 0 46 L 8 15 L 0 5 L -8 15 Z" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5}/>
-               <path d="M 0 -46 L 0 -5 M 0 5 L 0 46" strokeWidth={2}/>
+               <path d="M 0 -45 C 8 -25 15 -10 12 5 C 8 20 5 35 0 45 C -5 35 -8 20 -12 5 C -15 -10 -8 -25 0 -45 Z" fill="currentColor" fillOpacity={0.15} strokeWidth={1.5}/>
+               <path d="M -18 5 C -10 0 10 0 18 5" strokeWidth={2}/>
             </g>
          )}
 
+         {/* AGI: Flowing Feathers / Wind wings */}
          {has('agi') && (
             <g>
-               <path d="M -5 0 C -25 -25 -48 -28 -48 -5 C -48 12 -28 15 -10 5" strokeWidth={1.5}/>
-               <path d="M -10 5 C -22 15 -38 18 -38 28 C -38 35 -28 30 -15 15" strokeWidth={1} opacity={0.7}/>
+               <path d="M -3 0 C -20 -30 -45 -35 -45 -10 C -45 15 -25 20 -10 5" strokeWidth={1.5}/>
+               <path d="M -8 5 C -20 -10 -35 -15 -35 5 C -35 15 -25 20 -12 10" strokeWidth={1} opacity={0.7}/>
                
-               <path d="M 5 0 C 25 -25 48 -28 48 -5 C 48 12 28 15 10 5" strokeWidth={1.5}/>
-               <path d="M 10 5 C 22 15 38 18 38 28 C 38 35 28 30 15 15" strokeWidth={1} opacity={0.7}/>
+               <path d="M 3 0 C 20 -30 45 -35 45 -10 C 45 15 25 20 10 5" strokeWidth={1.5}/>
+               <path d="M 8 5 C 20 -10 35 -15 35 5 C 35 15 25 20 12 10" strokeWidth={1} opacity={0.7}/>
             </g>
          )}
 
+         {/* DEX: Archer / Assassin precision daggers */}
          {has('dex') && (
             <g>
-               <path d="M 0 -32 L 28 0 L 0 32 L -28 0 Z" strokeWidth={1}/>
-               <path d="M 0 -16 L 14 0 L 0 16 L -14 0 Z" strokeWidth={1.5}/>
-               <path d="M -18 -18 L 18 18 M -18 18 L 18 -18" strokeWidth={0.5} opacity={0.6}/>
+               <path d="M 0 -35 L 20 0 L 0 35 L -20 0 Z" strokeWidth={1.5}/>
+               <path d="M 0 -22 L 12 0 L 0 22 L -12 0 Z" fill="currentColor" fillOpacity={0.1} strokeWidth={1}/>
+               <path d="M -22 -22 L 22 22 M -22 22 L 22 -22" strokeWidth={0.5} opacity={0.6}/>
             </g>
          )}
 
+         {/* INT: Crescent Moons and Runes */}
          {has('int') && (
             <g>
-               <circle cx="0" cy="0" r="24" strokeWidth={1} strokeDasharray="2 6" opacity={0.8}/>
-               <circle cx="0" cy="0" r="14" strokeWidth={1}/>
-               <circle cx="-30" cy="-22" r="2.5" fill="currentColor"/>
-               <circle cx="30" cy="-22" r="2.5" fill="currentColor"/>
-               <circle cx="-30" cy="22" r="2.5" fill="currentColor"/>
-               <circle cx="30" cy="22" r="2.5" fill="currentColor"/>
-               <path d="M -30 -22 A 38 38 0 0 1 30 -22" strokeWidth={0.5} opacity={0.5} strokeDasharray="4 4"/>
-               <path d="M -30 22 A 38 38 0 0 0 30 22" strokeWidth={0.5} opacity={0.5} strokeDasharray="4 4"/>
+               <path d="M 0 -28 A 28 28 0 1 1 -28 0" strokeWidth={1.5} opacity={0.9}/>
+               <path d="M 0 -20 A 20 20 0 1 1 -20 0" strokeWidth={0.5} opacity={0.6} strokeDasharray="3 4"/>
+               <circle cx="-15" cy="-15" r="3" fill="currentColor"/>
+               <circle cx="15" cy="-25" r="2" fill="currentColor"/>
+               <circle cx="25" cy="15" r="2" fill="currentColor"/>
+               <path d="M -20 -15 L 25 -20" strokeWidth={0.5} opacity={0.4}/>
             </g>
          )}
 
+         {/* SEN: Elegant Vines and Tribal Scrolls */}
          {has('sen') && (
             <g>
-               <path d="M 0 -30 C 18 -30 28 -15 28 0 C 28 15 12 5 5 10" strokeWidth={1.5}/>
-               <path d="M 0 -30 C -18 -30 -28 -15 -28 0 C -28 15 -12 5 -5 10" strokeWidth={1.5}/>
-               <path d="M 0 30 C 18 30 22 18 12 18" strokeWidth={1} opacity={0.8}/>
-               <path d="M 0 30 C -18 30 -22 18 -12 18" strokeWidth={1} opacity={0.8}/>
+               <path d="M 0 -30 C 25 -35 38 -5 20 15 C 10 25 5 15 0 5" strokeWidth={1.5}/>
+               <path d="M 0 -30 C -25 -35 -38 -5 -20 15 C -10 25 -5 15 0 5" strokeWidth={1.5}/>
+               <circle cx="-15" cy="5" r="1.5" fill="currentColor"/>
+               <circle cx="15" cy="5" r="1.5" fill="currentColor"/>
             </g>
          )}
          
          {topKeys.length === 0 && (
-             <path d="M 0 -25 L 25 0 L 0 25 L -25 0 Z" strokeWidth={1.5}/>
+             <path d="M 0 -25 C 15 -25 25 -10 25 5 C 25 20 15 30 0 40 C -15 30 -25 20 -25 5 C -25 -10 -15 -25 0 -25 Z" strokeWidth={1.5}/>
          )}
        </g>
     </svg>
@@ -1105,24 +1108,24 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto relative z-10">
-                
-                {/* Background Emblem Watermark */}
-                <div className="absolute top-1/2 left-1/2 md:left-1/3 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[-1] opacity-[0.07] mix-blend-screen">
-                   <ClassEmblem 
-                     topKeys={activeTopKeys} 
-                     size={450} 
-                     className="text-[#e6d0a7]" 
-                   />
-                </div>
-
-                <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex items-center">
+              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto">
+                <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-2 drop-shadow-md flex items-center">
                    <span className="mr-3">{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
                    {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-xs border border-[#bca374]/30">{prefixText}</span>}
                 </h5>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
-                   {enTitle}
-                </h1>
+                <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-4">
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                     {enTitle}
+                  </h1>
+                  <div className="relative flex items-center justify-center group w-12 h-12 md:w-16 md:h-16 shrink-0 mt-2">
+                    <div className="absolute inset-0 bg-white/20 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                    <ClassEmblem 
+                      topKeys={activeTopKeys} 
+                      size={72} 
+                      className="text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-transform duration-700 group-hover:scale-110" 
+                    />
+                  </div>
+                </div>
                 <div className="mb-8 border-l-4 border-[#bca374] pl-4">
                   <p className="text-sm md:text-base text-slate-300 font-light italic mb-2">
                      "{styleDesc}"
