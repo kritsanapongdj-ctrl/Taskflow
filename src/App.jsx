@@ -1340,11 +1340,11 @@ export default function App() {
       ].map(o => ({...o, finalVal: (u[o.k] !== null && u[o.k] !== undefined) ? u[o.k] : o.val}));
 
       return (
-        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-hidden flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[600px]">
+        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[600px]">
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
-           <div className="w-full md:w-1/2 p-6 md:p-8 z-10 flex flex-col border-r border-white/10 relative h-full overflow-y-auto hide-scrollbar">
+           <div className="w-full md:w-1/2 p-6 md:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
               <div className="absolute top-4 right-4 z-20">
                 <button type="button" onClick={() => setTeamEditMode(true)} className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
                   <Icon name="settings" size={20} />
@@ -1411,10 +1411,10 @@ export default function App() {
               </div>
            </div>
 
-           <div className="w-full md:w-1/2 min-h-[400px] h-full flex items-center justify-center relative overflow-hidden">
+           <div className="w-full md:w-1/2 min-h-[400px] h-full flex items-start justify-center relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
               
-              <div className="relative z-10 w-full h-full flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
+              <div className="relative z-10 w-full h-[600px] flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
                 {u.image ? (
                    <img src={u.image} className="max-w-[85%] max-h-[85%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-110" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
                 ) : (
