@@ -116,51 +116,126 @@ const SimplePieChart = ({ data, title }) => {
   );
 };
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
-  const mods = {
-     shield: <path d="M 0 -38 C 15 -38 28 -20 28 0 C 28 20 15 35 0 45 C -15 35 -28 20 -28 0 C -28 -20 -15 -38 0 -38 Z" strokeWidth={1.5} opacity={0.8}/>,
-     wings: <><path d="M -5 0 C -25 -25 -45 -30 -45 -10 C -45 15 -25 20 -10 5" strokeWidth={1.5}/><path d="M 5 0 C 25 -25 45 -30 45 -10 C 45 15 25 20 10 5" strokeWidth={1.5}/></>,
-     sword: <path d="M 0 -45 L 6 -20 L 2 -10 L 12 -10 L 12 -5 L 2 0 L 0 45 L -2 0 L -12 -5 L -12 -10 L -2 -10 L -6 -20 Z" fill="currentColor" fillOpacity={0.2} strokeWidth={1.5}/>,
-     twin_swords: <><path d="M -30 -30 L -5 -5 M 5 5 L 30 30 M -15 -30 L -30 -30 L -30 -15" strokeWidth={1.5}/><path d="M 30 -30 L 5 -5 M -5 5 L -30 30 M 15 -30 L 30 -30 L 30 -15" strokeWidth={1.5}/></>,
-     lightning: <path d="M 5 -40 L -10 -5 L 5 0 L -5 40 L 15 5 L 0 0 Z" strokeWidth={1.5}/>,
-     crosshair: <><circle cx="0" cy="0" r="25" strokeDasharray="4 6"/><path d="M 0 -30 L 0 -15 M 0 15 L 0 30 M -30 0 L -15 0 M 15 0 L 30 0"/></>,
-     book: <path d="M 0 15 L 0 35 M -20 25 L 0 35 L 20 25 M -20 5 L 0 15 L 20 5 M -20 5 L -20 25 M 20 5 L 20 25" strokeWidth={1.5}/>,
-     hammer: <><path d="M -15 -35 L 15 -35 L 15 -15 L -15 -15 Z" strokeWidth={1.5}/><path d="M -5 -15 L -5 35 M 5 -15 L 5 35" strokeWidth={1.5}/></>,
-     crown: <path d="M -25 -15 L -15 -30 L 0 -15 L 15 -30 L 25 -15 L 15 10 L -15 10 Z" strokeWidth={1.5}/>,
-     eye: <><path d="M -25 0 C -10 -15 10 -15 25 0 C 10 15 -10 15 -25 0 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="6" fill="currentColor"/></>,
-     compass: <><path d="M 0 -35 L 5 -5 L 35 0 L 5 5 L 0 35 L -5 5 L -35 0 L -5 -5 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="18" strokeDasharray="2 4"/></>,
-     gear: <><path d="M 0 -25 A 25 25 0 1 1 -0.1 -25" strokeDasharray="6 8" strokeWidth={4}/><circle cx="0" cy="0" r="15" strokeWidth={1.5}/></>,
-     castle: <path d="M -20 15 L 20 15 L 20 -10 L 12 -10 L 12 0 L -12 0 L -12 -10 L -20 -10 Z" strokeWidth={1.5}/>,
-     anchor: <><path d="M 0 -25 L 0 25 M -15 -15 L 15 -15 M -25 10 C -10 35 10 35 25 10 M -30 5 L -25 10 L -20 5 M 30 5 L 25 10 L 20 5" strokeWidth={1.5}/><circle cx="0" cy="-30" r="5" strokeWidth={1.5}/></>,
-     puppet: <><path d="M 0 -35 L 0 5 M -25 -15 L 25 -15" strokeWidth={1.5}/><path d="M -22 -15 L -22 30 M 22 -15 L 22 30 M -5 -5 L -5 20 M 5 -5 L 5 20" strokeDasharray="2 4" opacity={0.6}/></>,
-     katana: <path d="M -30 30 Q 0 10 30 -30 M -15 15 L -10 20 M 20 -20 L 25 -15" strokeWidth={2}/>,
-     smoke: <><path d="M -15 20 C -30 10 -20 -10 -5 0 C 10 10 20 -10 5 -20 C -5 -30 -20 -20 -15 -10" strokeWidth={1.5}/><path d="M 15 20 C 30 10 20 -10 5 0 C -10 10 -20 -10 -5 -20 C 5 -30 20 -20 15 -10" strokeWidth={1.5}/></>,
-     mask: <><path d="M -30 -5 C -15 -20 -5 -5 0 0 C 5 -5 15 -20 30 -5 C 35 10 15 20 0 10 C -15 20 -35 10 -30 -5 Z" strokeWidth={1.5}/><circle cx="-12" cy="0" r="3" fill="currentColor"/><circle cx="12" cy="0" r="3" fill="currentColor"/></>,
-     runes: <><circle cx="0" cy="0" r="32" strokeDasharray="3 6"/><circle cx="0" cy="-32" r="3" fill="currentColor"/><circle cx="0" cy="32" r="3" fill="currentColor"/><circle cx="-32" cy="0" r="3" fill="currentColor"/><circle cx="32" cy="0" r="3" fill="currentColor"/></>,
-     pillar: <path d="M -15 -35 L 15 -35 L 10 -25 L 10 25 L 15 35 L -15 35 L -10 25 L -10 -25 Z" strokeWidth={1.5}/>,
-     anvil: <path d="M -20 10 L 20 10 L 25 30 L -25 30 Z M -15 10 L -20 -10 L 20 -10 L 15 10" strokeWidth={1.5}/>,
-     axe: <><path d="M 0 -35 L 0 35 M -20 -20 C -10 -30 0 -20 0 -10 C -10 0 -20 -10 -20 -20 Z M 20 -20 C 10 -30 0 -20 0 -10 C 10 0 20 -10 20 -20 Z" strokeWidth={1.5}/></>,
+  const crests = {
+    'agi_str': ( // Musa/Maehwa: Katana + Gale
+       <g><path d="M -35 35 Q 0 10 35 -35 M -15 15 L -10 20 M 15 -15 L 20 -10" strokeWidth={2}/><path d="M -25 -10 C -15 -25 15 -25 25 -10 C 35 5 15 25 5 25 C -5 25 -15 5 -25 -10" strokeWidth={1} strokeDasharray="3 5"/></g>
+    ),
+    'dex_str': ( // Striker: Heavy Gauntlet + Aura
+       <g><path d="M -15 -20 L 15 -20 L 25 10 L 15 35 L -15 35 L -25 10 Z" strokeWidth={1.5}/><path d="M -10 -20 L -10 35 M 0 -20 L 0 35 M 10 -20 L 10 35" opacity={0.5}/><circle cx="0" cy="5" r="30" strokeDasharray="2 4" strokeWidth={1.5}/></g>
+    ),
+    'int_str': ( // Dark Knight: Kriegsmesser + Runes
+       <g><path d="M 0 -45 L 8 -15 L 2 0 L 2 45 L -2 45 L -2 0 L -8 -15 Z" strokeWidth={1.5}/><path d="M -15 -5 L 15 -5 M -8 -10 L 8 -10" strokeWidth={1.5}/><circle cx="0" cy="0" r="28" strokeDasharray="2 6" strokeWidth={1.5}/><circle cx="-28" cy="0" r="2" fill="currentColor"/><circle cx="28" cy="0" r="2" fill="currentColor"/></g>
+    ),
+    'con_str': ( // Berserker/Crusader: Cross Shield + Dual Axes (User requested)
+       <g>
+         <path d="M -25 -25 L 25 -25 L 25 10 C 25 35 0 45 0 45 C 0 45 -25 35 -25 10 Z" strokeWidth={1.5} opacity={0.6}/>
+         <path d="M -15 -5 L 15 -5 M 0 -15 L 0 25" strokeWidth={2}/>
+         <path d="M -35 35 L 15 -15 M 15 -25 C 15 -25 35 -15 25 5 C 25 5 10 -5 15 -25" strokeWidth={1.5}/>
+         <path d="M 35 35 L -15 -15 M -15 -25 C -15 -25 -35 -15 -25 5 C -25 5 -10 -5 -15 -25" strokeWidth={1.5}/>
+       </g>
+    ),
+    'sen_str': ( // Warlord: Crown + Broadsword
+       <g><path d="M -25 -30 L -15 -15 L 0 -30 L 15 -15 L 25 -30 L 20 0 L -20 0 Z" strokeWidth={1.5}/><path d="M 0 -15 L 0 45 M -12 5 L 12 5 M -6 10 L 6 10" strokeWidth={2}/></g>
+    ),
+    'agi_dex': ( // Phantom Operative: Shuriken + Smoke
+       <g><path d="M 0 -30 L 5 -5 L 30 0 L 5 5 L 0 30 L -5 5 L -30 0 L -5 -5 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="12" strokeWidth={1.5}/><path d="M -20 20 C -35 5 -10 -15 -25 -30" strokeDasharray="3 4"/><path d="M 20 20 C 35 5 10 -15 25 -30" strokeDasharray="3 4"/></g>
+    ),
+    'agi_int': ( // Sorceress: Amulet + Raven Wings
+       <g><path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z" strokeWidth={1.5}/><circle cx="0" cy="0" r="6"/><path d="M -15 0 C -35 -20 -45 -10 -45 10 C -45 25 -25 15 -15 0" strokeWidth={1.5}/><path d="M 15 0 C 35 -20 45 -10 45 10 C 45 25 25 15 15 0" strokeWidth={1.5}/></g>
+    ),
+    'agi_con': ( // Corsair: Cutlass + Rope
+       <g><path d="M -30 30 Q 15 15 35 -25 M -10 15 L -5 20 M 20 -5 L 25 0" strokeWidth={2}/><path d="M -25 -15 C -5 -35 25 -15 5 15 C -15 45 -45 15 -25 -15 Z" strokeDasharray="4 4" strokeWidth={1.5}/></g>
+    ),
+    'agi_sen': ( // Pathfinder: Compass + Falcon Wings
+       <g><circle cx="0" cy="0" r="20" strokeDasharray="4 6"/><path d="M 0 -25 L 0 -10 M 0 10 L 0 25 M -25 0 L -10 0 M 10 0 L 25 0" strokeWidth={2}/><path d="M -15 -15 C -35 -35 -50 -10 -30 10" strokeWidth={1.5}/><path d="M 15 -15 C 35 -35 50 -10 30 10" strokeWidth={1.5}/></g>
+    ),
+    'dex_int': ( // System Artisan (Sage): Kyve Cube + Runes
+       <g><path d="M 0 -25 L 20 -10 L 20 15 L 0 30 L -20 15 L -20 -10 Z" strokeWidth={1.5}/><path d="M 0 -25 L 0 0 L 20 15 M 0 0 L -20 15 M -20 -10 L 20 -10" opacity={0.6}/><circle cx="0" cy="0" r="35" strokeDasharray="2 8" strokeWidth={1.5}/></g>
+    ),
+    'con_dex': ( // Guardian/Peltasta: Heavy Battleaxe + Round Shield
+       <g><circle cx="0" cy="0" r="25" strokeWidth={2}/><circle cx="0" cy="0" r="15" opacity={0.5}/><path d="M -35 35 L 15 -15 M 5 -25 C 15 -35 35 -15 25 -5 Z" strokeWidth={1.5}/></g>
+    ),
+    'dex_sen': ( // Sniper: Musket / Crossbow Target
+       <g><circle cx="0" cy="0" r="25" strokeDasharray="3 5"/><path d="M 0 -35 L 0 -15 M 0 15 L 0 35 M -35 0 L -15 0 M 15 0 L 35 0" strokeWidth={2}/><circle cx="0" cy="0" r="2" fill="currentColor"/></g>
+    ),
+    'con_int': ( // Fortress Architect: Morning Star + Tower Shield
+       <g><path d="M -20 -30 L 20 -30 L 20 30 C 20 40 0 45 0 45 C 0 45 -20 40 -20 30 Z" strokeWidth={1.5} opacity={0.7}/><path d="M -15 -20 L 15 -20 M -15 0 L 15 0 M -15 20 L 15 20" opacity={0.4}/><path d="M 0 45 L 0 -40 M -10 -40 L 10 -40" strokeWidth={2}/><circle cx="0" cy="-40" r="8" strokeDasharray="2 2" strokeWidth={2}/></g>
+    ),
+    'int_sen': ( // Supreme Tactician: Staff + Tome
+       <g><path d="M -25 15 L -5 35 M -5 5 L 15 25 M -25 5 L -25 25 M 15 5 L 15 25" strokeWidth={1.5}/><path d="M 0 -15 C -20 -35 20 -35 0 -15 Z" strokeWidth={2}/><path d="M 0 -15 L 0 45" strokeWidth={2}/></g>
+    ),
+    'con_sen': ( // Valkyrie: Lance + Kite Shield + Wings
+       <g><path d="M 0 -25 L 20 -10 L 20 15 L 0 35 L -20 15 L -20 -10 Z" strokeWidth={1.5}/><path d="M 0 -45 L 5 -20 L 0 45 L -5 -20 Z" fill="currentColor" fillOpacity={0.4}/><path d="M -20 -10 C -40 -30 -40 10 -20 25 M 20 -10 C 40 -30 40 10 20 25" strokeWidth={1.5}/></g>
+    ),
+    'agi_con_dex': ( // Swift Guardian (Lahn): Crescent Pendulum + Chain
+       <g><path d="M 0 -35 C 25 -35 35 -15 35 0 C 35 15 25 35 0 35" strokeWidth={2}/><path d="M -15 -20 C 5 -20 15 -10 15 0 C 15 10 5 20 -15 20" strokeWidth={1.5}/><circle cx="-25" cy="0" r="10" strokeDasharray="4 4"/><path d="M -15 0 L 5 0" strokeDasharray="2 2"/></g>
+    ),
+    'agi_con_int': ( // Blitz Strategist (Drakania): Slayer + Lightning Wings
+       <g><path d="M 0 -45 L 8 -15 L 6 35 L -6 35 L -8 -15 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/><path d="M -8 10 L -30 -10 L -15 0 L -35 10" strokeWidth={1.5}/><path d="M 8 10 L 30 -10 L 15 0 L 35 10" strokeWidth={1.5}/></g>
+    ),
+    'agi_con_sen': ( // Vanguard Tracker (Hashashin): Shamshir + Sand Tornado
+       <g><path d="M -20 30 Q 15 25 25 -35 M -5 15 L 5 20" strokeWidth={2}/><path d="M -30 -20 C 0 -40 30 -10 0 10 C -30 30 10 40 20 20" strokeDasharray="6 4" strokeWidth={1.5}/></g>
+    ),
+    'agi_con_str': ( // Doppelsoeldner: Zweihander + Spikes
+       <g><path d="M -35 35 L 20 -20 M 10 -25 L 30 -5" strokeWidth={2}/><path d="M 35 35 L -20 -20 M -10 -25 L -30 -5" strokeWidth={2}/><circle cx="0" cy="0" r="12" opacity={0.6}/></g>
+    ),
+    'agi_dex_int': ( // Digital Ronin (Woosa): Swallowtail Fan + Clouds
+       <g><path d="M 0 35 L -35 -15 C -15 -30 15 -30 35 -15 Z" strokeWidth={1.5}/><path d="M 0 35 L -20 -20 M 0 35 L 0 -25 M 0 35 L 20 -20" opacity={0.5}/><path d="M -25 15 C -40 -5 -10 -5 0 10 C 10 -5 40 -5 25 15" strokeDasharray="3 3"/></g>
+    ),
+    'agi_dex_sen': ( // Mirage Walker (Maegu): Fox Charm + Spectral Tails
+       <g><path d="M -15 -25 L 15 -25 L 15 20 L 0 35 L -15 20 Z" strokeWidth={1.5}/><circle cx="0" cy="-5" r="4"/><path d="M 0 -5 L 0 15" strokeWidth={1.5}/><path d="M -15 -5 C -35 15 -35 -25 -15 -35 M 15 -5 C 35 15 35 -25 15 -35" strokeWidth={1.5}/></g>
+    ),
+    'agi_dex_str': ( // Swift Duelist (Rogue): Dual Daggers (Elegant)
+       <g><path d="M -35 25 C -15 5 -10 -15 0 -35 C -5 -10 -25 0 -35 25 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/><path d="M 35 25 C 15 5 10 -15 0 -35 C 5 -10 25 0 35 25 Z" strokeWidth={1.5} fill="currentColor" fillOpacity={0.2}/></g>
+    ),
+    'agi_int_sen': ( // Spymaster: Domino Mask + Third Eye
+       <g><path d="M -35 -10 C -20 -30 0 -10 0 0 C 0 -10 20 -30 35 -10 C 40 10 20 20 0 10 C -20 20 -40 10 -35 -10 Z" strokeWidth={1.5}/><circle cx="-15" cy="-2" r="3" fill="currentColor"/><circle cx="15" cy="-2" r="3" fill="currentColor"/><path d="M -8 -25 C 0 -35 8 -25 0 -15 Z" strokeWidth={1.5}/></g>
+    ),
+    'agi_int_str': ( // Arcane Vanguard (Scholar): Dual Hammers + Sparks
+       <g><path d="M -25 -25 L -5 -5 M -35 -15 L -15 -35 L -5 -25 L -25 -5 Z" strokeWidth={1.5}/><path d="M 25 -25 L 5 -5 M 35 -15 L 15 -35 L 5 -25 L 25 -5 Z" strokeWidth={1.5}/><circle cx="0" cy="15" r="20" strokeDasharray="2 4"/></g>
+    ),
+    'agi_sen_str': ( // Vanguard Warlord (High Priest/Templar) - User requested Halberd + Cross + Crown
+       <g><path d="M 0 -45 L 0 45 M -15 -15 L 15 -15 M -8 -30 L 8 -30" strokeWidth={2}/><path d="M -25 -5 L -15 -25 L 0 -10 L 15 -25 L 25 -5 L 15 15 L -15 15 Z" strokeWidth={1.5} opacity={0.6}/></g>
+    ),
+    'con_dex_int': ( // Foundation Maestro: Heavy Anvil + Gear
+       <g><path d="M -25 10 L 25 10 L 30 35 L -30 35 Z M -15 10 L -25 -10 L 25 -10 L 15 10" strokeWidth={1.5}/><circle cx="0" cy="-10" r="10" strokeDasharray="3 4" strokeWidth={2}/></g>
+    ),
+    'con_dex_sen': ( // Titan Warden (Shai Florang): Giant Boomerang + Leaf
+       <g><path d="M -30 20 C -40 -30 40 -30 30 20 C 15 -10 -15 -10 -30 20 Z" strokeWidth={1.5}/><path d="M 0 -10 C -10 -25 10 -25 0 -10 Z" fill="currentColor"/></g>
+    ),
+    'con_dex_str': ( // Juggernaut Craftsman (Mechanic): Wrench / Robot Arm
+       <g><path d="M -25 35 L 15 -5 M 5 -15 L 25 -35 M 25 -5 L 35 -15" strokeWidth={2}/><circle cx="15" cy="-15" r="12" strokeDasharray="6 4"/></g>
+    ),
+    'con_int_sen': ( // Grand Pillar (Bishop): Pillar + Holy Light
+       <g><path d="M -15 -35 L 15 -35 L 10 -20 L 10 20 L 15 35 L -15 35 L -10 20 L -10 -20 Z" strokeWidth={1.5}/><path d="M 0 0 L 0 45 M -25 -10 L 25 20 M 25 -10 L -25 20" strokeWidth={1} strokeDasharray="2 3"/></g>
+    ),
+    'con_int_str': ( // Citadel Builder (Murmillo): Gladiator Helmet + Shield
+       <g><path d="M -20 -10 C -20 -35 20 -35 20 -10 L 20 20 L 5 15 L 5 35 L -5 35 L -5 15 L -20 20 Z" strokeWidth={1.5}/><path d="M 0 -35 L 0 -15 M -15 5 L 15 5" strokeWidth={2}/></g>
+    ),
+    'con_sen_str': ( // Indomitable Chief (Lord Knight): Lion Head + Sword
+       <g><path d="M 0 -40 L 0 40 M -15 -5 L 15 -5" strokeWidth={2}/><path d="M -20 0 C -35 15 -15 35 0 25 C 15 35 35 15 20 0 C 10 -15 -10 -15 -20 0 Z" strokeWidth={1.5} opacity={0.8}/></g>
+    ),
+    'dex_int_sen': ( // Visionary Consultant (Chronomancer): Astrolabe
+       <g><circle cx="0" cy="0" r="25" strokeWidth={1.5}/><ellipse cx="0" cy="0" rx="35" ry="10" transform="rotate(30)" strokeWidth={1.5}/><ellipse cx="0" cy="0" rx="35" ry="10" transform="rotate(-30)" strokeWidth={1.5}/><circle cx="0" cy="0" r="4" fill="currentColor"/></g>
+    ),
+    'dex_int_str': ( // Grandmaster (Fencer): Rapier + Rose
+       <g><path d="M -30 30 L 35 -35 M 15 -35 L 35 -15 M 15 -15 C 25 -15 25 -25 15 -25" strokeWidth={1.5}/><path d="M -10 10 C -20 0 -5 -15 5 -5 C 15 -15 30 0 20 10 C 30 20 15 35 5 25 C -5 35 -20 20 -10 10 Z" strokeWidth={1} opacity={0.7}/></g>
+    ),
+    'dex_sen_str': ( // Sharpshooter General (Fletcher): Longbow + Crown
+       <g><path d="M -20 -35 C 30 -20 30 20 -20 35" strokeWidth={2}/><path d="M -20 -35 L -20 35" strokeWidth={0.5}/><path d="M -35 0 L 15 0 M 5 -5 L 15 0 L 5 5" strokeWidth={1.5}/><path d="M 0 -25 L 5 -35 L 10 -25 Z" fill="currentColor"/></g>
+    ),
+    'int_sen_str': ( // Mastermind Overseer (Puppeteer): Cross + Strings + Eye
+       <g><path d="M 0 -40 L 0 5 M -30 -15 L 30 -15" strokeWidth={2}/><path d="M -25 -15 L -25 35 M 25 -15 L 25 35 M -8 -5 L -8 25 M 8 -5 L 8 25" strokeDasharray="3 4" strokeWidth={1}/><path d="M -15 25 C -5 15 5 15 15 25 C 5 35 -5 35 -15 25 Z" strokeWidth={1.5}/><circle cx="0" cy="25" r="3" fill="currentColor"/></g>
+    ),
+    'novice': (
+       <g><circle cx="0" cy="0" r="20" strokeDasharray="4 6"/><path d="M 0 -30 L 5 -5 L 30 0 L 5 5 L 0 30 L -5 5 L -30 0 L -5 -5 Z" strokeWidth={1.5}/></g>
+    ),
+    'all_rounder': (
+       <g><circle cx="0" cy="0" r="28" strokeDasharray="3 6"/><path d="M -20 -10 L -10 -25 L 0 -10 L 10 -25 L 20 -10 L 15 15 L -15 15 Z" strokeWidth={1.5}/></g>
+    )
   };
 
-  const map = {
-    'agi_str': ['lightning', 'sword'], 'dex_str': ['crosshair', 'sword'], 'int_str': ['book', 'sword'],
-    'con_str': ['shield', 'hammer'], 'sen_str': ['crown', 'sword'], 'agi_dex': ['mask', 'twin_swords'],
-    'agi_int': ['wings', 'runes'], 'agi_con': ['wings', 'shield'], 'agi_sen': ['wings', 'compass'],
-    'dex_int': ['gear', 'runes'], 'con_dex': ['shield', 'crosshair'], 'dex_sen': ['crosshair', 'eye'],
-    'con_int': ['castle', 'gear'], 'int_sen': ['eye', 'runes'], 'con_sen': ['shield', 'anchor'],
-    'agi_con_dex': ['shield', 'wings', 'crosshair'], 'agi_con_int': ['shield', 'lightning', 'runes'],
-    'agi_con_sen': ['shield', 'compass', 'wings'], 'agi_con_str': ['shield', 'axe'],
-    'agi_dex_int': ['katana', 'gear', 'runes'], 'agi_dex_sen': ['mask', 'smoke', 'twin_swords'],
-    'agi_dex_str': ['wings', 'twin_swords'], 'agi_int_sen': ['mask', 'eye', 'smoke'],
-    'agi_int_str': ['sword', 'runes', 'lightning'], 'agi_sen_str': ['crown', 'wings', 'sword'],
-    'con_dex_int': ['anvil', 'gear', 'runes'], 'con_dex_sen': ['shield', 'eye', 'pillar'],
-    'con_dex_str': ['hammer', 'anvil', 'gear'], 'con_int_sen': ['pillar', 'eye', 'shield'],
-    'con_int_str': ['castle', 'hammer', 'shield'], 'con_sen_str': ['anchor', 'crown', 'shield'],
-    'dex_int_sen': ['eye', 'book', 'compass'], 'dex_int_str': ['crown', 'book', 'sword'],
-    'dex_sen_str': ['crosshair', 'crown', 'twin_swords'], 'int_sen_str': ['puppet', 'eye'],
-    'novice': ['compass'], 'all_rounder': ['crown', 'runes', 'shield']
-  };
-
-  const activeMods = map[archetypeKey] || ['gear', 'runes'];
+  const activeSVG = crests[archetypeKey] || crests['novice'];
 
   return (
     <svg viewBox="-50 -50 100 100" width={size} height={size} className={className}>
@@ -171,8 +246,7 @@ const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
          </filter>
        </defs>
        <g stroke="currentColor" fill="none" strokeLinejoin="round" strokeLinecap="round" filter="url(#glow)">
-         <circle cx="0" cy="0" r="2.5" fill="currentColor" />
-         {activeMods.map((m, i) => <g key={i} opacity={1 - (i * 0.15)}>{mods[m]}</g>)}
+         {activeSVG}
        </g>
     </svg>
   );
