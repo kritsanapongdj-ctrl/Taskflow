@@ -1105,16 +1105,15 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto">
-                <div className="mb-4 flex items-center justify-start group">
-                  <div className="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20">
-                    <div className="absolute inset-0 bg-white/20 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-                    <ClassEmblem 
-                      topKeys={activeTopKeys} 
-                      size={64} 
-                      className="text-white/80 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-700 group-hover:scale-110 group-hover:text-white group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" 
-                    />
-                  </div>
+              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto relative z-10">
+                
+                {/* Background Emblem Watermark */}
+                <div className="absolute top-1/2 left-1/2 md:left-1/3 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[-1] opacity-[0.07] mix-blend-screen">
+                   <ClassEmblem 
+                     topKeys={activeTopKeys} 
+                     size={450} 
+                     className="text-[#e6d0a7]" 
+                   />
                 </div>
 
                 <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex items-center">
