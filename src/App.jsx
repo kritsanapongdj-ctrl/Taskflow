@@ -1340,46 +1340,46 @@ export default function App() {
       ].map(o => ({...o, finalVal: (u[o.k] !== null && u[o.k] !== undefined) ? u[o.k] : o.val}));
 
       return (
-        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[600px]">
+        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[450px]">
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
-           <div className="w-full md:w-1/2 p-6 md:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
+           <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
               <div className="absolute top-4 right-4 z-20">
                 <button type="button" onClick={() => setTeamEditMode(true)} className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
-                  <Icon name="settings" size={20} />
+                  <Icon name="settings" size={18} />
                 </button>
               </div>
 
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 mb-5">
-                  <div className="flex-shrink-0 w-16 h-16 sm:w-16 sm:h-16 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
+              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
                     <div className="absolute inset-0 bg-white/10 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
                     <ClassEmblem archetypeKey={archetypeKey} size="100%" className="text-white transition-transform duration-700 group-hover:scale-110" />
                   </div>
                   <div className="flex flex-col">
-                    <h5 className="text-[#bca374] text-xs sm:text-sm font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex flex-wrap items-center gap-2">
+                    <h5 className="text-[#bca374] text-[10px] sm:text-xs lg:text-sm font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex flex-wrap items-center gap-2">
                        <span>{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
-                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[10px] border border-[#bca374]/30">{prefixText}</span>}
+                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[9px] border border-[#bca374]/30">{prefixText}</span>}
                     </h5>
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
                        {enTitle}
                     </h1>
                   </div>
                 </div>
-                <div className="mb-5 border-l-4 border-[#bca374] pl-3 sm:pl-4">
-                  <p className="text-xs sm:text-sm md:text-base text-slate-300 font-light italic mb-1.5 sm:mb-2">
+                <div className="mb-4 lg:mb-5 border-l-4 border-[#bca374] pl-3">
+                  <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1 lg:mb-2">
                      "{styleDesc}"
                   </p>
-                  <p className="text-[11px] sm:text-[12px] md:text-sm text-slate-400 leading-relaxed font-bold mb-1">
-                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] sm:text-[10px] text-slate-500 font-normal ml-1">({flavorText})</span>}
+                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-0.5">
+                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] text-slate-500 font-normal ml-1">({flavorText})</span>}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] md:text-xs text-slate-300 leading-relaxed drop-shadow-md">
+                  <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
                      {validStats.length >= 2 ? archetypeDescMap[validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_')] || 'ทำงานได้โดดเด่นและมีเอกลักษณ์เฉพาะตัว' : styleDesc}
                   </p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:gap-y-4 mb-6">
+                <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-2 lg:gap-y-3 mb-4 lg:mb-5">
                    {[
                      { l: 'STR', val: statsObj.str, c: 'from-rose-600 to-rose-400' },
                      { l: 'AGI', val: statsObj.agi, c: 'from-emerald-600 to-emerald-400' },
@@ -1390,33 +1390,33 @@ export default function App() {
                    ].map(s => (
                      <div key={s.l} className="flex flex-col">
                         <div className="flex justify-between items-end mb-1">
-                           <span className="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
-                           <span className="text-xs sm:text-sm font-bold text-white">{s.val}</span>
+                           <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
+                           <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-white">{s.val}</span>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                        <div className="w-full h-1 lg:h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                            <div className={`h-full bg-gradient-to-r ${s.c} rounded-full`} style={{width: `${(s.val/10)*100}%`, boxShadow: '0 0 10px currentColor'}}></div>
                         </div>
                      </div>
                    ))}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 lg:gap-2">
                    {outers.map(o => (
-                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-md px-2 py-1.5 flex flex-col backdrop-blur-md">
-                         <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider">{o.n}</span>
-                         <span className="text-white font-bold text-xs sm:text-sm">{o.finalVal} <span className="text-slate-500 text-[9px] sm:text-[10px] font-normal">/10</span></span>
+                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-md px-1.5 py-1 lg:px-2 lg:py-1.5 flex flex-col backdrop-blur-md">
+                         <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider">{o.n}</span>
+                         <span className="text-white font-bold text-[10px] sm:text-xs">{o.finalVal} <span className="text-slate-500 text-[8px] sm:text-[9px] font-normal">/10</span></span>
                       </div>
                    ))}
                 </div>
               </div>
            </div>
 
-           <div className="w-full md:w-1/2 min-h-[400px] h-full flex items-start justify-center relative overflow-hidden">
+           <div className="w-full md:w-[45%] min-h-[300px] h-full flex items-start justify-center relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
               
-              <div className="relative z-10 w-full h-[600px] flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
+              <div className="relative z-10 w-full h-full flex items-center justify-center p-4 lg:p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
                 {u.image ? (
-                   <img src={u.image} className="max-w-[85%] max-h-[85%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-110" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
+                   <img src={u.image} className="max-w-[85%] max-h-[90%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-105" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
                 ) : (
                    <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                      <Icon name="user" size={64} className="text-slate-600" />
