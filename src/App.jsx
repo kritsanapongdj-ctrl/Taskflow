@@ -985,6 +985,21 @@ export default function App() {
         'int_sen_str': 'ผู้บงการเชิงกลยุทธ์ที่สามารถวิเคราะห์ ตัดสินใจด้วยไหวพริบ และผลักดันแผนงานให้เกิดขึ้นจริง'
       };
 
+      const archetypeIconMap = {
+        'agi_str': 'Zap', 'dex_str': 'Crosshair', 'int_str': 'Wand', 'con_str': 'Mountain', 'sen_str': 'Crown',
+        'agi_dex': 'Ghost', 'agi_int': 'Compass', 'agi_con': 'Activity', 'agi_sen': 'Radar', 'dex_int': 'Cog',
+        'con_dex': 'ShieldCheck', 'dex_sen': 'Target', 'con_int': 'Castle', 'int_sen': 'Eye', 'con_sen': 'Anchor',
+        'agi_con_dex': 'Shield', 'agi_con_int': 'Zap', 'agi_con_sen': 'Radar', 'agi_con_str': 'Flame', 'agi_dex_int': 'Terminal', 'agi_dex_sen': 'Ghost',
+        'agi_dex_str': 'Sword', 'agi_int_sen': 'VenetianMask', 'agi_int_str': 'Sparkles', 'agi_sen_str': 'Crown', 'con_dex_int': 'Gavel', 'con_dex_sen': 'ShieldAlert',
+        'con_dex_str': 'Hammer', 'con_int_sen': 'Landmark', 'con_int_str': 'Castle', 'con_sen_str': 'Anchor', 'dex_int_sen': 'Lightbulb', 'dex_int_str': 'Award',
+        'dex_sen_str': 'Target', 'int_sen_str': 'Brain'
+      };
+
+      let mainIcon = 'Hexagon';
+      if (validStats.length < 2) mainIcon = 'Sprout';
+      else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) mainIcon = 'Infinity';
+      else mainIcon = archetypeIconMap[validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_')] || 'Hexagon';
+
       const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
       const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
       const thTitle = nameMatch ? nameMatch[2].trim() : '';
@@ -1020,6 +1035,18 @@ export default function App() {
               </div>
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto">
+                <div className="mb-4 flex items-center justify-start group">
+                  <div className="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20">
+                    <div className="absolute inset-0 bg-white/20 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                    <Icon 
+                      name={mainIcon} 
+                      size={64} 
+                      className="text-white/80 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-700 group-hover:scale-110 group-hover:text-white group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" 
+                      strokeWidth={1} 
+                    />
+                  </div>
+                </div>
+
                 <h5 className="text-[#bca374] text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex items-center">
                    <span className="mr-3">{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
                    {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-xs border border-[#bca374]/30">{prefixText}</span>}
