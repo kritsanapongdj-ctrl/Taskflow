@@ -58,15 +58,32 @@ const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบ
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
 const POTENTIAL_IDENTITY_MAP = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
 const getArchetypeIdentity = (statsObj) => {
-    if (!statsObj) return '-';
-    const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
-    const validStats = Object.keys(tieBreakers).map(k => ({ key: k, val: Number(statsObj[k])||0, adj: (Number(statsObj[k])||0) + tieBreakers[k] })).filter(s => s.val >= 5).sort((a,b) => b.adj - a.adj);
-    if (validStats.length < 2) return 'Novice (ระดับเริ่มต้น)';
-    if (validStats.length === 6 && validStats[0].val === validStats[5].val) return 'All-Rounder (สายสมดุล)';
-    const useTop3 = validStats.length >= 3 && validStats[2].val >= 6.5;
-    const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
-    return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
-};
+      if (!statsObj) return '-';
+      const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
+      const rawStats = Object.keys(tieBreakers).map(k => Number(statsObj[k])||0);
+      const maxStat = Math.max(...rawStats);
+      const minStat = Math.min(...rawStats);
+      
+      if (maxStat <= 5) {
+         if (maxStat === 5 && minStat === 5) return 'The Standard (ผลงานตามมาตรฐาน)';
+         if (maxStat === 4 && minStat === 4) return 'The Maintainer (ผู้ประคองงาน)';
+         if (maxStat <= 3 && minStat === maxStat) return 'Needs Attention (ผู้ต้องได้รับการดูแล)';
+         if (minStat >= 4) return 'Undeveloped Potential (ศักยภาพที่ยังไม่ถูกพัฒนา)';
+         if (maxStat <= 3) return 'The Beginner (ผู้เริ่มต้น)';
+         const has4 = rawStats.some(v => v >= 4);
+         const has3 = rawStats.some(v => v <= 3);
+         if (has4 && has3) return 'Emerging Talent (พรสวรรค์ที่เพิ่งฉายแวว)';
+         return 'Uncalibrated (ยังไม่ผ่านการสอบเทียบ)';
+      }
+
+      const validStats = Object.keys(tieBreakers).map(k => ({ key: k, val: Number(statsObj[k])||0, adj: (Number(statsObj[k])||0) + tieBreakers[k] })).filter(s => s.val >= 5).sort((a,b) => b.adj - a.adj);
+      if (validStats.length < 2) return 'Novice (ระดับเริ่มต้น)';
+      if (validStats.length === 6 && validStats[0].val === validStats[5].val) return 'All-Rounder (สายสมดุล)';
+      const useTop3 = validStats.length >= 3 && validStats[2].val >= 6.5;
+      const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
+      const POTENTIAL_IDENTITY_MAP = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
+      return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
+  };
 
 const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   const iconName = Object.keys(LucideIcons).find(k => k.toLowerCase() === name.toLowerCase().replace(/[-_]/g, ''));
@@ -1218,8 +1235,7 @@ export default function App() {
                archetypeKey = topKeys.join('_');
             }
 
-            const potentialIdentityMap = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
-            const potentialIdentity = potentialIdentityMap[archetypeKey] || '-';
+            const potentialIdentity = getArchetypeIdentity(stats);
             
             const existingIdx = ns.findIndex(x => x.name === name);
             const newObj = {
@@ -1352,13 +1368,25 @@ export default function App() {
       const potentialIdentityMap = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
 
       let archetypeKey = 'novice';
-      if (validStats.length >= 2) {
-         if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-            archetypeKey = 'all_rounder';
-         } else {
-            archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
+      let identityText = '-';
+      let bottomDescText = styleDesc;
+
+      if (maxStat <= 5) {
+         if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
          }
+      } else {
+         if (validStats.length >= 2) {
+            if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+               archetypeKey = 'all_rounder';
+            } else {
+               archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
+            }
+         }
+         bottomDescText = validStats.length >= 2 ? archetypeDescMap[archetypeKey] || 'ทำงานได้โดดเด่นและมีเอกลักษณ์เฉพาะตัว' : styleDesc;
       }
+
+      identityText = getArchetypeIdentity(statsObj);
 
       const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
       const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
@@ -1415,13 +1443,13 @@ export default function App() {
                      "{styleDesc}"
                   </p>
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-[#bca374] leading-relaxed font-bold mb-1">
-                     อัตลักษณ์ศักยภาพ: <span className="text-[#e6d0a7]">{potentialIdentityMap[archetypeKey] || '-'}</span>
+                     อัตลักษณ์ศักยภาพ: <span className="text-[#e6d0a7]">{identityText}</span>
                   </p>
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-0.5">
                      สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] text-slate-500 font-normal ml-1">({flavorText})</span>}
                   </p>
                   <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
-                     {validStats.length >= 2 ? archetypeDescMap[validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_')] || 'ทำงานได้โดดเด่นและมีเอกลักษณ์เฉพาะตัว' : styleDesc}
+                     {bottomDescText}
                   </p>
                 </div>
                 
