@@ -2,7 +2,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 
 async function processExcel() {
-  const filePath = path.join('C:', 'Users', 'krits', 'lh-taskflow', 'rpg-performance-tracker-v5.xlsx');
+  const filePath = path.join('C:', 'Users', 'krits', 'lh-taskflow', 'rpg-performance-tracker-v6.xlsx');
   
   const workbook = new ExcelJS.Workbook();
   try {
@@ -75,12 +75,23 @@ async function processExcel() {
       const T = `IF(LARGE(${ARR_STATS},3)>=6.5,LARGE(${ARR_ADJ},3),LARGE(${ARR_ADJ},2))`;
       const statsFormula = `SUBSTITUTE(TRIM(IF(${V_AGI}>=${T}," AGI","")&IF(${V_CON}>=${T}," CON","")&IF(${V_DEX}>=${T}," DEX","")&IF(${V_INT}>=${T}," INT","")&IF(${V_SEN}>=${T}," SEN","")&IF(${V_STR}>=${T}," STR",""))," ","+")`;
 
+      const MAX_S = `MAX('ประเมินผลทีม'!C${r}:H${r})`;
+      const MIN_S = `MIN('ประเมินผลทีม'!C${r}:H${r})`;
+      const C4 = `COUNTIF('ประเมินผลทีม'!C${r}:H${r}, ">=4")`;
+      const C3 = `COUNTIF('ประเมินผลทีม'!C${r}:H${r}, "<=3")`;
+
+      const growthFormulaName = `IFS(AND(${MAX_S}=5, ${MIN_S}=5), "Standard Achiever (ผู้บรรลุมาตรฐาน)", AND(${MAX_S}=4, ${MIN_S}=4), "The Maintainer (ผู้ประคองงาน)", AND(${MAX_S}<=3, ${MIN_S}=${MAX_S}), "Needs Attention (ผู้ต้องได้รับการดูแล)", ${MIN_S}>=4, "Generalist (ผู้เรียนรู้รอบด้าน)", ${MAX_S}<=3, "Apprentice (ผู้ฝึกหัด)", AND(${C4}>0, ${C3}>0), "Rookie (ดาวรุ่ง)", TRUE, "Uncalibrated (ศักยภาพที่รอการเจียระไน)")`;
+      
+      const growthFormulaDesc = `IFS(AND(${MAX_S}=5, ${MIN_S}=5), "ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วนในทุกมิติ เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ผู้เชี่ยวชาญ", AND(${MAX_S}=4, ${MIN_S}=4), "ประคองการทำงานภาพรวมได้ แต่มีช่องโหว่ในรายละเอียด ควรเน้นความรอบคอบและเรียนรู้จากพี่เลี้ยงเพื่อยกระดับผลงาน", AND(${MAX_S}<=3, ${MIN_S}=${MAX_S}), "ผลการปฏิบัติงานต่ำกว่าเกณฑ์ในทุกมิติ หัวหน้างานควรเร่งประเมินสาเหตุและวางแผนปรับพื้นฐานใหม่ (Re-train) อย่างเร่งด่วน", ${MIN_S}>=4, "มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา ""ความถนัดเฉพาะทาง"" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น", ${MAX_S}<=3, "อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน", AND(${C4}>0, ${C3}>0), "เริ่มฉายแววในด้านที่ถนัด แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน", TRUE, "ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น")`;
+
+      const growthFormulaIdentity = `IFS(AND(${MAX_S}=5, ${MIN_S}=5), "The Standard", AND(${MAX_S}=4, ${MIN_S}=4), "The Maintainer", AND(${MAX_S}<=3, ${MIN_S}=${MAX_S}), "Needs Attention", ${MIN_S}>=4, "Undeveloped Potential", ${MAX_S}<=3, "The Beginner", AND(${C4}>0, ${C3}>0), "Emerging Talent", TRUE, "Uncalibrated")`;
+
       summaryRow.getCell(1).value = { formula: `'ประเมินผลทีม'!A${r}` };
       summaryRow.getCell(2).value = { formula: `'ประเมินผลทีม'!B${r}` };
-      summaryRow.getCell(3).value = { formula: statsFormula };
-      summaryRow.getCell(4).value = { formula: `INDEX('Archetypes Guide V2'!$B$2:$B$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0))` };
-      summaryRow.getCell(5).value = { formula: `INDEX('Archetypes Guide V2'!$D$2:$D$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0))` };
-      summaryRow.getCell(6).value = { formula: `INDEX('Archetypes Guide V2'!$E$2:$E$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0))` };
+      summaryRow.getCell(3).value = { formula: `IF(${MAX_S}<=5, "Growth Tendency", ${statsFormula})` };
+      summaryRow.getCell(4).value = { formula: `IF(${MAX_S}<=5, ${growthFormulaName}, INDEX('Archetypes Guide V2'!$B$2:$B$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0)))` };
+      summaryRow.getCell(5).value = { formula: `IF(${MAX_S}<=5, ${growthFormulaDesc}, INDEX('Archetypes Guide V2'!$D$2:$D$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0)))` };
+      summaryRow.getCell(6).value = { formula: `IF(${MAX_S}<=5, ${growthFormulaIdentity}, INDEX('Archetypes Guide V2'!$E$2:$E$36, MATCH(C${i}, 'Archetypes Guide V2'!$C$2:$C$36, 0)))` };
     }
   }
 
