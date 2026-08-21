@@ -2,7 +2,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 
 async function processExcel() {
-  const filePath = path.join('C:', 'Users', 'krits', 'lh-taskflow', 'rpg-performance-tracker-v5.xlsx');
+  const filePath = path.join('C:', 'Users', 'krits', 'lh-taskflow', 'rpg-performance-tracker-v6.xlsx');
   
   const workbook = new ExcelJS.Workbook();
   try {
