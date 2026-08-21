@@ -84,21 +84,62 @@ async function processExcel() {
 
       stats.sort((a, b) => b.val - a.val);
       
-      let topStats = [];
-      if (stats[2].val >= 6.5) {
-        topStats = [stats[0].name, stats[1].name, stats[2].name];
-      } else {
-        topStats = [stats[0].name, stats[1].name];
-      }
-      
-      topStats.sort();
-      const comboKey = topStats.join('+');
+      const maxStat = stats[0].val;
+      const minStat = stats[5].val;
 
-      const archetypeData = archetypeMap[comboKey] || { 
-        archetypeName: 'Unknown', 
-        desc: 'ไม่พบข้อมูลตรงกับตาราง',
-        identity: 'Unknown'
-      };
+      let archetypeData = { archetypeName: 'Unknown', desc: 'ไม่พบข้อมูลตรงกับตาราง', identity: 'Unknown' };
+      let comboKey = '';
+
+      if (maxStat <= 5) {
+          comboKey = 'Growth Tendency';
+          if (maxStat === 5 && minStat === 5) {
+             archetypeData.archetypeName = 'Standard Achiever (ผู้บรรลุมาตรฐาน)';
+             archetypeData.desc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วนในทุกมิติ เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ผู้เชี่ยวชาญ';
+             archetypeData.identity = 'The Standard';
+          } else if (maxStat === 4 && minStat === 4) {
+             archetypeData.archetypeName = 'The Maintainer (ผู้ประคองงาน)';
+             archetypeData.desc = 'ประคองการทำงานภาพรวมได้ แต่มีช่องโหว่ในรายละเอียด ควรเน้นความรอบคอบและเรียนรู้จากพี่เลี้ยงเพื่อยกระดับผลงาน';
+             archetypeData.identity = 'The Maintainer';
+          } else if (maxStat <= 3 && minStat === maxStat) {
+             archetypeData.archetypeName = 'Needs Attention (ผู้ต้องได้รับการดูแล)';
+             archetypeData.desc = 'ผลการปฏิบัติงานต่ำกว่าเกณฑ์ในทุกมิติ หัวหน้างานควรเร่งประเมินสาเหตุและวางแผนปรับพื้นฐานใหม่ (Re-train) อย่างเร่งด่วน';
+             archetypeData.identity = 'Needs Attention';
+          } else if (minStat >= 4) {
+             archetypeData.archetypeName = 'Generalist (ผู้เรียนรู้รอบด้าน)';
+             archetypeData.desc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
+             archetypeData.identity = 'Undeveloped Potential';
+          } else if (maxStat <= 3) {
+             archetypeData.archetypeName = 'Apprentice (ผู้ฝึกหัด)';
+             archetypeData.desc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
+             archetypeData.identity = 'The Beginner';
+          } else if (stats.filter(s => s.val >= 4).length > 0 && stats.filter(s => s.val <= 3).length > 0) {
+             const bestKey = [stats[0].name, stats[1].name].sort().join('+');
+             let topName = archetypeMap[bestKey]?.archetypeName || 'Specialist';
+             archetypeData.archetypeName = `Rookie ${topName.split(' ')[0]} (ดาวรุ่ง)`;
+             archetypeData.desc = `เริ่มฉายแววในด้าน ${stats[0].name} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
+             archetypeData.identity = 'Emerging Talent';
+          } else {
+             archetypeData.archetypeName = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)';
+             archetypeData.desc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
+             archetypeData.identity = 'Uncalibrated';
+          }
+      } else {
+          let topStats = [];
+          if (stats[2].val >= 6.5) {
+            topStats = [stats[0].name, stats[1].name, stats[2].name];
+          } else {
+            topStats = [stats[0].name, stats[1].name];
+          }
+          
+          topStats.sort();
+          comboKey = topStats.join('+');
+
+          archetypeData = archetypeMap[comboKey] || { 
+            archetypeName: 'Unknown', 
+            desc: 'ไม่พบข้อมูลตรงกับตาราง',
+            identity: 'Unknown'
+          };
+      }
 
       summarySheet.addRow({
         name: name,

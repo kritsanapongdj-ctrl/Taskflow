@@ -1267,13 +1267,13 @@ export default function App() {
       };
 
       const validStats = sortedStats.filter(s => s[1] >= 5);
-      const maxStat = validStats.length > 0 ? validStats[0][1] : 0;
+      const minStat = sortedStats[5][1];
+      const maxStat = sortedStats[0][1];
       
       let prefix = '';
       if (maxStat >= 9) prefix = 'Elite ';
       else if (maxStat >= 7) prefix = 'Veteran ';
-      else if (maxStat >= 5) prefix = 'Adept ';
-      else prefix = 'Trainee ';
+      else if (maxStat >= 6) prefix = 'Adept ';
 
       const getDesc = (k) => {
          const defaults = { str: 'พลังดันงาน', agi: 'ความไว', dex: 'คุณภาพ', int: 'วิเคราะห์', con: 'ทนทาน', sen: 'ไหวพริบ' };
@@ -1281,10 +1281,24 @@ export default function App() {
       };
 
       let mainStyleRaw = ''; let styleDesc = ''; let useTop3 = false;
-      if (validStats.length < 2) {
-         mainStyleRaw = 'Novice (ระดับเริ่มต้น)'; styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้มุ่งเน้นการพัฒนาศักยภาพเพิ่มเติม';
-      } else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-         mainStyleRaw = 'All-Rounder (สายสมดุล)'; styleDesc = 'สมดุลในทุกมิติ ปรับตัวได้กับทุกสถานการณ์และแก้ไขปัญหาได้ทุกรูปแบบ';
+      if (maxStat <= 5) {
+         if (maxStat === 5 && minStat === 5) {
+            mainStyleRaw = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วนในทุกมิติ เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ผู้เชี่ยวชาญ';
+         } else if (maxStat === 4 && minStat === 4) {
+            mainStyleRaw = 'The Maintainer (ผู้ประคองงาน)'; styleDesc = 'ประคองการทำงานภาพรวมได้ แต่มีช่องโหว่ในรายละเอียด ควรเน้นความรอบคอบและเรียนรู้จากพี่เลี้ยงเพื่อยกระดับผลงาน';
+         } else if (maxStat <= 3 && minStat === maxStat) {
+            mainStyleRaw = 'Needs Attention (ผู้ต้องได้รับการดูแล)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่าเกณฑ์ในทุกมิติ หัวหน้างานควรเร่งประเมินสาเหตุและวางแผนปรับพื้นฐานใหม่ (Re-train) อย่างเร่งด่วน';
+         } else if (minStat >= 4) {
+            mainStyleRaw = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
+         } else if (maxStat <= 3) {
+            mainStyleRaw = 'Apprentice (ผู้ฝึกหัด)'; styleDesc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
+         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+            const bestKey = sortedStats[0][0]; const secondBestKey = sortedStats[1][0];
+            let topName = archetypeMapTop2[[bestKey, secondBestKey].sort().join('_')] || 'Specialist (สายเฉพาะทาง)';
+            mainStyleRaw = `Rookie ${topName.split(' ')[0]} (ดาวรุ่งสาย${getDesc(bestKey)})`; styleDesc = `เริ่มฉายแววในด้าน${getDesc(bestKey)} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
+         } else {
+            mainStyleRaw = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
+         }
       } else {
          if (validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1])) useTop3 = true;
          if (useTop3) {
@@ -1618,13 +1632,13 @@ export default function App() {
       };
 
       const validStats = sortedStats.filter(s => s[1] >= 5);
-      const maxStat = validStats.length > 0 ? validStats[0][1] : 0;
+      const minStat = sortedStats[5][1];
+      const maxStat = sortedStats[0][1];
       
       let prefix = '';
       if (maxStat >= 9) prefix = 'Elite ';
       else if (maxStat >= 7) prefix = 'Veteran ';
-      else if (maxStat >= 5) prefix = 'Adept ';
-      else prefix = 'Trainee ';
+      else if (maxStat >= 6) prefix = 'Adept ';
 
       const getDesc = (k) => {
          const conf = sets.statConfigs && sets.statConfigs[k];
@@ -1636,12 +1650,24 @@ export default function App() {
          return defaults[k];
       };
 
-      if (validStats.length < 2) {
-         mainStyle = prefix + 'Novice (สายเริ่มต้น)';
-         styleDesc = 'ทักษะยังอยู่ในระดับเริ่มต้น แนะนำให้ประเมินความสามารถเพื่อวางแผนพัฒนาศักยภาพเพิ่มเติม';
-      } else if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-         mainStyle = prefix + 'All-Rounder (สายสมดุล)';
-         styleDesc = 'มีความสามารถรอบด้าน บาลานซ์ในทุกมิติ สามารถปรับตัวเข้าได้กับทุกสถานการณ์';
+      if (maxStat <= 5) {
+         if (maxStat === 5 && minStat === 5) {
+            mainStyle = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วนในทุกมิติ เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ผู้เชี่ยวชาญ';
+         } else if (maxStat === 4 && minStat === 4) {
+            mainStyle = 'The Maintainer (ผู้ประคองงาน)'; styleDesc = 'ประคองการทำงานภาพรวมได้ แต่มีช่องโหว่ในรายละเอียด ควรเน้นความรอบคอบและเรียนรู้จากพี่เลี้ยงเพื่อยกระดับผลงาน';
+         } else if (maxStat <= 3 && minStat === maxStat) {
+            mainStyle = 'Needs Attention (ผู้ต้องได้รับการดูแล)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่าเกณฑ์ในทุกมิติ หัวหน้างานควรเร่งประเมินสาเหตุและวางแผนปรับพื้นฐานใหม่ (Re-train) อย่างเร่งด่วน';
+         } else if (minStat >= 4) {
+            mainStyle = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
+         } else if (maxStat <= 3) {
+            mainStyle = 'Apprentice (ผู้ฝึกหัด)'; styleDesc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
+         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+            const bestKey = sortedStats[0][0]; const secondBestKey = sortedStats[1][0];
+            let topName = archetypeMapTop2[[bestKey, secondBestKey].sort().join('_')] || 'Specialist (สายเฉพาะทาง)';
+            mainStyle = `Rookie ${topName.split(' ')[0]} (ดาวรุ่งสาย${getDesc(bestKey).split(' ')[0]})`; styleDesc = `เริ่มฉายแววในด้าน${getDesc(bestKey)} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
+         } else {
+            mainStyle = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
+         }
       } else {
          let useTop3 = false;
          if (validStats.length >= 3) {
