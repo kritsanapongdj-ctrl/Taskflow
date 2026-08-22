@@ -5,6 +5,7 @@ import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc }
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import Cropper from 'react-easy-crop';
 import * as XLSX from 'xlsx';
+import GuildSimulation from './GuildSimulation.jsx';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -2294,7 +2295,7 @@ export default function App() {
           <aside className="w-64 bg-[#0f2e4a] text-white hidden md:flex flex-col shadow-xl z-20">
             <div className="p-6 border-b border-white/10"><div className="text-xl font-bold text-[#bca374]">LH <span className="font-light text-white">TaskFlow</span></div></div>
             <nav className="p-4 space-y-1 flex-1">
-              {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
+              {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'simulation',l:'กิลด์ (Simulation)', icon:'swords'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
                 <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-colors ${tab===x.i?'bg-[#bca374]':'hover:bg-white/10'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
               ))}
             </nav>
@@ -2304,6 +2305,7 @@ export default function App() {
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
+              {tab==='simulation'&&<GuildSimulation tasks={tasks} sets={sets} setTab={setTab} />} 
               {tab==='daily'&&rDail()} 
               {tab==='monthly'&&rMont()} 
               {tab==='kanban'&&rKanb()} 
@@ -2313,7 +2315,7 @@ export default function App() {
             </div>
           </main>
           <nav className="md:hidden fixed bottom-0 w-full bg-white border-t flex justify-around p-2 z-[999]">
-            {[{i:'dashboard',l:'ภาพรวม', icon:'layoutDashboard'},{i:'daily',l:'รายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งงาน', icon:'bell'},{i:'team',l:'ทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
+            {[{i:'dashboard',l:'ภาพรวม', icon:'layoutDashboard'},{i:'simulation',l:'กิลด์', icon:'swords'},{i:'daily',l:'รายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งงาน', icon:'bell'},{i:'team',l:'ทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
               <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`flex flex-col items-center p-2 w-14 ${tab===x.i?'text-[#bca374] -translate-y-1':'text-gray-400'} transition-transform`}><Icon name={x.icon} size={20} className={tab===x.i?'fill-current/20':''} /><div className="text-[9px] font-bold mt-1 truncate w-full text-center">{x.l}</div></button>
             ))}
           </nav>
