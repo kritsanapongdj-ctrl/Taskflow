@@ -6,6 +6,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import Cropper from 'react-easy-crop';
 import * as XLSX from 'xlsx';
 import GuildSimulation from './GuildSimulation.jsx';
+import ClassEmblem from './ClassEmblem.jsx';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -144,130 +145,7 @@ const SimplePieChart = ({ data, title }) => {
     </div>
   );
 };
-const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
-  const crests = {
-    'agi_str': (
-       <g>
-         <path d="M -30 35 Q -10 30 30 -35 L 32 -33 Q -8 32 -28 37 Z" fill="currentColor"/>
-         <path d="M -25 32 L -33 39" strokeWidth={2.5} strokeLinecap="round"/>
-         <path d="M -30 37 L -40 47" strokeWidth={2.5}/>
-         <circle cx="-41" cy="48" r="1.5" fill="currentColor"/>
-         <path d="M -10 -10 C -20 -30 20 -30 25 -10 C 30 10 0 20 -10 5" strokeWidth={1.5} fill="none" strokeDasharray="4 4"/>
-       </g>
-    ),
-    'dex_str': (
-       <g>
-         <path d="M -15 -10 L -15 15 C -15 25 15 25 15 15 L 15 -10 Z" strokeWidth={2} fill="none"/>
-         <path d="M -15 -10 C -10 -20 -5 -10 0 -10 C 5 -10 10 -20 15 -10" strokeWidth={2} fill="none"/>
-         <path d="M -10 5 L 10 5 M -10 15 L 10 15" strokeWidth={1.5}/>
-         <circle cx="0" cy="5" r="30" strokeWidth={1.5} strokeDasharray="6 4" fill="none"/>
-         <path d="M -40 5 C -40 -15 -20 -35 0 -40 M 40 5 C 40 -15 20 -35 0 -40" strokeWidth={1.5} fill="none" opacity="0.5"/>
-       </g>
-    ),
-    'int_str': (
-       <g>
-         <path d="M 0 -40 L 8 -10 L 6 20 L -6 20 L -8 -10 Z" strokeWidth={1.5} fill="none"/>
-         <path d="M 0 -35 L 0 15 M -15 -10 L 15 -10 L 12 -5 L -12 -5 Z" strokeWidth={1.5} fill="currentColor"/>
-         <path d="M -3 -5 L -3 30 L 3 30 L 3 -5 Z" fill="none" strokeWidth={1.5}/>
-         <circle cx="0" cy="32" r="3" fill="currentColor"/>
-         <circle cx="0" cy="-5" r="35" strokeWidth={1} strokeDasharray="1 8" fill="none"/>
-         <path d="M -25 -15 L -35 -20 L -30 -10 M 25 -15 L 35 -20 L 30 -10" strokeWidth={1.5} fill="none"/>
-       </g>
-    ),
-    'con_str': (
-       <g>
-         <path d="M -25 -20 L 25 -20 L 25 15 C 25 35 0 45 0 45 C 0 45 -25 35 -25 15 Z" strokeWidth={1.5} fill="none" opacity="0.6"/>
-         <path d="M -15 0 L 15 0 M 0 -10 L 0 25" strokeWidth={3} strokeLinecap="round" opacity="0.6"/>
-         <g transform="rotate(45)"><path d="M 0 -35 L 0 35" strokeWidth={2}/><path d="M 0 -20 C -25 -25 -25 5 0 0 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/></g>
-         <g transform="rotate(-45)"><path d="M 0 -35 L 0 35" strokeWidth={2}/><path d="M 0 -20 C 25 -25 25 5 0 0 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/></g>
-       </g>
-    ),
-    'sen_str': (
-       <g>
-         <path d="M 0 -45 L 6 -20 L 4 10 L -4 10 L -6 -20 Z" strokeWidth={1.5} fill="none"/>
-         <path d="M -12 -20 L 12 -20 L 10 -15 L -10 -15 Z" fill="currentColor"/>
-         <path d="M -2 -15 L -2 25 L 2 25 L 2 -15 Z" strokeWidth={1.5} fill="none"/>
-         <circle cx="0" cy="27" r="3" fill="currentColor"/>
-         <path d="M -25 0 L -15 -20 L 0 -5 L 15 -20 L 25 0 L 20 20 L -20 20 Z" strokeWidth={2} fill="none"/>
-         <circle cx="-15" cy="-22" r="2" fill="currentColor"/><circle cx="0" cy="-7" r="2" fill="currentColor"/><circle cx="15" cy="-22" r="2" fill="currentColor"/>
-         <path d="M -15 10 L 15 10" strokeWidth={2}/>
-       </g>
-    ),
-    'agi_dex': (
-       <g>
-         <path d="M 0 -25 L 5 -5 L 25 0 L 5 5 L 0 25 L -5 5 L -25 0 L -5 -5 Z" strokeWidth={2} fill="none"/>
-         <circle cx="0" cy="0" r="10" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="3" fill="currentColor"/>
-         <path d="M -20 20 C -40 10 -20 -15 -5 -10 C 15 -5 10 -25 25 -20" strokeWidth={1.5} strokeDasharray="4 4" fill="none"/>
-         <path d="M -25 -20 C -15 -35 5 -20 15 -30" strokeWidth={1.5} strokeDasharray="2 4" fill="none"/>
-       </g>
-    ),
-    'agi_int': (
-       <g>
-         <path d="M -10 -5 C -30 -30 -50 -10 -30 15 C -25 5 -15 0 -10 5 Z M 10 -5 C 30 -30 50 -10 30 15 C 25 5 15 0 10 5 Z" strokeWidth={1.5} fill="currentColor" opacity="0.3"/>
-         <path d="M -10 -5 C -30 -20 -40 5 -20 25 M 10 -5 C 30 -20 40 5 20 25" strokeWidth={1.5} fill="none"/>
-         <path d="M 0 -20 L 15 0 L 0 20 L -15 0 Z" strokeWidth={2} fill="none"/>
-         <circle cx="0" cy="0" r="6" fill="currentColor"/><path d="M 0 -20 L 0 -35 M -5 -35 L 5 -35" strokeWidth={1.5} fill="none"/>
-       </g>
-    ),
-    'agi_con': (
-       <g>
-         <path d="M -25 25 Q 15 15 35 -25 L 32 -28 Q 10 10 -28 22 Z" fill="currentColor"/>
-         <path d="M -15 10 L -5 20 L 0 15 L -10 5 Z" fill="none" strokeWidth={1.5}/>
-         <path d="M -28 22 L -35 30 M -10 5 C 0 -5 15 5 5 20" strokeWidth={2} fill="none"/>
-         <path d="M -20 -15 C 10 -40 30 0 10 25 C -10 50 -40 10 -20 -15" strokeWidth={2} strokeDasharray="5 3" fill="none"/>
-       </g>
-    ),
-    'agi_sen': (
-       <g>
-         <path d="M -15 -5 C -35 -20 -45 5 -25 25 C -20 15 -15 15 -10 20 Z M 15 -5 C 35 -20 45 5 25 25 C 20 15 15 15 10 20 Z" strokeWidth={1.5} fill="none"/>
-         <circle cx="0" cy="0" r="18" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="14" strokeWidth={1} strokeDasharray="2 4" fill="none"/>
-         <path d="M 0 -22 L 0 -14 M 0 14 L 0 22 M -22 0 L -14 0 M 14 0 L 22 0" strokeWidth={2}/>
-         <path d="M -6 6 L 0 -10 L 6 6 Z" fill="currentColor"/>
-       </g>
-    ),
-    'dex_int': (
-       <g>
-         <path d="M 0 -20 L 18 -10 L 18 10 L 0 20 L -18 10 L -18 -10 Z" strokeWidth={2} fill="none"/>
-         <path d="M 0 -20 L 0 0 L 18 10 M 0 0 L -18 10 M -18 -10 L 18 -10" strokeWidth={1.5} fill="none" opacity="0.6"/>
-         <circle cx="0" cy="0" r="4" fill="currentColor"/><circle cx="0" cy="0" r="32" strokeWidth={1} strokeDasharray="4 8" fill="none"/>
-         <rect x="-35" y="-5" width="4" height="10" fill="currentColor"/><rect x="31" y="-5" width="4" height="10" fill="currentColor"/>
-         <circle cx="0" cy="-32" r="3" fill="currentColor"/><circle cx="0" cy="32" r="3" fill="currentColor"/>
-       </g>
-    ),
-    'con_dex': (
-       <g>
-         <circle cx="0" cy="0" r="25" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="20" strokeWidth={1} fill="none"/>
-         <circle cx="0" cy="0" r="6" fill="currentColor"/><circle cx="-15" cy="0" r="2" fill="currentColor"/><circle cx="15" cy="0" r="2" fill="currentColor"/>
-         <circle cx="0" cy="-15" r="2" fill="currentColor"/><circle cx="0" cy="15" r="2" fill="currentColor"/>
-         <path d="M -35 35 L 30 -30" strokeWidth={3} strokeLinecap="round"/>
-         <path d="M 10 -10 C 20 -30 40 -10 30 10 Z" strokeWidth={1.5} fill="currentColor" opacity="0.8"/>
-         <path d="M 15 -15 L 5 -5" strokeWidth={4}/>
-       </g>
-    ),
-    'dex_sen': (
-       <g>
-         <circle cx="0" cy="0" r="25" strokeWidth={2} fill="none"/><circle cx="0" cy="0" r="18" strokeWidth={1} strokeDasharray="4 4" fill="none"/>
-         <path d="M 0 -35 L 0 -10 M 0 10 L 0 35 M -35 0 L -10 0 M 10 0 L 35 0" strokeWidth={2} strokeLinecap="round"/>
-         <path d="M -25 25 L 25 -25 L 28 -22 L -22 28 Z" fill="currentColor" opacity="0.4"/>
-         <path d="M -25 25 L -35 30 L -30 35 L -22 28" fill="currentColor"/>
-       </g>
-    ),
-    'con_int': (
-       <g>
-         <path d="M -20 -30 L 20 -30 L 20 25 C 20 40 0 45 0 45 C 0 45 -20 40 -20 25 Z" strokeWidth={2} fill="none"/>
-         <path d="M -15 -25 L 15 -25 L 15 20 C 15 30 0 38 0 38 C 0 38 -15 30 -15 20 Z" strokeWidth={1} fill="none"/>
-         <path d="M 0 -30 L 0 40 M -20 -5 L 20 -5 M 25 35 L 45 -5" strokeWidth={1.5}/>
-         <circle cx="45" cy="-5" r="8" fill="none" strokeWidth={2}/>
-         <path d="M 45 -18 L 45 -13 M 45 3 L 45 8 M 32 -5 L 37 -5 M 53 -5 L 58 -5 M 37 -13 L 40 -10 M 50 0 L 53 3 M 37 3 L 40 0 M 50 -10 L 53 -13" strokeWidth={2}/>
-       </g>
-    ),
-    'int_sen': (
-       <g>
-         <path d="M 0 5 C -15 -5 -25 0 -25 0 L -25 25 C -25 25 -15 20 0 30 C 15 20 25 25 25 25 L 25 0 C 25 0 15 -5 0 5 Z" strokeWidth={1.5} fill="none"/>
-         <path d="M 0 5 L 0 30 M -20 10 L -10 5 M -20 15 L -10 10 M 20 10 L 10 5 M 20 15 L 10 10" strokeWidth={1}/>
-         <path d="M 0 5 L 0 -25" strokeWidth={2.5}/>
-         <circle cx="0" cy="-32" r="7" fill="none" strokeWidth={2}/>
-         <path d="M -10 -40 C 0 -50 10 -40 10 -30" strokeWidth={1.5} fill="none"/>
+one"/>
        </g>
     ),
     'con_sen': (
