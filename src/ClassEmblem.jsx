@@ -38,16 +38,16 @@ const bdoClassMapping = {
 
 // แผนที่จับคู่คลาสพิเศษ (Tree of Savior)
 const tosClassMapping = {
-  'con_dex_str': 'Lancer',       // แทน Gunlancer (หอก/โล่)
-  'int_sen_str': 'Necromancer',  // แทน Necromancer (วิญญาณ)
-  'dex_int_sen': 'Oracle'        // แทน Astrologian (เทพยากรณ์)
+  'con_dex_str': 'tos_lancer.png',       // แทน Gunlancer (หอก/โล่)
+  'int_sen_str': 'tos_necromancer.png',  // แทน Necromancer (วิญญาณ)
+  'dex_int_sen': 'tos_oracle.png'        // แทน Astrologian (เทพยากรณ์)
 };
 
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
   // 1. หากเป็น 3 คลาสพิเศษ ให้ใช้รูปสัญลักษณ์จาก Tree of Savior (ดัดแปลงสีให้เหมือน BDO ด้วย mask-image)
   const tosClassName = tosClassMapping[archetypeKey];
   if (tosClassName) {
-    const imageUrl = `https://treeofsavior.com/img/class2/class_icon/${tosClassName}.png`;
+    const imageUrl = `/${tosClassName}`;
     return (
       <span
         className={`inline-block ${className}`}
