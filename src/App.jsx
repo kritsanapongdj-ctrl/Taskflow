@@ -81,7 +81,7 @@ const getArchetypeIdentity = (statsObj) => {
       const validStats = Object.keys(tieBreakers).map(k => ({ key: k, val: Number(statsObj[k])||0, adj: (Number(statsObj[k])||0) + tieBreakers[k] })).filter(s => s.val >= 5).sort((a,b) => b.adj - a.adj);
       if (validStats.length < 2) return 'Novice (ระดับเริ่มต้น)';
       if (validStats.length === 6 && validStats[0].val === validStats[5].val) return 'All-Rounder (สายสมดุล)';
-      const useTop3 = validStats.length >= 3 && validStats[2].val >= 6.5;
+      const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
       const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
       const POTENTIAL_IDENTITY_MAP = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
       return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
@@ -910,7 +910,7 @@ export default function App() {
             let archetypeKey = 'novice';
             if (validStats.length >= 2) {
                validStats.sort((a,b) => b.adj - a.adj); // Sort descending by adjusted score
-               const useTop3 = validStats.length >= 3 && validStats[2].val >= 6.5;
+               const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
                const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
                archetypeKey = topKeys.join('_');
             }
