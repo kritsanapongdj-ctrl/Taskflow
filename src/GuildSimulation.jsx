@@ -3,78 +3,28 @@ import { Home, Sparkles, List, X, ShieldAlert, Clock } from 'lucide-react';
 
 const BGM_URL = '/bgm.mp3';
 
-// --- CSS Animations ภายในตัว ---
-const AgentStyles = () => (
-  <style>{`
-    @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-    @keyframes walk { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-6px) rotate(5deg); } 50% { transform: translateY(0) rotate(0deg); } 75% { transform: translateY(-6px) rotate(-5deg); } }
-    @keyframes cast { 0% { transform: rotateX(70deg) rotateZ(0deg) scale(1); opacity: 0.6; } 50% { transform: rotateX(70deg) rotateZ(180deg) scale(1.2); opacity: 1; } 100% { transform: rotateX(70deg) rotateZ(360deg) scale(1); opacity: 0.6; } }
-    @keyframes write { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-15deg) translateX(-2px); } }
-    
-    .act-idle { animation: bob 2s infinite ease-in-out; }
-    .act-float { animation: float 3s infinite ease-in-out; }
-    .act-walk { animation: walk 0.5s infinite linear; }
-    .act-cast { animation: float 2s infinite ease-in-out; }
-    .eff-magic { animation: cast 4s infinite linear; transform-origin: center; }
-    .eff-pen { animation: write 0.3s infinite ease-in-out; transform-origin: bottom left; }
-  `}</style>
-);
+import { AgentPixelArt } from './AgentPixelArt';
 
-// --- Base Agent Component ---
-const AgentSprite = ({ type, x, y, action, flip, msg, title }) => {
+const AgentWrapper = ({ type, x, y, action, flip, msg, title }) => {
   const isWalking = action === 'walking';
   const isWorking = action === 'working';
   
-  let colorPrimary = '#1e3a8a', colorSecondary = '#64748b', eyeColor = '#38bdf8';
-  let baseAnim = 'act-idle';
-  
-  if (type === 'scout') { colorPrimary = '#0f172a'; colorSecondary = '#475569'; eyeColor = '#38bdf8'; baseAnim = isWalking ? 'act-walk' : 'act-idle'; }
-  if (type === 'wizard') { colorPrimary = '#4c1d95'; colorSecondary = '#c084fc'; eyeColor = '#d8b4fe'; baseAnim = isWalking ? 'act-walk' : (isWorking ? 'act-cast' : 'act-float'); }
-  if (type === 'watcher') { colorPrimary = '#450a0a'; colorSecondary = '#1c1917'; eyeColor = '#f87171'; baseAnim = isWalking ? 'act-walk' : 'act-idle'; }
-  if (type === 'evaluator') { colorPrimary = '#14532d'; colorSecondary = '#fde047'; eyeColor = '#fef08a'; baseAnim = isWalking ? 'act-walk' : 'act-idle'; }
+  const currentFps = isWalking ? 6 : (isWorking ? 4 : 2);
 
   return (
-    <div className="absolute transition-all ease-linear flex flex-col items-center z-20" style={{ left: `${x}%`, top: `${y}%`, transitionDuration: isWalking ? '2000ms' : '500ms' }}>
-      
-      <div className={`${isWorking && type === 'watcher' ? 'bg-red-900 border-red-500 animate-pulse' : 'bg-black/80 border-gray-600'} text-white text-[10px] px-2 py-1 rounded-md border mb-2 whitespace-nowrap shadow-lg absolute -top-12`}>
+    <div 
+      className="absolute transition-all ease-linear flex flex-col items-center z-20" 
+      style={{ left: `${x}%`, top: `${y}%`, transitionDuration: isWalking ? '2000ms' : '500ms' }}
+    >
+      <div className={`${isWorking && type === 'watcher' ? 'bg-red-900 border-red-500 animate-pulse' : 'bg-black/80 border-gray-600'} text-white text-[10px] px-2 py-1 rounded-md border mb-2 whitespace-nowrap shadow-lg absolute -top-12 z-30`}>
         {msg}
       </div>
       
-      <div className="bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded border border-gray-600 mb-1 z-10">{title}</div>
-      
-      <div className="relative w-24 h-24 flex items-end justify-center">
-        
-        {isWorking && type !== 'scout' && type !== 'evaluator' && (
-           <svg className="absolute bottom-0 w-24 h-24 eff-magic" viewBox="0 0 100 100">
-             <circle cx="50" cy="50" r="40" fill="none" stroke={eyeColor} strokeWidth="2" strokeDasharray="4 4" />
-             <polygon points="50,10 90,90 10,90" fill="none" stroke={eyeColor} strokeWidth="1" opacity="0.5" />
-             <polygon points="50,90 10,10 90,10" fill="none" stroke={eyeColor} strokeWidth="1" opacity="0.5" />
-           </svg>
-        )}
-
-        <svg className={`w-16 h-16 origin-bottom ${baseAnim}`} style={{ transform: flip ? 'scaleX(-1)' : 'scaleX(1)' }} viewBox="0 0 100 100">
-          <ellipse cx="50" cy="95" rx="25" ry="5" fill="rgba(0,0,0,0.3)" />
-          
-          <path d="M 30 40 L 70 40 L 85 95 L 15 95 Z" fill={colorPrimary} />
-          
-          {type === 'wizard' && <path d="M 10 95 L 90 95 L 50 40 Z" fill={colorSecondary} opacity="0.3" />}
-          {type === 'scout' && <path d="M 20 45 L 40 60 L 80 45 L 50 30 Z" fill={colorSecondary} />}
-          {type === 'watcher' && <path d="M 15 95 L 30 50 L 50 95 L 70 50 L 85 95 Z" fill={colorSecondary} opacity="0.5" />}
-          {type === 'evaluator' && <path d="M 45 40 L 55 40 L 55 95 L 45 95 Z" fill={colorSecondary} />}
-          
-          <circle cx="50" cy="35" r="20" fill={colorPrimary} stroke={colorSecondary} strokeWidth="2" />
-          <circle cx="50" cy="35" r="14" fill="#000" />
-          
-          <circle cx="44" cy="33" r="3" fill={eyeColor} className={isWorking ? 'animate-ping' : ''} />
-          <circle cx="58" cy="33" r="3" fill={eyeColor} className={isWorking ? 'animate-ping' : ''} />
-          
-          {type === 'wizard' && isWorking && <circle cx="80" cy="20" r="8" fill={eyeColor} style={{animation: 'float 1s infinite'}} />}
-          {type === 'scout' && <path d="M 10 35 L 30 35 L 20 60 Z" fill={colorSecondary} className="animate-pulse" />}
-          {type === 'watcher' && isWorking && <circle cx="50" cy="50" r="6" fill={eyeColor} className="animate-pulse" />}
-          {type === 'evaluator' && isWorking && <rect x="75" y="40" width="4" height="20" fill="#fff" className="eff-pen" />}
-        </svg>
+      <div className="bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded border border-gray-600 mb-1 z-30">
+        {title}
       </div>
+      
+      <AgentPixelArt type={type} flip={flip} fps={currentFps} scale={4} showGlow={true} />
     </div>
   );
 };
@@ -230,7 +180,6 @@ export default function GuildSimulation({ tasks, sets, setTab }) {
 
   return (
     <div className="fixed inset-0 bg-stone-900 text-stone-100 flex flex-col font-sans overflow-hidden z-[9999]">
-      <AgentStyles />
       <audio ref={audioRef} loop src={BGM_URL} />
       <div className="h-14 bg-stone-800/95 border-b border-stone-600 flex items-center justify-between px-4 shadow-lg z-30 backdrop-blur-sm">
         <div className="flex items-center gap-4">
@@ -249,10 +198,10 @@ export default function GuildSimulation({ tasks, sets, setTab }) {
 
       <div className="flex-1 relative bg-[url('/tavern-bg.jpg')] bg-cover bg-center overflow-hidden">
         <div className="absolute inset-0 bg-black/30 pointer-events-none z-0" />
-        <AgentSprite type="scout" title="🕵️ Agent 1 (Scout)" {...a1} />
-        <AgentSprite type="wizard" title="🧠 Agent 2 (Dispatcher)" {...a2} />
-        <AgentSprite type="watcher" title="⏱️ Agent 3 (Watcher)" {...a3} />
-        <AgentSprite type="evaluator" title="📊 Agent 4 (Evaluator)" {...a4} />
+        <AgentWrapper type="scout" title="🕵️ Agent 1 (Scout)" {...a1} />
+        <AgentWrapper type="wizard" title="🧠 Agent 2 (Dispatcher)" {...a2} />
+        <AgentWrapper type="watcher" title="⏱️ Agent 3 (Watcher)" {...a3} />
+        <AgentWrapper type="evaluator" title="📊 Agent 4 (Evaluator)" {...a4} />
 
         <div className="absolute right-4 top-4 bottom-4 w-[340px] bg-stone-900/90 rounded-lg border-4 border-[#5c4033] shadow-[0_10px_30px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col z-30 backdrop-blur-sm">
           <div className="bg-amber-800/90 text-amber-100 text-center py-2.5 font-black border-b-2 border-amber-900 text-base tracking-widest uppercase">📋 Quest Board</div>
