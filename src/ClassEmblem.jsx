@@ -38,9 +38,9 @@ const bdoClassMapping = {
 
 // แผนที่จับคู่คลาสพิเศษกับไฟล์ SVG ที่ดาวน์โหลดมาเก็บไว้ใน public/
 const extraClassMapping = {
-  'con_dex_str': '/emblem_juggernaut.svg',   // Spartan (ถึก/หอก)
-  'int_sen_str': '/emblem_mastermind.svg',    // Scythe (เคียวยมทูต)
-  'dex_int_sen': '/emblem_visionary.svg'      // Nested Eclipses (วงโคจร)
+  'con_dex_str': '/emblem_juggernaut.png',   // Spartan (ถึก/หอก)
+  'int_sen_str': '/emblem_mastermind.png',    // Scythe (เคียวยมทูต)
+  'dex_int_sen': '/emblem_visionary.png'      // Nested Eclipses (วงโคจร)
 };
 
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
