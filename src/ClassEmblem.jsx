@@ -43,7 +43,7 @@ const compositeClassMapping = {
      overlay: 'class_6',
      scaleBase: 1.25,
      scaleOverlay: 0.65,
-     opacityBase: 0.45,
+     opacityBase: 1.0,
      opacityOverlay: 1.0
   },
   'dex_int_sen': { // Visionary Consultant (Woosa + Sorceress)
@@ -51,7 +51,7 @@ const compositeClassMapping = {
      overlay: 'class_8',
      scaleBase: 1.15,
      scaleOverlay: 0.75,
-     opacityBase: 0.5,
+     opacityBase: 1.0,
      opacityOverlay: 1.0
   },
   'int_sen_str': { // Mastermind Overseer (Dark Knight + Shai)
@@ -59,7 +59,7 @@ const compositeClassMapping = {
      overlay: 'class_27', // Dark Knight (ดาบตรงกลาง)
      scaleBase: 1.35,
      scaleOverlay: 0.85,
-     opacityBase: 0.4,
+     opacityBase: 1.0,
      opacityOverlay: 1.0
   }
 };
