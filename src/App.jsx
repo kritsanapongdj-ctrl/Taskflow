@@ -66,15 +66,16 @@ const getArchetypeIdentity = (statsObj) => {
       const maxStat = Math.max(...rawStats);
       const minStat = Math.min(...rawStats);
       
-      if (maxStat <= 5) {
+      if (maxStat <= 5 || minStat <= 4) {
          if (maxStat === 5 && minStat === 5) return 'The Standard (ผลงานตามมาตรฐาน)';
          if (maxStat === 4 && minStat === 4) return 'The Maintainer (ผู้ประคองงาน)';
          if (maxStat <= 3 && minStat === maxStat) return 'Needs Attention (ผู้ต้องได้รับการดูแล)';
-         if (minStat >= 4) return 'Undeveloped Potential (ศักยภาพที่ยังไม่ถูกพัฒนา)';
+         if (maxStat <= 5 && minStat >= 4) return 'Undeveloped Potential (ศักยภาพที่ยังไม่ถูกพัฒนา)';
          if (maxStat <= 3) return 'The Beginner (ผู้เริ่มต้น)';
          const has4 = rawStats.some(v => v >= 4);
          const has3 = rawStats.some(v => v <= 3);
-         if (has4 && has3) return 'Emerging Talent (พรสวรรค์ที่เพิ่งฉายแวว)';
+         if (maxStat <= 5 && has4 && has3) return 'Emerging Talent (พรสวรรค์ที่เพิ่งฉายแวว)';
+         if (maxStat >= 6 && minStat <= 4) return 'Inconsistent (ผลงานไม่คงที่)';
          return 'Uncalibrated (ยังไม่ผ่านการสอบเทียบ)';
       }
 
@@ -1051,8 +1052,8 @@ export default function App() {
       let identityText = '-';
       let bottomDescText = styleDesc;
 
-      if (maxStat <= 5) {
-         if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+      if (maxStat <= 5 || minStat <= 4) {
+         if (maxStat <= 5 && sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
             archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
          }
       } else {
@@ -1358,20 +1359,22 @@ export default function App() {
          return defaults[k];
       };
 
-      if (maxStat <= 5) {
+      if (maxStat <= 5 || minStat <= 4) {
          if (maxStat === 5 && minStat === 5) {
             mainStyle = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วนในทุกมิติ เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ผู้เชี่ยวชาญ';
          } else if (maxStat === 4 && minStat === 4) {
             mainStyle = 'The Maintainer (ผู้ประคองงาน)'; styleDesc = 'ประคองการทำงานภาพรวมได้ แต่มีช่องโหว่ในรายละเอียด ควรเน้นความรอบคอบและเรียนรู้จากพี่เลี้ยงเพื่อยกระดับผลงาน';
          } else if (maxStat <= 3 && minStat === maxStat) {
             mainStyle = 'Needs Attention (ผู้ต้องได้รับการดูแล)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่าเกณฑ์ในทุกมิติ หัวหน้างานควรเร่งประเมินสาเหตุและวางแผนปรับพื้นฐานใหม่ (Re-train) อย่างเร่งด่วน';
-         } else if (minStat >= 4) {
+         } else if (maxStat <= 5 && minStat >= 4) {
             mainStyle = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
          } else if (maxStat <= 3) {
             mainStyle = 'Apprentice (ผู้ฝึกหัด)'; styleDesc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
-         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+         } else if (maxStat <= 5 && sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
             const bestKey = sortedStats[0][0]; const secondBestKey = sortedStats[1][0];
             let topName = archetypeMapTop2[[bestKey, secondBestKey].sort().join('_')] || 'Specialist (สายเฉพาะทาง)';
+         } else if (maxStat >= 6 && minStat <= 4) {
+            mainStyle = 'Uncalibrated Talent (พรสวรรค์ที่รอการเจียระไน)'; styleDesc = `มีความโดดเด่นอย่างมากในบางทักษะ แต่ยังมีจุดอ่อนระดับ ${minStat} ที่ดึงรั้งศักยภาพรวมไว้ ควรเร่งอุดช่องโหว่นี้`;
             mainStyle = `Rookie ${topName.split(' ')[0]} (ดาวรุ่งสาย${getDesc(bestKey).split(' ')[0]})`; styleDesc = `เริ่มฉายแววในด้าน${getDesc(bestKey)} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
          } else {
             mainStyle = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
