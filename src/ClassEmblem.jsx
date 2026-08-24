@@ -36,39 +36,80 @@ const bdoClassMapping = {
   'con_int_sen': 'class_17'    // Shai (ชายย์)
 };
 
-// แผนที่จับคู่คลาสพิเศษกับไฟล์ SVG ที่ดาวน์โหลดมาเก็บไว้ใน public/
-const extraClassMapping = {
-  'con_dex_str': '/emblem_juggernaut.png',   // Spartan (ถึก/หอก)
-  'int_sen_str': '/emblem_mastermind.png',    // Scythe (เคียวยมทูต)
-  'dex_int_sen': '/emblem_visionary.png'      // Nested Eclipses (วงโคจร)
+// แผนที่จับคู่คลาสพิเศษผสม 2 คลาสเข้าด้วยกัน
+const compositeClassMapping = {
+  'con_dex_str': { // Juggernaut Craftsman (Nova + Scholar)
+     base: 'class_9', 
+     overlay: 'class_6',
+     scaleBase: 1.25,
+     scaleOverlay: 0.65,
+     opacityBase: 0.45,
+     opacityOverlay: 1.0
+  },
+  'dex_int_sen': { // Visionary Consultant (Woosa + Sorceress)
+     base: 'class_30', 
+     overlay: 'class_8',
+     scaleBase: 1.15,
+     scaleOverlay: 0.75,
+     opacityBase: 0.5,
+     opacityOverlay: 1.0
+  },
+  'int_sen_str': { // Mastermind Overseer (Dark Knight + Shai)
+     base: 'class_17', // Shai (บูมเมอแรงเป็นรัศมี)
+     overlay: 'class_27', // Dark Knight (ดาบตรงกลาง)
+     scaleBase: 1.35,
+     scaleOverlay: 0.85,
+     opacityBase: 0.4,
+     opacityOverlay: 1.0
+  }
 };
 
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
-  // 1. หากเป็น 3 คลาสพิเศษ ให้ใช้ SVG ที่เก็บไว้ใน public/ ผ่าน mask-image (เหมือน BDO)
-  const extraFile = extraClassMapping[archetypeKey];
-  if (extraFile) {
+  // 1. ตรวจสอบว่าเป็นคลาสพิเศษที่ต้องผสมรูปหรือไม่
+  const composite = compositeClassMapping[archetypeKey];
+  if (composite) {
+    const baseUrl = `https://static.pearlcdn.com/asset/brand/bdo/contents_bdo/img/classes/${composite.base}/class_icon.svg`;
+    const overlayUrl = `https://static.pearlcdn.com/asset/brand/bdo/contents_bdo/img/classes/${composite.overlay}/class_icon.svg`;
+    
     return (
-      <span
-        className={`inline-block ${className}`}
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: 'currentColor',
-          maskImage: `url('${extraFile}')`,
-          WebkitMaskImage: `url('${extraFile}')`,
-          maskSize: 'contain',
-          WebkitMaskSize: 'contain',
-          maskRepeat: 'no-repeat',
-          WebkitMaskRepeat: 'no-repeat',
-          maskPosition: 'center',
-          WebkitMaskPosition: 'center',
-          transform: 'scale(1.2)'
-        }}
-      />
+      <div className={`relative inline-block ${className}`} style={{ width: size, height: size }}>
+        <span
+          className="absolute inset-0"
+          style={{
+            backgroundColor: 'currentColor',
+            maskImage: `url('${baseUrl}')`,
+            WebkitMaskImage: `url('${baseUrl}')`,
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+            transform: `scale(${composite.scaleBase})`,
+            opacity: composite.opacityBase
+          }}
+        />
+        <span
+          className="absolute inset-0"
+          style={{
+            backgroundColor: 'currentColor',
+            maskImage: `url('${overlayUrl}')`,
+            WebkitMaskImage: `url('${overlayUrl}')`,
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+            transform: `scale(${composite.scaleOverlay})`,
+            opacity: composite.opacityOverlay
+          }}
+        />
+      </div>
     );
   }
 
-  // หากอยู่ในลิสต์ BDO Official ให้ใช้รูปจากเซิร์ฟเวอร์โดยตรง
+  // 2. หากอยู่ในลิสต์ BDO Official ให้ใช้รูปจากเซิร์ฟเวอร์โดยตรง
   const classId = bdoClassMapping[archetypeKey];
   
   if (classId) {
@@ -95,7 +136,7 @@ const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
     );
   }
 
-  // Fallback
+  // 3. Fallback
   return (
     <svg width={size} height={size} viewBox="-50 -50 100 100" className={className} stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
       <g strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
