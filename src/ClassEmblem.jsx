@@ -36,41 +36,36 @@ const bdoClassMapping = {
   'con_int_sen': 'class_17'    // Shai (ชายย์)
 };
 
+// แผนที่จับคู่คลาสพิเศษ (Tree of Savior)
+const tosClassMapping = {
+  'con_dex_str': 'Lancer',       // แทน Gunlancer (หอก/โล่)
+  'int_sen_str': 'Necromancer',  // แทน Necromancer (วิญญาณ)
+  'dex_int_sen': 'Oracle'        // แทน Astrologian (เทพยากรณ์)
+};
+
 const ClassEmblem = ({ archetypeKey, className = "", size = 100 }) => {
-  // หากเป็น 3 คลาสพิเศษ (Extra) ที่ไม่มีใน BDO ให้วาด SVG เลียนแบบสไตล์ BDO
-  if (['con_dex_str', 'int_sen_str', 'dex_int_sen'].includes(archetypeKey)) {
-    let customPath = null;
-    if (archetypeKey === 'con_dex_str') {
-      customPath = (
-        <g strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 -35 L10 35 M0 -15 L20 -15" />
-          <path d="M-25 -5 L-25 15 C-25 30 -5 40 -5 40 C-5 40 -5 -15 -25 -5 Z" opacity="0.6" />
-          <path d="M10 -35 L5 -25 L15 -25 Z" fill="currentColor" />
-        </g>
-      );
-    } else if (archetypeKey === 'int_sen_str') {
-      customPath = (
-        <g strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M-20 35 L20 -25" />
-          <path d="M20 -25 C10 -40 -15 -35 -25 -20 C-15 -30 5 -25 10 -10 Z" fill="currentColor" />
-          <circle cx="-10" cy="15" r="4" fill="currentColor" opacity="0.6" />
-        </g>
-      );
-    } else if (archetypeKey === 'dex_int_sen') {
-      customPath = (
-        <g strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <ellipse cx="0" cy="0" rx="25" ry="10" transform="rotate(30)" />
-          <ellipse cx="0" cy="0" rx="25" ry="10" transform="rotate(-30)" />
-          <circle cx="0" cy="0" r="15" opacity="0.4" />
-          <circle cx="0" cy="0" r="3" fill="currentColor" />
-        </g>
-      );
-    }
-    
+  // 1. หากเป็น 3 คลาสพิเศษ ให้ใช้รูปสัญลักษณ์จาก Tree of Savior (ดัดแปลงสีให้เหมือน BDO ด้วย mask-image)
+  const tosClassName = tosClassMapping[archetypeKey];
+  if (tosClassName) {
+    const imageUrl = `https://treeofsavior.com/img/class2/class_icon/${tosClassName}.png`;
     return (
-      <svg width={size} height={size} viewBox="-50 -50 100 100" className={className} stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-        {customPath}
-      </svg>
+      <span
+        className={`inline-block ${className}`}
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: 'currentColor',
+          maskImage: `url('${imageUrl}')`,
+          WebkitMaskImage: `url('${imageUrl}')`,
+          maskSize: 'contain',
+          WebkitMaskSize: 'contain',
+          maskRepeat: 'no-repeat',
+          WebkitMaskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          WebkitMaskPosition: 'center',
+          transform: 'scale(1.2)'
+        }}
+      />
     );
   }
 
