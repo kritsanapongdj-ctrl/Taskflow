@@ -177,19 +177,31 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   
   const pMap = {};
   (sets?.projects || []).forEach(p => {
-    pMap[normalize(getProjName(p))] = p; // เก็บ String เต็มของโปรเจคไว้ค้นหา
+    const name = getProjName(p);
+    pMap[normalize(name)] = name; 
   });
+  
+  const getStdProj = (raw) => {
+    const clean = String(raw || '').trim();
+    const norm = normalize(clean);
+    return pMap[norm] || clean;
+  };
 
   const projectsList = Array.from(new Set((sets?.projects || []).map(p => getProjName(p))));
   
   const staffList = Array.from(new Set((sets?.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean);
   const [filterStaff, setFilterStaff] = useState('');
 
-  const checkStaffMatch = (projStr, staff) => {
-    if(!staff || staff === 'ทั้งหมด') return true;
-    const pFullStr = pMap[normalize(projStr)];
-    if(!pFullStr) return false;
-    return pFullStr.toLowerCase().includes(staff.toLowerCase());
+  const checkStaffMatch = (taskProj, staffNameFilter) => {
+    if(!staffNameFilter || staffNameFilter === 'ทั้งหมด') return true;
+    const stdProj = getStdProj(taskProj);
+    const staffEntries = (sets?.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === staffNameFilter);
+    if (staffEntries.length === 0) return false;
+    for (const e of staffEntries) {
+      const projs = (e.split('|')[1] || '').split(',');
+      if (projs.includes('ทั้งหมด') || projs.includes(stdProj)) return true;
+    }
+    return false;
   };
 
   const filteredTaskFlow = allTaskFlowTasks.filter(t => {
