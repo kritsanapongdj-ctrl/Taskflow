@@ -1998,7 +1998,7 @@ export default function App() {
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab==='dashboard'&&rDash()} 
-              {tab==='simulation'&&<GuildSimulation tasks={tasks} sets={sets} setTab={setTab} />} 
+              {tab==='simulation'&&<GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />} 
               {tab==='daily'&&rDail()} 
               {tab==='monthly'&&rMont()} 
               {tab==='kanban'&&rKanb()} 
