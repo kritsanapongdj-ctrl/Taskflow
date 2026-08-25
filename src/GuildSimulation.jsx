@@ -172,17 +172,24 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const today = new Date().toISOString().split('T')[0];
   const allTaskFlowTasks = tasks || [];
   
-  const getProjName = (str) => str ? str.split('|')[0] : '';
+  const getProjName = (str) => str ? String(str).split('|')[0] : '';
+  const normalize = (str) => String(str || '').replace(/[\s\-]/g, '').toUpperCase();
+  
+  const pMap = {};
+  (sets?.projects || []).forEach(p => {
+    pMap[normalize(getProjName(p))] = p; // เก็บ String เต็มของโปรเจคไว้ค้นหา
+  });
+
   const projectsList = Array.from(new Set((sets?.projects || []).map(p => getProjName(p))));
   
   const staffList = Array.from(new Set((sets?.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean);
   const [filterStaff, setFilterStaff] = useState('');
 
   const checkStaffMatch = (projStr, staff) => {
-    if(!staff) return true;
-    const p = (sets?.projects||[]).find(x=>getProjName(x)===getProjName(projStr));
-    if(!p) return false;
-    return p.toLowerCase().includes(staff.toLowerCase());
+    if(!staff || staff === 'ทั้งหมด') return true;
+    const pFullStr = pMap[normalize(projStr)];
+    if(!pFullStr) return false;
+    return pFullStr.toLowerCase().includes(staff.toLowerCase());
   };
 
   const filteredTaskFlow = allTaskFlowTasks.filter(t => {
@@ -191,7 +198,19 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
     return true;
   });
   
-  const todayTaskFlow = filteredTaskFlow.filter(t => t.startDate === today || t.endDate === today);
+  const activeTaskFlow = filteredTaskFlow
+    .filter(t => !t.status?.startsWith('จบงาน'))
+    .sort((a, b) => {
+      const dA = new Date(a.endDate).getTime() || 0;
+      const dB = new Date(b.endDate).getTime() || 0;
+      return dA - dB;
+    });
+    
+  const filteredJobStatusTasks = jobStatusTasks.filter(t => {
+    if (filterProj && getProjName(t.project) !== filterProj) return false;
+    if (filterStaff && !checkStaffMatch(t.project, filterStaff)) return false;
+    return true;
+  });
   
   const isOverdue = (t) => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || (t.endDate < today && !t.status?.startsWith('จบงาน'));
 
@@ -296,8 +315,8 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
               <div className="flex-1 bg-stone-900/90 rounded-md border border-stone-700 p-3 flex flex-col shadow-inner">
                 <h3 className="text-xs font-black text-emerald-400 mb-3 uppercase tracking-wider text-center bg-emerald-900/40 py-1.5 rounded">📡 New Scraped Quests (LH Jobstatus)</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                  {jobStatusTasks.slice(0, 10).map(t => <QuestCard key={t.job_id} task={t} source="jobstatus" onClick={setSelectedTask} />)}
-                  {jobStatusTasks.length === 0 && <p className="text-center text-sm text-stone-500 py-10">ยังไม่มีงานจากระบบภายนอก</p>}
+                  {filteredJobStatusTasks.slice(0, 15).map(t => <QuestCard key={t.job_id} task={t} source="jobstatus" onClick={setSelectedTask} />)}
+                  {filteredJobStatusTasks.length === 0 && <p className="text-center text-sm text-stone-500 py-10">ไม่มีงานจากระบบภายนอก (หรือโดนกรองออก)</p>}
                 </div>
               </div>
               
@@ -305,8 +324,8 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
               <div className="flex-1 bg-stone-900/90 rounded-md border border-stone-700 p-3 flex flex-col shadow-inner">
                 <h3 className="text-xs font-black text-blue-400 mb-3 uppercase tracking-wider text-center bg-blue-900/40 py-1.5 rounded">⚔️ Active Internal Quests (TaskFlow)</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                  {todayTaskFlow.slice(0, 10).map(t => <QuestCard key={t.id} task={t} source="taskflow" onClick={setSelectedTask} />)}
-                  {todayTaskFlow.length === 0 && <p className="text-center text-sm text-stone-500 py-10">ไม่มีงานภายในที่ต้องทำวันนี้</p>}
+                  {activeTaskFlow.slice(0, 15).map(t => <QuestCard key={t.id} task={t} source="taskflow" onClick={setSelectedTask} />)}
+                  {activeTaskFlow.length === 0 && <p className="text-center text-sm text-stone-500 py-10">ไม่มีงานภายในที่กำลังดำเนินการ</p>}
                 </div>
               </div>
             </div>
