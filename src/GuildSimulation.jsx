@@ -171,17 +171,35 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   // การจัดการข้อมูล Dashboard ด้านล่าง
   const today = new Date().toISOString().split('T')[0];
   const allTaskFlowTasks = tasks || [];
-  const filteredTaskFlow = filterProj ? allTaskFlowTasks.filter(t => t.project === filterProj) : allTaskFlowTasks;
-  const todayTaskFlow = filteredTaskFlow.filter(t => t.startDate === today || t.endDate === today);
   
-  const stats = {
-    pending: filteredTaskFlow.filter(t => t.status === 'รอดำเนินการ').length,
-    inProgress: filteredTaskFlow.filter(t => t.status === 'กำลังดำเนินการ').length,
-    completed: filteredTaskFlow.filter(t => t.status === 'เสร็จสิ้น').length,
-  };
-
   const getProjName = (str) => str ? str.split('|')[0] : '';
   const projectsList = Array.from(new Set((sets?.projects || []).map(p => getProjName(p))));
+  
+  const staffList = Array.from(new Set((sets?.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean);
+  const [filterStaff, setFilterStaff] = useState('');
+
+  const checkStaffMatch = (projStr, staff) => {
+    if(!staff) return true;
+    const p = (sets?.projects||[]).find(x=>getProjName(x)===getProjName(projStr));
+    if(!p) return false;
+    return p.toLowerCase().includes(staff.toLowerCase());
+  };
+
+  const filteredTaskFlow = allTaskFlowTasks.filter(t => {
+    if (filterProj && getProjName(t.project) !== filterProj) return false;
+    if (filterStaff && !checkStaffMatch(t.project, filterStaff)) return false;
+    return true;
+  });
+  
+  const todayTaskFlow = filteredTaskFlow.filter(t => t.startDate === today || t.endDate === today);
+  
+  const isOverdue = (t) => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || (t.endDate < today && !t.status?.startsWith('จบงาน'));
+
+  const stats = {
+    pending: filteredTaskFlow.filter(t => !t.status?.startsWith('จบงาน') && !isOverdue(t)).length,
+    overdue: filteredTaskFlow.filter(t => isOverdue(t)).length,
+    completed: filteredTaskFlow.filter(t => t.status?.startsWith('จบงาน')).length,
+  };
 
   return (
     <div className="fixed inset-0 bg-stone-900 text-stone-100 flex flex-col font-sans overflow-hidden z-[9999]">
@@ -241,15 +259,24 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
             onChange={(e) => setFilterProj(e.target.value)}
             className="bg-stone-800 border border-stone-600 text-stone-200 rounded px-2 py-1.5 w-full md:w-48 outline-none"
           >
-            <option value="">ทุกโครงการ (TaskFlow)</option>
+            <option value="">ทุกโครงการ</option>
             {projectsList.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          
+          <select 
+            value={filterStaff} 
+            onChange={(e) => setFilterStaff(e.target.value)}
+            className="bg-stone-800 border border-stone-600 text-stone-200 rounded px-2 py-1.5 w-full md:w-32 outline-none"
+          >
+            <option value="">ทุกเจ้าหน้าที่</option>
+            {staffList.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         {/* สรุปสถิติตามจริง */}
         <div className="flex flex-wrap justify-center gap-3 md:gap-4 bg-stone-800 px-4 py-1.5 rounded border border-stone-700">
-          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> รอดำเนินการ: <span className="text-white ml-1">{stats.pending}</span></div>
-          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> กำลังทำ: <span className="text-white ml-1">{stats.inProgress}</span></div>
+          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> ดำเนินการ: <span className="text-white ml-1">{stats.pending}</span></div>
+          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> ล่าช้า: <span className="text-white ml-1">{stats.overdue}</span></div>
           <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> เสร็จสิ้น: <span className="text-white ml-1">{stats.completed}</span></div>
           <div className="ml-2 pl-3 border-l border-stone-600">รวมทั้งหมด: <span className="text-white ml-1">{filteredTaskFlow.length}</span></div>
         </div>
