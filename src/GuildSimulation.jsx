@@ -208,14 +208,14 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         <AgentWrapper type="watcher" title="⏱️ Agent 3 (Watcher)" {...a3} />
         <AgentWrapper type="evaluator" title="📊 Agent 4 (Evaluator)" {...a4} />
 
-        {/* จุดกดซ่อนบอร์ดในฉากหลัง (ปรับ left, top, width, height ได้ที่นี่) */}
+        {/* จุดกดซ่อนบอร์ดในฉากหลัง (ย้ายไปทับกระดานไม้ฝั่งซ้าย) */}
         <div 
           onClick={() => setShowQuestBoard(true)}
           className="absolute z-20 cursor-pointer hover:bg-white/20 transition-colors border-2 border-transparent hover:border-amber-400/50 flex items-center justify-center group rounded-lg"
-          style={{ right: '15%', top: '25%', width: '15%', height: '30%' }}
+          style={{ left: '4%', top: '22%', width: '20%', height: '38%' }}
         >
           <div className="bg-black/90 text-amber-400 text-xs font-bold px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity border border-amber-600 pointer-events-none shadow-xl whitespace-nowrap">
-            🔍 กดเพื่อเปิด Quest Board
+            🔍 เปิดกระดานเควสต์
           </div>
         </div>
       </div>
