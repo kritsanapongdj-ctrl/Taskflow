@@ -116,18 +116,41 @@ ${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปั�
     return geminiResponse;
   }
   
-  // Fallback (ถ้า AI พัง)
+  // Fallback (ถ้า AI พัง หรือยังไม่ได้ใส่ Key)
   let fallbackMsg = `🤖 [โหมดสำรอง] สรุปงานกลุ่ม ${groupName}:\n`;
+  
+  const getEmoji = (text) => {
+    if (!text) return '🛠️';
+    if (/น้ำ|ก๊อก|ท่อ|รั่ว|ซึม|ปั๊ม/.test(text)) return '💧';
+    if (/ไฟ|หลอด|เบรกเกอร์|สวิตช์/.test(text)) return '⚡';
+    if (/เหม็น|กลิ่น/.test(text)) return '🤢';
+    if (/สี|ทาสี/.test(text)) return '🎨';
+    if (/แอร์|ปรับอากาศ/.test(text)) return '❄️';
+    if (/กระเบื้อง|พื้น/.test(text)) return '🧱';
+    if (/ประตู|หน้าต่าง/.test(text)) return '🚪';
+    if (/สวน|หญ้า|ต้นไม้/.test(text)) return '🌳';
+    return '🛠️';
+  };
+
   const byProject = {};
   groupTasks.forEach(t => {
     const proj = t.project || 'ไม่ระบุ';
     if (!byProject[proj]) byProject[proj] = [];
     byProject[proj].push(t);
   });
+  
   for (const proj in byProject) {
     fallbackMsg += `\n📌 ${proj}\n`;
     byProject[proj].forEach((t, idx) => {
-      fallbackMsg += `${idx + 1}. ${t.details || t.task_name || 'ไม่ระบุปัญหา'} (สถานะ: ${t.status || 'รอดำเนินการ'})\n`;
+      const emoji = getEmoji(t.details || t.task_name);
+      let status = t.status || 'รอดำเนินการ';
+      let stEmoji = '⚪';
+      if (status.includes('จบงาน(รอใบงาน)')) stEmoji = '🟠';
+      else if (status.includes('จบงาน')) stEmoji = '🟢';
+      else if (status.includes('ดำเนินการ')) stEmoji = '🟡';
+      else if (status.includes('เลื่อนงาน')) stEmoji = '🟣';
+
+      fallbackMsg += `${idx + 1}. ${t.details || t.task_name || 'ไม่ระบุปัญหา'} ${emoji} (สถานะ: ${stEmoji} ${status})\n`;
     });
   }
   return fallbackMsg;
