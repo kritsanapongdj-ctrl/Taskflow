@@ -20,6 +20,7 @@ const auth = getAuth(app);
 
 const GROUP_A = ['LA-025', 'LH-402', 'LH-410', 'LH-415', 'NE-419'];
 const GROUP_B = ['LH-379', 'LH-392', 'LH-395'];
+const GROUP_A2 = ['LH-120', 'LH-195', 'LH-225'];
 
 // ส่งข้อความตอบกลับไปยัง LINE (Reply API ฟรี 100%)
 async function replyToLine(replyToken, text) {
@@ -202,12 +203,14 @@ export default async function handler(req, res) {
         // กรองคำสั่ง
         if (text === '!สรุปงานA') { action = 'summary'; targetGroup = 'A'; }
         else if (text === '!สรุปงานB') { action = 'summary'; targetGroup = 'B'; }
+        else if (text === '!สรุปงานA2') { action = 'summary'; targetGroup = 'A2'; }
         else if (text === '!เช็คงานA') { action = 'check'; targetGroup = 'A'; }
         else if (text === '!เช็คงานB') { action = 'check'; targetGroup = 'B'; }
+        else if (text === '!เช็คงานA2') { action = 'check'; targetGroup = 'A2'; }
         
         if (action) {
           let responseText = '';
-          const projectList = targetGroup === 'A' ? GROUP_A : GROUP_B;
+          const projectList = targetGroup === 'A' ? GROUP_A : (targetGroup === 'B' ? GROUP_B : GROUP_A2);
           const groupName = targetGroup;
           
           if (action === 'summary') {
