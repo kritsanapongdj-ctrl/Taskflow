@@ -139,21 +139,75 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
     const rosterList = sets?.staffStats || [];
     
     const getStaffProfile = (staffObj) => {
-       const key = staffObj.archetypeKey || 'agi_str'; // Fallback
-       let archetype = archetypesData.find(a => a.key === key);
-       if (!archetype) archetype = archetypesData[0];
-       
-       const stats = {
-         STR: staffObj.str || 0,
-         AGI: staffObj.agi || 0,
-         INT: staffObj.int || 0,
-         DEX: staffObj.dex || 0,
-         CON: staffObj.con || 0,
-         SEN: staffObj.sen || 0,
-       };
-       return { archetype, stats };
+    const statsObj = { 
+        str: Number(staffObj.str)||0, 
+        agi: Number(staffObj.agi)||0, 
+        dex: Number(staffObj.dex)||0, 
+        int: Number(staffObj.int)||0, 
+        con: Number(staffObj.con)||0, 
+        sen: Number(staffObj.sen)||0 
     };
-  const audioRef = useRef(null);
+    
+    const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
+    const validStats = sortedStats.filter(s => s[1] >= 5);
+    const maxStat = sortedStats[0][1];
+    const minStat = sortedStats[5][1];
+    const rawStats = Object.values(statsObj);
+
+    let useTop3 = false;
+    if (validStats.length >= 3) {
+        if (validStats.length === 3 || validStats[2][1] > validStats[3][1]) {
+             useTop3 = true;
+        }
+    }
+
+    let calculatedKey = 'novice';
+    if (maxStat <= 5) {
+        if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+            calculatedKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
+        }
+    } else {
+        if (validStats.length >= 2) {
+            if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+                calculatedKey = 'all_rounder';
+            } else {
+                calculatedKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
+            }
+        }
+    }
+
+    let archetype = archetypesData.find(a => a.key === calculatedKey);
+    
+    if (!archetype) {
+        let fallbackIdentity = 'Uncalibrated (ยังไม่ผ่านการสอบเทียบ)';
+        if (maxStat === 5 && minStat === 5) fallbackIdentity = 'The Standard (ผลงานตามมาตรฐาน)';
+        else if (maxStat === 4 && minStat === 4) fallbackIdentity = 'The Maintainer (ผู้ประคองงาน)';
+        else if (minStat >= 4) fallbackIdentity = 'The Generalist (ผู้ปรับตัวรอบด้าน)';
+        else if (maxStat <= 3) fallbackIdentity = 'The Beginner (ผู้เริ่มต้น)';
+        else if (rawStats.some(v => v >= 4) && rawStats.some(v => v <= 3)) fallbackIdentity = 'Emerging Talent (พรสวรรค์ที่เพิ่งฉายแวว)';
+        
+        archetype = {
+            key: calculatedKey !== 'novice' ? calculatedKey : 'novice',
+            name: 'Apprentice (ผู้ฝึกหัด)',
+            thai: 'สายเริ่มต้น',
+            identity: fallbackIdentity,
+            desc: 'พนักงานยังอยู่ในช่วงประเมินและพัฒนางาน หรือมีสถานะที่รอการปรับปรุงเพิ่มเติม',
+            strengths: 'มีความยืดหยุ่น',
+            weaknesses: 'รอการพัฒนาศักยภาพเฉพาะด้าน'
+        };
+    }
+    
+    const stats = {
+        STR: statsObj.str,
+        AGI: statsObj.agi,
+        INT: statsObj.int,
+        DEX: statsObj.dex,
+        CON: statsObj.con,
+        SEN: statsObj.sen,
+    };
+    return { archetype, stats };
+};
+    const audioRef = useRef(null);
   
   const [selectedTask, setSelectedTask] = useState(null);
   const [showQuestBoard, setShowQuestBoard] = useState(false);
