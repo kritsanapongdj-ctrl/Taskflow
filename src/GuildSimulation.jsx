@@ -461,7 +461,7 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
             </div>
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 custom-scrollbar pb-24">
               {rosterList.length > 0 ? rosterList.map((staff, idx) => {
-                const arch = getStaffProfile(staff);
+                const { archetype: arch } = getStaffProfile(staff);
                 return (
                   <div key={idx} onClick={() => setSelectedStaff(staff)} className="bg-stone-800 border-2 border-stone-600 rounded-xl p-4 flex flex-col items-center cursor-pointer hover:bg-stone-700 hover:border-amber-600/50 transition-all shadow-lg group">
                     <div className="w-20 h-20 bg-stone-900 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(217,119,6,0.5)] transition-all border-2 border-stone-700 group-hover:border-amber-600">
@@ -485,7 +485,7 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100001] p-4" onClick={() => setSelectedStaff(null)}>
           <div className="bg-stone-900 w-full max-w-4xl rounded-xl border-2 border-amber-600/50 flex flex-col md:flex-row overflow-hidden shadow-[0_0_50px_rgba(217,119,6,0.3)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             {(() => {
-              const arch = getStaffProfile(selectedStaff);
+              const { archetype: arch } = getStaffProfile(selectedStaff);
               const radarData = [
                 { subject: 'STR', A: selectedStaff.str, fullMark: 10 },
                 { subject: 'AGI', A: selectedStaff.agi, fullMark: 10 },

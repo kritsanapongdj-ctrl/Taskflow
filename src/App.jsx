@@ -7,6 +7,7 @@ import Cropper from 'react-easy-crop';
 import * as XLSX from 'xlsx';
 import GuildSimulation from './GuildSimulation.jsx';
 import ClassEmblem from './ClassEmblem.jsx';
+import archetypesData from './data/archetypes.json';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -58,7 +59,10 @@ const GlobalStyles = () => (
 // --- ฟังก์ชันช่วยเหลือต่างๆ ---
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
-const POTENTIAL_IDENTITY_MAP = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
+const POTENTIAL_IDENTITY_MAP = {};
+archetypesData.forEach(a => {
+   POTENTIAL_IDENTITY_MAP[a.key] = a.identity;
+});
 const getArchetypeIdentity = (statsObj) => {
       if (!statsObj) return '-';
       const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
@@ -83,7 +87,10 @@ const getArchetypeIdentity = (statsObj) => {
       if (validStats.length === 6 && validStats[0].val === validStats[5].val) return 'All-Rounder (สายสมดุล)';
       const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
       const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
-      const POTENTIAL_IDENTITY_MAP = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
+      const POTENTIAL_IDENTITY_MAP = {};
+archetypesData.forEach(a => {
+   POTENTIAL_IDENTITY_MAP[a.key] = a.identity;
+});
       return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
   };
 
@@ -949,18 +956,18 @@ export default function App() {
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
       
-      const archetypeMapTop2 = {
-        'agi_str': 'Striker (สายจู่โจมความเร็วสูง)', 'dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาด)', 'int_str': 'Battlemage (สายผสานแผนและการลงมือทำ)', 'con_str': 'Juggernaut (สายลุยงานหนักทรหด)', 'sen_str': 'Warlord (สายผู้นำบุกเบิก)',
-        'agi_dex': 'Phantom Operative (สายปฏิบัติการไร้ร่องรอย)', 'agi_int': 'Tactical Runner (สายรุกฉับไวด้วยกลยุทธ์)', 'agi_con': 'Resilient Scout (สายสำรวจและแก้ปัญหาด่วน)', 'agi_sen': 'Pathfinder (สายประสานงานรวดเร็ว)', 'dex_int': 'System Artisan (สายสร้างสรรค์ระบบสุดเนี้ยบ)',
-        'con_dex': 'Iron Sentinel (สายคุมมาตรฐานสุดแกร่ง)', 'dex_sen': 'Sniper (สายจับเป้าหมายแม่นยำ)', 'con_int': 'Fortress Architect (สายออกแบบโครงสร้างมั่นคง)', 'int_sen': 'Supreme Tactician (สายเจรจาและวางกลยุทธ์)', 'con_sen': 'Unbreakable Commander (สายผู้บัญชาการรับแรงกดดัน)'
-      };
-
-      const archetypeMapTop3 = {
-        'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)', 'agi_con_int': 'Blitz Strategist (สายปฏิบัติการเชิงรุกฉับไว)', 'agi_con_sen': 'Vanguard Tracker (สายสำรวจและประเมินสถานการณ์)', 'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)', 'agi_dex_int': 'Digital Ronin (สายจัดระบบงานเนี้ยบและไว)', 'agi_dex_sen': 'Mirage Walker (สายจัดการปัญหาไร้ร่องรอย)',
-        'agi_dex_str': 'Swift Duelist (สายปฏิบัติการเฉียบขาดว่องไว)', 'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)', 'agi_int_str': 'Arcane Vanguard (สายผสานกลยุทธ์และการลงมือทำ)', 'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)', 'con_dex_int': 'Foundation Maestro (สายวางรากฐานและแก้ปัญหาระบบ)', 'con_dex_sen': 'Titan Warden (สายคุมมาตรฐานงานสุดแกร่ง)',
-        'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)', 'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)', 'con_int_str': 'Citadel Builder (สายออกแบบโครงสร้างงานมั่นคง)', 'con_sen_str': 'Indomitable Chief (สายผู้นำทีมสุดแกร่ง)', 'dex_int_sen': 'Visionary Consultant (สายที่ปรึกษาและคาดการณ์แม่นยำ)', 'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
-        'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)', 'int_sen_str': 'Mastermind Overseer (สายบริหารจัดการเชิงกลยุทธ์)'
-      };
+      const archetypeMapTop2 = {};
+        const archetypeMapTop3 = {};
+        archetypesData.forEach(a => {
+           const keys = a.key.split('_');
+           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+        });
+        archetypesData.forEach(a => {
+           const keys = a.key.split('_');
+           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+        });
 
       const validStats = sortedStats.filter(s => s[1] >= 5);
       const minStat = sortedStats[5][1];
@@ -1271,46 +1278,13 @@ export default function App() {
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
       
-      const archetypeMapTop2 = {
-        'agi_str': 'Striker (สายจู่โจมความเร็วสูง)',
-        'dex_str': 'Blademaster (สายปฏิบัติการเฉียบขาด)',
-        'int_str': 'Battlemage (สายผสานแผนและการลงมือทำ)',
-        'con_str': 'Juggernaut (สายลุยงานหนักทรหด)',
-        'sen_str': 'Warlord (สายผู้นำบุกเบิก)',
-        'agi_dex': 'Phantom Operative (สายปฏิบัติการไร้ร่องรอย)',
-        'agi_int': 'Tactical Runner (สายรุกฉับไวด้วยกลยุทธ์)',
-        'agi_con': 'Resilient Scout (สายสำรวจและแก้ปัญหาด่วน)',
-        'agi_sen': 'Pathfinder (สายประสานงานรวดเร็ว)',
-        'dex_int': 'System Artisan (สายสร้างสรรค์ระบบสุดเนี้ยบ)',
-        'con_dex': 'Iron Sentinel (สายคุมมาตรฐานสุดแกร่ง)',
-        'dex_sen': 'Sniper (สายจับเป้าหมายแม่นยำ)',
-        'con_int': 'Fortress Architect (สายออกแบบโครงสร้างมั่นคง)',
-        'int_sen': 'Supreme Tactician (สายเจรจาและวางกลยุทธ์)',
-        'con_sen': 'Unbreakable Commander (สายผู้บัญชาการรับแรงกดดัน)'
-      };
-
-      const archetypeMapTop3 = {
-        'agi_con_dex': 'Swift Guardian (สายปกป้องความราบรื่นของงาน)',
-        'agi_con_int': 'Blitz Strategist (สายปฏิบัติการเชิงรุกฉับไว)',
-        'agi_con_sen': 'Vanguard Tracker (สายสำรวจและประเมินสถานการณ์)',
-        'agi_con_str': 'Frontline Berserker (สายลุยงานหนักทะลุทะลวง)',
-        'agi_dex_int': 'Digital Ronin (สายจัดระบบงานเนี้ยบและไว)',
-        'agi_dex_sen': 'Mirage Walker (สายจัดการปัญหาไร้ร่องรอย)',
-        'agi_dex_str': 'Swift Duelist (สายปฏิบัติการเฉียบขาดว่องไว)',
-        'agi_int_sen': 'Spymaster (สายเจาะลึกข้อมูลและเจรจา)',
-        'agi_int_str': 'Arcane Vanguard (สายผสานกลยุทธ์และการลงมือทำ)',
-        'agi_sen_str': 'Vanguard Warlord (สายผู้นำบุกเบิกโปรเจกต์)',
-        'con_dex_int': 'Foundation Maestro (สายวางรากฐานและแก้ปัญหาระบบ)',
-        'con_dex_sen': 'Titan Warden (สายคุมมาตรฐานงานสุดแกร่ง)',
-        'con_dex_str': 'Juggernaut Craftsman (สายช่างฝีมือทรหด)',
-        'con_int_sen': 'Grand Pillar (สายเสาหลักบริหารความเสี่ยง)',
-        'con_int_str': 'Citadel Builder (สายออกแบบโครงสร้างงานมั่นคง)',
-        'con_sen_str': 'Indomitable Chief (สายผู้นำทีมสุดแกร่ง)',
-        'dex_int_sen': 'Visionary Consultant (สายที่ปรึกษาและคาดการณ์แม่นยำ)',
-        'dex_int_str': 'Grandmaster (สายปรมาจารย์คุมคุณภาพงาน)',
-        'dex_sen_str': 'Sharpshooter General (สายจัดการเป้าหมายเฉียบคม)',
-        'int_sen_str': 'Mastermind Overseer (สายบริหารจัดการเชิงกลยุทธ์)'
-      };
+      const archetypeMapTop2 = {};
+        const archetypeMapTop3 = {};
+        archetypesData.forEach(a => {
+           const keys = a.key.split('_');
+           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
+        });
 
       const validStats = sortedStats.filter(s => s[1] >= 5);
       const minStat = sortedStats[5][1];
