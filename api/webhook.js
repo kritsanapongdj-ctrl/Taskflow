@@ -183,7 +183,7 @@ async function handleCheck(projectList, groupName) {
   }
 
   let msg = `📢 อัปเดตงานสาธารณูปโภค (กลุ่ม ${groupName})\n`;
-  const formatJob = (j) => `\n📌 ${j.project}\n🏠 บ้านเลขที่: ${j.house_no}\n👤 ผู้แจ้ง: ${j.customer_name}\n📞 เบอร์โทร: ${j.phone}\n📝 รายละเอียด: ${j.details}\n(รหัส: ${j.job_id})\n`;
+  const formatJob = (j) => `\n📌 ${j.project}\n🏠 บ้านเลขที่: ${j.house_no || '-'}\n👤 ผู้แจ้ง: ${j.customer_name || '-'}\n📞 เบอร์โทร: ${j.phone || '-'}\n📝 รายละเอียด: ${j.details || '-'}\n(รหัส: ${j.job_id})\n`;
   
   if (normalJobs.length > 0) {
      msg += `\n🆕 งานรอดำเนินการ:\n` + normalJobs.map(formatJob).join('');
