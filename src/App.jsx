@@ -899,9 +899,9 @@ export default function App() {
             const str = avg([row[10], row[11], row[12]]);
             const agi = avg([row[13], row[14], row[15]]);
             const dex = avg([row[16], row[17], row[18]]);
-            const int = avg([row[19], row[20], row[21], row[22]]);
+            const int = avg([row[19], row[20], row[21], row[22], row[27], row[28]]);
             const con = avg([row[23], row[24], row[25]]);
-            const sen = avg([row[26], row[27], row[28]]);
+            const sen = avg([row[26], row[29], row[30]]);
             
             const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
             const stats = { str, agi, dex, int, con, sen };
@@ -2332,3 +2332,4 @@ export default function App() {
     </React.Fragment>
   );
 }
+
