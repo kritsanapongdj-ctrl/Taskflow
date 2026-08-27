@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight } from 'lucide-react';
+import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight, BookOpen, Book, Target, Shield, Sword, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const BGM_URL = '/bgm.mp3';
