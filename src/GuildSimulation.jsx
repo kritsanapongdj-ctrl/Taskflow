@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 
@@ -129,24 +129,27 @@ const RadarChart = ({ stats, size = 180 }) => {
   );
 };
 
-const getMockStaffProfile = (staffName) => {
-   let hash = 0;
-   for(let i=0; i<staffName.length; i++) hash += staffName.charCodeAt(i);
-   const archetype = archetypesData[hash % archetypesData.length];
-   const stats = { STR: 3, AGI: 3, INT: 3, DEX: 3, CON: 3, SEN: 3 };
-   const keys = archetype.key.split('_');
-   keys.forEach(k => { stats[k.toUpperCase()] = 8 + (hash % 3); });
-   Object.keys(stats).forEach(k => {
-      if(!keys.includes(k.toLowerCase())) stats[k] = 3 + ((hash + k.charCodeAt(0)) % 5);
-   });
-   return { archetype, stats };
-};
-
 export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [isPlaying, setIsPlaying] = useState(false);
     const [showRoster, setShowRoster] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
-    const rosterList = Array.from(new Set((sets?.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean);
+    const rosterList = sets?.staffStats || [];
+    
+    const getStaffProfile = (staffObj) => {
+       const key = staffObj.archetypeKey || 'agi_str'; // Fallback
+       let archetype = archetypesData.find(a => a.key === key);
+       if (!archetype) archetype = archetypesData[0];
+       
+       const stats = {
+         STR: staffObj.str || 0,
+         AGI: staffObj.agi || 0,
+         INT: staffObj.int || 0,
+         DEX: staffObj.dex || 0,
+         CON: staffObj.con || 0,
+         SEN: staffObj.sen || 0,
+       };
+       return { archetype, stats };
+    };
   const audioRef = useRef(null);
   
   const [selectedTask, setSelectedTask] = useState(null);
@@ -433,5 +436,6 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
     </div>
   );
 }
+
 
 
