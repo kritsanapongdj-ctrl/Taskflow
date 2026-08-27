@@ -432,13 +432,208 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         </div>
       )}
 
+      
+      {/* MMORPG Action Bar (Bottom) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-stone-900 border-t-4 border-amber-700/80 p-2 flex justify-center gap-2 md:gap-4 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+        <button onClick={() => setShowQuestBoard(true)} className="flex flex-col items-center justify-center bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 rounded-lg p-2 min-w-[100px] transition-transform hover:-translate-y-1 group">
+          <Target size={24} className="text-red-400 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-bold text-stone-200">Quest Board</span>
+        </button>
+        <button onClick={() => setShowRoster(true)} className="flex flex-col items-center justify-center bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 rounded-lg p-2 min-w-[100px] transition-transform hover:-translate-y-1 group">
+          <Users size={24} className="text-blue-400 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-bold text-stone-200">Guild Roster</span>
+        </button>
+        <button onClick={() => setShowManual(true)} className="flex flex-col items-center justify-center bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 rounded-lg p-2 min-w-[100px] transition-transform hover:-translate-y-1 group">
+          <BookOpen size={24} className="text-amber-400 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-bold text-stone-200">Adventurer's Tome</span>
+        </button>
+      </div>
+
+      {/* Roster Modal */}
+      {showRoster && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100000] p-4" onClick={() => setShowRoster(false)}>
+          <div className="bg-stone-900 w-full max-w-6xl h-[85vh] rounded-lg border-4 border-[#8b5a2b] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#8b5a2b] text-amber-100 px-6 py-3 font-black flex justify-between items-center border-b-4 border-[#5c4033] tracking-widest text-xl shadow-lg">
+              <span className="flex items-center gap-2"><Users /> ทำเนียบกิลด์ (Guild Roster)</span>
+              <button onClick={() => setShowRoster(false)} className="text-amber-200 hover:text-white transition-colors"><X /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 custom-scrollbar pb-24">
+              {rosterList.length > 0 ? rosterList.map((staff, idx) => {
+                const arch = getStaffProfile(staff);
+                return (
+                  <div key={idx} onClick={() => setSelectedStaff(staff)} className="bg-stone-800 border-2 border-stone-600 rounded-xl p-4 flex flex-col items-center cursor-pointer hover:bg-stone-700 hover:border-amber-600/50 transition-all shadow-lg group">
+                    <div className="w-20 h-20 bg-stone-900 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(217,119,6,0.5)] transition-all border-2 border-stone-700 group-hover:border-amber-600">
+                      <ClassEmblem archetypeKey={arch?.key || 'agi_str'} size={48} />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">{staff.name}</h3>
+                    <div className="text-sm font-bold text-amber-500 text-center">{arch?.identity}</div>
+                    <div className="text-xs text-stone-400 mt-1 bg-stone-900 px-2 py-1 rounded-full border border-stone-700">{arch?.name} {arch?.thai ? '('+arch.thai+')' : ''}</div>
+                  </div>
+                );
+              }) : (
+                <div className="col-span-full text-center text-stone-500 py-10 bg-stone-900/50 rounded-xl border border-stone-800">ไม่พบข้อมูลพนักงาน กรุณาอัปโหลดไฟล์ Excel ก่อน</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Profile Modal (Inside Roster) */}
+      {selectedStaff && (
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100001] p-4" onClick={() => setSelectedStaff(null)}>
+          <div className="bg-stone-900 w-full max-w-4xl rounded-xl border-2 border-amber-600/50 flex flex-col md:flex-row overflow-hidden shadow-[0_0_50px_rgba(217,119,6,0.3)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            {(() => {
+              const arch = getStaffProfile(selectedStaff);
+              const radarData = [
+                { subject: 'STR', A: selectedStaff.str, fullMark: 10 },
+                { subject: 'AGI', A: selectedStaff.agi, fullMark: 10 },
+                { subject: 'INT', A: selectedStaff.int, fullMark: 10 },
+                { subject: 'DEX', A: selectedStaff.dex, fullMark: 10 },
+                { subject: 'CON', A: selectedStaff.con, fullMark: 10 },
+                { subject: 'SEN', A: selectedStaff.sen, fullMark: 10 },
+              ];
+              return (
+                <>
+                  <div className="flex-1 bg-stone-950 p-6 flex flex-col items-center justify-center relative border-b md:border-b-0 md:border-r border-stone-800 shadow-inner">
+                    <button onClick={() => setSelectedStaff(null)} className="absolute top-4 right-4 text-stone-500 hover:text-white md:hidden"><X /></button>
+                    <div className="w-32 h-32 bg-stone-900 rounded-full flex items-center justify-center border-4 border-amber-900 mb-6 shadow-[0_0_30px_rgba(0,0,0,0.8)] relative">
+                      <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-ping"></div>
+                      <ClassEmblem archetypeKey={arch?.key || 'agi_str'} size={80} />
+                    </div>
+                    <h2 className="text-3xl font-black text-white mb-2 text-center drop-shadow-md">{selectedStaff.name}</h2>
+                    <div className="text-lg text-amber-500 font-bold mb-1 text-center bg-amber-900/20 px-4 py-1 rounded-full border border-amber-900/50">{arch?.identity}</div>
+                    <div className="text-sm text-stone-400 mb-6 text-center">{arch?.name} {arch?.thai ? '('+arch.thai+')' : ''}</div>
+                    
+                    <div className="w-full h-[250px] mb-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                          <PolarGrid stroke="#444" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#aaa', fontSize: 11 }} />
+                          <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
+                          <Radar name="Stats" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.4} />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 p-6 bg-stone-900 overflow-y-auto custom-scrollbar">
+                    <div className="flex justify-between items-start mb-6 hidden md:flex">
+                      <h3 className="text-xl font-bold text-stone-200 border-b-2 border-stone-700 pb-2 w-full flex items-center gap-2">
+                        <Activity className="text-emerald-500" /> Player Stats
+                      </h3>
+                      <button onClick={() => setSelectedStaff(null)} className="text-stone-500 hover:text-white -mt-2 ml-4 transition-colors"><X /></button>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">STR</div><div className="text-xl font-black text-red-400 drop-shadow">{selectedStaff.str.toFixed(1)}</div></div>
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">AGI</div><div className="text-xl font-black text-blue-400 drop-shadow">{selectedStaff.agi.toFixed(1)}</div></div>
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">INT</div><div className="text-xl font-black text-purple-400 drop-shadow">{selectedStaff.int.toFixed(1)}</div></div>
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">DEX</div><div className="text-xl font-black text-yellow-400 drop-shadow">{selectedStaff.dex.toFixed(1)}</div></div>
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">CON</div><div className="text-xl font-black text-orange-400 drop-shadow">{selectedStaff.con.toFixed(1)}</div></div>
+                      <div className="bg-stone-800 p-2 rounded-lg border border-stone-700 text-center shadow-inner"><div className="text-xs text-stone-400">SEN</div><div className="text-xl font-black text-pink-400 drop-shadow">{selectedStaff.sen.toFixed(1)}</div></div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-stone-950 p-4 rounded-lg border border-stone-800 shadow-inner">
+                        <h4 className="text-sm font-bold text-stone-400 mb-2 uppercase tracking-wider flex items-center gap-2"><Info size={14} className="text-blue-400"/> รายละเอียดอาชีพ</h4>
+                        <p className="text-stone-300 text-sm leading-relaxed">{arch?.desc}</p>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-emerald-950/20 p-4 rounded-lg border border-emerald-900/40 hover:border-emerald-700/50 transition-colors">
+                          <h4 className="text-xs font-bold text-emerald-500 mb-1 flex items-center gap-1 uppercase tracking-wider"><CheckCircle size={14}/> จุดแข็ง</h4>
+                          <p className="text-emerald-200/80 text-sm">{arch?.strengths}</p>
+                        </div>
+                        <div className="bg-red-950/20 p-4 rounded-lg border border-red-900/40 hover:border-red-700/50 transition-colors">
+                          <h4 className="text-xs font-bold text-red-500 mb-1 flex items-center gap-1 uppercase tracking-wider"><AlertTriangle size={14}/> จุดอ่อน</h4>
+                          <p className="text-red-200/80 text-sm">{arch?.weaknesses}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Manual Modal (Adventurer's Tome) */}
+      {showManual && (
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100000] p-4" onClick={() => setShowManual(false)}>
+          <div className="bg-stone-900 w-full max-w-6xl h-[90vh] rounded-xl border-[6px] border-double border-amber-700 shadow-[0_0_80px_rgba(180,83,9,0.4)] flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            {/* Left Page (List) */}
+            <div className="md:w-1/3 bg-stone-950 border-r border-amber-900/50 flex flex-col shadow-[inset_-10px_0_20px_rgba(0,0,0,0.5)]">
+              <div className="bg-stone-900 px-4 py-4 border-b border-amber-900 flex justify-between items-center bg-[url('https://www.transparenttextures.com/patterns/aged-paper.png')]">
+                <h2 className="text-xl font-black text-amber-500 tracking-widest uppercase drop-shadow-md flex items-center gap-2"><Book /> Adventurer's Tome</h2>
+                <button onClick={() => setShowManual(false)} className="text-stone-500 hover:text-white md:hidden"><X /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1 pb-20">
+                {archetypesData.map(arch => (
+                  <div key={arch.key} onClick={() => {
+                     const rightPane = document.getElementById('manual-content-area');
+                     const targetEl = document.getElementById('arch-' + arch.key);
+                     if (rightPane && targetEl) rightPane.scrollTo({top: targetEl.offsetTop - 40, behavior: 'smooth'});
+                  }} className="flex items-center gap-3 p-2 rounded-lg hover:bg-stone-800 cursor-pointer border border-transparent hover:border-amber-900/50 group transition-all">
+                    <div className="w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center shrink-0 border border-stone-700 group-hover:border-amber-600 transition-colors shadow-inner">
+                      <ClassEmblem archetypeKey={arch.key} size={28} />
+                    </div>
+                    <div className="overflow-hidden flex-1">
+                      <div className="text-sm font-bold text-stone-200 truncate group-hover:text-amber-400 transition-colors">{arch.name}</div>
+                      <div className="text-xs text-amber-700/80 font-semibold truncate group-hover:text-amber-500 transition-colors">{arch.identity}</div>
+                    </div>
+                    <ChevronRight size={16} className="text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right Page (Details) */}
+            <div className="md:w-2/3 bg-stone-900 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
+              <button onClick={() => setShowManual(false)} className="absolute top-4 right-4 text-stone-500 hover:text-white hidden md:block z-10 transition-transform hover:scale-110 bg-stone-800 rounded-full p-2 border border-stone-700"><X /></button>
+              
+              <div id="manual-content-area" className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar scroll-smooth pb-32">
+                <div className="text-center mb-12 relative">
+                  <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-amber-900/50 to-transparent"></div>
+                  <h1 className="text-4xl font-black text-amber-500 mb-2 uppercase tracking-[0.2em] relative inline-block bg-stone-900 px-6 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]">คัมภีร์ 35 สายอาชีพ</h1>
+                  <p className="text-stone-400 text-sm mt-4 max-w-lg mx-auto relative z-10 bg-stone-900 px-4">รวบรวมข้อมูลสายอาชีพทั้งหมดในสมาคมนักผจญภัย เพื่อเป็นแนวทางในการประเมินศักยภาพและดึงจุดเด่นของบุคลากรออกมาใช้ให้เกิดประสิทธิภาพสูงสุด</p>
+                </div>
+                
+                <div className="space-y-16">
+                  {archetypesData.map(arch => (
+                    <div id={'arch-' + arch.key} key={arch.key} className="bg-stone-950/80 rounded-2xl border border-stone-800 p-8 flex flex-col md:flex-row gap-8 hover:border-amber-700/50 transition-colors relative shadow-xl backdrop-blur-sm group">
+                      <div className="shrink-0 flex flex-col items-center justify-start relative">
+                        <div className="w-28 h-28 bg-stone-900 rounded-full border-4 border-stone-700 flex items-center justify-center mb-4 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] group-hover:border-amber-600 transition-colors relative z-10">
+                          <ClassEmblem archetypeKey={arch.key} size={64} />
+                        </div>
+                        <div className="px-3 py-1.5 bg-stone-800 rounded-md text-xs font-mono font-bold text-stone-400 border border-stone-700 shadow-md whitespace-nowrap">{arch.key.toUpperCase().replace(/_/g, ' + ')}</div>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-3xl font-black text-stone-100 mb-1 drop-shadow-md">{arch.name} <span className="text-stone-500 text-lg font-normal tracking-wide">({arch.thai})</span></h3>
+                        <div className="text-amber-500 font-bold mb-5 text-lg inline-block border-b border-amber-900/50 pb-1">{arch.identity}</div>
+                        <p className="text-stone-300 text-base leading-relaxed mb-6 bg-stone-900/50 p-4 rounded-lg border border-stone-800/50">{arch.desc}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-emerald-950/20 p-4 rounded-xl border border-emerald-900/30 shadow-inner hover:bg-emerald-900/20 transition-colors">
+                            <h4 className="text-sm font-bold text-emerald-500 mb-2 uppercase tracking-wider flex items-center gap-2"><Shield size={16}/> จุดแข็ง</h4>
+                            <p className="text-stone-300 text-sm">{arch.strengths}</p>
+                          </div>
+                          <div className="bg-red-950/20 p-4 rounded-xl border border-red-900/30 shadow-inner hover:bg-red-900/20 transition-colors">
+                            <h4 className="text-sm font-bold text-red-500 mb-2 uppercase tracking-wider flex items-center gap-2"><Sword size={16}/> จุดอ่อน</h4>
+                            <p className="text-stone-300 text-sm">{arch.weaknesses}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Task Modal (รายละเอียดงานเดี่ยวๆ) */}
       {selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}
     </div>
   );
 }
-
-
-
-
-
