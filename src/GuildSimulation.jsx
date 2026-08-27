@@ -133,6 +133,7 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [isPlaying, setIsPlaying] = useState(false);
     const [showRoster, setShowRoster] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
+    const [showManual, setShowManual] = useState(false);
     const rosterList = sets?.staffStats || [];
     
     const getStaffProfile = (staffObj) => {
@@ -436,6 +437,7 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
     </div>
   );
 }
+
 
 
 
