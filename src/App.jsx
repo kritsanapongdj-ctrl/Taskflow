@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
@@ -522,7 +522,7 @@ export default function App() {
         else if(sMod.type === 'postpone') { 
             nT.status = 'อยู่ระหว่างดำเนินการ'; 
             nT.endDate = sMod.postponeDate; 
-            nT.emailAlert = { action: 'ขอเลื่อนวันจบงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: `[เดิมจบ: ${fDate(t.endDate)} -> เลื่อนเป็น: ${fDate(sMod.postponeDate)}] ${t.details}` }; 
+            nT.emailAlert = { action: 'ขอเลื่อนวันจบงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: `รายละเอียดงาน: ${t.details}\nวันที่เริ่มเดิม: ${fDate(t.startDate)}\nวันที่จบเดิม: ${fDate(t.endDate)}\nวันที่ขอเลื่อนไป: ${fDate(sMod.postponeDate)}` }; 
         }
         else if(sMod.type === 'complete') { 
             if (sMod.noWO) {
