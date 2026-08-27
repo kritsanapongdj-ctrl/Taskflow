@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity } from 'lucide-react';
+import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const BGM_URL = '/bgm.mp3';
 
 import { AgentPixelArt } from './AgentPixelArt';
+import ClassEmblem from './ClassEmblem';
+import archetypesData from './data/archetypes.json';
 
 const AgentWrapper = ({ type, x, y, action, flip, msg, title }) => {
   const isWalking = action === 'walking';
@@ -92,8 +94,59 @@ const TaskModal = ({ task, onClose }) => {
   );
 };
 
+const RadarChart = ({ stats, size = 180 }) => {
+  const center = size / 2;
+  const radius = (size / 2) - 25;
+  const getPoint = (val, angle) => {
+    const r = (val / 10) * radius;
+    const a = (angle - 90) * (Math.PI / 180);
+    return `${center + r * Math.cos(a)},${center + r * Math.sin(a)}`;
+  };
+  const statKeys = ['STR', 'AGI', 'INT', 'DEX', 'CON', 'SEN'];
+  const angles = [0, 60, 120, 180, 240, 300];
+  const polyPoints = statKeys.map((k, i) => getPoint(stats[k] || 0, angles[i])).join(' ');
+  return (
+    <svg width={size} height={size} className="overflow-visible mx-auto">
+      {[10, 8, 6, 4, 2].map(l => (
+        <polygon key={l} points={angles.map(a => getPoint(l, a)).join(' ')} fill={l===10?"rgba(255,255,255,0.05)":"none"} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+      ))}
+      {angles.map((a, i) => {
+         const p = getPoint(10, a);
+         return (
+           <g key={i}>
+             <line x1={center} y1={center} x2={p.split(',')[0]} y2={p.split(',')[1]} stroke="rgba(255,255,255,0.15)" />
+             <text x={getPoint(13.5, a).split(',')[0]} y={getPoint(13.5, a).split(',')[1]} textAnchor="middle" alignmentBaseline="middle" fontSize="10" fontWeight="bold" fill="#a8a29e">
+               {statKeys[i]}
+             </text>
+           </g>
+         )
+      })}
+      <polygon points={polyPoints} fill="rgba(251, 191, 36, 0.4)" stroke="#f59e0b" strokeWidth="2" />
+      {statKeys.map((k, i) => (
+        <circle key={k} cx={getPoint(stats[k]||0, angles[i]).split(',')[0]} cy={getPoint(stats[k]||0, angles[i]).split(',')[1]} r="3" fill="#fef3c7" />
+      ))}
+    </svg>
+  );
+};
+
+const getMockStaffProfile = (staffName) => {
+   let hash = 0;
+   for(let i=0; i<staffName.length; i++) hash += staffName.charCodeAt(i);
+   const archetype = archetypesData[hash % archetypesData.length];
+   const stats = { STR: 3, AGI: 3, INT: 3, DEX: 3, CON: 3, SEN: 3 };
+   const keys = archetype.key.split('_');
+   keys.forEach(k => { stats[k.toUpperCase()] = 8 + (hash % 3); });
+   Object.keys(stats).forEach(k => {
+      if(!keys.includes(k.toLowerCase())) stats[k] = 3 + ((hash + k.charCodeAt(0)) % 5);
+   });
+   return { archetype, stats };
+};
+
 export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [isPlaying, setIsPlaying] = useState(false);
+    const [showRoster, setShowRoster] = useState(false);
+    const [selectedStaff, setSelectedStaff] = useState(null);
+    const rosterList = Array.from(new Set((sets?.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean);
   const audioRef = useRef(null);
   
   const [selectedTask, setSelectedTask] = useState(null);
@@ -380,3 +433,5 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
     </div>
   );
 }
+
+
