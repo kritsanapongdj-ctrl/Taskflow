@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight, BookOpen, Book, Target, Shield, Sword, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+
 
 const BGM_URL = '/bgm.mp3';
 
@@ -506,13 +508,13 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
                     
                     <div className="w-full h-[250px] mb-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                        <RechartsRadar cx="50%" cy="50%" outerRadius="65%" data={radarData}>
                           <PolarGrid stroke="#444" />
                           <PolarAngleAxis dataKey="subject" tick={{ fill: '#aaa', fontSize: 11 }} />
                           <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
                           <Radar name="Stats" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.4} />
-                        </RadarChart>
-                      </ResponsiveContainer>
+                        </RechartsRadar>
+                        </ResponsiveContainer>
                     </div>
                   </div>
                   
