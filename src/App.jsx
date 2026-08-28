@@ -1022,27 +1022,36 @@ export default function App() {
          }
       }
 
-      const archetypeDescMap = {};
-      const potentialIdentityMap = {"agi_str":"The Blitzkrieg (การรุกคืบฉับพลัน)","dex_str":"The Perfection (มาตรฐานไร้ที่ติ)","int_str":"The Adaptation (การพลิกแพลงปรับตัว)","con_str":"The Endurance (ความทนทานต่อแรงกดดัน)","sen_str":"The Commander (ผู้นำการบริหารงาน)","agi_dex":"The Flawless (ผลงานเนียบไร้รอยขีดข่วน)","agi_int":"The Opportunist (นักบริหารช่องว่างวิกฤต)","agi_con":"The Survivor (ผู้หยัดยืนทุกสภาวะ)","agi_sen":"The Link (ศูนย์กลางเครือข่ายประสานงาน)","dex_int":"The Designer (นักออกแบบระบบงาน)","con_dex":"The Guardian (ผู้พิทักษ์มาตรฐาน)","dex_sen":"The Hunter (นักติดตามและล็อกเป้าหมาย)","con_int":"The Root (ฐานรากอันแข็งแกร่ง)","int_sen":"The Tactician (นักกลยุทธ์)","con_sen":"The Unbreakable (ความมั่นคงที่ไม่สั่นคลอน)","agi_con_dex":"The Watcher (ผู้เฝ้าระวังความราบรื่น)","agi_con_int":"The Nonstop (แรงขับเคลื่อนอย่างต่อเนื่อง)","agi_con_sen":"The Vanguard (กองหน้าผู้เตรียมพร้อม)","agi_con_str":"The Berserk (ความมุ่งมั่นทะลวงอุปสรรค)","agi_dex_int":"The Independent (อิสระในแนวคิด)","agi_dex_sen":"The Mirage (การจัดการอย่างแนบเนียน)","agi_dex_str":"The Quickdraw (การจัดการเด็ดขาดในพริบตา)","agi_int_sen":"The Espionage (นักเจาะลึกข้อมูล)","agi_int_str":"The Catalyst (ปัจจัยเร่งความสำเร็จ)","agi_sen_str":"The Kinetic (พลังขับเคลื่อนทีม)","con_dex_int":"The Origin (จุดเริ่มต้นของระบบงาน)","con_dex_sen":"The Gatekeeper (ผู้คัดกรองและเฝ้าประตูมาตรฐาน)","con_dex_str":"The Xtreme (ขีดสุดแห่งความทุ่มเท)","con_int_sen":"The Pillar (ฐานค้ำจุนทีมงาน)","con_int_str":"The Antithesis (การพลิกวิกฤตสถานการณ์)","con_sen_str":"The Yieldless (ผู้นำที่ไม่ยอมจำนนต่ออุปสรรค)","dex_int_sen":"The Visionary (ผู้หยั่งรู้แนวโน้ม)","dex_int_str":"The Masterpiece (ความเชี่ยวชาญระดับชิ้นเอก)","dex_sen_str":"The X-Axis (จุดตัดแห่งความแม่นยำ)","int_sen_str":"The Almighty (ผู้ควบคุมทิศทางเบ็ดเสร็จ)"};
-
       let archetypeKey = 'novice';
-      let identityText = '-';
-      let bottomDescText = styleDesc;
-
-      if (maxStat <= 5) {
-         if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-         }
-      } else {
-         if (validStats.length >= 2) {
-            if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-               archetypeKey = 'all_rounder';
-            } else {
-               archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
-            }
-         }
-         bottomDescText = validStats.length >= 2 ? archetypeDescMap[archetypeKey] || 'ทำงานได้โดดเด่นและมีเอกลักษณ์เฉพาะตัว' : styleDesc;
-      }
+        let identityText = '-';
+        let bottomDescText = <>{styleDesc}</>;
+  
+        if (maxStat <= 5) {
+           if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+              archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
+           }
+        } else {
+           if (validStats.length >= 2) {
+              if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+                 archetypeKey = 'all_rounder';
+              } else {
+                 archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
+              }
+           }
+        }
+        
+        const archObj = archetypesData.find(a => a.key === archetypeKey);
+        if (archObj && validStats.length >= 2) {
+            bottomDescText = (
+                <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
+                    <span className="text-stone-300 italic">"{archObj.desc}"</span>
+                    <span className="mt-1 flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่น:</span> <span>{archObj.strengths}</span></span>
+                    {archObj.weaknesses && <span className="flex items-start"><span className="text-rose-400 font-bold mr-1 shrink-0">จุดอ่อน:</span> <span>{archObj.weaknesses}</span></span>}
+                </span>
+            );
+        } else {
+            bottomDescText = <span className="text-gray-400 italic block mt-2">{styleDesc}</span>;
+        }
 
       identityText = getArchetypeIdentity(statsObj);
 
