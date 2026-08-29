@@ -95,11 +95,11 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
               <button
                 key={s.id}
                 onClick={() => setActiveTab(s.id)}
-                className={\`flex items-center justify-between p-4 text-left border-b border-slate-200 transition-colors whitespace-nowrap \${activeTab === s.id ? 'bg-white border-l-4 border-l-[#0f2e4a] font-bold text-[#0f2e4a]' : 'text-slate-500 hover:bg-slate-100'}\`}
+                className={`flex items-center justify-between p-4 text-left border-b border-slate-200 transition-colors whitespace-nowrap ${activeTab === s.id ? 'bg-white border-l-4 border-l-[#0f2e4a] font-bold text-[#0f2e4a]' : 'text-slate-500 hover:bg-slate-100'}`}
               >
                 <span>{s.id.toUpperCase()}</span>
                 <div className="flex items-center">
-                  <span className={\`text-xs px-2 py-1 rounded-full text-white \${s.bg}\`}>{calculateAverage(s.id)}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full text-white ${s.bg}`}>{calculateAverage(s.id)}</span>
                 </div>
               </button>
             ))}
@@ -108,12 +108,12 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
           {/* Main Assessment Area */}
           <div className="flex-1 p-6 overflow-y-auto bg-white">
             <div className="mb-6 flex items-center justify-between border-b pb-4">
-              <h3 className={\`text-2xl font-black \${stats.find(s=>s.id===activeTab).color}\`}>
+              <h3 className={`text-2xl font-black ${stats.find(s=>s.id===activeTab).color}`}>
                 {stats.find(s=>s.id===activeTab).label}
               </h3>
               <div className="bg-slate-100 px-4 py-2 rounded-lg">
                 <span className="text-sm text-slate-500 font-bold mr-2">คะแนนเฉลี่ย:</span>
-                <span className={\`text-xl font-black \${stats.find(s=>s.id===activeTab).color}\`}>{calculateAverage(activeTab)} / 10</span>
+                <span className={`text-xl font-black ${stats.find(s=>s.id===activeTab).color}`}>{calculateAverage(activeTab)} / 10</span>
               </div>
             </div>
 
@@ -143,8 +143,8 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
                     </div>
 
                     {/* Dynamic Guideline Box */}
-                    <div className={\`mt-4 p-4 rounded-lg border bg-white \${guide.color.replace('text-', 'border-').replace('500', '200')} shadow-inner\`}>
-                      <div className={\`text-xs font-black uppercase mb-1 \${guide.color}\`}>
+                    <div className={`mt-4 p-4 rounded-lg border bg-white ${guide.color.replace('text-', 'border-').replace('500', '200')} shadow-inner`}>
+                      <div className={`text-xs font-black uppercase mb-1 ${guide.color}`}>
                         {guide.level}
                       </div>
                       <p className="text-sm text-slate-700 leading-relaxed">

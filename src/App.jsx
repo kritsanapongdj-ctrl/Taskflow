@@ -7,6 +7,7 @@ import Cropper from 'react-easy-crop';
 import * as XLSX from 'xlsx';
 import GuildSimulation from './GuildSimulation.jsx';
 import ClassEmblem from './ClassEmblem.jsx';
+import AssessmentModal from './AssessmentModal.jsx';
 import archetypesData from './data/archetypes.json';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
@@ -1109,11 +1110,14 @@ export default function App() {
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
            <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
-              <div className="absolute top-4 right-4 z-20">
-                <button type="button" onClick={() => setTeamEditMode(true)} className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
-                  <Icon name="settings" size={18} />
-                </button>
-              </div>
+              <div className="absolute top-4 right-4 z-20 flex gap-2">
+                  <button type="button" onClick={() => setTeamEditMode(true)} title="ตั้งค่าข้อมูลพื้นฐาน" className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
+                    <Icon name="settings" size={18} />
+                  </button>
+                  <button type="button" onClick={() => setAssessMode(true)} title="ประเมินศักยภาพบุคลากร" className="bg-[#bca374]/20 hover:bg-[#bca374]/40 border border-[#bca374]/30 text-[#e6d0a7] hover:text-white p-2 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(188,163,116,0.3)]">
+                    <Icon name="clipboard-check" size={18} />
+                  </button>
+                </div>
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
