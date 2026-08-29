@@ -1046,22 +1046,23 @@ export default function App() {
             const lowestStatValue = sortedStats[5][1];
             const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
             
-            const weakDefs = { 
-                str: 'พลังขับเคลื่อน/ลุยงาน', 
-                agi: 'ความรวดเร็วคล่องตัว', 
-                dex: 'ความละเอียดรอบคอบ', 
-                int: 'การวิเคราะห์/วางระบบ', 
-                con: 'ความทนทานต่อแรงกดดัน', 
-                sen: 'ไหวพริบ/การจัดการความรู้สึก' 
+            const weakBehaviorDefs = { 
+                str: 'อาจขาดความเด็ดขาดในการลุยงาน หรือลังเลที่จะตัดสินใจแก้ปัญหาเฉพาะหน้า (STR)', 
+                agi: 'อาจตอบสนองต่อปัญหาได้ช้า และปรับตัวไม่ทันเมื่อสถานการณ์เปลี่ยนแปลงกะทันหัน (AGI)', 
+                dex: 'อาจมีข้อผิดพลาดหลุดรอดในรายละเอียดงาน ขาดความประณีตเมื่อต้องเน้นความถูกต้องสูง (DEX)', 
+                int: 'อาจมองข้ามต้นตอของปัญหา หรือวางแผนระบบรับมือล่วงหน้าได้ไม่รัดกุมพอ (INT)', 
+                con: 'อาจทนรับความกดดันจากงานที่ยืดเยื้อไม่ได้ดีนัก และเสี่ยงต่อภาวะหมดไฟได้ง่าย (CON)', 
+                sen: 'อาจละเลยความรู้สึกของทีมที่ตามไม่ทัน สื่อสารเจตนาคลาดเคลื่อน หรือขาดการประนีประนอม (SEN)' 
             };
-            const weakNames = lowestStats.map(s => weakDefs[s[0]]).join(' และ ');
+            const weakBehaviors = lowestStats.map(s => weakBehaviorDefs[s[0]]).join(' รวมถึง ');
 
             if (lowestStatValue <= 4) {
-                dynamicWeakness = `ต้องระวังการปฏิบัติงานด้าน ${weakNames} (คะแนน: ${lowestStatValue}/10) ซึ่งยังต่ำกว่าเกณฑ์มาตรฐานที่ยอมรับได้`;
+                weaknessLabel = "จุดอ่อน:";
+                dynamicWeakness = `${weakBehaviors} (สเตตัสต่ำกว่าเกณฑ์มาตรฐาน: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแล`;
             } else {
-                weaknessLabel = "จุดพัฒนา:";
+                weaknessLabel = "ข้อควรระวัง:";
                 weaknessColor = "text-amber-400";
-                dynamicWeakness = `ทักษะด้าน ${weakNames} อยู่ในระดับปกติ (คะแนน: ${lowestStatValue}/10) แต่สามารถยกระดับให้โดดเด่นขึ้นได้อีก`;
+                dynamicWeakness = `${weakBehaviors} แม้จะอยู่ในระดับที่สอบผ่าน (${lowestStatValue}/10) แต่ถือเป็นจุดที่ยังอ่อนที่สุดเมื่อเทียบกับศักยภาพด้านอื่นของพนักงาน`;
             }
 
             bottomDescText = (
