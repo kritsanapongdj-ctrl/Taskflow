@@ -190,6 +190,7 @@ export default function App() {
   const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
   const [teamEditMode, setTeamEditMode] = useState(false);
+  const [assessMode, setAssessMode] = useState(false);
 
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', staffName: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
   const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' });
