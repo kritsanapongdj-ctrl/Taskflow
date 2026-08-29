@@ -1105,6 +1105,26 @@ export default function App() {
       ].map(o => ({...o, finalVal: (u[o.k] !== null && u[o.k] !== undefined) ? u[o.k] : o.val}));
 
       return (
+          <>
+            <AssessmentModal 
+               isOpen={assessMode} 
+               onClose={() => setAssessMode(false)} 
+               staff={teamForm} 
+               onSave={(newStats) => {
+                  const ns = [...(sets.staffStats||[])];
+                  const idx = ns.findIndex(x => x.id === teamForm.id);
+                  if (idx >= 0) {
+                     ns[idx] = { ...ns[idx], ...newStats };
+                  }
+                  const newSets = { ...sets, staffStats: ns };
+                  setSets(newSets);
+                  saveD('settings', newSets);
+                  setTeamForm({ ...teamForm, ...newStats });
+                  setSelTeam({ ...selTeam, ...newStats });
+                  setAssessMode(false);
+                  alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
+               }}
+            />
         <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[450px]">
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
@@ -1199,10 +1219,10 @@ export default function App() {
               
               <div className="absolute bottom-10 -right-10 text-[150px] font-black text-white/5 whitespace-nowrap pointer-events-none z-0 transform -rotate-12 select-none tracking-tighter mix-blend-overlay">
                  {u.name.split(' ')[0]}
-              </div>
+                           </div>
            </div>
         </div>
-      );
+      </>);
     };
 
     const renderAnalysis = () => {
