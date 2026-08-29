@@ -998,9 +998,7 @@ export default function App() {
          } else if (maxStat <= 3) {
             mainStyleRaw = 'Apprentice (ผู้ฝึกหัด)'; styleDesc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
          } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            const bestKey = sortedStats[0][0]; const secondBestKey = sortedStats[1][0];
-            let topName = archetypeMapTop2[[bestKey, secondBestKey].sort().join('_')] || 'Specialist (สายเฉพาะทาง)';
-            mainStyleRaw = `Rookie ${topName.split(' ')[0]} (ดาวรุ่งสาย${getDesc(bestKey)})`; styleDesc = `เริ่มฉายแววในด้าน${getDesc(bestKey)} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
+            mainStyleRaw = 'Trainee (อยู่ในช่วงพัฒนาทักษะ)'; styleDesc = 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์ปฏิบัติงานขั้นต้น (มาตรฐาน = 5) จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิดและไม่ควรให้รับผิดชอบงานหลักเพียงลำพัง';
          } else {
             mainStyleRaw = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
          }
@@ -1042,11 +1040,35 @@ export default function App() {
         
         const archObj = archetypesData.find(a => a.key === archetypeKey);
         if (archObj && validStats.length >= 2) {
+            let dynamicWeakness = "";
+            let weaknessLabel = "จุดอ่อน:";
+            let weaknessColor = "text-rose-400";
+            const lowestStatValue = sortedStats[5][1];
+            const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
+            
+            const weakDefs = { 
+                str: 'พลังขับเคลื่อน/ลุยงาน', 
+                agi: 'ความรวดเร็วคล่องตัว', 
+                dex: 'ความละเอียดรอบคอบ', 
+                int: 'การวิเคราะห์/วางระบบ', 
+                con: 'ความทนทานต่อแรงกดดัน', 
+                sen: 'ไหวพริบ/การจัดการความรู้สึก' 
+            };
+            const weakNames = lowestStats.map(s => weakDefs[s[0]]).join(' และ ');
+
+            if (lowestStatValue <= 4) {
+                dynamicWeakness = `ต้องระวังการปฏิบัติงานด้าน ${weakNames} (คะแนน: ${lowestStatValue}/10) ซึ่งยังต่ำกว่าเกณฑ์มาตรฐานที่ยอมรับได้`;
+            } else {
+                weaknessLabel = "จุดพัฒนา:";
+                weaknessColor = "text-amber-400";
+                dynamicWeakness = `ทักษะด้าน ${weakNames} อยู่ในระดับปกติ (คะแนน: ${lowestStatValue}/10) แต่สามารถยกระดับให้โดดเด่นขึ้นได้อีก`;
+            }
+
             bottomDescText = (
                 <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
                     <span className="text-stone-300 italic">"{archObj.desc}"</span>
                     <span className="mt-1 flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่น:</span> <span>{archObj.strengths}</span></span>
-                    {archObj.weaknesses && <span className="flex items-start"><span className="text-rose-400 font-bold mr-1 shrink-0">จุดอ่อน:</span> <span>{archObj.weaknesses}</span></span>}
+                    <span className="flex items-start"><span className={`font-bold mr-1 shrink-0 ${weaknessColor}`}>{weaknessLabel}</span> <span>{dynamicWeakness}</span></span>
                 </span>
             );
         } else {
@@ -1326,9 +1348,7 @@ export default function App() {
          } else if (maxStat <= 3) {
             mainStyle = 'Apprentice (ผู้ฝึกหัด)'; styleDesc = 'อยู่ในช่วงเริ่มต้นหรือยังไม่คุ้นเคยกับกระบวนการ ต้องการการสอนงานอย่างใกล้ชิด (OJT) และกำหนดเป้าหมายที่ชัดเจน';
          } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            const bestKey = sortedStats[0][0]; const secondBestKey = sortedStats[1][0];
-            let topName = archetypeMapTop2[[bestKey, secondBestKey].sort().join('_')] || 'Specialist (สายเฉพาะทาง)';
-            mainStyle = `Rookie ${topName.split(' ')[0]} (ดาวรุ่งสาย${getDesc(bestKey).split(' ')[0]})`; styleDesc = `เริ่มฉายแววในด้าน${getDesc(bestKey)} แต่ทักษะอื่นยังไม่เสถียร ควรส่งเสริมจุดแข็งและใช้พี่เลี้ยงประคองจุดอ่อน`;
+            mainStyle = 'Trainee (อยู่ในช่วงพัฒนาทักษะ)'; styleDesc = 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์ปฏิบัติงานขั้นต้น (มาตรฐาน = 5) จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิดและไม่ควรให้รับผิดชอบงานหลักเพียงลำพัง';
          } else {
             mainStyle = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
          }
