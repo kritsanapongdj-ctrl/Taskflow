@@ -462,7 +462,7 @@ export default function AgentPixelArtGallery() {
                 <p className="text-stone-400 text-[10px] leading-relaxed">
                   {{
                     scout:     'สำรวจนอกกิลด์\nดึงข้อมูลใหม่',
-                    wizard:    'วิเคราะห์เควสต์\nแปะกระดาน',
+                    wizard:    'วางระบบเควสต์\nแปะกระดาน',
                     watcher:   'ลาดตระเวน\nตรวจจับงานล่าช้า',
                     evaluator: 'เขียนรายงาน\nสรุปสถิติรายวัน',
                   }[type]}
@@ -477,3 +477,4 @@ export default function AgentPixelArtGallery() {
     </div>
   );
 }
+

@@ -60,12 +60,20 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
   const getGuidelineText = (statId, index, currentScore) => {
     const rubrics = rubricsData[statId][index].levels;
-    if (currentScore <= 3) return { text: rubrics["1"], level: "ระดับพื้นฐาน (1-3)", color: "text-red-500" };
-    if (currentScore === 4) return { text: rubrics["4"], level: "ระดับพอใช้ (4)", color: "text-orange-500" };
-    if (currentScore === 5) return { text: rubrics["5"], level: "ระดับมาตรฐานขั้นต้น (5)", color: "text-emerald-600" };
-    if (currentScore === 6) return { text: rubrics["6"], level: "ระดับมาตรฐานขั้นดี (6)", color: "text-emerald-500" };
-    if (currentScore <= 8) return { text: rubrics["7"], level: "ระดับสูง (7-8)", color: "text-blue-500" };
-    return { text: rubrics["9"], level: "ระดับสูงสุด (9-10)", color: "text-purple-500" };
+    const v = String(currentScore);
+    const levelMap = {
+      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (Crisis)", color: "text-red-700" },
+      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (Poor)", color: "text-red-500" },
+      "3": { text: rubrics["3"], level: "ต้องการการดูแล (Needs Help)", color: "text-orange-600" },
+      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (Below Average)", color: "text-orange-500" },
+      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (Standard)", color: "text-emerald-600" },
+      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (Good)", color: "text-emerald-500" },
+      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (Advanced)", color: "text-blue-500" },
+      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (Expert)", color: "text-blue-600" },
+      "9": { text: rubrics["9"], level: "ระดับผู้นำ (Mastery)", color: "text-purple-500" },
+      "10": { text: rubrics["10"], level: "ระดับตำนาน (Legendary)", color: "text-purple-600" }
+    };
+    return levelMap[v] || levelMap["5"];
   };
 
   return (
