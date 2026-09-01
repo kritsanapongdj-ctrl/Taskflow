@@ -114,8 +114,8 @@ const RadarChart = ({ baseStats = [], userStats = [] }) => {
       {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
       {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
       {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="11" fontWeight="bold" fill="#4b5563" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
-      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.4)" stroke="#0f2e4a" strokeWidth="2" />}
-      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" />; })}
+      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.4)" stroke="#0f2e4a" strokeWidth="2" style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />}
+      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />; })}
     </svg>
   );
 };
@@ -136,18 +136,21 @@ const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m =
 const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Array.from(new Set(data.flatMap(Object.keys))); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
 
 const SimplePieChart = ({ data, title }) => {
-  let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); const getC = (p) => [Math.cos(2*Math.PI*p), Math.sin(2*Math.PI*p)];
+  let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); 
+  const C = Math.PI / 2; 
   return (
     <div className="flex flex-col items-center w-full">
       <h3 className="text-sm font-bold mb-4 text-[#0f2e4a]">{title}</h3>
       {t === 0 ? <div className="w-32 h-32 rounded-full border-4 flex items-center justify-center text-xs text-gray-400">ไม่มีข้อมูล</div> : 
-      <svg viewBox="-1 -1 2 2" className="w-32 h-32 -rotate-90">
+      <svg viewBox="0 0 1 1" className="w-32 h-32 -rotate-90 rounded-full" style={{ overflow: 'hidden' }}>
         {data.map((s, i) => { 
-          if(s.value===0) return null; const [sX, sY] = getC(cP); cP += s.value/t; const [eX, eY] = getC(cP); 
-          if(s.value===t) return <circle key={i} cx="0" cy="0" r="1" fill={s.color} />; 
-          return <path key={i} d={`M ${sX} ${sY} A 1 1 0 ${s.value/t>0.5?1:0} 1 ${eX} ${eY} L 0 0`} fill={s.color}><title>{s.name}: {s.value}</title></path>; 
+          if(s.value===0) return null; 
+          const dash = (s.value / t) * C;
+          const offset = -(cP / t) * C;
+          cP += s.value; 
+          return <circle key={i} cx="0.5" cy="0.5" r="0.25" fill="none" stroke={s.color} strokeWidth="0.5" strokeDasharray={`${dash} ${C}`} strokeDashoffset={offset} style={{ transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}><title>{s.name}: {s.value}</title></circle>; 
         })}
-        <circle cx="0" cy="0" r="0.6" fill="white" />
+        <circle cx="0.5" cy="0.5" r="0.15" fill="white" />
       </svg>}
       <div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">{data.map((item, i)=><div key={i} className="flex items-center"><span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: item.color}}></span>{item.name} ({item.value})</div>)}</div>
     </div>
@@ -693,7 +696,7 @@ export default function App() {
     return (
       <div className="space-y-6 animate-in">
         <h2 className="text-xl font-bold text-[#0f2e4a] flex items-center"><Icon name="layoutDashboard" size={20} className="mr-2"/> ภาพรวม (เดือน {gFilt.month})</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{l:'ปริมาณงานรวม', v:mt.length, i:'listTodo', c:THEME.primary}, {l:'งานวันนี้', v:dy.length, i:'calendar', c:THEME.secondary}, {l:'งานล่าช้า/เกินกำหนด', v:ov.length, i:'alertTriangle', c:THEME.danger, clk:true}].map((x,i) => (<div key={i} onClick={()=>x.clk && setOPop({isOpen:true, tasks:ov})} className={`bg-white p-6 rounded-xl shadow-sm border-l-[6px] flex justify-between items-center ${x.clk?'cursor-pointer hover:shadow-md border-red-500':'border-[#0f2e4a]'}`}><div><div className="text-xs text-gray-500 font-bold mb-1">{x.l} {x.clk && <span className="text-[9px] text-red-500 bg-red-50 px-1 rounded">(คลิกดู)</span>}</div><div className="text-3xl font-black">{x.v}</div></div><div className="p-3 bg-gray-50 rounded-full"><Icon name={x.i} size={24} color={x.c}/></div></div>))}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{l:'ปริมาณงานรวม', v:mt.length, i:'listTodo', c:THEME.primary}, {l:'งานวันนี้', v:dy.length, i:'calendar', c:THEME.secondary}, {l:'งานล่าช้า/เกินกำหนด', v:ov.length, i:'alertTriangle', c:THEME.danger, clk:true}].map((x,i) => (<div key={i} onClick={()=>x.clk && setOPop({isOpen:true, tasks:ov})} className={`bg-white p-6 rounded-xl shadow-sm border-l-[6px] flex justify-between items-center transition-all duration-300 ${x.clk?'cursor-pointer hover:shadow-md border-red-500 hover:-translate-y-1':'border-[#0f2e4a] hover:shadow-md hover:-translate-y-1'}`}><div><div className="text-xs text-gray-500 font-bold mb-1">{x.l} {x.clk && <span className="text-[9px] text-red-500 bg-red-50 px-1 rounded">(คลิกดู)</span>}</div><div key={x.v} className="text-3xl font-black animate-in fade-in slide-in-from-bottom-2 duration-500">{x.v}</div></div><div className="p-3 bg-gray-50 rounded-full transition-transform duration-500 hover:scale-110 hover:rotate-3"><Icon name={x.i} size={24} color={x.c}/></div></div>))}</div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้"/></div><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(mt)} title="สถานะเดือนนี้"/></div></div>
       </div>
     );
