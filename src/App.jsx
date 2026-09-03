@@ -3,14 +3,13 @@ import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import Cropper from 'react-easy-crop';
 import * as XLSX from 'xlsx';
 import GuildSimulation from './GuildSimulation.jsx';
-import ClassEmblem from './ClassEmblem.jsx';
-import AssessmentModal from './AssessmentModal.jsx';
-import archetypesData from './data/archetypes.json';
-import RadarChart from './components/charts/RadarChart.jsx';
-import SimplePieChart from './components/charts/SimplePieChart.jsx';
+import TaskFormModal from './components/modals/TaskFormModal.jsx';
+import StatusChangeModal from './components/modals/StatusChangeModal.jsx';
+import InformDetailModal from './components/modals/InformDetailModal.jsx';
+import InformStatusModal from './components/modals/InformStatusModal.jsx';
+import AvatarCropModal from './components/modals/AvatarCropModal.jsx';
 import DashboardTab from './pages/DashboardTab.jsx';
 import DailyTasksTab from './pages/DailyTasksTab.jsx';
 import MonthlyCalendarTab from './pages/MonthlyCalendarTab.jsx';
@@ -73,40 +72,6 @@ const GlobalStyles = () => (
 // --- ฟังก์ชันช่วยเหลือต่างๆ ---
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
 const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
-const POTENTIAL_IDENTITY_MAP = {};
-archetypesData.forEach(a => {
-   POTENTIAL_IDENTITY_MAP[a.key] = a.identity;
-});
-const getArchetypeIdentity = (statsObj) => {
-      if (!statsObj) return '-';
-      const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
-      const rawStats = Object.keys(tieBreakers).map(k => Number(statsObj[k])||0);
-      const maxStat = Math.max(...rawStats);
-      const minStat = Math.min(...rawStats);
-      
-      if (maxStat <= 5) {
-         if (maxStat === 5 && minStat === 5) return 'The Standard (ผลงานตามมาตรฐาน)';
-         if (maxStat === 4 && minStat === 4) return 'The Maintainer (ผู้ประคองงาน)';
-         if (maxStat <= 3 && minStat === maxStat) return 'Needs Attention (ผู้ต้องได้รับการดูแล)';
-         if (minStat >= 4) return 'Undeveloped Potential (ศักยภาพที่ยังไม่ถูกพัฒนา)';
-         if (maxStat <= 3) return 'The Beginner (ผู้เริ่มต้น)';
-         const has4 = rawStats.some(v => v >= 4);
-         const has3 = rawStats.some(v => v <= 3);
-         if (has4 && has3) return 'Emerging Talent (พรสวรรค์ที่เพิ่งฉายแวว)';
-         return 'Uncalibrated (ยังไม่ผ่านการสอบเทียบ)';
-      }
-
-      const validStats = Object.keys(tieBreakers).map(k => ({ key: k, val: Number(statsObj[k])||0, adj: (Number(statsObj[k])||0) + tieBreakers[k] })).filter(s => s.val >= 5).sort((a,b) => b.adj - a.adj);
-      if (validStats.length < 2) return 'Novice (ระดับเริ่มต้น)';
-      if (validStats.length === 6 && validStats[0].val === validStats[5].val) return 'All-Rounder (สายสมดุล)';
-      const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
-      const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
-      const POTENTIAL_IDENTITY_MAP = {};
-archetypesData.forEach(a => {
-   POTENTIAL_IDENTITY_MAP[a.key] = a.identity;
-});
-      return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
-  };
 
 const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   const iconName = Object.keys(LucideIcons).find(k => k.toLowerCase() === name.toLowerCase().replace(/[-_]/g, ''));
@@ -147,6 +112,9 @@ export default function App() {
   const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5, cx: null, tech: null, sla: null, crisis: null, resource: null, innovation: null });
   const [selTeam, setSelTeam] = useState(null);
   const [cropModal, setCropModal] = useState({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCropModal(prev => ({ ...prev, croppedAreaPixels }));
+  };
 
   const [emForm, setEmForm] = useState({ name: '', email: '', selectedProjs: [] });
 
@@ -638,20 +606,6 @@ export default function App() {
   
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
 
-  const GFBar = () => {
-    if(tab === 'settings') return null;
-    return (
-      <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center text-sm shadow-sm z-10 sticky top-14">
-        <span className="font-bold text-gray-500 mr-2"><Icon name="filter" size={16} className="inline mr-1"/> ตัวกรอง:</span>
-        {tab !== 'daily' ? <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" /> : <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" />}
-        <select value={gFilt.staffName} onChange={e=>setGilt({...gFilt, staffName: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select>
-        <select value={gFilt.area} onChange={e=>setGilt({...gFilt, area: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกพื้นที่</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select>
-        <select value={gFilt.project} onChange={e=>setGilt({...gFilt, project: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกโครงการ</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select>
-        {tab === 'inform' && iTab === 'manage' && <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกสถานะ</option><option value="รอดำเนินการ">รอดำเนินการ</option><option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option></select>}
-      </div>
-    );
-  };
-
 
   const saveCroppedImage = () => {
     if (!cropModal.imageSrc || !cropModal.croppedAreaPixels) return;
@@ -735,7 +689,16 @@ export default function App() {
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
             <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
-            <GFBar />
+            {tab !== 'settings' && (
+              <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center text-sm shadow-sm z-10 sticky top-14">
+                <span className="font-bold text-gray-500 mr-2"><Icon name="filter" size={16} className="inline mr-1"/> ตัวกรอง:</span>
+                {tab !== 'daily' ? <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" /> : <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" />}
+                <select value={gFilt.staffName} onChange={e=>setGilt({...gFilt, staffName: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select>
+                <select value={gFilt.area} onChange={e=>setGilt({...gFilt, area: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกพื้นที่</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select>
+                <select value={gFilt.project} onChange={e=>setGilt({...gFilt, project: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกโครงการ</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select>
+                {tab === 'inform' && iTab === 'manage' && <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกสถานะ</option><option value="รอดำเนินการ">รอดำเนินการ</option><option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option></select>}
+              </div>
+            )}
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               {tab === 'dashboard' && (
                 <DashboardTab
@@ -911,175 +874,48 @@ export default function App() {
             fDate={fDate}
             Icon={Icon}
           />
-          {tMod && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                <div className="bg-[#0f2e4a] p-4 flex justify-between text-white">
-                  <h3 className="font-bold">{eTask?'แก้ไข':'เพิ่ม'}งานประจำวัน</h3>
-                  <button type="button" onClick={()=>{setTMod(false);setSReason('');setShowStartReason(false);}}><Icon name="x" size={18}/></button>
-                </div>
-                <form onSubmit={subT} className="p-5 space-y-3 max-h-[70vh] overflow-auto">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-500">วันที่รับเรื่อง (ห้ามแก้ไขย้อนหลัง)</label>
-                    <input type="date" required value={taskForm.receivedDate} onChange={e=>setTaskForm({...taskForm, receivedDate: e.target.value})} disabled={!!eTask} className="w-full border rounded p-2 text-sm bg-gray-50" />
-                  </div>
-                  <textarea required value={taskForm.details} onChange={e=>setTaskForm({...taskForm, details: e.target.value})} rows="2" placeholder="รายละเอียดงาน..." className="w-full border rounded p-2 text-sm outline-none"></textarea>
-                  
-                  <div className="flex gap-2">
-                    <select required value={taskForm.requester} onChange={e=>setTaskForm({...taskForm, requester: e.target.value})} className="w-1/2 border rounded p-2 text-sm">
-                        <option value="">ผู้แจ้ง...</option>{REQ_TYPES.map(r=><option key={r}>{r}</option>)}
-                    </select>
-                    <select value={taskForm.slaCategory} onChange={e=>setTaskForm({...taskForm, slaCategory: e.target.value})} className="w-1/2 border rounded p-2 text-sm">
-                        <option value="">--- กรุณาเลือกหมวด SLA ---</option>
-                        <option value="งานทั่วไป (ไม่มี SLA)">งานทั่วไป (ไม่มี SLA)</option>
-                        {(sets.slas||[]).map(s=><option key={s} value={getProjName(s)}>{getProjName(s)} ({getProjArea(s)} วัน)</option>)}
-                    </select>
-                  </div>
+          <TaskFormModal
+            isOpen={tMod}
+            onClose={() => { setTMod(false); setSReason(''); setShowStartReason(false); }}
+            onSubmit={subT}
+            taskForm={taskForm}
+            setTaskForm={setTaskForm}
+            eTask={eTask}
+            REQ_TYPES={REQ_TYPES}
+            sets={sets}
+            getProjName={getProjName}
+            getProjArea={getProjArea}
+            checkStaffMatch={checkStaffMatch}
+            showStartReason={showStartReason}
+            setShowStartReason={setShowStartReason}
+            sRsn={sRsn}
+            setSReason={setSReason}
+            Icon={Icon}
+          />
 
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-500 mb-1 block">เจ้าหน้าที่ดูแลโครงการ (ตัวกรองโครงการ)</label>
-                    <select value={taskForm.staffName} onChange={e=>setTaskForm({...taskForm, staffName: e.target.value, project: '', area: ''})} className="w-full border rounded p-2 text-sm bg-blue-50">
-                        <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
-                        {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
+          <StatusChangeModal
+            isOpen={sMod.isOpen}
+            onClose={() => setSMod({ ...sMod, isOpen: false, noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() })}
+            onConfirm={cfSt}
+            sMod={sMod}
+            setSMod={setSMod}
+            getTStr={getTStr}
+          />
 
-                  <div className="flex gap-2">
-                    <select required value={taskForm.project} onChange={(e)=>{ const p = (sets.projects||[]).find(x=>getProjName(x)===e.target.value); setTaskForm({...taskForm, project: e.target.value, area: getProjArea(p)}); }} className="w-2/3 border rounded p-2 text-sm">
-                        <option value="">โครงการ (เลือกเพื่อดึงพื้นที่)...</option>
-                        {(sets.projects||[]).filter(p => !taskForm.staffName || checkStaffMatch(getProjName(p), taskForm.staffName)).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}
-                    </select>
-                    <input type="text" readOnly value={taskForm.area} placeholder="พื้นที่..." className="w-1/3 border rounded p-2 text-sm bg-gray-100" />
-                  </div>
+          <InformDetailModal
+            inform={infView}
+            onClose={() => setInfView(null)}
+            fDate={fDate}
+            Icon={Icon}
+          />
 
-                  <div className="flex gap-2">
-                    <div className="w-1/2">
-                        <label className="text-[10px] font-bold">เริ่มงาน</label>
-                        <input type="date" required value={taskForm.startDate} onChange={(e)=>{ setTaskForm({...taskForm, startDate: e.target.value}); if(eTask) setShowStartReason(e.target.value !== eTask.startDate); }} className="w-full border rounded p-2 text-sm" />
-                    </div>
-                    <div className="w-1/2">
-                        <label className="text-[10px] font-bold">กำหนดเสร็จ</label>
-                        <input type="date" required value={taskForm.endDate} onChange={e=>setTaskForm({...taskForm, endDate: e.target.value})} className="w-full border rounded p-2 text-sm" />
-                    </div>
-                  </div>
-                  
-                  {showStartReason && (
-                    <div className="mt-2 animate-in"><label className="text-[10px] font-bold text-red-500">เหตุผลที่เลื่อนวันเริ่ม (บังคับ) *</label><textarea required value={sRsn} onChange={e=>setSReason(e.target.value)} rows="2" className="w-full border border-red-300 rounded p-2 text-sm outline-none bg-red-50"></textarea></div>
-                  )}
-                  <div className="text-right mt-4 flex gap-2">
-                    <button type="button" onClick={()=>{setTMod(false);setSReason('');setShowStartReason(false);}} className="bg-gray-200 px-4 py-2 rounded text-sm font-bold flex-1">ยกเลิก</button>
-                    <button type="submit" disabled={showStartReason && !sRsn.trim()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded text-sm font-bold flex-1 disabled:opacity-50">บันทึก</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {sMod.isOpen && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-              <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
-                <h3 className={`font-bold text-lg mb-3 ${sMod.type==='cancel'?'text-red-500':sMod.type==='postpone'?'text-amber-500':'text-green-500'}`}>
-                  {sMod.type==='cancel'?'ยกเลิกงาน':sMod.type==='postpone'?'เลื่อนวันจบงาน':'ยืนยันจบงาน'}
-                </h3>
-                <div className="space-y-3">
-                  {sMod.type==='cancel' && (
-                    <div>
-                      <label className="text-xs font-bold text-red-500">เหตุผลบังคับ *</label>
-                      <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-red-50" value={sMod.reason} onChange={e=>setSMod({...sMod,reason:e.target.value})}></textarea>
-                    </div>
-                  )}
-                  {sMod.type==='postpone' && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-bold text-amber-600">วันที่ขอเลื่อนไป *</label>
-                        <input type="date" className="w-full border rounded p-2 text-sm bg-amber-50" value={sMod.postponeDate} onChange={e=>setSMod({...sMod,postponeDate:e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-amber-600">เหตุผลที่ขอเลื่อน *</label>
-                        <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-amber-50" placeholder="ระบุเหตุผล..." value={sMod.reason} onChange={e=>setSMod({...sMod,reason:e.target.value})}></textarea>
-                      </div>
-                    </div>
-                  )}
-                  {sMod.type==='complete' && (
-                    <div className="space-y-3">
-                      {sMod.isOverdue && (
-                        <div>
-                          <label className="text-xs font-bold text-red-500">สาเหตุที่จบงานช้ากว่ากำหนด (บังคับ) *</label>
-                          <textarea rows="2" className="w-full border rounded p-2 text-sm resize-none bg-red-50" placeholder="ระบุเหตุผลที่งานล่าช้า..." value={sMod.overdueReason} onChange={e=>setSMod({...sMod,overdueReason:e.target.value})}></textarea>
-                        </div>
-                      )}
-                      <div>
-                        <label className="text-xs font-bold text-green-700">เลขที่ใบงาน (บังคับ: อักษร 2 ตัว-เลข 3 ตัว-เลข 7 ตัว) *</label>
-                        <input type="text" placeholder="ตัวอย่าง: LH-123-1234567" disabled={sMod.noWO} className={`w-full border rounded p-2 text-sm uppercase ${sMod.noWO ? 'bg-gray-100 border-gray-300 text-gray-400' : 'bg-green-50 border-green-300'}`} value={sMod.workOrderNo} onChange={e=>setSMod({...sMod,workOrderNo:e.target.value.toUpperCase()})} />
-                        
-                        {!sMod.forceWO && (
-                          <label className="flex items-start mt-3 text-xs text-gray-700 bg-gray-50 p-2 rounded border cursor-pointer">
-                            <input type="checkbox" checked={sMod.noWO} onChange={e => setSMod({...sMod, noWO: e.target.checked, workOrderNo: ''})} className="mt-0.5 mr-2 accent-[#0f2e4a]" />
-                            <span>ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน<br/><span className="text-red-500 font-bold text-[10px]">(ต้องกลับมาใส่ภายใน 3 วัน ไม่เช่นนั้นระบบจะประทับตรา "ออกใบงานช้า")</span></span>
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 mt-5">
-                  <button type="button" onClick={()=>setSMod({...sMod, isOpen:false, noWO:false, forceWO:false, isOverdue:false, overdueReason:'', postponeDate: getTStr()})} className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded">ปิด</button>
-                  <button type="button" onClick={cfSt} disabled={((sMod.type==='cancel'||sMod.type==='postpone')&&!sMod.reason.trim()) || (sMod.type==='complete' && !sMod.noWO && !sMod.workOrderNo.trim()) || (sMod.type==='complete' && sMod.isOverdue && !sMod.overdueReason.trim())} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50 shadow-sm active:scale-95 transition-all">ยืนยัน</button>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {infView && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setInfView(null)}>
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in" onClick={e=>e.stopPropagation()}>
-                <div className="bg-[#0f2e4a] p-4 flex justify-between text-white">
-                  <h3 className="font-bold flex items-center"><Icon name="search" size={16} className="mr-2"/> รายละเอียดรับแจ้ง</h3>
-                  <button type="button" onClick={()=>setInfView(null)}><Icon name="x" size={18}/></button>
-                </div>
-                <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-3 text-xs border-b pb-3">
-                    <div><span className="text-gray-400 font-bold">วันที่แจ้ง</span><br/><span className="font-bold text-gray-800">{fDate(infView.date)}</span></div>
-                    <div><span className="text-gray-400 font-bold">รหัสอ้างอิง</span><br/><span className="font-bold text-gray-800">{infView.id}</span></div>
-                    <div><span className="text-gray-400 font-bold">ผู้แจ้ง</span><br/><span className="font-bold text-gray-800">{infView.requesterName}</span></div>
-                    <div><span className="text-gray-400 font-bold">เบอร์ติดต่อ</span><br/><span className="font-bold text-gray-800">{infView.phone||'-'}</span></div>
-                    <div><span className="text-gray-400 font-bold">โครงการ</span><br/><span className="font-bold text-[#bca374]">{infView.project}</span></div>
-                    <div><span className="text-gray-400 font-bold">พื้นที่</span><br/><span className="font-bold text-gray-800">{infView.area}</span></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs mb-2">
-                    <div><span className="text-gray-400 font-bold">ประเภทงาน</span><br/><span className="font-bold text-[#0f2e4a]">{infView.jobType||'-'}</span></div>
-                    <div><span className="text-gray-400 font-bold">บริเวณ</span><br/><span className="font-bold text-[#0f2e4a]">{infView.location||'-'}</span></div>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border text-sm shadow-inner">
-                    <span className="text-gray-500 font-bold text-xs mb-1 block">รายละเอียด:</span>
-                    <div className="whitespace-pre-wrap text-gray-700">{infView.details || '-'}</div>
-                  </div>
-                  <div className="text-right pt-2">
-                    <button type="button" onClick={()=>setInfView(null)} className="bg-gray-200 px-6 py-2 rounded-lg text-sm font-bold w-full hover:bg-gray-300 transition">ปิดหน้าต่าง</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {iMod.isOpen && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-              <div className="bg-white rounded-xl shadow-xl p-5 w-full max-w-sm">
-                <h3 className={`font-bold mb-3 ${iMod.type==='cancel'?'text-red-500':'text-green-500'}`}>
-                  {iMod.type==='cancel'?'ยกเลิกแจ้งงาน':'เปิดงาน'}
-                </h3>
-                {iMod.type==='open' ? (
-                  <input placeholder="เลข Inform..." className="w-full border rounded p-2 text-sm uppercase" value={iMod.val} onChange={e=>setIMod({...iMod,val:e.target.value})}/>
-                ) : (
-                  <textarea placeholder="เหตุผล..." className="w-full border rounded p-2 text-sm resize-none" value={iMod.val} onChange={e=>setIMod({...iMod,val:e.target.value})}></textarea>
-                )}
-                <div className="flex gap-2 mt-4">
-                  <button type="button" onClick={()=>setIMod({...iMod,isOpen:false})} className="flex-1 bg-gray-100 p-2 text-xs rounded font-bold">ปิด</button>
-                  <button type="button" onClick={cfInf} disabled={!iMod.val.trim()} className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs rounded font-bold disabled:opacity-50">ยืนยัน</button>
-                </div>
-              </div>
-            </div>
-          )}
+          <InformStatusModal
+            isOpen={iMod.isOpen}
+            onClose={() => setIMod({ ...iMod, isOpen: false })}
+            onConfirm={cfInf}
+            iMod={iMod}
+            setIMod={setIMod}
+          />
         </div>
         
         {/* เพิ่มโค้ดบรรทัดนี้ เพื่อวาง Report ซ่อนไว้สำหรับให้ดึงไปพิมพ์ PDF */}
@@ -1095,35 +931,15 @@ export default function App() {
           fDate={fDate}
         />
         
-        {cropModal.isOpen && (
-          <div className="fixed inset-0 bg-black/90 z-[100000] flex flex-col">
-            <div className="flex justify-between items-center p-4 bg-[#0f2e4a] text-white shadow-md z-10">
-              <h3 className="font-bold">ครอบตัดรูปโปรไฟล์</h3>
-              <button type="button" onClick={() => setCropModal({ ...cropModal, isOpen: false })} className="p-2 hover:bg-white/10 rounded-lg"><Icon name="x" size={24} /></button>
-            </div>
-            <div className="flex-1 relative bg-black">
-              <Cropper
-                image={cropModal.imageSrc}
-                crop={cropModal.crop}
-                zoom={cropModal.zoom}
-                aspect={1}
-                cropShape="round"
-                showGrid={false}
-                onCropChange={(crop) => setCropModal(prev => ({ ...prev, crop }))}
-                onCropComplete={onCropComplete}
-                onZoomChange={(zoom) => setCropModal(prev => ({ ...prev, zoom }))}
-              />
-            </div>
-            <div className="p-6 bg-white flex flex-col gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] z-10">
-              <div className="flex items-center gap-4">
-                <Icon name="zoomOut" size={20} className="text-gray-400" />
-                <input type="range" min={1} max={3} step={0.1} value={cropModal.zoom} onChange={(e) => setCropModal(prev => ({ ...prev, zoom: Number(e.target.value) }))} className="flex-1 accent-[#0f2e4a]" />
-                <Icon name="zoomIn" size={20} className="text-gray-400" />
-              </div>
-              <button type="button" onClick={saveCroppedImage} className="w-full bg-[#0f2e4a] text-white py-3 rounded-xl font-bold text-lg hover:bg-[#1a3f63] shadow-lg transition-transform active:scale-95">ยืนยันรูปโปรไฟล์</button>
-            </div>
-          </div>
-        )}
+        <AvatarCropModal
+          isOpen={cropModal.isOpen}
+          onClose={() => setCropModal({ ...cropModal, isOpen: false })}
+          cropModal={cropModal}
+          setCropModal={setCropModal}
+          onCropComplete={onCropComplete}
+          onSave={saveCroppedImage}
+          Icon={Icon}
+        />
       </div>
     </React.Fragment>
   );

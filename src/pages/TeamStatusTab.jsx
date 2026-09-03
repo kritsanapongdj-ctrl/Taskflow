@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import ClassEmblem from '../ClassEmblem';
 import AssessmentModal from '../AssessmentModal';
-import AgentPixelArt from '../AgentPixelArt';
 import RadarChart from '../components/charts/RadarChart';
 import archetypesData from '../data/archetypes.json';
 import { 
@@ -408,6 +407,14 @@ export default function TeamStatusTab({
       const u = teamForm;
       if (!u.id && !selTeam?.isNew) return null;
       const role = classMap[u.classId];
+      const statsObj = { 
+        str: Number(u.str) || 5, 
+        agi: Number(u.agi) || 5, 
+        dex: Number(u.dex) || 5, 
+        int: Number(u.int) || 5, 
+        con: Number(u.con) || 5, 
+        sen: Number(u.sen) || 5 
+      };
       
       const analysis = analyzeArchetype(u, sets, archetypesData);
       if (!analysis) return null;
