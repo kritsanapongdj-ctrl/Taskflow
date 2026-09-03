@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local tracking and scratch files
+*.xlsx
+scripts/archive/
+*.cjs
+output.json
+
