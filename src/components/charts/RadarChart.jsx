@@ -1,38 +1,163 @@
 import React from 'react';
 
 export default function RadarChart({ baseStats = [], userStats = [] }) {
-  const max = 10, size = 200, center = 100, radius = 80;
-  const getPoint = (val, index) => {
+  const max = 10;
+  const size = 240;
+  const center = 120;
+  const radius = 88;
+
+  const getPoint = (val, index, customRadius = radius) => {
     const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
-    const r = (val / max) * radius;
-    return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
+    const r = (Math.min(Math.max(val, 0), max) / max) * customRadius;
+    const x = center + r * Math.cos(angle);
+    const y = center + r * Math.sin(angle);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
   };
-  const labels = ['STR', 'AGI', 'DEX', 'INT', 'CON', 'SEN'];
+
+  const statDefs = [
+    { key: 'STR', label: 'STR', name: 'กำลังผลักดัน' },
+    { key: 'AGI', label: 'AGI', name: 'ความเร็วคล่องตัว' },
+    { key: 'DEX', label: 'DEX', name: 'ความแม่นยำ' },
+    { key: 'INT', label: 'INT', name: 'เทคโนโลยี/ระบบ' },
+    { key: 'CON', label: 'CON', name: 'ความทนทาน' },
+    { key: 'SEN', label: 'SEN', name: 'เจรจา/อารมณ์' }
+  ];
+
+  const levels = [2, 4, 6, 8, 10];
+  const safeStats = userStats.length === 6 ? userStats : [5, 5, 5, 5, 5, 5];
+  const polygonPoints = safeStats.map((v, i) => getPoint(v, i)).join(' ');
+
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible">
-      {[2, 4, 6, 8, 10].map(level => (
-        <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />
-      ))}
-      {labels.map((_, i) => (
-        <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />
-      ))}
-      {labels.map((l, i) => {
-        const [x, y] = getPoint(11.5, i).split(',');
-        return <text key={i} x={x} y={y} fontSize="11" fontWeight="bold" fill="#4b5563" textAnchor="middle" dominantBaseline="middle">{l}</text>;
-      })}
-      {userStats.length === 6 && (
+    <div className="relative w-full h-full max-w-[280px] mx-auto flex items-center justify-center select-none">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="w-full h-full overflow-visible drop-shadow-sm"
+      >
+        <defs>
+          <linearGradient id="radarPolygonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#bca374" stopOpacity="0.45" />
+            <stop offset="50%" stopColor="#0f2e4a" stopOpacity="0.40" />
+            <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.30" />
+          </linearGradient>
+          <filter id="radarGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* Concentric Web Grid */}
+        {levels.map((lvl) => {
+          const pts = statDefs.map((_, i) => getPoint(lvl, i)).join(' ');
+          return (
+            <polygon
+              key={`grid-${lvl}`}
+              points={pts}
+              fill={lvl === 10 ? 'rgba(248, 250, 252, 0.5)' : 'none'}
+              stroke={lvl === 10 ? '#cbd5e1' : '#e2e8f0'}
+              strokeWidth={lvl === 6 ? '1.5' : '1'}
+              strokeDasharray={lvl === 6 ? '3 3' : undefined}
+            />
+          );
+        })}
+
+        {/* Axis Lines */}
+        {statDefs.map((_, i) => {
+          const [x2, y2] = getPoint(10, i).split(',');
+          return (
+            <line
+              key={`axis-${i}`}
+              x1={center}
+              y1={center}
+              x2={x2}
+              y2={y2}
+              stroke="#e2e8f0"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Dynamic Animated Polygon with Spring Curve */}
         <polygon
-          points={userStats.map((v, i) => getPoint(v, i)).join(' ')}
-          fill="rgba(15, 46, 74, 0.4)"
+          points={polygonPoints}
+          fill="url(#radarPolygonGrad)"
           stroke="#0f2e4a"
-          strokeWidth="2"
-          style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          style={{
+            transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
         />
-      )}
-      {userStats.map((v, i) => {
-        const [x, y] = getPoint(v, i).split(',');
-        return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />;
-      })}
-    </svg>
+
+        {/* Interactive Vertex Nodes */}
+        {safeStats.map((val, i) => {
+          const [cx, cy] = getPoint(val, i).split(',');
+          const isHigh = val >= 8;
+          return (
+            <g key={`node-${i}`} className="transition-all duration-700">
+              {isHigh && (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="7"
+                  fill="#bca374"
+                  opacity="0.3"
+                  className="animate-ping"
+                  style={{ transformOrigin: `${cx}px ${cy}px` }}
+                />
+              )}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isHigh ? '4.5' : '3.5'}
+                fill={isHigh ? '#bca374' : '#0f2e4a'}
+                stroke="#ffffff"
+                strokeWidth="1.5"
+                className="cursor-pointer transition-all duration-700 hover:r-6"
+                style={{
+                  transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}
+              >
+                <title>{`${statDefs[i].key}: ${val} / 10`}</title>
+              </circle>
+            </g>
+          );
+        })}
+
+        {/* Labels and Value Badges */}
+        {statDefs.map((def, i) => {
+          const [lx, ly] = getPoint(10, i, radius + 22).split(',');
+          const val = safeStats[i];
+          const isHighlight = val >= 8;
+          return (
+            <g key={`label-${def.key}`}>
+              <text
+                x={lx}
+                y={Number(ly) - 2}
+                fontSize="11"
+                fontWeight="bold"
+                fill={isHighlight ? '#0f2e4a' : '#64748b'}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="font-sans"
+              >
+                {def.key}
+              </text>
+              <text
+                x={lx}
+                y={Number(ly) + 10}
+                fontSize="9"
+                fontWeight="bold"
+                fill={isHighlight ? '#bca374' : '#94a3b8'}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="font-sans"
+              >
+                {val}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
