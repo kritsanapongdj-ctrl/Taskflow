@@ -9,6 +9,8 @@ import {
   getStatLevelText, 
   getRubricText, 
   analyzeArchetype, 
+  analyzeRadarMorphology,
+  analyzeOuterLayer,
   STAT_DEFINITIONS, 
   STAT_KEYS 
 } from '../utils/archetypeEngine';
@@ -28,10 +30,14 @@ export default function TeamStatusTab({
   teamEditMode,
   setTeamEditMode,
   setCropModal,
+  setCropImg,
   saveTeam,
-  Icon
+  Icon,
+  setAlert
 }) {
   const [assessMode, setAssessMode] = useState(false);
+  const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
+  const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
     if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
 
     const sList = sets.staffStats || [];
@@ -309,6 +315,18 @@ export default function TeamStatusTab({
 
            <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
               <div className="absolute top-4 right-4 z-20 flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setCinematicViewMode(cinematicViewMode === 'spider' ? 'avatar' : 'spider')} 
+                    title={cinematicViewMode === 'spider' ? 'ดูภาพตัวละคร' : 'ดู Performance Spider Map'} 
+                    className={`p-2 rounded-full backdrop-blur-sm transition border ${
+                      cinematicViewMode === 'spider' 
+                        ? 'bg-[#bca374] text-[#0f2e4a] border-[#e6d0a7] shadow-[0_0_15px_rgba(188,163,116,0.5)]' 
+                        : 'bg-white/10 hover:bg-white/20 text-white/70 hover:text-white border-white/10'
+                    }`}
+                  >
+                    <Icon name={cinematicViewMode === 'spider' ? 'user' : 'network'} size={18} />
+                  </button>
                   <button type="button" onClick={() => setTeamEditMode(true)} title="ตั้งค่าข้อมูลพื้นฐาน" className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
                     <Icon name="settings" size={18} />
                   </button>
@@ -384,12 +402,58 @@ export default function TeamStatusTab({
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
               
               <div className="relative z-10 w-full h-full flex items-center justify-center p-4 lg:p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
-                {u.image ? (
-                   <img src={u.image} className="max-w-[85%] max-h-[90%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-105" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
+                {cinematicViewMode === 'spider' ? (
+                  <div className="w-full flex flex-col items-center justify-center max-w-[320px] bg-slate-900/85 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div className="w-full flex justify-between items-center mb-2">
+                      <span className="text-[10px] uppercase font-bold text-[#bca374] tracking-wider flex items-center">
+                        <Icon name="swords" size={14} className="mr-1.5" /> SPIDER PERFORMANCE MAP
+                      </span>
+                      {(() => {
+                        const m = analyzeRadarMorphology(statsObj);
+                        return (
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${m.badgeColor}`}>
+                            {m.shapeName.split(' (')[0]}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div className="w-full max-w-[240px] aspect-square my-1">
+                      <RadarChart 
+                        userStats={[statsObj.str, statsObj.agi, statsObj.dex, statsObj.int, statsObj.con, statsObj.sen]}
+                        selectedAxis={selectedRadarAxis}
+                        onSelectAxis={(idx, key) => setSelectedRadarAxis(selectedRadarAxis === key ? null : key)}
+                      />
+                    </div>
+                    {(() => {
+                      const m = analyzeRadarMorphology(statsObj);
+                      const o = analyzeOuterLayer(u, statsObj);
+                      return (
+                        <div className="w-full mt-2 text-left space-y-1.5 text-[10px]">
+                          <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">
+                            <div className="flex justify-between items-center mb-1">
+                              <strong className="text-[#e6d0a7] font-black text-xs">{o.performanceDna.title}</strong>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded ${o.alignmentBadge}`}>
+                                {o.alignmentTitle.split(' (')[0]}
+                              </span>
+                            </div>
+                            <p className="text-[9px] text-slate-400 leading-snug">{m.shapeDesc}</p>
+                          </div>
+                          <div className="flex justify-between items-center text-[9px] text-slate-400 px-1 pt-0.5">
+                            <span>พื้นที่ครอบคลุม: <strong className="text-[#e6d0a7]">{m.coveragePct}%</strong></span>
+                            <span>{m.topFocus}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 ) : (
-                   <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                     <Icon name="user" size={64} className="text-slate-600" />
-                   </div>
+                  u.image ? (
+                     <img src={u.image} className="max-w-[85%] max-h-[90%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-105" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
+                  ) : (
+                     <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                       <Icon name="user" size={64} className="text-slate-600" />
+                     </div>
+                  )
                 )}
               </div>
               
@@ -558,6 +622,49 @@ export default function TeamStatusTab({
                    );
                 })}
              </div>
+
+              {/* Outer Layer Executive Performance Summary */}
+              {(() => {
+                const outerSummary = analyzeOuterLayer(teamForm, statsObj);
+                return (
+                  <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-indigo-900/5 via-slate-50 to-indigo-50/40 border border-indigo-100 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 shadow-xs">
+                          <Icon name="layers" size={15} />
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Performance DNA Profile</span>
+                          <strong className="text-xs text-indigo-950 font-black">{outerSummary.performanceDna.title}</strong>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
+                        {outerSummary.alignmentTitle}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 mb-3 leading-relaxed">
+                      {outerSummary.performanceDna.desc}
+                    </p>
+
+                    <div className="p-3 rounded-lg bg-white/90 border border-indigo-100/70 text-[11px] space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 pb-1.5 border-b border-slate-100">
+                        <span>ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong> / 10</span>
+                        <span>ผลงานจริง (WHAT): <strong className="text-indigo-600">{outerSummary.avgOuter}</strong> / 10</span>
+                        <span className={outerSummary.gap >= 0 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
+                          Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 leading-snug">
+                        {outerSummary.alignmentDesc}
+                      </p>
+                      <div className="text-[10px] text-indigo-950 bg-indigo-50/80 p-2 rounded-lg border border-indigo-100 font-medium">
+                        💡 <strong>คำแนะนำเชิงบริหาร:</strong> {outerSummary.coachingAdvice}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
           </div>
         </div>
       );
@@ -651,17 +758,88 @@ export default function TeamStatusTab({
                     <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
                     <div className="w-full mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
-                       <h4 className="font-bold text-[#0f2e4a] mb-6 text-center tracking-wider flex items-center justify-center text-sm"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
-                       <div className="w-full max-w-[280px] aspect-square">
-                         <RadarChart 
-                            userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
-                         />
-                       </div>
-                       <div className="flex flex-wrap justify-center gap-4 mt-6 text-[11px] font-bold text-slate-500">
-                          <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-2 rounded-sm opacity-60"></div> ระดับสเตตัสพนักงาน</div>
-                       </div>
-                       <div className="w-full mt-6 border-t border-slate-100"></div>
-                       {renderAnalysis()}
+                       <h4 className="font-bold text-[#0f2e4a] mb-1 text-center tracking-wider flex items-center justify-center text-sm">
+                          <Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE SPIDER MAP
+                        </h4>
+                        <p className="text-[10px] text-slate-400 text-center mb-4">
+                          คลิกที่แกนสเตตัสเพื่อเจาะลึกคำอธิบายรายมิติ
+                        </p>
+                        <div className="w-full max-w-[280px] aspect-square">
+                          <RadarChart 
+                             userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
+                             selectedAxis={selectedRadarAxis}
+                             onSelectAxis={(idx, key) => setSelectedRadarAxis(selectedRadarAxis === key ? null : key)}
+                          />
+                        </div>
+
+                        {/* Radar Morphology Live Interpretation Card */}
+                        {(() => {
+                          const statsObj = { 
+                            str: Number(teamForm.str) || 5, 
+                            agi: Number(teamForm.agi) || 5, 
+                            dex: Number(teamForm.dex) || 5, 
+                            int: Number(teamForm.int) || 5, 
+                            con: Number(teamForm.con) || 5, 
+                            sen: Number(teamForm.sen) || 5 
+                          };
+                          const morph = analyzeRadarMorphology(statsObj);
+                          
+                          return (
+                            <div className="w-full mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 shadow-sm text-left">
+                              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${morph.badgeColor}`}>
+                                  {morph.shapeName}
+                                </span>
+                                <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                  พื้นที่ครอบคลุม: <strong className="text-[#0f2e4a]">{morph.coveragePct}%</strong>
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 mb-2 leading-relaxed">
+                                {morph.shapeDesc}
+                              </p>
+                              <div className="text-[10px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200 space-y-1">
+                                <div><strong>🎯 จุดเน้นหลัก:</strong> {morph.topFocus}</div>
+                                <div className="text-indigo-900"><strong>💡 การจัดสรรงาน:</strong> {morph.managementAdvice}</div>
+                              </div>
+
+                              {/* Interactive Axis Inspector Detail Box */}
+                              {selectedRadarAxis && (() => {
+                                const statKey = selectedRadarAxis.toLowerCase();
+                                const statDef = STAT_DEFINITIONS[statKey];
+                                const val = statsObj[statKey];
+                                const lvlText = getStatLevelText(val);
+                                const rubricText = getRubricText(statKey, val);
+                                
+                                return (
+                                  <div className="mt-2.5 p-2.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-[11px] animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="flex justify-between items-center mb-1">
+                                      <strong className="text-[#0f2e4a] flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[#bca374]"></span>
+                                        {statDef.label} ({statDef.name}) : ระดับ {val}/10 ({lvlText})
+                                      </strong>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setSelectedRadarAxis(null)} 
+                                        className="text-[9px] text-slate-400 hover:text-slate-600 px-1 rounded hover:bg-amber-100"
+                                      >
+                                        ปิด ✕
+                                      </button>
+                                    </div>
+                                    <p className="text-slate-700 text-[10px] leading-relaxed mb-1.5">
+                                      <strong>พฤติกรรมหน้างาน:</strong> {rubricText}
+                                    </p>
+                                    <div className="text-[9px] text-amber-900 bg-white/80 p-1.5 rounded border border-amber-100 font-medium">
+                                      🚀 <strong>เกณฑ์สู่ระดับถัดไป:</strong> {val >= 9 ? 'รักษามาตรฐานระดับปรมาจารย์ และเป็นพี่เลี้ยงถ่ายทอดความรู้แก่ทีม' : 'พัฒนาความเร็วและความสม่ำเสมอในงานซ้ำซ้อน และลดข้อผิดพลาดหน้างาน'}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          );
+                        })()}
+
+                        <div className="w-full mt-6 border-t border-slate-100"></div>
+                        {renderAnalysis()}
                     </div>
                  </div>
                </div>

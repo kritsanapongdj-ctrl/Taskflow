@@ -82,7 +82,9 @@ export const getStatLevelText = (val) => {
   return 'ขั้นวิกฤต (Crisis)';
 };
 
-export const getRubricText = (stat, val) => {
+export const getRubricText = (statOrKey, val) => {
+  const stat = (typeof statOrKey === 'string') ? STAT_DEFINITIONS[statOrKey.toLowerCase()] : statOrKey;
+  if (!stat || !stat.rubric) return '';
   const v = Number(val);
   if (v >= 9) return stat.rubric.mastery;
   if (v >= 7) return stat.rubric.advanced;
@@ -299,5 +301,202 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
     dynamicWeakness,
     weaknessLabel,
     weaknessColor
+  };
+};
+
+export const analyzeRadarMorphology = (statsObj = {}) => {
+  const keys = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
+  const values = keys.map(k => Math.min(Math.max(Number(statsObj[k]) || 5, 1), 10));
+  
+  const sum = values.reduce((a, b) => a + b, 0);
+  const mean = sum / 6;
+  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / 6;
+  const stdDev = Math.sqrt(variance);
+  
+  const sorted = keys.map((k, i) => ({ key: k, val: values[i] })).sort((a, b) => b.val - a.val);
+  const maxVal = sorted[0].val;
+  const minVal = sorted[5].val;
+  const gap = maxVal - minVal;
+
+  // Radar Area Coverage in polar coords (equilateral 60 deg slices)
+  let areaSum = 0;
+  for (let i = 0; i < 6; i++) {
+    areaSum += values[i] * values[(i + 1) % 6];
+  }
+  const area = 0.5 * (Math.sqrt(3) / 2) * areaSum;
+  const maxArea = 0.5 * (Math.sqrt(3) / 2) * 600;
+  const coveragePct = Math.min(100, Math.round((area / maxArea) * 100));
+
+  let shapeKey = 'irregular';
+  let shapeName = 'ทรงเฉพาะกิจ (Dynamic Polygon)';
+  let shapeDesc = 'มีทิศทางการเติบโตที่เป็นเอกลักษณ์ตามภารกิจที่รับผิดชอบ';
+  let managementAdvice = 'จัดสรรงานตามจุดยอดที่ยื่นสูง และประกบพี่เลี้ยงในจุดที่เว้าต่ำ';
+  let badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+
+  if (maxVal === minVal) {
+    shapeKey = 'concentric';
+    shapeName = `ทรงหกเหลี่ยมสมมาตร (${maxVal}/10)`;
+    shapeDesc = `สเตตัสเท่ากันทุกมิติที่ระดับ ${maxVal} เป็นรูปทรงสมดุล 100%`;
+    managementAdvice = maxVal >= 7 ? 'เป็นเสาหลักที่ไว้ใจได้ในทุกสถานการณ์ ไร้จุดบอด' : 'เน้นการพัฒนาเสริมทักษะเฉพาะทางเพื่อสร้างจุดเด่น';
+    badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  } else if (gap >= 5 && minVal <= 3) {
+    shapeKey = 'hourglass';
+    shapeName = 'ทรงคอดกิ่ว / จุดบอดลึก (Hourglass Gap)';
+    shapeDesc = `มีมิติที่พุ่งสูง (${sorted[0].key.toUpperCase()} ${maxVal}) แต่มีจุดบอดวิกฤต (${sorted[5].key.toUpperCase()} ${minVal}) ที่เว้าลึกอย่างเห็นได้ชัด`;
+    managementAdvice = '⚠️ ห้ามมอบหมายงานเดี่ยวที่ต้องอาศัยจุดบอดนี้เด็ดขาด ต้องมีทีมหรือคู่หูประกบอุดช่องโหว่ทันที';
+    badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+  } else if (stdDev < 1.3 && mean >= 6.5) {
+    shapeKey = 'full_hexagon';
+    shapeName = 'ทรงหกเหลี่ยมสมบูรณ์ (All-Round Pillar)';
+    shapeDesc = 'ใยแมงมุมแผ่ขยายกว้างรอบทิศทางอย่างมั่นคง มีความพร้อมรอบด้านในระดับสูง';
+    managementAdvice = 'เหมาะสำหรับบทบาทผู้ประสานงานหลักของทีม หรือผู้นำที่ต้องดูแลภาพรวมในทุกมิติ';
+    badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  } else if (maxVal <= 5 && minVal >= 4) {
+    shapeKey = 'compact_core';
+    shapeName = 'ทรงแกนกลางมาตรฐาน (Standard Core)';
+    shapeDesc = 'รูปทรงเกาะกลุ่มรอบมาตรฐานขั้นต้น (5/10) ยังไม่มีมิติใดที่ฉีกเด่นชัดเจน';
+    managementAdvice = 'ควรวางแผน Career Path ให้ทดลองงานหลากหลาย เพื่อค้นหา "จุดแข็งเฉพาะตัว" 1-2 ด้าน';
+    badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+  } else if (sorted.filter(s => s.val >= 7).length === 3) {
+    shapeKey = 'tri_force';
+    shapeName = 'ทรงสามเหลี่ยมผสาน (Tri-Force Prism)';
+    shapeDesc = `รูปทรงสามเหลี่ยมเด่น 3 มิติ (${sorted.slice(0, 3).map(s => s.key.toUpperCase()).join(' - ')}) ที่เสริมแรงกันเป็นฐานค้ำยัน`;
+    managementAdvice = 'มอบหมายโปรเจกต์ที่ต้องผสมผสานทั้งสามทักษะนี้ จะสร้างผลลัพธ์ที่ทรงพลังที่สุด';
+    badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+  } else if (sorted.filter(s => s.val >= 8).length <= 2 && sorted.filter(s => s.val >= 8).length >= 1) {
+    shapeKey = 'spearhead';
+    shapeName = 'ทรงหัวหอกทะลวง (Spearhead Delta)';
+    shapeDesc = `มียอดแหลมพุ่งเด่นอย่างทรงพลังในด้าน ${sorted[0].key.toUpperCase()} (${maxVal}/10) เป็นท่าไม้ตายเฉพาะตัว`;
+    managementAdvice = 'ใช้เป็น "มือสังหาร/ตัวจบงาน" ในสถานการณ์ที่ต้องอาศัยทักษะจุดนี้เป็นตัวตัดสิน';
+    badgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
+  }
+
+  const vectorNames = {
+    str: 'พลังขับเคลื่อน (STR)',
+    agi: 'ความไวตอบสนอง (AGI)',
+    dex: 'ความแม่นยำประณีต (DEX)',
+    int: 'เทคโนโลยีระบบ (INT)',
+    con: 'ความทนทานอารมณ์ (CON)',
+    sen: 'การเจรจาจิตวิทยา (SEN)'
+  };
+  const top2Names = [vectorNames[sorted[0].key], vectorNames[sorted[1].key]].join(' และ ');
+
+  return {
+    values,
+    mean: Math.round(mean * 10) / 10,
+    stdDev: Math.round(stdDev * 10) / 10,
+    maxVal,
+    minVal,
+    gap,
+    coveragePct,
+    shapeKey,
+    shapeName,
+    shapeDesc,
+    managementAdvice,
+    badgeColor,
+    topFocus: top2Names,
+    sorted
+  };
+};
+
+export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
+  const str = Number(statsObj.str) || Number(u.str) || 5;
+  const agi = Number(statsObj.agi) || Number(u.agi) || 5;
+  const dex = Number(statsObj.dex) || Number(u.dex) || 5;
+  const int = Number(statsObj.int) || Number(u.int) || 5;
+  const con = Number(statsObj.con) || Number(u.con) || 5;
+  const sen = Number(statsObj.sen) || Number(u.sen) || 5;
+
+  const autoValues = {
+    cx: Math.round((con + sen) / 2),
+    tech: Math.round((int + dex) / 2),
+    sla: Math.round((agi + dex) / 2),
+    crisis: Math.round((str + con) / 2),
+    resource: Math.round((str + sen) / 2),
+    innovation: Math.round((int + sen) / 2)
+  };
+
+  const actualValues = {
+    cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : autoValues.cx,
+    tech: (u.tech !== null && u.tech !== undefined) ? Number(u.tech) : autoValues.tech,
+    sla: (u.sla !== null && u.sla !== undefined) ? Number(u.sla) : autoValues.sla,
+    crisis: (u.crisis !== null && u.crisis !== undefined) ? Number(u.crisis) : autoValues.crisis,
+    resource: (u.resource !== null && u.resource !== undefined) ? Number(u.resource) : autoValues.resource,
+    innovation: (u.innovation !== null && u.innovation !== undefined) ? Number(u.innovation) : autoValues.innovation
+  };
+
+  const outerMeta = [
+    { key: 'cx', name: 'Customer Exp.', thai: 'ความพึงพอใจลูกค้า' },
+    { key: 'tech', name: 'Tech. Expertise', thai: 'ทักษะเชิงลึก' },
+    { key: 'sla', name: 'Ops & SLA', thai: 'เวลาและความเป๊ะ' },
+    { key: 'crisis', name: 'Crisis Resolv.', thai: 'แก้ปัญหาวิกฤต' },
+    { key: 'resource', name: 'Resource Ctrl.', thai: 'บริหารทรัพยากร' },
+    { key: 'innovation', name: 'Innovation', thai: 'สร้างระบบใหม่' }
+  ];
+
+  const avgInner = (str + agi + dex + int + con + sen) / 6;
+  const avgOuter = Object.values(actualValues).reduce((a, b) => a + b, 0) / 6;
+  const gap = Math.round((avgOuter - avgInner) * 10) / 10;
+
+  let alignmentKey = 'harmonized';
+  let alignmentTitle = 'สมดุลเต็มศักยภาพ (Harmonized)';
+  let alignmentDesc = 'ผลสัมฤทธิ์หน้างานจริงสอดคล้องกับศักยภาพตั้งต้นอย่างมั่นคง เป็นไปตามมาตรฐานที่คาดหวัง';
+  let alignmentBadge = 'bg-blue-50 text-blue-700 border-blue-200';
+  let coachingAdvice = 'รักษาระดับผลงานต่อเนื่อง และมอบหมายความท้าทายใหม่ๆ เพื่อขยายเพดานความสามารถ';
+
+  if (gap >= 1.2) {
+    alignmentKey = 'over_achiever';
+    alignmentTitle = 'ผลงานแซงศักยภาพ (Over-Achiever)';
+    alignmentDesc = `ผลงานจริง (${avgOuter.toFixed(1)}) สูงกว่าศักยภาพคำนวณ (${avgInner.toFixed(1)}) โดดเด่น มีวินัยและความขยันเป็นเลิศ`;
+    alignmentBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    coachingAdvice = 'ค้นหาเคล็ดลับหน้างาน (Best Practice) ของพนักงาน เพื่อนำมาแชร์และเป็นต้นแบบให้แก่ทีม';
+  } else if (gap <= -1.2) {
+    alignmentKey = 'under_leveraged';
+    alignmentTitle = 'ศักยภาพยังไม่ถูกปลดล็อก (Under-Leveraged)';
+    alignmentDesc = `มีศักยภาพแฝงสูง (${avgInner.toFixed(1)}) แต่ผลสัมฤทธิ์หน้างาน (${avgOuter.toFixed(1)}) ยังไม่ออกมาเต็มที่`;
+    alignmentBadge = 'bg-amber-50 text-amber-700 border-amber-200';
+    coachingAdvice = 'หัวหน้างานควรสำรวจอุปสรรคหน้างาน เช่น ปริมาณงานหรือสภาพแวดล้อม เพื่อช่วยปลดล็อกพลังแท้จริง';
+  }
+
+  const sortedOuter = outerMeta.map(m => ({ ...m, val: actualValues[m.key] })).sort((a, b) => b.val - a.val);
+  const pairKey = [sortedOuter[0].key, sortedOuter[1].key].sort().join('_');
+
+  const dnaMap = {
+    'crisis_cx': { title: 'Frontline Shield (เกราะหน้าด่านพิทักษ์ลูกค้า)', desc: 'รับมืออารมณ์ลูกค้าได้ดีเยี่ยมและดับวิกฤตได้เด็ดขาด' },
+    'cx_crisis': { title: 'Frontline Shield (เกราะหน้าด่านพิทักษ์ลูกค้า)', desc: 'รับมืออารมณ์ลูกค้าได้ดีเยี่ยมและดับวิกฤตได้เด็ดขาด' },
+    'innovation_tech': { title: 'System Pioneer (ผู้นำนวัตกรรมระบบ)', desc: 'ริเริ่มระบบดิจิทัลและเทคโนโลยีใหม่เพื่อยกระดับทีม' },
+    'tech_innovation': { title: 'System Pioneer (ผู้นำนวัตกรรมระบบ)', desc: 'ริเริ่มระบบดิจิทัลและเทคโนโลยีใหม่เพื่อยกระดับทีม' },
+    'resource_sla': { title: 'Operational Commander (ผู้คุมวินัยและต้นทุน)', desc: 'งานจบตามเวลาเป๊ะและควบคุมงบประมาณได้อย่างมีประสิทธิภาพ' },
+    'sla_resource': { title: 'Operational Commander (ผู้คุมวินัยและต้นทุน)', desc: 'งานจบตามเวลาเป๊ะและควบคุมงบประมาณได้อย่างมีประสิทธิภาพ' },
+    'crisis_sla': { title: 'Rapid Responder (หน่วยตอบโต้ฉับไว)', desc: 'เข้าถึงจุดเกิดเหตุเร็วและระงับเหตุการณ์ฉุกเฉินได้ทันท่วงที' },
+    'sla_crisis': { title: 'Rapid Responder (หน่วยตอบโต้ฉับไว)', desc: 'เข้าถึงจุดเกิดเหตุเร็วและระงับเหตุการณ์ฉุกเฉินได้ทันท่วงที' },
+    'cx_resource': { title: 'Strategic Negotiator (นักเจรจาพันธมิตร)', desc: 'ประสานงานลูกค้าและคู่ค้าอย่างมืออาชีพเพื่อผลประโยชน์สูงสุด' },
+    'resource_cx': { title: 'Strategic Negotiator (นักเจรจาพันธมิตร)', desc: 'ประสานงานลูกค้าและคู่ค้าอย่างมืออาชีพเพื่อผลประโยชน์สูงสุด' },
+    'sla_tech': { title: 'Precision Architect (สถาปนิกงานประณีต)', desc: 'รักษามาตรฐานงานเชิงลึกและส่งมอบงานตรงเวลา 100%' },
+    'tech_sla': { title: 'Precision Architect (สถาปนิกงานประณีต)', desc: 'รักษามาตรฐานงานเชิงลึกและส่งมอบงานตรงเวลา 100%' },
+    'crisis_innovation': { title: 'Crisis Innovator (นักพลิกวิกฤตด้วยระบบ)', desc: 'แก้ปัญหาเฉพาะหน้าด้วยเครื่องมือและวิธีคิดใหม่ๆ' },
+    'innovation_crisis': { title: 'Crisis Innovator (นักพลิกวิกฤตด้วยระบบ)', desc: 'แก้ปัญหาเฉพาะหน้าด้วยเครื่องมือและวิธีคิดใหม่ๆ' },
+    'cx_tech': { title: 'Consultative Expert (ผู้เชี่ยวชาญบริการ)', desc: 'อธิบายเรื่องเทคนิคยากๆ ให้ลูกค้าเข้าใจง่ายและประทับใจ' },
+    'tech_cx': { title: 'Consultative Expert (ผู้เชี่ยวชาญบริการ)', desc: 'อธิบายเรื่องเทคนิคยากๆ ให้ลูกค้าเข้าใจง่ายและประทับใจ' }
+  };
+
+  const performanceDna = dnaMap[pairKey] || {
+    title: `${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
+    desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai}`
+  };
+
+  return {
+    autoValues,
+    actualValues,
+    avgInner: Math.round(avgInner * 10) / 10,
+    avgOuter: Math.round(avgOuter * 10) / 10,
+    gap,
+    alignmentKey,
+    alignmentTitle,
+    alignmentDesc,
+    alignmentBadge,
+    coachingAdvice,
+    performanceDna,
+    topOuter: sortedOuter
   };
 };

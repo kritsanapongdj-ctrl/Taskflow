@@ -1,10 +1,15 @@
 import React from 'react';
 
-export default function RadarChart({ baseStats = [], userStats = [] }) {
+export default function RadarChart({
+  baseStats = [],
+  userStats = [],
+  selectedAxis = null,
+  onSelectAxis = null
+}) {
   const max = 10;
-  const size = 240;
-  const center = 120;
-  const radius = 88;
+  const size = 250;
+  const center = 125;
+  const radius = 90;
 
   const getPoint = (val, index, customRadius = radius) => {
     const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
@@ -61,8 +66,9 @@ export default function RadarChart({ baseStats = [], userStats = [] }) {
         })}
 
         {/* Axis Lines */}
-        {statDefs.map((_, i) => {
+        {statDefs.map((def, i) => {
           const [x2, y2] = getPoint(10, i).split(',');
+          const isSelected = selectedAxis === i || selectedAxis === def.key.toLowerCase();
           return (
             <line
               key={`axis-${i}`}
@@ -70,8 +76,9 @@ export default function RadarChart({ baseStats = [], userStats = [] }) {
               y1={center}
               x2={x2}
               y2={y2}
-              stroke="#e2e8f0"
-              strokeWidth="1"
+              stroke={isSelected ? '#bca374' : '#e2e8f0'}
+              strokeWidth={isSelected ? '2' : '1'}
+              className="transition-colors duration-300"
             />
           );
         })}
@@ -92,32 +99,50 @@ export default function RadarChart({ baseStats = [], userStats = [] }) {
         {safeStats.map((val, i) => {
           const [cx, cy] = getPoint(val, i).split(',');
           const isHigh = val >= 8;
+          const isSelected = selectedAxis === i || selectedAxis === statDefs[i].key.toLowerCase();
+
           return (
-            <g key={`node-${i}`} className="transition-all duration-700">
-              {isHigh && (
+            <g
+              key={`node-${i}`}
+              className="cursor-pointer transition-all duration-700"
+              onClick={() => onSelectAxis && onSelectAxis(i, statDefs[i].key.toLowerCase())}
+            >
+              {/* Pulsing ring for high scores or selected axis */}
+              {(isHigh || isSelected) && (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={isSelected ? '9' : '7'}
+                  fill={isSelected ? '#0f2e4a' : '#bca374'}
+                  opacity={isSelected ? '0.25' : '0.3'}
+                  className="animate-ping"
+                  style={{ transformOrigin: `${cx}px ${cy}px` }}
+                />
+              )}
+              {isSelected && (
                 <circle
                   cx={cx}
                   cy={cy}
                   r="7"
-                  fill="#bca374"
-                  opacity="0.3"
-                  className="animate-ping"
-                  style={{ transformOrigin: `${cx}px ${cy}px` }}
+                  fill="none"
+                  stroke="#bca374"
+                  strokeWidth="2"
+                  className="transition-all duration-300"
                 />
               )}
               <circle
                 cx={cx}
                 cy={cy}
-                r={isHigh ? '4.5' : '3.5'}
-                fill={isHigh ? '#bca374' : '#0f2e4a'}
+                r={isSelected ? '5.5' : isHigh ? '4.5' : '3.5'}
+                fill={isSelected ? '#bca374' : isHigh ? '#bca374' : '#0f2e4a'}
                 stroke="#ffffff"
                 strokeWidth="1.5"
-                className="cursor-pointer transition-all duration-700 hover:r-6"
+                className="transition-all duration-700 hover:scale-125"
                 style={{
                   transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
                 }}
               >
-                <title>{`${statDefs[i].key}: ${val} / 10`}</title>
+                <title>{`${statDefs[i].key}: ${val} / 10 (${statDefs[i].name})`}</title>
               </circle>
             </g>
           );
@@ -128,29 +153,35 @@ export default function RadarChart({ baseStats = [], userStats = [] }) {
           const [lx, ly] = getPoint(10, i, radius + 22).split(',');
           const val = safeStats[i];
           const isHighlight = val >= 8;
+          const isSelected = selectedAxis === i || selectedAxis === def.key.toLowerCase();
+
           return (
-            <g key={`label-${def.key}`}>
+            <g
+              key={`label-${def.key}`}
+              className="cursor-pointer group"
+              onClick={() => onSelectAxis && onSelectAxis(i, def.key.toLowerCase())}
+            >
               <text
                 x={lx}
                 y={Number(ly) - 2}
-                fontSize="11"
+                fontSize={isSelected ? '12' : '11'}
                 fontWeight="bold"
-                fill={isHighlight ? '#0f2e4a' : '#64748b'}
+                fill={isSelected ? '#bca374' : isHighlight ? '#0f2e4a' : '#64748b'}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="font-sans"
+                className="font-sans transition-all duration-300 group-hover:fill-[#bca374]"
               >
                 {def.key}
               </text>
               <text
                 x={lx}
                 y={Number(ly) + 10}
-                fontSize="9"
+                fontSize={isSelected ? '10' : '9'}
                 fontWeight="bold"
-                fill={isHighlight ? '#bca374' : '#94a3b8'}
+                fill={isSelected ? '#0f2e4a' : isHighlight ? '#bca374' : '#94a3b8'}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="font-sans"
+                className="font-sans transition-all duration-300"
               >
                 {val}
               </text>
