@@ -9,6 +9,19 @@ import GuildSimulation from './GuildSimulation.jsx';
 import ClassEmblem from './ClassEmblem.jsx';
 import AssessmentModal from './AssessmentModal.jsx';
 import archetypesData from './data/archetypes.json';
+import RadarChart from './components/charts/RadarChart.jsx';
+import SimplePieChart from './components/charts/SimplePieChart.jsx';
+import DashboardTab from './pages/DashboardTab.jsx';
+import DailyTasksTab from './pages/DailyTasksTab.jsx';
+import MonthlyCalendarTab from './pages/MonthlyCalendarTab.jsx';
+import KanbanBillingTab from './pages/KanbanBillingTab.jsx';
+import InformJobTab from './pages/InformJobTab.jsx';
+import TeamStatusTab from './pages/TeamStatusTab.jsx';
+import SettingsTab from './pages/SettingsTab.jsx';
+import OverdueTasksModal from './components/modals/OverdueTasksModal.jsx';
+import CalendarTasksModal from './components/modals/CalendarTasksModal.jsx';
+import BillingModal from './components/modals/BillingModal.jsx';
+import PrintReport from './components/reports/PrintReport.jsx';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -100,63 +113,6 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   const Comp = LucideIcons[iconName] || LucideIcons.CircleCheck;
   return <Comp size={size} color={color} className={className} />;
 };
-
-const RadarChart = ({ baseStats = [], userStats = [] }) => {
-  const max = 10, size = 200, center = 100, radius = 80;
-  const getPoint = (val, index) => {
-    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
-    const r = (val / max) * radius;
-    return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
-  };
-  const labels = ['STR', 'AGI', 'DEX', 'INT', 'CON', 'SEN'];
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-[250px] mx-auto overflow-visible">
-      {[2, 4, 6, 8, 10].map(level => <polygon key={level} points={labels.map((_, i) => getPoint(level, i)).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="1" />)}
-      {labels.map((_, i) => <line key={i} x1={center} y1={center} x2={getPoint(10, i).split(',')[0]} y2={getPoint(10, i).split(',')[1]} stroke="#e5e7eb" strokeWidth="1" />)}
-      {labels.map((l, i) => { const [x, y] = getPoint(11.5, i).split(','); return <text key={i} x={x} y={y} fontSize="11" fontWeight="bold" fill="#4b5563" textAnchor="middle" dominantBaseline="middle">{l}</text>; })}
-      {userStats.length === 6 && <polygon points={userStats.map((v, i) => getPoint(v, i)).join(' ')} fill="rgba(15, 46, 74, 0.4)" stroke="#0f2e4a" strokeWidth="2" style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />}
-      {userStats.map((v, i) => { const [x, y] = getPoint(v, i).split(','); return <circle key={i} cx={x} cy={y} r="3" fill="#0f2e4a" style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />; })}
-    </svg>
-  );
-};
-
-const getCleanVal = (r, keys) => {
-  for (let k in r) {
-    const cln = String(k).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase();
-    for (let key of keys) if (cln === String(key).replace(/[\s\(\)\[\]\-]/g, '').toLowerCase() && r[k] !== undefined && r[k] !== '') return r[k]; 
-  }
-  return null;
-};
-
-const getTStr = () => new Date().toISOString().split('T')[0];
-const getMStr = () => getTStr().slice(0, 7);
-const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
-const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m = String(timeStr).match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : "17:30"; };
-const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Array.from(new Set(data.flatMap(Object.keys))); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
-
-const SimplePieChart = ({ data, title }) => {
-  let cP = 0; const t = data.reduce((s, i) => s + i.value, 0); 
-  const C = Math.PI / 2; 
-  return (
-    <div className="flex flex-col items-center w-full">
-      <h3 className="text-sm font-bold mb-4 text-[#0f2e4a]">{title}</h3>
-      {t === 0 ? <div className="w-32 h-32 rounded-full border-4 flex items-center justify-center text-xs text-gray-400">ไม่มีข้อมูล</div> : 
-      <svg viewBox="0 0 1 1" className="w-32 h-32 -rotate-90 rounded-full" style={{ overflow: 'hidden' }}>
-        {data.map((s, i) => { 
-          if(s.value===0) return null; 
-          const dash = (s.value / t) * C;
-          const offset = -(cP / t) * C;
-          cP += s.value; 
-          return <circle key={i} cx="0.5" cy="0.5" r="0.25" fill="none" stroke={s.color} strokeWidth="0.5" strokeDasharray={`${dash} ${C}`} strokeDashoffset={offset} style={{ transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}><title>{s.name}: {s.value}</title></circle>; 
-        })}
-        <circle cx="0.5" cy="0.5" r="0.15" fill="white" />
-      </svg>}
-      <div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">{data.map((item, i)=><div key={i} className="flex items-center"><span className="w-3 h-3 rounded-full mr-1" style={{backgroundColor: item.color}}></span>{item.name} ({item.value})</div>)}</div>
-    </div>
-  );
-};
-
 
 export default function App() {
   const [tab, setTab] = useState('dashboard');
@@ -681,171 +637,9 @@ export default function App() {
     );
   };
 
-  const rDash = () => {
-    const tS = getTStr(); const aT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
-    const dy = aT.filter(t => (tS >= t.startDate && tS <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tS)));
-    const mt = aT.filter(t => t.startDate && t.startDate.startsWith(gFilt.month));
-    const ov = mt.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
-    
-    const getChartData = (arr) => [
-      {name:'จบงาน(ในกำหนด)', value: arr.filter(t=>t.status?.startsWith('จบงาน') && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า') && !chkOvdTimeAware(t, getTStr())).length, color:THEME.success},
-      {name:'ดำเนินการ', value: arr.filter(t=>!t.status?.startsWith('จบงาน') && !(t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า') && !chkOvdTimeAware(t, getTStr())).length, color:THEME.secondary},
-      {name:'ล่าช้า/เกินกำหนด', value: arr.filter(t=>t.overdueStatus==='เกินกำหนด'||t.overdueStatus==='ออกใบงานช้า'||chkOvdTimeAware(t, getTStr())).length, color:THEME.danger}
-    ];
-
-    return (
-      <div className="space-y-6 animate-in">
-        <h2 className="text-xl font-bold text-[#0f2e4a] flex items-center"><Icon name="layoutDashboard" size={20} className="mr-2"/> ภาพรวม (เดือน {gFilt.month})</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[{l:'ปริมาณงานรวม', v:mt.length, i:'listTodo', c:THEME.primary}, {l:'งานวันนี้', v:dy.length, i:'calendar', c:THEME.secondary}, {l:'งานล่าช้า/เกินกำหนด', v:ov.length, i:'alertTriangle', c:THEME.danger, clk:true}].map((x,i) => (<div key={i} onClick={()=>x.clk && setOPop({isOpen:true, tasks:ov})} className={`bg-white p-6 rounded-xl shadow-sm border-l-[6px] flex justify-between items-center transition-all duration-300 ${x.clk?'cursor-pointer hover:shadow-md border-red-500 hover:-translate-y-1':'border-[#0f2e4a] hover:shadow-md hover:-translate-y-1'}`}><div><div className="text-xs text-gray-500 font-bold mb-1">{x.l} {x.clk && <span className="text-[9px] text-red-500 bg-red-50 px-1 rounded">(คลิกดู)</span>}</div><div key={x.v} className="text-3xl font-black animate-in fade-in slide-in-from-bottom-2 duration-500">{x.v}</div></div><div className="p-3 bg-gray-50 rounded-full transition-transform duration-500 hover:scale-110 hover:rotate-3"><Icon name={x.i} size={24} color={x.c}/></div></div>))}</div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้"/></div><div className="bg-white p-6 rounded-xl shadow-sm border"><SimplePieChart data={getChartData(mt)} title="สถานะเดือนนี้"/></div></div>
-      </div>
-    );
-  };
-
-  const rDail = () => {
-    const tD = gFilt.date; const vT = tasks.filter(t => t.status !== 'ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && ((tD >= t.startDate && tD <= t.endDate) || (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr())));
-    return (
-      <div className="space-y-4 animate-in">
-        <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">งานประจำวัน</h2><button type="button" onClick={()=>openTaskModal()} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-md"><Icon name="plus" size={16} className="mr-2"/> เพิ่มงาน</button></div>
-        <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b text-xs uppercase text-gray-500"><tr><th className="p-4">รายละเอียด</th><th className="p-4">โครงการ</th><th className="p-4">ระยะเวลา</th><th className="p-4">สถานะ</th><th className="p-4 text-center">จัดการ</th></tr></thead><tbody>{vT.map(t => { const od = chkOvdTimeAware(t, getTStr()); return (<tr key={t.id} className="border-b hover:bg-gray-50"><td className="p-4"><div className="font-medium">{t.details}</div><div className="text-[10px] text-gray-400 mt-1 flex gap-1 items-center"><span>{t.id} | {t.requester}</span>{t.workOrderNo && <span className="bg-blue-50 text-blue-600 px-1 rounded">WO:{t.workOrderNo}</span>}{t.overdueStatus==='เกินกำหนด' && <span className="text-red-500 px-1 border border-red-200 rounded">{t.overdueStatus}</span>}</div></td><td className="p-4 font-bold text-[#bca374]">{getStdProj(t.project)}<div className="text-xs text-gray-400 font-normal">{t.area}</div></td><td className="p-4 text-xs text-gray-600">เริ่ม: {fDate(t.startDate)}<br/><span className={od&&!t.status?.startsWith('จบงาน')?'text-red-500 font-bold':''}>จบ: {fDate(t.endDate)}</span></td><td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${t.status?.startsWith('จบงาน')?'bg-emerald-50 text-emerald-700 border-emerald-200':t.status==='จบงาน(รอใบงาน)'?'bg-yellow-50 text-yellow-700 border-yellow-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{t.status}</span></td><td className="p-4 text-center"><div className="flex justify-center gap-1"><select value={t.status} onChange={e=>initSt(t.id, e.target.value)} className="border rounded text-xs p-1 outline-none"><option value="อยู่ระหว่างดำเนินการ">ดำเนินการ</option><option value="เลื่อนงาน">เลื่อนงาน</option><option value="จบงาน">จบงาน</option></select><button type="button" onClick={()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');openTaskModal(t);}} className="text-gray-400 hover:text-[#0f2e4a] p-1 bg-gray-100 rounded hover:bg-gray-200" title="แก้ไขงาน"><Icon name="edit2" size={14}/></button><button type="button" onClick={async ()=>{const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อลบข้อมูล:');if(pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');if(confirm('ต้องการลบงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) { try { fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'deleteTask', data: { id: t.id } }) }).catch(()=>{}); await deleteDoc(getDocRef('Tasks', t.id)); } catch(e) { alert('ลบข้อมูลไม่สำเร็จ: ' + e.message); } }}} className="text-red-400 hover:text-red-600 p-1 bg-red-50 rounded hover:bg-red-100" title="ลบงาน"><Icon name="trash" size={14}/></button></div></td></tr>); })} {vT.length===0 && <tr><td colSpan="5" className="text-center py-10 text-gray-400">ไม่มีงาน</td></tr>}</tbody></table></div>
-      </div>
-    );
-  };
-
-  const rMont = () => {
-    const tS = getTStr(); 
-    if(!gFilt.month) return null;
-    const sM = new Date(gFilt.month + '-01'); const y = sM.getFullYear(); const m = sM.getMonth(); const dM = new Date(y, m+1, 0).getDate(); const fD = new Date(y, m, 1).getDay(); const ds = Array(fD).fill(null).concat(Array.from({length: dM}, (_, i) => new Date(y, m, i+1)));
-    return (
-      <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
-         <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center"><Icon name="calendar" size={20} className="mr-2 text-[#bca374]"/> ปฏิทินเดือน {gFilt.month}</h2>
-        <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">{['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=><div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">{d}</div>)}{ds.map((d,i) => { if(!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]"></div>; const dS = pYMD(d); const iT = dS === tS; const dTs = tasks.filter(t => t.status!=='ยกเลิก' && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName) && dS>=(t.startDate||'') && dS<=(t.status?.startsWith('จบงาน')?(t.completedDate||t.endDate):((t.endDate||'') > tS ? t.endDate : tS))); return (<div key={dS} onClick={()=>dTs.length>0 && setCPop({isOpen:true, date:dS, tasks:dTs})} className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 ${iT?'bg-blue-50/30 ring-1 ring-inset ring-blue-300':''}`}><div className={`text-right text-[10px] mb-1 ${iT?'font-black text-blue-600':'text-gray-400'}`}>{d.getDate()}</div><div className="space-y-0.5">{dTs.slice(0,3).map(t=><div key={t.id} className={`text-[8px] px-1 rounded truncate font-bold ${t.status?.startsWith('จบงาน')?'bg-green-100 text-green-700':'bg-blue-100 text-blue-800'}`}>{getStdProj(t.project)}</div>)}{dTs.length>3 && <div className="text-[8px] text-center text-gray-400 font-bold">+ {dTs.length-3}</div>}</div></div>); })}</div>
-      </div>
-    );
-  };
-
-  const rInf = () => {
-    const ft = informs.filter(j => j.status!=='ยกเลิก' && j.date?.startsWith(gFilt.month) && (gFilt.area==='ทั้งหมด'||j.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(j.project)===gFilt.project) && (gFilt.status==='ทั้งหมด'||j.status===gFilt.status) && checkStaffMatch(j.project, gFilt.staffName));
-    return (
-      <div className="space-y-4 animate-in">
-        <div className="bg-white p-4 rounded-xl shadow-sm border flex gap-2"><button type="button" onClick={()=>setITab('form')} className={`flex-1 py-2 text-xs font-bold rounded ${iTab==='form'?'bg-[#0f2e4a] text-white shadow':'bg-gray-100 text-gray-500'}`}>แจ้งเปิดงานใหม่</button><button type="button" onClick={()=>setITab('manage')} className={`flex-1 py-2 text-xs font-bold rounded ${iTab==='manage'?'bg-[#0f2e4a] text-white shadow':'bg-gray-100 text-gray-500'}`}>จัดการสถานะ</button></div>
-        {iTab === 'form' ? (
-          <form onSubmit={subInf} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-2 gap-4 border-t-4 border-t-[#bca374]">
-            <div><label className="text-xs font-bold mb-1 block">วันที่</label><input type="date" value={informForm.date} onChange={e=>setInformForm({...informForm, date: e.target.value})} required className="border rounded-xl px-3 py-2 w-full text-sm outline-none" /></div>
-            <div>
-              <label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label>
-              <div className="flex gap-2">
-                <input value={informForm.requesterName} onChange={e=>setInformForm({...informForm, requesterName: e.target.value})} required placeholder="ชื่อ" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
-                <input value={informForm.phone} onChange={e=>setInformForm({...informForm, phone: e.target.value})} required placeholder="เบอร์โทร" className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none" />
-              </div>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-xs font-bold mb-1 block">เจ้าหน้าที่ดูแลโครงการ (ตัวกรอง)</label>
-              <select value={informForm.staffName} onChange={e=>setInformForm({...informForm, staffName: e.target.value, project: '', area: ''})} className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-blue-50">
-                <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
-                {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div><label className="text-xs font-bold mb-1 block">โครงการ (ออโต้พื้นที่)</label>
-              <select value={informForm.project} required onChange={(e) => { const pData = (sets.projects||[]).find(p=>getProjName(p) === e.target.value); setInformForm({...informForm, project: e.target.value, area: getProjArea(pData)}); }} className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.projects||[]).filter(p => !informForm.staffName || checkStaffMatch(getProjName(p), informForm.staffName)).map(p=><option key={p} value={getProjName(p)}>{getProjName(p)}</option>)}</select>
-            </div>
-            <div><label className="text-xs font-bold mb-1 block">พื้นที่</label><input type="text" value={informForm.area} readOnly className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-gray-100 text-gray-500" /></div>
-            <div><label className="text-xs font-bold mb-1 block">ประเภทงาน</label><select value={informForm.jobType} onChange={e=>setInformForm({...informForm, jobType: e.target.value})} required className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.jobTypes||[]).map(a=><option key={a}>{a}</option>)}</select></div>
-            <div><label className="text-xs font-bold mb-1 block">บริเวณ</label><select value={informForm.location} onChange={e=>setInformForm({...informForm, location: e.target.value})} required className="border rounded-xl px-3 py-2 w-full text-sm outline-none"><option value="">เลือก...</option>{(sets.locations||[]).map(a=><option key={a}>{a}</option>)}</select></div>
-            <div className="md:col-span-2"><label className="text-xs font-bold mb-1 block">รายละเอียดปัญหา</label><textarea value={informForm.details} onChange={e=>setInformForm({...informForm, details: e.target.value})} required rows="3" className="border rounded-xl px-3 py-2 w-full text-sm outline-none resize-none"></textarea></div>
-            <div className="md:col-span-2 text-center mt-2"><button type="submit" className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-10 py-2 rounded-lg text-sm font-bold shadow-md">ส่งแจ้งงาน</button></div>
-          </form>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-gray-100 border-b"><tr><th className="p-3 w-28">วันที่/ID</th><th className="p-3">ข้อมูลเบื้องต้น</th><th className="p-3 w-32">สถานะ</th><th className="p-3 w-28">จัดการ</th></tr></thead>
-                <tbody>
-                  {ft.map(j => (
-                    <tr key={j.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-bold">{fDate(j.date)}<div className="text-[9px] text-gray-400 mt-1">{j.id}</div></td>
-                      <td className="p-3">
-                        <div className="font-bold text-[#0f2e4a] text-sm">{getStdProj(j.project)} <span className="font-normal text-xs text-gray-500">({j.area})</span></div>
-                        <div className="text-gray-500 mt-1">{j.requesterName} {j.phone && `| เบอร์: ${j.phone}`}</div>
-                        <div className="flex gap-1 mt-1.5 mb-1">
-                           {j.jobType && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-medium border">{j.jobType}</span>}
-                           {j.location && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-medium border">{j.location}</span>}
-                        </div>
-                        <div className="italic text-gray-600 mt-1 text-[11px] bg-gray-50 p-1.5 rounded border border-gray-200">
-                           {String(j.details || '-').length > 90 ? String(j.details || '-').substring(0, 90) + '...' : String(j.details || '-')}
-                        </div>
-                        <button type="button" onClick={()=>setInfView(j)} className="mt-2 text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded flex items-center text-[10px] font-bold shadow-sm"><Icon name="search" size={12} className="mr-1"/> อ่านรายละเอียดเต็ม</button>
-                      </td>
-                      <td className="p-3"><span className={`px-2 py-1 rounded text-[10px] font-bold ${j.status==='เปิด Inform Job แล้ว'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}>{j.status}</span>{j.informNo&&<div className="text-[9px] text-green-600 mt-1 font-bold">No: {j.informNo}</div>}</td>
-                      <td className="p-3"><select value={j.status} onChange={e=>{if(e.target.value==='เปิด Inform Job แล้ว')setIMod({isOpen:true,type:'open',id:j.id,val:''});else if(e.target.value==='ยกเลิก')setIMod({isOpen:true,type:'cancel',id:j.id,val:''});else{saveD('informJob',{...j,status:e.target.value})}}} className="border rounded p-1 outline-none text-xs"><option value="รอดำเนินการ">รอดำเนินการ</option><option value="เปิด Inform Job แล้ว">เปิดงาน</option><option value="ยกเลิก">ยกเลิก</option></select></td>
-                    </tr>
-                  ))} 
-                  {ft.length===0 && <tr><td colSpan="4" className="text-center py-10 text-gray-400">ไม่มีข้อมูลแจ้งเปิดงาน</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const rKanb = () => {
-    const cT = tasks.filter(t => t.status?.startsWith('จบงาน') && (gFilt.area==='ทั้งหมด'||t.area===gFilt.area) && (gFilt.project==='ทั้งหมด'||getStdProj(t.project)===gFilt.project) && checkStaffMatch(t.project, gFilt.staffName));
-    const ubGrp = groupTasks(cT.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว')); 
-    const biGrp = groupTasks(cT.filter(t => t.billingStatus === 'ส่งเบิกแล้ว' && (t.billingMonth === gFilt.month || (gFilt.month === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))));
-    
-    return (
-      <div className="space-y-4 animate-in">
-         <div className="flex justify-between items-center"><h2 className="text-xl font-bold text-[#0f2e4a]">ส่งเบิก (เดือน {gFilt.month})</h2></div>
-         <div className="flex flex-col md:flex-row gap-4 h-[70vh]">
-            <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border">
-              <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between"><span>รอส่งเบิก / ค้างเบิก</span><span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} กลุ่ม</span></h3>
-              <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
-                {ubGrp.map(g => (
-                  <div key={g.id} onClick={()=>setBMod({isOpen: true, group: g, type: 'รอส่งเบิก'})} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all relative">
-                    <div className="flex justify-between items-start mb-2"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span></div>
-                    <div className="font-bold text-[#0f2e4a] text-sm mb-1">{getStdProj(g.project)} <span className="text-xs text-gray-500 font-normal">({g.tasks.length} งาน)</span></div>
-                    <div className="space-y-1.5 mt-2">{g.tasks.map((t, i) => (<div key={t.id} className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"><span className="text-gray-400 font-bold mr-1">#{i+1}</span>{t.details}</div>))}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100">
-              <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between"><span>ส่งเบิกแล้ว (รอบ {gFilt.month})</span><span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span></h3>
-              <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
-                {biGrp.map(g => (
-                  <div key={g.id} onClick={()=>setBMod({isOpen: true, group: g, type: 'ส่งเบิกแล้ว'})} className="bg-white p-3 rounded-lg shadow-sm border border-green-200 cursor-pointer hover:border-green-400 hover:shadow-md transition-all relative">
-                    <div className="flex justify-between items-start mb-2"><span className="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[10px]">{g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0].id}`}</span></div>
-                    <div className="font-bold text-green-800 text-sm mb-1">{getStdProj(g.project)} <span className="text-xs text-green-600/70 font-normal">({g.tasks.length} งาน)</span></div>
-                    <div className="space-y-1.5 mt-2 opacity-70">{g.tasks.map((t, i) => (<div key={t.id} className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"><span className="text-gray-400 font-bold mr-1">#{i+1}</span>{t.details}</div>))}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-         </div>
-      </div>
-
-    )
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCropModal({ isOpen: true, imageSrc: ev.target.result, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = null;
-  };
-
-  const onCropComplete = (croppedArea, croppedAreaPixels) => {
-    setCropModal(prev => ({ ...prev, croppedAreaPixels }));
-  };
 
   const saveCroppedImage = () => {
-    if(!cropModal.imageSrc || !cropModal.croppedAreaPixels) return;
+    if (!cropModal.imageSrc || !cropModal.croppedAreaPixels) return;
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -855,1133 +649,54 @@ export default function App() {
       const ctx = canvas.getContext('2d');
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, cropModal.croppedAreaPixels.x, cropModal.croppedAreaPixels.y, cropModal.croppedAreaPixels.width, cropModal.croppedAreaPixels.height, 0, 0, MAX_SIZE, MAX_SIZE);
-      setTeamForm({...teamForm, image: canvas.toDataURL('image/webp', 0.85)});
+      setTeamForm({ ...teamForm, image: canvas.toDataURL('image/webp', 0.85) });
       setCropModal({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
     };
     img.src = cropModal.imageSrc;
   };
 
   const saveTeam = () => {
-    if(!teamForm.name) return alert('กรุณาระบุชื่อพนักงาน');
-    let ns = [...(sets.staffStats||[])];
-    if(teamForm.id) {
+    if (!teamForm.name) return alert('กรุณาระบุชื่อพนักงาน');
+    let ns = [...(sets.staffStats || [])];
+    if (teamForm.id) {
       const idx = ns.findIndex(x => x.id === teamForm.id);
-      if(idx > -1) ns[idx] = {...teamForm};
-    } else { ns.push({...teamForm, id: Date.now().toString()}); }
-    const newSets = {...sets, staffStats: ns};
+      if (idx > -1) ns[idx] = { ...teamForm };
+    } else {
+      ns.push({ ...teamForm, id: Date.now().toString() });
+    }
+    const newSets = { ...sets, staffStats: ns };
     setSets(newSets);
     saveD('settings', newSets);
-    setSelTeam({...teamForm});
+    setSelTeam({ ...teamForm });
     setTeamEditMode(false);
   };
 
-  const rTeam = () => {
-    if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
-
-    const sList = sets.staffStats || [];
-    const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
-    
-    const handleExcelUpload = (e) => {
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const data = evt.target.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames.includes('ประเมินผลทีม') ? 'ประเมินผลทีม' : workbook.SheetNames[1] || workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          let ns = [...(sets.staffStats||[])];
-          let addedCount = 0;
-          for(let i=2; i<rows.length; i++) {
-            const row = rows[i];
-            if(!row || !row[0] || row[0].toString().trim() === '') continue;
-            
-            const name = row[0].toString().trim();
-            const avg = (arr) => {
-               const valid = arr.filter(v => typeof v === 'number');
-               if(valid.length === 0) return 5;
-               const sum = valid.reduce((a,b)=>a+b,0);
-               const rawAvg = sum/valid.length;
-               const r1 = Math.round(rawAvg * 10) / 10;
-               return Math.round(r1);
-            };
-            const str = avg([row[10], row[11], row[12]]);
-            const agi = avg([row[13], row[14], row[15]]);
-            const dex = avg([row[16], row[17], row[18]]);
-            const int = avg([row[19], row[20], row[21], row[22], row[27], row[28]]);
-            const con = avg([row[23], row[24], row[25]]);
-            const sen = avg([row[26], row[29], row[30]]);
-            
-            const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
-            const stats = { str, agi, dex, int, con, sen };
-            const validStats = Object.keys(stats).filter(k => stats[k] >= 5).map(k => ({ key: k, val: stats[k], adj: stats[k] + tieBreakers[k] }));
-            
-            let archetypeKey = 'novice';
-            if (validStats.length >= 2) {
-               validStats.sort((a,b) => b.adj - a.adj); // Sort descending by adjusted score
-               const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
-               const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
-               archetypeKey = topKeys.join('_');
-            }
-
-            const potentialIdentity = getArchetypeIdentity(stats);
-            
-            const existingIdx = ns.findIndex(x => x.name === name);
-            const newObj = {
-              name: name, str, agi, dex, int, con, sen, archetypeKey, potentialIdentity
-            };
-            if(existingIdx > -1) {
-              ns[existingIdx] = {...ns[existingIdx], ...newObj};
-            } else {
-              ns.push({ id: Date.now().toString() + i, classId: '', image: '', ...newObj });
-            }
-            addedCount++;
-          }
-          const newSets = {...sets, staffStats: ns};
-          setSets(newSets);
-          saveD('settings', newSets);
-          alert(`นำเข้าข้อมูลพนักงานสำเร็จจำนวน ${addedCount} รายการ!`);
-        } catch (err) {
-          console.error(err);
-          alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel กรุณาตรวจสอบว่าเลือกไฟล์ที่ถูกต้อง');
-        }
-      };
-      reader.readAsBinaryString(file);
-      e.target.value = null;
-    };
-    
-    const renderCinematicView = () => {
-      const u = teamForm;
-      if (!u.id) return null;
-      const role = classMap[u.classId];
-
-      const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
-      const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
-      
-      const archetypeMapTop2 = {};
-        const archetypeMapTop3 = {};
-        archetypesData.forEach(a => {
-           const keys = a.key.split('_');
-           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-        });
-        archetypesData.forEach(a => {
-           const keys = a.key.split('_');
-           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-        });
-
-      const validStats = sortedStats.filter(s => s[1] >= 5);
-      const minStat = sortedStats[5][1];
-      const maxStat = sortedStats[0][1];
-      
-      let prefix = '';
-      if (maxStat >= 10) prefix = 'Master ';
-      else if (maxStat >= 9) prefix = 'Elite ';
-      else if (maxStat >= 8) prefix = 'Expert ';
-      else if (maxStat >= 7) prefix = 'Veteran ';
-      else if (maxStat >= 6) prefix = 'Adept ';
-
-      const getDesc = (k) => {
-         const defaults = { str: 'พลังดันงาน', agi: 'ความไว', dex: 'ความละเอียด', int: 'เทคโนโลยี', con: 'ทนทาน', sen: 'วุฒิภาวะทางอารมณ์' };
-         return defaults[k];
-      };
-
-      let mainStyleRaw = ''; let styleDesc = ''; let useTop3 = false;
-      if (maxStat === minStat) {
-         const v = maxStat;
-         if (v === 1) { mainStyleRaw = 'Critical Crisis (ขั้นวิกฤต/ต้องจัดการเด็ดขาด)'; styleDesc = 'ผลงานและพฤติกรรมต่ำสุดในทุกมิติ ก่อให้เกิดความเสียหายร้ายแรง เป็นปัจจัยเสี่ยงระดับวิกฤตที่หัวหน้างานต้องมีมาตรการจัดการขั้นเด็ดขาด (Terminate หรือ Re-role ทันที)'; }
-         else if (v === 2) { mainStyleRaw = 'Severe Underperformer (ต่ำกว่าเกณฑ์รุนแรง)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่ามาตรฐานมาก เป็นจุดอ่อนของทีมที่ต้องเข้าสู่แผน PIP (Performance Improvement Plan) อย่างเร่งด่วนที่สุด'; }
-         else if (v === 3) { mainStyleRaw = 'Needs Intensive Care (ต้องดูแลใกล้ชิด)'; styleDesc = 'ยังไม่สามารถปล่อยให้ทำงานเองได้ ต้องมีพี่เลี้ยง (Mentor) คอยประกบแทบทุกขั้นตอนเพื่อป้องกันความผิดพลาด'; }
-         else if (v === 4) { mainStyleRaw = 'Inconsistent Performer (ขาดความสม่ำเสมอ)'; styleDesc = 'เกือบแตะมาตรฐาน แต่ยังมีจุดบกพร่องหรือหลุดบ่อย หัวหน้างานต้องคอยกระตุ้นและกำหนด Check-point ถี่ขึ้นเพื่อดึงศักยภาพ'; }
-         else if (v === 5) { mainStyleRaw = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วน เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ความเชี่ยวชาญ'; }
-         else if (v === 6) { mainStyleRaw = 'Solid Contributor (ผู้ขับเคลื่อนชั้นเยี่ยม)'; styleDesc = 'ทำงานได้ดีเยี่ยมและไว้ใจได้ในทุกด้าน เป็นแกนหลักที่ทีมฝากความหวังได้เสมอโดยไม่ต้องตรวจสอบซ้ำ'; }
-         else if (v === 7) { mainStyleRaw = 'Advanced Generalist (ผู้เชี่ยวชาญรอบด้าน)'; styleDesc = 'มีทักษะระดับสูงครบทุกมิติ สามารถแก้ปัญหาซับซ้อนได้อย่างอิสระและเป็นที่ปรึกษาให้ทีมได้'; }
-         else if (v === 8) { mainStyleRaw = 'Expert Leader (ผู้นำระดับผู้เชี่ยวชาญ)'; styleDesc = 'โดดเด่นรอบด้าน เป็นเสาหลักที่กำหนดมาตรฐานการทำงานของทีมและริเริ่มสิ่งใหม่ๆ ได้อย่างยอดเยี่ยม'; }
-         else if (v === 9) { mainStyleRaw = 'The Mastermind (ผู้คุมเกม)'; styleDesc = 'สุดยอดบุคลากรที่มีอิทธิพลต่อทิศทางของทีม เป็นตัวแปรสำคัญที่สามารถพลิกสถานการณ์และสร้างนวัตกรรมใหม่ๆ ได้อย่างไม่มีขีดจำกัด'; }
-         else if (v === 10) { mainStyleRaw = 'The Legend (ระดับตำนาน)'; styleDesc = 'บุคคลระดับตำนาน ไร้จุดอ่อนใดๆ เป็นรากฐานที่สร้างนิยามใหม่แห่งความสำเร็จและกำหนดทิศทางขององค์กร'; }
-      } else if (maxStat >= 8 && minStat <= 3) {
-         mainStyleRaw = 'Polarized Prodigy (สุดโต่งแต่อ่อนไหว)';
-         styleDesc = `มีพรสวรรค์สูงลิ่วในด้าน ${getDesc(sortedStats[0][0])} แต่มีจุดบอดวิกฤตในด้าน ${getDesc(sortedStats[5][0])} (คะแนน ${minStat}) ซึ่งอาจสร้างความเสียหายรุนแรงได้ หัวหน้างานต้องจัดสรรทีมงานมาอุดช่องโหว่นี้โดยด่วน ไม่ควรให้ลุยเดี่ยว`;
-      } else if (maxStat <= 5) {
-         if (minStat >= 4) {
-            mainStyleRaw = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
-         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            mainStyleRaw = 'Trainee (อยู่ในช่วงพัฒนาทักษะ)'; styleDesc = 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์ปฏิบัติงานขั้นต้น (มาตรฐาน = 5) จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิดและไม่ควรให้รับผิดชอบงานหลักเพียงลำพัง';
-         } else {
-            mainStyleRaw = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
-         }
-      } else {
-         if (validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1])) useTop3 = true;
-         if (useTop3) {
-            const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
-            mainStyleRaw = (archetypeMapTop3[topKeys.sort().join('_')] || 'Hybrid (สายผสมผสาน)');
-            styleDesc = `โดดเด่นอย่างมากด้าน ${getDesc(topKeys[0])}, ${getDesc(topKeys[1])} และ ${getDesc(topKeys[2])}`;
-         } else {
-            const topKeys = [validStats[0][0], validStats[1][0]];
-            mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
-            styleDesc = `ความเชี่ยวชาญพิเศษด้าน ${getDesc(topKeys[0])} ผสานกับ ${getDesc(topKeys[1])}`;
-         }
-         if (minStat <= 4) {
-            const weakReasons = { str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง', agi: 'งานด่วนที่ต้องการผลลัพธ์รวดเร็ว', dex: 'งานที่ต้องใช้ความละเอียดถูกต้องสูงและแข่งกับเวลา', int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน', con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ', sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า' };
-            const weakNames = sortedStats.filter(s => s[1] <= 4).map(s => weakReasons[s[0]]).filter(Boolean);
-            if (weakNames.length > 0) styleDesc += ` แต่ทั้งนี้ พนักงานยังไม่เหมาะที่จะมอบหมายให้ทำ${weakNames.join(' รวมถึง ')} เนื่องจากสเตตัสในด้านดังกล่าวยังอยู่ในระดับต่ำ`;
-         }
+  const deleteTask = async (t) => {
+    const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อลบข้อมูล:');
+    if (pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');
+    if (confirm('ต้องการลบงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) {
+      try {
+        fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ type: 'deleteTask', data: { id: t.id } })
+        }).catch(() => {});
+        await deleteDoc(getDocRef('Tasks', t.id));
+      } catch (e) {
+        alert('ลบข้อมูลไม่สำเร็จ: ' + e.message);
       }
-
-      let archetypeKey = 'novice';
-        let identityText = '-';
-        let bottomDescText = <>{styleDesc}</>;
-  
-        if (maxStat <= 5) {
-           if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-              archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-           }
-        } else {
-           if (validStats.length >= 2) {
-              if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-                 archetypeKey = 'all_rounder';
-              } else {
-                 archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
-              }
-           }
-        }
-        
-        const archObj = archetypesData.find(a => a.key === archetypeKey);
-        if (archObj && validStats.length >= 2) {
-            let dynamicWeakness = "";
-            let weaknessLabel = "จุดอ่อน:";
-            let weaknessColor = "text-rose-400";
-            const lowestStatValue = sortedStats[5][1];
-            const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
-            
-            const weakBehaviorDefs = { 
-                str: 'อาจขาดความเด็ดขาดในการลุยงาน หรือลังเลที่จะตัดสินใจแก้ปัญหาเฉพาะหน้า (STR)', 
-                agi: 'อาจตอบสนองต่อปัญหาได้ช้า และปรับตัวไม่ทันเมื่อสถานการณ์เปลี่ยนแปลงกะทันหัน (AGI)', 
-                dex: 'อาจมีข้อผิดพลาดในรายละเอียดเอกสาร ขาดความประณีตในการตรวจงาน หรือบริหารเวลาได้ไม่ดีนัก (DEX)', 
-                int: 'อาจใช้เครื่องมือ/เทคโนโลยีช่วยทำงานได้ไม่คล่อง หรือจัดลำดับกระบวนการทำงานได้ไม่เป็นระบบพอ (INT)', 
-                con: 'อาจทนรับความกดดันจากงานที่ยืดเยื้อไม่ได้ดีนัก และเสี่ยงต่อภาวะหมดไฟได้ง่าย (CON)', 
-                sen: 'อาจควบคุมอารมณ์ได้ไม่ดีเมื่อถูกยั่วยุ สื่อสารเจตนาคลาดเคลื่อน หรือขาดศิลปะในการเจรจา (SEN)' 
-            };
-            const weakBehaviors = lowestStats.map(s => weakBehaviorDefs[s[0]]).join(' รวมถึง ');
-
-            if (lowestStatValue <= 4) {
-                weaknessLabel = "จุดอ่อน:";
-                dynamicWeakness = `${weakBehaviors} (สเตตัสต่ำกว่าเกณฑ์มาตรฐาน: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแล`;
-            } else {
-                weaknessLabel = "ข้อควรระวัง:";
-                weaknessColor = "text-amber-400";
-                dynamicWeakness = `${weakBehaviors} แม้จะอยู่ในระดับที่สอบผ่าน (${lowestStatValue}/10) แต่ถือเป็นจุดที่ยังอ่อนที่สุดเมื่อเทียบกับศักยภาพด้านอื่นของพนักงาน`;
-            }
-
-            bottomDescText = (
-                <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
-                    <span className="text-stone-300 italic">"{archObj.desc}"</span>
-                    <span className="mt-1 flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่น:</span> <span>{archObj.strengths}</span></span>
-                    <span className="flex items-start"><span className={`font-bold mr-1 shrink-0 ${weaknessColor}`}>{weaknessLabel}</span> <span>{dynamicWeakness}</span></span>
-                </span>
-            );
-        } else {
-            bottomDescText = <span className="text-gray-400 italic block mt-2">{styleDesc}</span>;
-        }
-
-      identityText = getArchetypeIdentity(statsObj);
-
-      const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
-      const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
-      const thTitle = nameMatch ? nameMatch[2].trim() : '';
-
-      const flavorMap = {
-        'Master': 'ระดับปรมาจารย์',
-        'Elite': 'ระดับผู้เชี่ยวชาญสูงสุด',
-        'Expert': 'ระดับผู้เชี่ยวชาญ',
-        'Veteran': 'ระดับชำนาญการ',
-        'Adept': 'ระดับผู้มีความสามารถ',
-        'Trainee': 'ระดับผู้ฝึกฝน'
-      };
-      const prefixText = prefix.trim();
-      const flavorText = flavorMap[prefixText] || '';
-
-      const outers = [
-        { k: 'cx', n: 'Customer Exp.', val: Math.round((statsObj.con + statsObj.sen)/2) },
-        { k: 'tech', n: 'Tech. Expertise', val: Math.round((statsObj.int + statsObj.dex)/2) },
-        { k: 'sla', n: 'Ops & SLA', val: Math.round((statsObj.agi + statsObj.dex)/2) },
-        { k: 'crisis', n: 'Crisis Resolv.', val: Math.round((statsObj.str + statsObj.con)/2) },
-        { k: 'resource', n: 'Resource Ctrl.', val: Math.round((statsObj.str + statsObj.sen)/2) },
-        { k: 'innovation', n: 'Innovation', val: Math.round((statsObj.int + statsObj.sen)/2) }
-      ].map(o => ({...o, finalVal: (u[o.k] !== null && u[o.k] !== undefined) ? u[o.k] : o.val}));
-
-      return (
-          <>
-            <AssessmentModal 
-               isOpen={assessMode} 
-               onClose={() => setAssessMode(false)} 
-               staff={teamForm} 
-               onSave={(newStats) => {
-                  const ns = [...(sets.staffStats||[])];
-                  const idx = ns.findIndex(x => x.id === teamForm.id);
-                  if (idx >= 0) {
-                     ns[idx] = { ...ns[idx], ...newStats };
-                  }
-                  const newSets = { ...sets, staffStats: ns };
-                  setSets(newSets);
-                  saveD('settings', newSets);
-                  setTeamForm({ ...teamForm, ...newStats });
-                  setSelTeam({ ...selTeam, ...newStats });
-                  setAssessMode(false);
-                  alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
-               }}
-            />
-        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[450px]">
-           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
-           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
-
-           <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
-              <div className="absolute top-4 right-4 z-20 flex gap-2">
-                  <button type="button" onClick={() => setTeamEditMode(true)} title="ตั้งค่าข้อมูลพื้นฐาน" className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
-                    <Icon name="settings" size={18} />
-                  </button>
-                  <button type="button" onClick={() => setAssessMode(true)} title="ประเมินศักยภาพบุคลากร" className="bg-[#bca374]/20 hover:bg-[#bca374]/40 border border-[#bca374]/30 text-[#e6d0a7] hover:text-white p-2 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(188,163,116,0.3)]">
-                    <Icon name="clipboard-check" size={18} />
-                  </button>
-                </div>
-
-              <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)] group">
-                    <div className="absolute inset-0 bg-white/10 blur-xl rounded-full mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-                    <ClassEmblem archetypeKey={archetypeKey} size="100%" className="text-white transition-transform duration-700 group-hover:scale-110" />
-                  </div>
-                  <div className="flex flex-col">
-                    <h5 className="text-[#bca374] text-[10px] sm:text-xs lg:text-sm font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex flex-wrap items-center gap-2">
-                       <span>{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
-                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[9px] border border-[#bca374]/30">{prefixText}</span>}
-                    </h5>
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
-                       {enTitle}
-                    </h1>
-                  </div>
-                </div>
-                <div className="mb-4 lg:mb-5 border-l-4 border-[#bca374] pl-3">
-                  <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1 lg:mb-2">
-                     "{styleDesc}"
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-[#bca374] leading-relaxed font-bold mb-1">
-                     อัตลักษณ์ศักยภาพ: <span className="text-[#e6d0a7]">{identityText}</span>
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-0.5">
-                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] text-slate-500 font-normal ml-1">({flavorText})</span>}
-                  </p>
-                  <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
-                     {bottomDescText}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-2 lg:gap-y-3 mb-4 lg:mb-5">
-                   {[
-                     { l: 'STR', val: statsObj.str, c: 'from-rose-600 to-rose-400' },
-                     { l: 'AGI', val: statsObj.agi, c: 'from-emerald-600 to-emerald-400' },
-                     { l: 'DEX', val: statsObj.dex, c: 'from-amber-600 to-amber-400' },
-                     { l: 'INT', val: statsObj.int, c: 'from-blue-600 to-blue-400' },
-                     { l: 'CON', val: statsObj.con, c: 'from-orange-600 to-orange-400' },
-                     { l: 'SEN', val: statsObj.sen, c: 'from-purple-600 to-purple-400' }
-                   ].map(s => (
-                     <div key={s.l} className="flex flex-col">
-                        <div className="flex justify-between items-end mb-1">
-                           <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
-                           <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-white">{s.val}</span>
-                        </div>
-                        <div className="w-full h-1 lg:h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                           <div className={`h-full bg-gradient-to-r ${s.c} rounded-full`} style={{width: `${(s.val/10)*100}%`, boxShadow: '0 0 10px currentColor'}}></div>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 lg:gap-2">
-                   {outers.map(o => (
-                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-md px-1.5 py-1 lg:px-2 lg:py-1.5 flex flex-col backdrop-blur-md">
-                         <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider">{o.n}</span>
-                         <span className="text-white font-bold text-[10px] sm:text-xs">{o.finalVal} <span className="text-slate-500 text-[8px] sm:text-[9px] font-normal">/10</span></span>
-                      </div>
-                   ))}
-                </div>
-              </div>
-           </div>
-
-           <div className="w-full md:w-[45%] min-h-[300px] h-full flex items-start justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
-              
-              <div className="relative z-10 w-full h-full flex items-center justify-center p-4 lg:p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
-                {u.image ? (
-                   <img src={u.image} className="max-w-[85%] max-h-[90%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-105" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
-                ) : (
-                   <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                     <Icon name="user" size={64} className="text-slate-600" />
-                   </div>
-                )}
-              </div>
-              
-              <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#08080c] to-transparent pointer-events-none z-20"></div>
-              
-              <div className="absolute bottom-10 -right-10 text-[150px] font-black text-white/5 whitespace-nowrap pointer-events-none z-0 transform -rotate-12 select-none tracking-tighter mix-blend-overlay">
-                 {u.name.split(' ')[0]}
-                           </div>
-           </div>
-        </div>
-      </>);
-    };
-
-    const renderAnalysis = () => {
-      const u = teamForm;
-      if (!u.id && !selTeam?.isNew) return null;
-      const role = classMap[u.classId];
-      
-      const sc = sets.statConfigs || {};
-      const defMeta = {
-        str: { 
-          key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'Execution & Impact', 
-          rubric: {
-            basic: 'ลังเล ต้องรอคำสั่งจากหัวหน้าเสมอ',
-            intermediate: 'ตัดสินใจเองได้เฉพาะงาน Routine / ปิดเคสยากได้ตามมาตรฐานบริษัท',
-            advanced: 'กล้าตัดสินใจในเคสพิพาทที่ซับซ้อน / มีความสม่ำเสมอในการเจรจารักษาสัมพันธ์ลูกค้า',
-            mastery: 'อนุมัติงบพิเศษหรือมาตรการเยียวยาเพื่อจบวิกฤตได้ทันที / ปิดเคสระดับวิกฤตได้สำเร็จ'
-          }
-        },
-        agi: { 
-          key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'Speed & Adaptability', 
-          rubric: {
-            basic: 'ตอบกลับล่าช้ากว่า SLA / รับมือล่าช้าหรือไม่รู้ขั้นตอนปฏิบัติ',
-            intermediate: 'ตอบกลับตามมาตรฐานเวลา / ตอบสนองเหตุการณ์ตามขั้นตอน',
-            advanced: 'ตอบกลับเร็วกว่าค่าเฉลี่ย / ระงับเหตุและประสานงานแก้วิกฤตได้เร็ว',
-            mastery: 'ตอบกลับทันทีและเตรียมทางออกล่วงหน้า / คาดการณ์ความเสี่ยงและเข้าถึงหน้างานก่อนเกิดเหตุบานปลาย'
-          }
-        },
-        dex: { 
-          key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'Precision & Quality', 
-          rubric: {
-            basic: 'พบข้อผิดพลาดบ่อย / มองไม่เห็นจุด Defect พื้นฐาน',
-            intermediate: 'ข้อมูลถูกต้องตามมาตรฐาน / ตรวจพบ Defect ทั่วไปตาม Check-list',
-            advanced: 'ข้อมูลแม่นยำสูง / ตรวจพบจุดบกพร่องที่ซ่อนเร้นเชิงเทคนิค',
-            mastery: 'ข้อมูลและตัวเลขสมบูรณ์ 100% ไร้ที่ติ / ชี้จุดผิดพลาดที่ส่งผลต่ออายุการใช้งานได้อย่างเป๊ะ'
-          }
-        },
-        int: { 
-          key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'Tech, Systems & Automation', 
-            rubric: {
-              basic: 'ใช้เครื่องมือพื้นฐานได้ไม่คล่องตัว / ทำงานซ้ำซ้อนโดยไม่ใช้ระบบช่วย',
-              intermediate: 'ใช้ระบบ (CRM/Excel) ติดตามงานได้ดี / จัดคิวงานตัวเองได้อย่างเป็นระบบ',
-              advanced: 'ออกแบบโฟลว์งาน (Workflow) ลดความซ้ำซ้อน / สร้าง Dashboard ควบคุมงานได้',
-              mastery: 'นำเทคโนโลยีขั้นสูง (AI/Automation) มาปฏิวัติการทำงาน / วางโครงสร้างระบบไร้รอยต่อ'
-            }
-          },
-        con: { 
-          key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'Resilience & Mental Toughness', 
-            rubric: {
-              basic: 'หลุดมาตรฐานเมื่อเจองานหนัก / ประสิทธิภาพลดลงเมื่อกดดัน',
-              intermediate: 'คุมสติตามมาตรฐานวิชาชีพ / ทำงานได้ต่อเนื่องแม้งานมีปริมาณมาก',
-              advanced: 'อดทนและโฟกัสกับเป้าหมายได้ดีเยี่ยม / มาตรฐานงานไม่ตกแม้เผชิญวิกฤตรอบด้าน',
-              mastery: 'ยืนหยัดเป็นเสาหลักในภาวะวิกฤต (Crisis) / เปลี่ยนแรงกดดันมหาศาลเป็นพลังบวกให้ทีม'
-            }
-          },
-        sen: { 
-          key: 'sen', name: 'SEN (Sense)', group: 'The Mastermind', desc: 'EQ, People & Empathy', 
-            rubric: {
-              basic: 'สื่อสารแข็งกระด้าง ขาดความเห็นอกเห็นใจ / ทำงานร่วมกับผู้อื่นได้ยาก',
-              intermediate: 'สื่อสารได้ชัดเจน / เข้าใจความต้องการของเพื่อนร่วมงานและประสานงานราบรื่น',
-              advanced: 'มีศิลปะในการเจรจาต่อรอง / ซื้อใจคนเก่ง ลดความขัดแย้งในทีมได้อย่างนุ่มนวล',
-              mastery: 'อ่านใจคนและปรับตัวเข้ากับทุกสถานการณ์ได้ลึกซึ้ง / เป็นผู้นำทางจิตวิญญาณที่รวมใจคน'
-            }
-          }
-      };
-
-      const statMeta = ['str','agi','dex','int','con','sen'].map(k => ({
-        ...defMeta[k]
-      }));
-
-      const getStatLevelText = (val) => {
-          const v = Number(val);
-          if (v >= 9) return 'ระดับเชี่ยวชาญ/วิกฤต (Mastery)';
-          if (v >= 7) return 'ระดับสูง (Advanced)';
-          if (v === 6) return 'ระดับมาตรฐาน (Standard)';
-          if (v >= 4) return 'ระดับปานกลาง (Intermediate)';
-          return 'ระดับพื้นฐาน (Basic)';
-      };
-
-      const getRubricText = (stat, val) => {
-          const v = Number(val);
-          if (v >= 9) return stat.rubric.mastery;
-          if (v >= 7) return stat.rubric.advanced;
-          if (v >= 4) return stat.rubric.intermediate;
-          return stat.rubric.basic;
-      };
-
-      let strengths = [];
-      let gaps = [];
-      
-      let workStyleScores = { precision: 0, lifting: 0, mastermind: 0 };
-
-      statMeta.forEach(s => {
-        const uVal = Number(u[s.key]) || 5;
-        
-        // Calculate style scores by measuring absolute sums
-        if (s.key === 'agi' || s.key === 'dex') workStyleScores.precision += uVal;
-        if (s.key === 'str' || s.key === 'con') workStyleScores.lifting += uVal;
-        if (s.key === 'int' || s.key === 'sen') workStyleScores.mastermind += uVal;
-
-        if (uVal >= 8) strengths.push({...s, uVal});
-        else if (uVal <= 4) gaps.push({...s, uVal});
-      });
-
-      strengths.sort((a,b) => b.uVal - a.uVal);
-      gaps.sort((a,b) => a.uVal - b.uVal);
-
-      let mainStyle = '';
-      let styleDesc = '';
-
-      const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
-      const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
-      
-      const archetypeMapTop2 = {};
-        const archetypeMapTop3 = {};
-        archetypesData.forEach(a => {
-           const keys = a.key.split('_');
-           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-        });
-
-      const validStats = sortedStats.filter(s => s[1] >= 5);
-      const minStat = sortedStats[5][1];
-      const maxStat = sortedStats[0][1];
-      
-      let prefix = '';
-      if (maxStat >= 9) prefix = 'Elite ';
-      else if (maxStat >= 7) prefix = 'Veteran ';
-      else if (maxStat >= 6) prefix = 'Adept ';
-
-      const getDesc = (k) => {
-         const conf = sets.statConfigs && sets.statConfigs[k];
-         if (conf && conf.desc) return conf.desc.trim();
-         const defaults = {
-             str: 'พลังในการผลักดันงานหนัก', agi: 'ความรวดเร็วและคล่องตัว', dex: 'ความละเอียดแม่นยำและการรักษาเวลา',
-             int: 'การใช้ระบบเทคโนโลยีและจัดกระบวนการทำงาน', con: 'ความทนทานต่อความกดดัน', sen: 'การสื่อสารและการจัดการอารมณ์'
-         };
-         return defaults[k];
-      };
-
-      if (maxStat === minStat) {
-         const v = maxStat;
-         if (v === 1) { mainStyle = 'Critical Crisis (ขั้นวิกฤต/ต้องจัดการเด็ดขาด)'; styleDesc = 'ผลงานและพฤติกรรมต่ำสุดในทุกมิติ ก่อให้เกิดความเสียหายร้ายแรง เป็นปัจจัยเสี่ยงระดับวิกฤตที่หัวหน้างานต้องมีมาตรการจัดการขั้นเด็ดขาด (Terminate หรือ Re-role ทันที)'; }
-         else if (v === 2) { mainStyle = 'Severe Underperformer (ต่ำกว่าเกณฑ์รุนแรง)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่ามาตรฐานมาก เป็นจุดอ่อนของทีมที่ต้องเข้าสู่แผน PIP (Performance Improvement Plan) อย่างเร่งด่วนที่สุด'; }
-         else if (v === 3) { mainStyle = 'Needs Intensive Care (ต้องดูแลใกล้ชิด)'; styleDesc = 'ยังไม่สามารถปล่อยให้ทำงานเองได้ ต้องมีพี่เลี้ยง (Mentor) คอยประกบแทบทุกขั้นตอนเพื่อป้องกันความผิดพลาด'; }
-         else if (v === 4) { mainStyle = 'Inconsistent Performer (ขาดความสม่ำเสมอ)'; styleDesc = 'เกือบแตะมาตรฐาน แต่ยังมีจุดบกพร่องหรือหลุดบ่อย หัวหน้างานต้องคอยกระตุ้นและกำหนด Check-point ถี่ขึ้นเพื่อดึงศักยภาพ'; }
-         else if (v === 5) { mainStyle = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วน เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ความเชี่ยวชาญ'; }
-         else if (v === 6) { mainStyle = 'Solid Contributor (ผู้ขับเคลื่อนชั้นเยี่ยม)'; styleDesc = 'ทำงานได้ดีเยี่ยมและไว้ใจได้ในทุกด้าน เป็นแกนหลักที่ทีมฝากความหวังได้เสมอโดยไม่ต้องตรวจสอบซ้ำ'; }
-         else if (v === 7) { mainStyle = 'Advanced Generalist (ผู้เชี่ยวชาญรอบด้าน)'; styleDesc = 'มีทักษะระดับสูงครบทุกมิติ สามารถแก้ปัญหาซับซ้อนได้อย่างอิสระและเป็นที่ปรึกษาให้ทีมได้'; }
-         else if (v === 8) { mainStyle = 'Expert Leader (ผู้นำระดับผู้เชี่ยวชาญ)'; styleDesc = 'โดดเด่นรอบด้าน เป็นเสาหลักที่กำหนดมาตรฐานการทำงานของทีมและริเริ่มสิ่งใหม่ๆ ได้อย่างยอดเยี่ยม'; }
-         else if (v === 9) { mainStyle = 'The Mastermind (ผู้คุมเกม)'; styleDesc = 'สุดยอดบุคลากรที่มีอิทธิพลต่อทิศทางของทีม เป็นตัวแปรสำคัญที่สามารถพลิกสถานการณ์และสร้างนวัตกรรมใหม่ๆ ได้อย่างไม่มีขีดจำกัด'; }
-         else if (v === 10) { mainStyle = 'The Legend (ระดับตำนาน)'; styleDesc = 'บุคคลระดับตำนาน ไร้จุดอ่อนใดๆ เป็นรากฐานที่สร้างนิยามใหม่แห่งความสำเร็จและกำหนดทิศทางขององค์กร'; }
-      } else if (maxStat >= 8 && minStat <= 3) {
-         mainStyle = 'Polarized Prodigy (สุดโต่งแต่อ่อนไหว)';
-         styleDesc = `มีพรสวรรค์สูงลิ่วในด้าน ${getDesc(sortedStats[0][0])} แต่มีจุดบอดวิกฤตในด้าน ${getDesc(sortedStats[5][0])} (คะแนน ${minStat}) ซึ่งอาจสร้างความเสียหายรุนแรงได้ หัวหน้างานต้องจัดสรรทีมงานมาอุดช่องโหว่นี้โดยด่วน ไม่ควรให้ลุยเดี่ยว`;
-      } else if (maxStat <= 5) {
-         if (minStat >= 4) {
-            mainStyle = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
-         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            mainStyle = 'Trainee (อยู่ในช่วงพัฒนาทักษะ)'; styleDesc = 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์ปฏิบัติงานขั้นต้น (มาตรฐาน = 5) จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิดและไม่ควรให้รับผิดชอบงานหลักเพียงลำพัง';
-         } else {
-            mainStyle = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
-         }
-      } else {
-         let useTop3 = false;
-         if (validStats.length >= 3) {
-            if (validStats.length === 3 || validStats[2][1] > validStats[3][1]) {
-               useTop3 = true;
-            }
-         }
-
-         if (useTop3) {
-            const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
-            const pairKey = [...topKeys].sort().join('_');
-            mainStyle = prefix + (archetypeMapTop3[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)');
-            styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} ผสานเข้ากับ${getDesc(topKeys[1])} และเสริมด้วย${getDesc(topKeys[2])}`;
-         } else {
-            const topKeys = [validStats[0][0], validStats[1][0]];
-            const pairKey = [...topKeys].sort().join('_');
-            mainStyle = prefix + (archetypeMapTop2[pairKey] || 'Specialist (สายเฉพาะทาง)');
-            styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} และผสานเข้ากับ${getDesc(topKeys[1])} ได้อย่างยอดเยี่ยม`;
-         }
-         if (minStat <= 4) {
-            const weakReasons = { str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง', agi: 'งานด่วนที่ต้องการผลลัพธ์รวดเร็ว', dex: 'งานที่ต้องใช้ความละเอียดถูกต้องสูงและแข่งกับเวลา', int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน', con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ', sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า' };
-            const weakNames = sortedStats.filter(s => s[1] <= 4).map(s => weakReasons[s[0]]).filter(Boolean);
-            if (weakNames.length > 0) styleDesc += ` แต่ทั้งนี้ พนักงานยังไม่เหมาะที่จะมอบหมายให้ทำ${weakNames.join(' รวมถึง ')} เนื่องจากสเตตัสในด้านดังกล่าวยังอยู่ในระดับต่ำ`;
-         }
-      }
-
-      return (
-        <div className="mt-6 pt-4 w-full text-left relative z-10 font-sans">
-          <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="user" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
-          </h4>
-          
-          <div className="mb-4 text-[12px] p-3 rounded bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-sm relative z-10">
-             <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ แนวโน้มการทำงาน (Work Style Tendency):</strong>
-             <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{mainStyle}</span>
-             <span className="block text-slate-600 leading-relaxed ml-3">{styleDesc}</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 mt-2 relative z-10">
-            <div className="bg-emerald-50/70 p-3 rounded border border-emerald-200 relative overflow-hidden">
-              <strong className="text-emerald-800 text-[13px] flex items-center mb-2"><Icon name="trendingUp" size={14} className="mr-1.5 text-emerald-600"/> จุดเด่น (Strengths)</strong>
-              {strengths.length > 0 ? (
-                <ul className="text-[12px] text-slate-700 space-y-1.5 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
-                  {strengths.map(s => (
-                    <li key={s.key} className="py-1">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-medium">{s.name}</span>
-                        <span className="font-bold text-emerald-700">
-                          {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
-                        </span>
-                      </div>
-                      <div className="text-slate-600 leading-snug">▶ {getRubricText(s, s.uVal)}</div>
-                    </li>
-                  ))}
-                </ul>
-              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่มีสเตตัสระดับสูง</div>}
-            </div>
-
-            <div className="bg-orange-50/70 p-3 rounded border border-orange-200 relative overflow-hidden mt-1">
-              <strong className="text-orange-800 text-[13px] flex items-center mb-2"><Icon name="alertCircle" size={14} className="mr-1.5 text-orange-600"/> สิ่งที่ควรพัฒนา (Gaps)</strong>
-              {gaps.length > 0 ? (
-                <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-orange-300 ml-1">
-                  {gaps.map(s => {
-                    const baseTarget = role?.baseStats?.[s.key] ? Number(role.baseStats[s.key]) : null;
-                    const isBelowTarget = baseTarget && s.uVal < baseTarget;
-                    return (
-                    <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-orange-100 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <strong className="text-[#0f2e4a]">{s.name}</strong>
-                        <span className="font-bold text-orange-600">
-                           {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
-                        </span>
-                      </div>
-                      <div className="text-orange-700 leading-snug mb-1">
-                        ▶ {getRubricText(s, s.uVal)}
-                      </div>
-                      {isBelowTarget && (
-                        <div className="text-[10px] text-rose-600 font-medium bg-rose-50 p-1 rounded inline-block mt-0.5">
-                           * เป้าหมายของตำแหน่ง {role.name} คือระดับ {baseTarget}
-                        </div>
-                      )}
-                    </li>
-                  )})}
-                </ul>
-              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่พบความเสี่ยงที่น่ากังวล</div>}
-            </div>
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-slate-200 relative z-10">
-             <h4 className="font-bold text-[#0f2e4a] text-[13px] flex items-center mb-1">
-                <Icon name="layers" size={14} className="mr-2 text-indigo-500" />
-                6 แกนสมรรถนะผลงาน (The Outer Layer)
-             </h4>
-             <p className="text-[10px] text-slate-500 mb-3 leading-snug">
-                * ระบบวิเคราะห์ค่าจากศักยภาพตั้งต้น (HOW) หัวหน้างานสามารถสไลด์ปรับเพิ่ม/ลดคะแนนเพื่อสะท้อนผลลัพธ์หน้างานจริง (WHAT)
-             </p>
-             <div className="grid grid-cols-2 gap-3">
-                {[
-                  { k: 'cx', n: 'Customer Exp.', d: 'ความพึงพอใจลูกค้า' },
-                  { k: 'tech', n: 'Tech. Expertise', d: 'ทักษะเชิงลึก' },
-                  { k: 'sla', n: 'Ops & SLA', d: 'เวลาและความเป๊ะ' },
-                  { k: 'crisis', n: 'Crisis Resolv.', d: 'แก้ปัญหาวิกฤต' },
-                  { k: 'resource', n: 'Resource Ctrl.', d: 'บริหารทรัพยากร' },
-                  { k: 'innovation', n: 'Innovation', d: 'สร้างระบบใหม่' }
-                ].map(out => {
-                   const autoVal = Math.round(
-                      out.k === 'cx' ? (statsObj.con + statsObj.sen)/2 :
-                      out.k === 'tech' ? (statsObj.int + statsObj.dex)/2 :
-                      out.k === 'sla' ? (statsObj.agi + statsObj.dex)/2 :
-                      out.k === 'crisis' ? (statsObj.str + statsObj.con)/2 :
-                      out.k === 'resource' ? (statsObj.str + statsObj.sen)/2 :
-                      (statsObj.int + statsObj.sen)/2
-                   );
-                   const actualVal = (u[out.k] !== null && u[out.k] !== undefined) ? u[out.k] : autoVal;
-                   const isOverride = u[out.k] !== null && u[out.k] !== undefined && u[out.k] !== autoVal;
-                   const gap = actualVal - autoVal;
-                   
-                   return (
-                     <div key={out.k} className={`bg-white p-2.5 rounded-lg border ${isOverride ? 'border-indigo-200 bg-indigo-50/20' : 'border-slate-200'} shadow-sm flex flex-col justify-between`}>
-                        <div className="flex justify-between items-start mb-1">
-                           <div>
-                              <strong className="text-[11px] text-indigo-900 block">{out.n}</strong>
-                              <span className="text-[9px] text-slate-400">{out.d}</span>
-                           </div>
-                           <span className={`font-bold text-[12px] ${isOverride ? 'text-indigo-600' : 'text-slate-500'}`}>
-                             {actualVal}<span className="text-[9px] text-slate-400">/10</span>
-                           </span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between">
-                           <input type="range" min="1" max="10" step="1" 
-                              className="w-[70%] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
-                              value={actualVal} 
-                              onChange={e => setTeamForm({...teamForm, [out.k]: Number(e.target.value)})} 
-                           />
-                           {isOverride && (
-                             <button type="button" className="text-[9px] text-slate-400 hover:text-indigo-500 underline ml-1" onClick={() => setTeamForm({...teamForm, [out.k]: null})}>คืนค่า</button>
-                           )}
-                        </div>
-                        {gap <= -2 && (
-                           <div className="mt-2 text-[10px] text-rose-700 bg-rose-50 p-1.5 rounded font-medium leading-tight border border-rose-100">
-                              ⚠️ ศักยภาพ {autoVal} แต่ผลงาน {actualVal} (Low Result) → ขาดประสบการณ์หน้างาน ควรทำ OJT ด่วน
-                           </div>
-                        )}
-                        {gap >= 2 && (
-                           <div className="mt-2 text-[10px] text-emerald-700 bg-emerald-50 p-1.5 rounded font-medium leading-tight border border-emerald-100">
-                              ⭐ ผลงาน {actualVal} แซงศักยภาพ {autoVal} → ค้นพบ Best Practice ควรแชร์ต่อในทีม
-                           </div>
-                        )}
-                     </div>
-                   );
-                })}
-             </div>
-          </div>
-        </div>
-      );
-    };
-
-    return (
-      <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
-        <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
-          <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-            <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
-            <div className="flex gap-2">
-               <label className="bg-indigo-600 text-white text-[11px] px-2 py-1 rounded hover:bg-indigo-700 cursor-pointer flex items-center transition shadow-sm">
-                 <Icon name="upload" size={12} className="mr-1" /> Excel
-                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
-               </label>
-               <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-[11px] px-2 py-1 rounded hover:bg-[#a38a5b] transition shadow-sm">+ เพิ่ม</button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
-            {sList.map(s => (
-              <div key={s.id} onClick={()=>{setSelTeam(s); setTeamForm({...s});}} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
-                {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{s.name.substring(0,2)}</div>}
-                <div className="truncate flex-1">
-                  <div className="font-bold text-sm truncate">{s.name}</div>
-                  <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
-                  <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{s.potentialIdentity || getArchetypeIdentity(s)}</div>
-                </div>
-              </div>
-            ))}
-            {sList.length === 0 && <div className="text-center text-xs text-gray-400 p-4">ยังไม่มีรายชื่อทีมงาน<br/>กด "+ เพิ่ม" เพื่อสร้างใหม่</div>}
-          </div>
-        </div>
-
-        <div className="flex-1 bg-white border rounded-xl shadow-sm flex flex-col h-auto md:h-full overflow-hidden">
-          {(!selTeam && !teamForm.name && !teamForm.id) ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-10">
-               <Icon name="users" size={64} className="mb-4 opacity-50" />
-               <p className="font-bold">เลือกทีมงานจากเมนูด้านซ้าย</p>
-               <p className="text-xs mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
-             </div>
-          ) : ( (!teamEditMode && teamForm.id && !selTeam?.isNew) ? renderCinematicView() : (
-            <div className="flex-1 overflow-y-auto hide-scrollbar p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-               <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
-                 <div className="w-full lg:w-1/2 flex flex-col items-center bg-white/90 p-4 md:p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#bca374] to-transparent opacity-30"></div>
-                    <div className="relative group mb-6 mt-2">
-                      <div className="w-32 h-32 rounded-full border-[3px] border-[#bca374] shadow-[0_0_20px_rgba(188,163,116,0.3)] overflow-hidden bg-[#0f2e4a] flex items-center justify-center relative z-10">
-                        {teamForm.image ? <img src={teamForm.image} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-[#bca374]/50"/>}
-                      </div>
-                      <div className="absolute -inset-2 border-2 border-dashed border-[#bca374]/30 rounded-full animate-[spin_20s_linear_infinite] pointer-events-none"></div>
-                      <label className="absolute bottom-0 right-0 bg-gradient-to-tr from-[#bca374] to-[#e6d0a7] text-[#0f2e4a] p-2.5 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform z-20 border border-white/50">
-                        <Icon name="upload" size={16} />
-                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                      </label>
-                    </div>
-                    
-                    <div className="w-full space-y-4">
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 mb-1 block">ชื่อ - นามสกุล</label>
-                        <input type="text" className="w-full border rounded-lg px-4 py-2 text-sm font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] outline-none" placeholder="ชื่อพนักงาน..." value={teamForm.name} onChange={e=>setTeamForm({...teamForm, name:e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 mb-1 block">คลาส (สายอาชีพ)</label>
-                        <select className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#bca374] outline-none" value={teamForm.classId} onChange={e=>setTeamForm({...teamForm, classId:e.target.value})}>
-                          <option value="">-- ไม่ระบุ --</option>
-                          {(sets.staffClasses||[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-4 border-t border-slate-100 mt-2">
-                        {[{k:'str',l:'STR',f:'Strength',c:'text-rose-600',bg:'bg-rose-50',b:'border-rose-200'},{k:'agi',l:'AGI',f:'Agility',c:'text-emerald-600',bg:'bg-emerald-50',b:'border-emerald-200'},{k:'dex',l:'DEX',f:'Dexterity',c:'text-amber-600',bg:'bg-amber-50',b:'border-amber-200'},{k:'int',l:'INT',f:'Intelligence',c:'text-blue-600',bg:'bg-blue-50',b:'border-blue-200'},{k:'con',l:'CON',f:'Constitution',c:'text-orange-600',bg:'bg-orange-50',b:'border-orange-200'},{k:'sen',l:'SEN',f:'Sense',c:'text-purple-600',bg:'bg-purple-50',b:'border-purple-200'}].map(s=>(
-                          <div key={s.k} className={`flex items-center justify-between ${s.bg} p-2 rounded-lg border ${s.b} shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-transform hover:scale-[1.02]`}>
-                            <div className="flex flex-col">
-                              <label className={`text-[12px] font-black ${s.c} leading-none`}>{s.l}</label>
-                              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{s.f}</label>
-                            </div>
-                            <input type="number" min="1" max="10" className={`w-10 text-center text-[14px] font-black border-b-2 border-transparent focus:${s.b} bg-transparent outline-none ${s.c}`} value={teamForm[s.k]} onChange={e=>setTeamForm({...teamForm, [s.k]: Number(e.target.value)||1})} />
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex gap-2 pt-4">
-                        <button type="button" onClick={saveTeam} className="flex-1 bg-[#0f2e4a] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#1a3f63] flex justify-center items-center"><Icon name="save" size={16} className="mr-2"/> บันทึกข้อมูล</button>
-                        {teamForm.id && !selTeam?.isNew && <button type="button" onClick={()=>{setTeamEditMode(false); setTeamForm({...selTeam});}} className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg font-bold hover:bg-slate-200">ยกเลิก</button>}
-                        {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); const newSets = {...sets, staffStats: ns}; setSets(newSets); saveD('settings', newSets); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
-                      </div>
-                    </div>
-                 </div>
-
-                 <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
-                    <div className="w-full mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
-                       <h4 className="font-bold text-[#0f2e4a] mb-6 text-center tracking-wider flex items-center justify-center text-sm"><Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE MAP</h4>
-                       <div className="w-full max-w-[280px] aspect-square">
-                         <RadarChart 
-                            userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
-                         />
-                       </div>
-                       <div className="flex flex-wrap justify-center gap-4 mt-6 text-[11px] font-bold text-slate-500">
-                          <div className="flex items-center"><div className="w-3 h-3 bg-[#0f2e4a] mr-2 rounded-sm opacity-60"></div> ระดับสเตตัสพนักงาน</div>
-                       </div>
-                       <div className="w-full mt-6 border-t border-slate-100"></div>
-                       {renderAnalysis()}
-                    </div>
-                 </div>
-               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const rSet = () => {
-    if (!setUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4">เข้าสู่ระบบแอดมิน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setSetUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setSetUnlk(true)} className="bg-[#0f2e4a] text-white px-4 py-2 rounded-lg w-full font-bold">ยืนยัน</button></div>);
-    const totalRows = tasks.length + informs.length; 
-    const healthPct = Math.min((totalRows / 3000) * 100, 100);
-    const healthColor = totalRows < 1500 ? 'bg-green-500' : (totalRows < 2500 ? 'bg-amber-500' : 'bg-red-500');
-    
-    const groupedProjects = (sets.projects||[]).reduce((acc, curr) => {
-        const p = getProjName(curr), a = getProjArea(curr);
-        if (!acc[a]) acc[a] = [];
-        acc[a].push({ fullStr: curr, name: p });
-        return acc;
-    }, {});
-
-    const groupedSlas = (sets.slas||[]).reduce((acc, curr) => {
-        const cat = getProjName(curr), days = getProjArea(curr);
-        if (!acc[days]) acc[days] = [];
-        acc[days].push({ fullStr: curr, name: cat });
-        return acc;
-    }, {});
-
-    return (
-      <div className="space-y-6 animate-in pb-10">
-        <div className="bg-white p-6 rounded-xl border shadow-sm border-t-4 border-[#bca374]">
-          <h3 className="font-bold text-lg mb-4 flex items-center"><Icon name="fileText" size={20} className="mr-2 text-[#0f2e4a]"/> ส่งออกรายงานสรุป (PDF)</h3>
-          <div className="flex flex-wrap gap-4 items-end bg-gray-50 p-4 rounded-lg border">
-            <div><label className="text-xs font-bold block mb-1">หัวข้อรายงาน</label><select className="border rounded px-3 py-2 text-sm font-bold text-[#0f2e4a]" value={rCfg.topic || 'task'} onChange={e=>setRConfig({...rCfg, topic:e.target.value})}><option value="task">ใบงาน (Task)</option><option value="inform">แจ้งเปิดงาน (Inform-Job)</option></select></div>
-            <div><label className="text-xs font-bold block mb-1">รูปแบบ</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.type} onChange={e=>setRConfig({...rCfg, type:e.target.value})}><option value="month">รายเดือน</option><option value="year">รายปี</option></select></div>
-            <div><label className="text-xs font-bold block mb-1">{rCfg.type==='month'?'เดือน':'ปี'}</label>{rCfg.type==='month'?<input type="month" className="border rounded px-3 py-2 text-sm" value={rCfg.val} onChange={e=>setRConfig({...rCfg, val:e.target.value})} />:<input type="number" className="border rounded px-3 py-2 text-sm w-24" value={rCfg.val.substring(0,4)} onChange={e=>setRConfig({...rCfg, val:`${e.target.value}-01`})} />}</div>
-            <div><label className="text-xs font-bold block mb-1">พื้นที่</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.area} onChange={e=>setRConfig({...rCfg, area:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select></div>
-            <div><label className="text-xs font-bold block mb-1">โครงการ</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.project} onChange={e=>setRConfig({...rCfg, project:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select></div>
-            <div><label className="text-xs font-bold block mb-1">เจ้าหน้าที่</label><select className="border rounded px-3 py-2 text-sm" value={rCfg.staffName} onChange={e=>setRConfig({...rCfg, staffName:e.target.value})}><option value="ทั้งหมด">ทั้งหมด</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select></div>
-            <button type="button" onClick={()=>window.print()} className="bg-[#0f2e4a] text-white px-6 py-2 rounded-lg text-sm font-bold shadow flex items-center ml-auto hover:bg-[#1a3f63]"><Icon name="download" size={16} className="mr-2"/> พิมพ์ PDF</button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-sm text-[#0f2e4a]">จัดกลุ่มโครงการตามพื้นที่</h3>
-              <button type="button" onClick={()=>clearSList('projects')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button>
-            </div>
-            <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-3 rounded">
-              {Object.keys(groupedProjects).map(area => (
-                <div key={area} className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-[#0f2e4a] border-b">{area || 'ไม่ได้ระบุพื้นที่'}</div>
-                  <div className="p-3 flex flex-wrap gap-2 bg-white">
-                    {groupedProjects[area].map(p => (
-                      <span key={p.fullStr} className="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-1.5 rounded text-xs flex items-center shadow-sm">
-                        {p.name}
-                        <button type="button" onClick={()=>dlS('projects', p.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={10}/></button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex gap-2 pt-4 border-t">
-              <input type="text" placeholder="ชื่อโครงการ..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50 focus:bg-white transition-colors" value={sInp.projects} onChange={e=>setSInp({...sInp,projects:e.target.value})} />
-              <select className="border rounded px-3 py-2 text-sm w-28 bg-gray-50 focus:bg-white transition-colors" value={sInp.projArea} onChange={e=>setSInp({...sInp,projArea:e.target.value})}>
-                <option value="">เลือกพื้นที่</option>
-                {(sets.areas||[]).map(a=><option key={a}>{a}</option>)}
-              </select>
-              <button type="button" onClick={()=>sInp.projects&&sInp.projArea&&upS('projects',`${sInp.projects}|${sInp.projArea}`)} className="bg-[#0f2e4a] text-white px-4 rounded shadow hover:bg-[#1a3f63] transition-colors"><Icon name="plus" size={16}/></button>
-            </div>
-          </div>
-          
-          <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">หมวดงาน ➡️ กรอบเวลา (SLA)</h3><button type="button" onClick={()=>clearSList('slas')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
-            <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 hide-scrollbar space-y-3 border border-gray-100 p-3 rounded">
-              {Object.keys(groupedSlas).sort((a,b)=>Number(a)-Number(b)).map(days => (
-                <div key={days} className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 border-b flex justify-between items-center">
-                    <span>⏳ {days} วัน</span>
-                    <span className="bg-white text-amber-700 px-2 py-0.5 rounded text-[10px] shadow-sm">{groupedSlas[days].length} รายการ</span>
-                  </div>
-                  <div className="p-3 flex flex-wrap gap-2 bg-white">
-                    {groupedSlas[days].map(item => (
-                      <span key={item.fullStr} className="bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5 rounded text-xs flex items-center shadow-sm font-medium">
-                        {item.name}
-                        <button type="button" onClick={()=>dlS('slas', item.fullStr)} className="ml-1.5 text-red-400 hover:text-red-600"><Icon name="x" size={12}/></button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex gap-2 pt-4 border-t">
-              <input type="text" placeholder="หมวดงาน SLA..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50" value={sInp.slas} onChange={e=>setSInp({...sInp,slas:e.target.value})} />
-              <input type="number" placeholder="วัน" className="border rounded px-3 py-2 text-sm w-20 bg-gray-50" value={sInp.slaDays} onChange={e=>setSInp({...sInp,slaDays:e.target.value})} />
-              <button type="button" onClick={()=>sInp.slas&&sInp.slaDays&&upS('slas',`${sInp.slas}|${sInp.slaDays}`)} className="bg-[#bca374] text-white px-4 rounded shadow hover:bg-[#a38a5b]"><Icon name="plus" size={16}/></button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col lg:flex-row gap-8">
-          <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r pb-6 lg:pb-0 lg:pr-8">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="mail" size={18} className="mr-2 text-blue-500"/> รายชื่อและสิทธิ์การรับอีเมล</h3>
-              <button type="button" onClick={()=>clearSList('emails')} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button>
-            </div>
-            <div className="flex-1 overflow-y-auto max-h-[450px] pr-2 hide-scrollbar space-y-3">
-              {(sets.emails||[]).map(item => {
-                const parts = item.split('|'), em = parts[0], projs = parts[1] ? parts[1].split(',') : ['ทั้งหมด'], name = parts[2] || '';
-                return (
-                  <div key={item} className="border rounded-lg overflow-hidden shadow-sm">
-                    <div className="bg-blue-50/50 px-4 py-2.5 flex justify-between items-center border-b border-blue-100">
-                      <span className="font-bold text-[#0f2e4a] text-sm">{em} {name && <span className="text-gray-500 font-normal">({name})</span>}</span>
-                      <button type="button" onClick={()=>dlS('emails', item)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"><Icon name="trash" size={14}/></button>
-                    </div>
-                    <div className="p-3 flex flex-wrap gap-2 bg-white">
-                      {projs.map(p => (
-                        <span key={p} className={`px-2.5 py-1.5 rounded text-xs flex items-center font-medium border ${p==='ทั้งหมด'?'bg-amber-50 text-amber-700 border-amber-200':'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'}`}>
-                          {p}
-                          {p!=='ทั้งหมด' && <button type="button" onClick={()=>rmEmailProj(item, p)} className="ml-1.5 text-blue-400 hover:text-blue-600"><Icon name="x" size={12}/></button>}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-          
-          <div className="flex-1 flex flex-col">
-            <h3 className="font-bold text-sm text-[#0f2e4a] mb-4">เพิ่ม / แก้ไข สิทธิ์อีเมล</h3>
-            <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
-              <label className="text-xs font-bold text-gray-700 mb-1">ชื่อเจ้าหน้าที่ (Staff Name)</label>
-              <input type="text" placeholder="ตัวอย่าง: สมชาย" className="border rounded-lg px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors mb-3 shadow-sm" value={emForm.name} onChange={e=>setEmForm({...emForm, name:e.target.value})} />
-              
-              <label className="text-xs font-bold text-gray-700 mb-1">อีเมลผู้รับ</label>
-              <input type="email" placeholder="ตัวอย่าง: admin@lh.co.th" className="border rounded-lg px-4 py-2.5 text-sm w-full bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors mb-4 shadow-sm" value={emForm.email} onChange={e=>setEmForm({...emForm, email:e.target.value})} />
-              
-              <label className="text-xs font-bold text-gray-700 mb-1">เลือกโครงการที่ต้องการให้แจ้งเตือน</label>
-              <div className="border rounded-lg bg-white p-3 max-h-[300px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 hide-scrollbar shadow-inner mb-4 flex-1">
-                 <label className="flex items-center text-xs cursor-pointer hover:bg-gray-50 p-2.5 rounded-lg transition border border-amber-200 bg-amber-50 col-span-1 sm:col-span-2 shadow-sm">
-                    <input type="checkbox" className="mr-3 accent-[#bca374] w-4 h-4" checked={emForm.selectedProjs.includes('ทั้งหมด')} onChange={() => toggleEmailProj('ทั้งหมด')} /> <span className="font-bold text-amber-800">เลือกทุกโครงการ (รับแจ้งเตือนทั้งหมด)</span>
-                 </label>
-                 {(sets.projects||[]).map(p => {
-                    const pName = getProjName(p);
-                    return (<label key={pName} className="flex items-center text-xs text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition border border-gray-100 shadow-sm"><input type="checkbox" className="mr-2 accent-[#0f2e4a] w-3.5 h-3.5" checked={emForm.selectedProjs.includes(pName)} onChange={() => toggleEmailProj(pName)} /> <span className="truncate" title={pName}>{pName}</span></label>);
-                 })}
-              </div>
-              <button type="button" onClick={addEmailMappingV2} className="bg-[#0f2e4a] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#1a3f63] text-sm font-bold w-full transition-colors mt-auto flex justify-center items-center"><Icon name="save" size={16} className="mr-2" /> บันทึกสิทธิ์รับอีเมล</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-sm text-[#0f2e4a] flex items-center"><Icon name="users" size={20} className="mr-2 text-[#bca374]"/> ตั้งค่าคลาสและฐานสเตตัสทีมงาน (RPG Classes)</h3>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="flex-1 overflow-y-auto max-h-[450px] pr-2 hide-scrollbar space-y-3 border p-3 rounded bg-gray-50">
-              {(sets.staffClasses||[]).map(c => (
-                <div key={c.id} className="bg-white border rounded-lg p-3 shadow-sm flex justify-between items-center">
-                  <div>
-                    <div className="font-bold text-[#0f2e4a]">{c.name}</div>
-                  </div>
-                  <button type="button" onClick={()=>{let ns=(sets.staffClasses||[]).filter(x=>x.id!==c.id); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets);}} className="text-red-400 hover:text-red-600 p-2"><Icon name="trash" size={16}/></button>
-                </div>
-              ))}
-              {(!sets.staffClasses || sets.staffClasses.length === 0) && <div className="text-center text-gray-400 py-4 text-xs">ยังไม่มีคลาสอาชีพ</div>}
-            </div>
-            <div className="bg-gray-50 p-4 rounded-xl border flex-1 flex flex-col">
-              <label className="text-xs font-bold text-gray-700 mb-1">ชื่อคลาส (Role Name)</label>
-              <input type="text" placeholder="เช่น Supervisor, Foreman" className="border rounded-lg px-4 py-2 text-sm w-full mb-3" value={sInp.className} onChange={e=>setSInp({...sInp, className:e.target.value})} onKeyDown={e=>{if(e.key==='Enter') {if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''});}}} />
-              <button type="button" onClick={()=>{ if(!sInp.className) return alert('ใส่ชื่อคลาส'); let ns=[...(sets.staffClasses||[])]; ns.push({id: Date.now().toString(), name: sInp.className}); const newSets = {...sets, staffClasses: ns}; setSets(newSets); saveD('settings', newSets); setSInp({...sInp, className:''}); }} className="bg-[#bca374] text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-[#a38a5b] text-sm w-full font-bold mt-auto transition"><Icon name="plus" size={16} className="inline mr-2"/> เพิ่มคลาส</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[{k:'areas',l:'พื้นที่'},{k:'jobTypes',l:'ประเภทงาน'},{k:'locations',l:'บริเวณ'}].map(x => (
-            <div key={x.k} className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-              <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-sm text-[#0f2e4a]">{x.l}</h3><button type="button" onClick={()=>clearSList(x.k)} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded flex items-center"><Icon name="trash" size={14} className="mr-1"/>ลบทั้งหมด</button></div>
-              <ul className="flex-1 overflow-y-auto max-h-[350px] space-y-2 pr-2 text-xs hide-scrollbar border border-gray-100 p-3 rounded">
-                {(sets[x.k]||[]).map(item=><li key={item} className="flex justify-between items-center bg-gray-50 px-3 py-2 border rounded-lg shadow-sm"><span>{item}</span><button type="button" onClick={()=>dlS(x.k,item)} className="text-red-400 hover:text-red-600"><Icon name="trash" size={14}/></button></li>)}
-              </ul>
-              <div className="mt-4 flex gap-2 pt-4 border-t">
-                <input type="text" placeholder="เพิ่มข้อมูลใหม่..." className="border rounded px-3 py-2 text-sm flex-1 min-w-0 bg-gray-50" value={sInp[x.k]||''} onChange={e=>setSInp({...sInp,[x.k]:e.target.value})} onKeyDown={e=>e.key==='Enter'&&upS(x.k,sInp[x.k])}/>
-                <button type="button" onClick={()=>upS(x.k,sInp[x.k])} className="bg-[#0f2e4a] text-white px-4 rounded shadow hover:bg-[#1a3f63]"><Icon name="plus" size={16}/></button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center space-y-3">
-            <Icon name="mail" size={32} className="text-blue-500 mb-2"/>
-            <div className="font-bold text-sm">ทดสอบระบบอีเมล</div>
-            <div className="text-xs text-gray-500">ทดสอบการส่งอีเมลไปยังผู้ดูแลโครงการทั้งหมดเพื่อความมั่นใจ</div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
-              <button type="button" onClick={testEmailSystem} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-blue-100">ทดสอบการเชื่อมต่อ (Ping)</button>
-              <button type="button" onClick={forceScanRealTasks} className="flex-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-purple-100">สแกนงานล่าช้า (ของจริง)</button>
-              <button type="button" onClick={installTrigger} className="flex-1 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-[11px] font-bold shadow hover:bg-amber-100">ติดตั้งบอทแจ้งเตือนอัตโนมัติ</button>
-            </div>
-          </div>
-          <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-            <div><h3 className="font-bold text-sm mb-2 flex items-center"><Icon name="clock" size={16} className="mr-2 text-amber-500"/> เวลาตัดเกณฑ์ Overdue</h3><input type="time" className="border rounded-lg px-4 py-2 text-sm outline-none bg-gray-50 w-full" value={sets.overdueTime} onChange={e=>upS('overdueTime',e.target.value,false)} /></div>
-            <div><h3 className="font-bold text-sm mb-2 flex items-center"><Icon name="fileText" size={16} className="mr-2 text-red-500"/> ขีดจำกัดออกใบงานช้า (ชม.)</h3><input type="number" className="border rounded-lg px-4 py-2 text-sm w-full outline-none bg-gray-50" value={sets.lateWorkOrderHours} onChange={e=>upS('lateWorkOrderHours',e.target.value,false)} /></div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border shadow-sm border-t-4 border-[#0f2e4a]">
-          <h3 className="font-bold text-lg mb-4 flex items-center"><Icon name="database" size={20} className="mr-2 text-[#0f2e4a]"/> ศูนย์จัดการข้อมูล (Data Center)</h3>
-          <div className="mb-5 bg-gray-50 p-4 rounded-lg border flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 w-full">
-              <div className="flex justify-between text-xs font-bold mb-2 text-gray-700"><span>ปริมาณข้อมูลรวมระบบ</span><span>{totalRows} รายการ</span></div>
-              <div className="w-full bg-gray-200 rounded-full h-3"><div className={`${healthColor} h-3 rounded-full transition-all duration-500`} style={{width: `${healthPct}%`}}></div></div>
-            </div>
-            <button type="button" onClick={runMigration} className="w-full md:w-auto bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-purple-100 transition shadow-sm"><Icon name="database" size={16} className="mr-2"/> ดึงข้อมูล Sheet เข้า Firebase</button>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={()=>downloadCSV(tasks, `Tasks_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองข้อมูลงาน (CSV)</button>
-            <button type="button" onClick={()=>downloadCSV(informs, `InformJobs_Backup_${getTStr()}.csv`)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-blue-100 transition shadow-sm"><Icon name="download" size={16} className="mr-2"/> สำรองแจ้งเปิดงาน (CSV)</button>
-            <button type="button" onClick={handleClearData} className="flex-none bg-red-50 text-red-600 border border-red-200 px-6 py-2.5 rounded-lg text-xs font-bold flex justify-center items-center hover:bg-red-100 transition shadow-sm"><Icon name="trash" size={16} className="mr-2"/> ล้างข้อมูล Firebase (Reset)</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const PReport = () => {
-    const isY = rCfg.type === 'year'; const fS = isY ? rCfg.val.substring(0,4) : rCfg.val; const tS = getTStr();
-    const pMap = {};
-    (sets.projects||[]).forEach(p => { const name = getProjName(p); pMap[name.replace(/[\s\-]/g, '').toUpperCase()] = name; });
-    const getStdName = (raw) => { const clean = String(raw || 'ไม่ระบุ').trim(); const norm = clean.replace(/[\s\-]/g, '').toUpperCase(); if (pMap[norm]) return pMap[norm]; pMap[norm] = clean; return clean; };
-
-    if (rCfg.topic === 'inform') {
-      const allPeriodInforms = informs.filter(j => {
-        if(!j.date || !String(j.date||'').startsWith(fS)) return false;
-        if(rCfg.area !== 'ทั้งหมด' && String(j.area||'').trim() !== rCfg.area) return false;
-        const stdP = getStdName(j.project);
-        if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
-        if(rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(j.project, rCfg.staffName)) return false;
-        return true;
-      });
-
-      const rI = allPeriodInforms.filter(j => j.status !== 'ยกเลิก');
-      const rOp = rI.filter(j => j.status === 'เปิด Inform Job แล้ว');
-      const rPd = rI.filter(j => j.status === 'รอดำเนินการ');
-
-      const pStI = {}; 
-      rI.forEach(j => { 
-        const pName = getStdName(j.project);
-        if(!pStI[pName]) pStI[pName] = { t:0, op:0, pd:0 }; 
-        pStI[pName].t++; 
-        if(j.status === 'เปิด Inform Job แล้ว') pStI[pName].op++; 
-        else pStI[pName].pd++; 
-      });
-
-      return (
-        <div id="print-area" className="hidden p-8 font-sans bg-white">
-          <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">สรุปรายงานแจ้งเปิดงาน (Inform-Job)</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
-          <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">แจ้งเปิดงานทั้งหมด</p><h2 className="text-2xl font-black">{rI.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">เปิด Inform Job แล้ว</p><h2 className="text-2xl font-black text-green-700">{rOp.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">รอดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rPd.length}</h2></div></div>
-          
-          <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สัดส่วนแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pStI).map(p => { const s = pStI[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.op/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.pd/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (เปิด:{s.op}, รอ:{s.pd})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>เปิด Inform Job แล้ว</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>รอดำเนินการ</div></div></div>
-
-          <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">รายการแจ้งเปิดงาน (Inform-Job)</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2 w-[20%]">วันที่แจ้ง / เลขที่อ้างอิง</th><th className="border p-2">รายละเอียด / บริเวณ</th><th className="border p-2 w-[25%]">โครงการ / ผู้แจ้ง</th><th className="border p-2 w-[15%]">สถานะ</th></tr></thead><tbody>{rI.map(j=>(<tr key={j.id}><td className="border p-2 font-bold text-blue-700">{fDate(j.date)}<br/><span className="text-gray-600 font-normal">{j.informNo || j.id}</span></td><td className="border p-2"><div className="font-bold text-gray-800">{j.jobType}</div>{j.details}<br/><span className="text-gray-500 text-[10px]">บริเวณ: {j.location}</span></td><td className="border p-2">{getStdName(j.project)}<br/><span className="text-gray-500 text-[10px]">{j.requesterName}</span></td><td className={`border p-2 font-bold ${j.status==='เปิด Inform Job แล้ว'?'text-green-600':'text-yellow-600'}`}>{j.status}</td></tr>))}</tbody></table></div>
-        </div>
-      );
     }
+  };
 
-    const allPeriodTasks = tasks.filter(t => {
-      if(!t.startDate || !String(t.startDate||'').startsWith(fS)) return false;
-      if(rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
-      const stdP = getStdName(t.project);
-      if(rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
-      if(rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(t.project, rCfg.staffName)) return false;
-      return true;
-    });
-
-    const rT = allPeriodTasks.filter(t => t.status !== 'ยกเลิก');
-
-    const rOd = rT.filter(t => t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS));
-    const rLateWo = rT.filter(t => t.lateWorkOrder === true);
-    const rC = rT.filter(t => t.status?.startsWith('จบงาน') && !rOd.includes(t)); 
-    const rO = rT.filter(t => !t.status?.startsWith('จบงาน') && !rOd.includes(t));
-    
-    const pSt = {}; 
-    rT.forEach(t => { 
-      const pName = getStdName(t.project);
-      if(!pSt[pName]) pSt[pName] = { t:0, d:0, o:0, od:0 }; 
-      pSt[pName].t++; 
-      if(rOd.includes(t)) pSt[pName].od++; 
-      else if(t.status?.startsWith('จบงาน')) pSt[pName].d++; 
-      else pSt[pName].o++; 
-    });
-    
-    const allC = tasks.filter(t => {
-      if (!t.status?.startsWith('จบงาน')) return false;
-      if (rCfg.area !== 'ทั้งหมด' && String(t.area||'').trim() !== rCfg.area) return false;
-      if (rCfg.project !== 'ทั้งหมด' && getStdName(t.project) !== rCfg.project) return false;
-      if (rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(t.project, rCfg.staffName)) return false;
-      return true;
-    });
-
-    const unbilledTasks = allC.filter(t => t.billingStatus !== 'ส่งเบิกแล้ว'); const ub = unbilledTasks.length; const b = allC.filter(t => t.billingStatus === 'ส่งเบิกแล้ว').length;
-    const ubBreakdown = {}; unbilledTasks.forEach(t => { let m = "ไม่ระบุเดือน"; if (t.completedDate) m = String(t.completedDate||'').substring(0,7); else if (t.endDate) m = String(t.endDate||'').substring(0,7); if (!ubBreakdown[m]) ubBreakdown[m] = 0; ubBreakdown[m]++; });
-    const sortedUbMonths = Object.keys(ubBreakdown).sort();
-
-    return (
-      <div id="print-area" className="hidden p-8 font-sans bg-white">
-        <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6"><h1 className="text-2xl font-bold text-[#0f2e4a] uppercase">รายงานผลการดำเนินงาน LH Task-Flow</h1><p className="text-sm text-gray-600 mt-2 font-bold">รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}</p></div>
-        <div className="flex gap-4 mb-8 print-break"><div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center"><p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p><h2 className="text-2xl font-black">{rT.length}</h2></div><div className="flex-1 bg-green-50 border p-4 rounded-lg text-center"><p className="text-xs text-green-700 font-bold">จบงาน(ในกำหนด)</p><h2 className="text-2xl font-black text-green-700">{rC.length}</h2></div><div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center"><p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p><h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2></div><div className="flex-1 bg-red-50 border p-4 rounded-lg text-center"><p className="text-xs text-red-700 font-bold">ล่าช้า/เกินกำหนด</p><h2 className="text-2xl font-black text-red-700">{rOd.length}</h2></div></div>
-        <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</h3><div className="flex justify-between px-4 text-sm mb-2"><div><span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ</div><div><span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ</div></div>{ub > 0 && (<div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center"><span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>{sortedUbMonths.map(m => (<span key={m} className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold">{m} : {ubBreakdown[m]} รายการ</span>))}</div>)}</div>
-        <div className="mb-8 print-break"><h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2">สถานะงานแยกตามโครงการ</h3><div className="space-y-3">{Object.keys(pSt).map(p => { const s = pSt[p]; return (<div key={p} className="flex items-center text-xs"><div className="w-1/4 font-bold truncate pr-2">{p}</div><div className="w-2/4 bg-gray-200 h-5 rounded overflow-hidden flex">{s.t>0&&<div style={{width:`${(s.d/s.t)*100}%`}} className="bg-green-500 h-full"></div>}{s.t>0&&<div style={{width:`${(s.o/s.t)*100}%`}} className="bg-yellow-400 h-full"></div>}{s.t>0&&<div style={{width:`${(s.od/s.t)*100}%`}} className="bg-red-500 h-full"></div>}</div><div className="w-1/4 pl-3 text-[10px] text-gray-500">รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})</div></div>); })}</div><div className="flex gap-4 text-[10px] justify-center mt-4 font-bold"><div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-sm mr-1"></span>จบงาน(ในกำหนด)</div><div className="flex items-center"><span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1"></span>กำลังดำเนินการ</div><div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-sm mr-1"></span>ล่าช้า/เกินกำหนด</div></div></div>
-        <div className="print-break"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานล่าช้า/เกินกำหนด (รวมงานที่จบช้ากว่ากำหนด)</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">กำหนดเสร็จ</th></tr></thead><tbody>{rOd.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-blue-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}{t.overdueReason && <div className="mt-1 p-1 bg-red-50 text-red-600 border border-red-200 rounded"><strong>สาเหตุที่ช้า:</strong> {t.overdueReason}</div>}</td><td className="border p-2 text-red-600">{t.status}<br/><span className="text-[9px]">({t.overdueStatus || 'เกินกำหนด'})</span></td><td className="border p-2 text-red-600 font-bold">{fDate(t.endDate) || '-'}</td></tr>))}</tbody></table></div>
-        {rLateWo.length > 0 && (
-            <div className="print-break mt-6"><h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">งานที่ออกใบงานช้า (เลยกำหนด 3 วัน)</h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน / เลขที่ใบงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">วันที่จบงาน/วันที่ออกใบงาน</th></tr></thead><tbody>{rLateWo.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-amber-700">{t.workOrderNo || t.id}<br/><span className="text-gray-600 font-normal">{getStdName(t.project)}</span></td><td className="border p-2">{t.details}</td><td className="border p-2 text-amber-700">{t.status}</td><td className="border p-2 text-amber-700 font-bold">จบ: {fDate(t.completedDate) || '-'}<br/><span className="text-red-500 font-normal">ออกใบงานล่าช้ากว่ากำหนด</span></td></tr>))}</tbody></table></div>
-        )}
-        {(() => {
-          const rNoSla = rT.filter(t => t.slaCategory === 'งานทั่วไป (ไม่มี SLA)' || !t.slaCategory);
-          if(rNoSla.length > 0) return (
-            <div className="print-break mt-6"><h3 className="font-bold text-gray-500 mb-2 text-sm border-b pb-2">งานทั่วไป (ไม่มี SLA) <span className="font-normal text-xs text-red-500 ml-2">- สำหรับสุ่มตรวจสอบการลงงานหลีกเลี่ยง SLA</span></h3><table className="w-full text-[11px] text-left border-collapse border"><thead><tr className="bg-gray-100"><th className="border p-2">รหัสงาน</th><th className="border p-2">รายละเอียด</th><th className="border p-2">สถานะ</th><th className="border p-2">ผู้แจ้ง / โครงการ</th></tr></thead><tbody>{rNoSla.map(t=>(<tr key={t.id}><td className="border p-2 font-bold text-gray-600">{t.workOrderNo || t.id}</td><td className="border p-2">{t.details}</td><td className="border p-2 text-gray-500">{t.status}</td><td className="border p-2 text-gray-700">{t.requester}<br/><span className="text-gray-500 text-[10px]">{getStdName(t.project)}</span></td></tr>))}</tbody></table></div>
-          );
-          return null;
-        })()}
-      </div>
-    );
+  const deleteInform = async (j) => {
+    if (confirm('ต้องการลบรายการนี้?')) {
+      try {
+        await deleteDoc(getDocRef('InformJobs', j.id));
+      } catch (e) {
+        alert('ลบข้อมูลไม่สำเร็จ: ' + e.message);
+      }
+    }
   };
 
   return (
@@ -2007,14 +722,142 @@ export default function App() {
             <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
             <GFBar />
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
-              {tab==='dashboard'&&rDash()} 
-              {tab==='simulation'&&<GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />} 
-              {tab==='daily'&&rDail()} 
-              {tab==='monthly'&&rMont()} 
-              {tab==='kanban'&&rKanb()} 
-              {tab==='inform'&&rInf()} 
-              {tab==='team'&&rTeam()} 
-              {tab==='settings'&&rSet()}
+              {tab === 'dashboard' && (
+                <DashboardTab
+                  tasks={tasks}
+                  gFilt={gFilt}
+                  THEME={THEME}
+                  getTStr={getTStr}
+                  getStdProj={getStdProj}
+                  checkStaffMatch={checkStaffMatch}
+                  chkOvdTimeAware={chkOvdTimeAware}
+                  onOpenOverdueModal={(ov) => setOPop({ isOpen: true, tasks: ov })}
+                  Icon={Icon}
+                />
+              )}
+              {tab === 'simulation' && (
+                <GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />
+              )}
+              {tab === 'daily' && (
+                <DailyTasksTab
+                  tasks={tasks}
+                  gFilt={gFilt}
+                  getTStr={getTStr}
+                  getStdProj={getStdProj}
+                  checkStaffMatch={checkStaffMatch}
+                  chkOvdTimeAware={chkOvdTimeAware}
+                  fDate={fDate}
+                  openTaskModal={openTaskModal}
+                  initSt={initSt}
+                  deleteTask={deleteTask}
+                  Icon={Icon}
+                />
+              )}
+              {tab === 'monthly' && (
+                <MonthlyCalendarTab
+                  tasks={tasks}
+                  gFilt={gFilt}
+                  getTStr={getTStr}
+                  getStdProj={getStdProj}
+                  checkStaffMatch={checkStaffMatch}
+                  pYMD={pYMD}
+                  onOpenCalendarModal={(date, tasks) => setCPop({ isOpen: true, date, tasks })}
+                  Icon={Icon}
+                />
+              )}
+              {tab === 'kanban' && (
+                <KanbanBillingTab
+                  tasks={tasks}
+                  gFilt={gFilt}
+                  groupTasks={groupTasks}
+                  getStdProj={getStdProj}
+                  checkStaffMatch={checkStaffMatch}
+                  onOpenBillingModal={(group, type) => setBMod({ isOpen: true, group, type })}
+                  Icon={Icon}
+                />
+              )}
+              {tab === 'inform' && (
+                <InformJobTab
+                  informs={informs}
+                  iTab={iTab}
+                  setITab={setITab}
+                  informForm={informForm}
+                  setInformForm={setInformForm}
+                  subInf={subInf}
+                  gFilt={gFilt}
+                  sets={sets}
+                  getProjName={getProjName}
+                  getProjArea={getProjArea}
+                  getStdProj={getStdProj}
+                  checkStaffMatch={checkStaffMatch}
+                  fDate={fDate}
+                  openInfModal={(id, type) => setIMod({ isOpen: true, type, id, val: '' })}
+                  setInfView={setInfView}
+                  deleteInform={deleteInform}
+                  Icon={Icon}
+                />
+              )}
+              {tab === 'team' && (
+                <TeamStatusTab
+                  teamUnlk={teamUnlk}
+                  setTeamUnlk={setTeamUnlk}
+                  pwd={pwd}
+                  setPwd={setPwd}
+                  sets={sets}
+                  setSets={setSets}
+                  saveD={saveD}
+                  teamForm={teamForm}
+                  setTeamForm={setTeamForm}
+                  selTeam={selTeam}
+                  setSelTeam={setSelTeam}
+                  teamEditMode={teamEditMode}
+                  setTeamEditMode={setTeamEditMode}
+                  assessMode={assessMode}
+                  setAssessMode={setAssessMode}
+                  talentSearch={talentSearch}
+                  setTalentSearch={setTalentSearch}
+                  talentFilter={talentFilter}
+                  setTalentFilter={setTalentFilter}
+                  talentPage={talentPage}
+                  setTalentPage={setTalentPage}
+                  cropModal={cropModal}
+                  setCropModal={setCropModal}
+                  onSelectFile={onSelectFile}
+                  saveTeam={saveTeam}
+                  Icon={Icon}
+                  THEME={THEME}
+                />
+              )}
+              {tab === 'settings' && (
+                <SettingsTab
+                  setUnlk={setUnlk}
+                  setSetUnlk={setSetUnlk}
+                  pwd={pwd}
+                  setPwd={setPwd}
+                  tasks={tasks}
+                  informs={informs}
+                  sets={sets}
+                  setSets={setSets}
+                  saveD={saveD}
+                  rCfg={rCfg}
+                  setRConfig={setRConfig}
+                  sInp={sInp}
+                  setSInp={setSInp}
+                  upS={upS}
+                  dlS={dlS}
+                  clearSList={clearSList}
+                  getProjName={getProjName}
+                  getProjArea={getProjArea}
+                  testEmailSystem={testEmailSystem}
+                  forceScanRealTasks={forceScanRealTasks}
+                  installTrigger={installTrigger}
+                  runMigration={runMigration}
+                  downloadCSV={downloadCSV}
+                  handleClearData={handleClearData}
+                  getTStr={getTStr}
+                  Icon={Icon}
+                />
+              )}
             </div>
           </main>
           <nav className="md:hidden fixed bottom-0 w-full bg-white border-t flex justify-around p-2 z-[999]">
@@ -2023,118 +866,47 @@ export default function App() {
             ))}
           </nav>
 
-          {oPop.isOpen && <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setOPop({isOpen:false,tasks:[]})}><div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-red-600 flex items-center"><Icon name="alertTriangle" size={18} className="mr-2"/> งานล่าช้า/เกินกำหนด (ประจำเดือน {gFilt.month})</h3><button type="button" onClick={()=>setOPop({isOpen:false,tasks:[]})}><Icon name="x" size={18}/></button></div><div className="overflow-auto space-y-2 flex-1">{oPop.tasks.map(t=>(<div key={t.id} className="p-3 border border-red-100 bg-red-50/50 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div><div className="text-xs text-gray-600">{t.details}</div><div className="text-[10px] text-red-500 mt-1 font-bold">ID: {t.id} | จบ: {fDate(t.endDate)} | สถานะ: {t.status}</div></div><button type="button" onClick={()=>{setOPop({isOpen:false,tasks:[]}); setGilt({...gFilt, date: t.endDate}); setTab('daily');}} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm">จัดการ</button></div>))}</div></div></div>}
-          
-          {cPop.isOpen && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})}>
-              <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[80vh] flex flex-col animate-in" onClick={e=>e.stopPropagation()}>
-                <div className="flex justify-between items-center mb-4 border-b pb-2">
-                  <h3 className="font-bold text-[#0f2e4a] flex items-center"><Icon name="calendar" size={18} className="mr-2 text-[#bca374]"/> งานประจำวันที่ {fDate(cPop.date)}</h3>
-                  <button type="button" onClick={()=>setCPop({isOpen:false, date:null, tasks:[]})} className="text-gray-400 hover:text-gray-700"><Icon name="x" size={18}/></button>
-                </div>
-                <div className="overflow-auto space-y-2 flex-1 pr-1 hide-scrollbar">
-                  {cPop.tasks.map(t => {
-                    const isOvd = t.overdueStatus==='เกินกำหนด'||chkOvdTimeAware(t,getTStr());
-                    return (
-                    <div key={t.id} className="p-3 border border-blue-100 bg-blue-50/30 rounded-lg flex justify-between items-center hover:bg-blue-50 transition-colors">
-                      <div>
-                        <div className="font-bold text-sm text-[#0f2e4a]">{t.project}</div>
-                        <div className="text-xs text-gray-600 line-clamp-1">{t.details}</div>
-                        <div className="text-[10px] mt-1 font-bold">
-                          <span className="text-gray-400">ID: {t.id}</span>
-                          <span className="mx-1 text-gray-300">|</span>
-                          <span className={t.status==='จบงาน'?'text-green-600':isOvd?'text-red-600':'text-amber-600'}>
-                            สถานะ: {t.status} {(isOvd && t.status!=='จบงาน') ? '(เกินกำหนด)' : ''}
-                          </span>
-                        </div>
-                      </div>
-                      <button type="button" onClick={()=>{
-                        setCPop({isOpen:false, date:null, tasks:[]});
-                        setGilt({...gFilt, date: cPop.date});
-                        setTab('daily');
-                      }} className="bg-white border border-blue-200 text-blue-700 px-3 py-1.5 rounded text-[10px] font-bold shadow-sm hover:bg-blue-100 whitespace-nowrap ml-2">
-                        จัดการงาน
-                      </button>
-                    </div>
-                  )})}
-                </div>
-              </div>
-            </div>
-          )}
+          <OverdueTasksModal
+            isOpen={oPop.isOpen}
+            onClose={() => setOPop({ isOpen: false, tasks: [] })}
+            tasks={oPop.tasks}
+            currentMonth={gFilt.month}
+            onManageTask={(t) => {
+              setOPop({ isOpen: false, tasks: [] });
+              setGilt({ ...gFilt, date: t.endDate });
+              setTab('daily');
+            }}
+            fDate={fDate}
+            Icon={Icon}
+          />
 
-          {bMod.isOpen && bMod.group && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] animate-in">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className={`p-4 flex justify-between text-white ${bMod.type==='ส่งเบิกแล้ว' ? 'bg-green-700' : 'bg-[#0f2e4a]'}`}>
-                  <h3 className="font-bold flex items-center">
-                    <Icon name="fileText" size={18} className="mr-2"/>
-                    {bMod.group.isWO && bMod.group.woNo ? `รายละเอียดใบงาน: ${bMod.group.woNo}` : `รายละเอียด JOB: ${bMod.group.tasks[0].id}`}
-                  </h3>
-                  <button type="button" onClick={()=>setBMod({isOpen:false,group:null,type:''})}><Icon name="x" size={18}/></button>
-                </div>
-                
-                <div className="p-5 overflow-y-auto flex-1 bg-gray-50/50">
-                  <div className="mb-4">
-                    <div className="text-sm text-gray-500 font-bold mb-1">โครงการ</div>
-                    <div className="text-lg font-black text-[#0f2e4a]">{getStdProj(bMod.group.project)}</div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {bMod.group.tasks.map((t, i) => {
-                      const isCompleteOnTime = !t.overdueStatus || t.overdueStatus === 'ในกำหนด';
-                      const isOpenedLate = t.lateWorkOrder || t.overdueStatus === 'ออกใบงานช้า';
-                      return (
-                        <div key={t.id} className="bg-white border rounded-lg p-4 shadow-sm relative">
-                          <div className="absolute top-0 right-0 bg-gray-100 text-gray-400 text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">#{i+1}</div>
-                          
-                          <div className="text-xs text-gray-400 mb-1">ID: {t.id}</div>
-                          <div className="text-sm font-medium text-gray-800 mb-3">{t.details}</div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t pt-3 mt-3">
-                            <div>
-                              <div className="text-gray-500 mb-0.5">วันที่บันทึก</div>
-                              <div className="font-bold">{fDate(t.receivedDate)}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-500 mb-0.5">กำหนดเสร็จ</div>
-                              <div className="font-bold">{fDate(t.endDate)}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-500 mb-0.5">สถานะใบงาน</div>
-                              <div className={`font-bold ${isOpenedLate ? 'text-red-600' : 'text-green-600'}`}>
-                                {isOpenedLate ? 'ออกล่าช้า' : 'ปกติ'}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-gray-500 mb-0.5">สถานะจบงาน</div>
-                              <div className={`font-bold flex items-center ${isCompleteOnTime ? 'text-green-600' : 'text-red-600'}`}>
-                                {isCompleteOnTime ? <Icon name="checkCircle" size={14} className="mr-1"/> : <Icon name="alertCircle" size={14} className="mr-1"/>}
-                                {isCompleteOnTime ? 'ในกำหนด' : 'ล่าช้า'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+          <CalendarTasksModal
+            isOpen={cPop.isOpen}
+            onClose={() => setCPop({ isOpen: false, date: null, tasks: [] })}
+            date={cPop.date}
+            tasks={cPop.tasks}
+            onManageDate={(date) => {
+              setCPop({ isOpen: false, date: null, tasks: [] });
+              setGilt({ ...gFilt, date });
+              setTab('daily');
+            }}
+            fDate={fDate}
+            chkOvdTimeAware={chkOvdTimeAware}
+            getTStr={getTStr}
+            Icon={Icon}
+          />
 
-                <div className="p-4 bg-gray-100 border-t flex justify-end gap-3">
-                  <button type="button" onClick={()=>setBMod({isOpen:false,group:null,type:''})} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50">ปิดหน้าต่าง</button>
-                  {bMod.type === 'รอส่งเบิก' ? (
-                    <button type="button" onClick={()=>{moveGroup(bMod.group.id, 'ส่งเบิกแล้ว'); setBMod({isOpen:false,group:null,type:''});}} className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-bold shadow-md flex items-center hover:bg-green-700">
-                      <Icon name="check" size={16} className="mr-2"/> ยืนยันการส่งเบิก (เดือน {gFilt.month})
-                    </button>
-                  ) : (
-                    <button type="button" onClick={()=>{moveGroup(bMod.group.id, 'รอส่งเบิก'); setBMod({isOpen:false,group:null,type:''});}} className="px-6 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg text-sm font-bold shadow-sm flex items-center hover:bg-red-200">
-                      <Icon name="rotateCcw" size={16} className="mr-2"/> ยกเลิกการส่งเบิก
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
+          <BillingModal
+            isOpen={bMod.isOpen}
+            onClose={() => setBMod({ isOpen: false, group: null, type: '' })}
+            group={bMod.group}
+            type={bMod.type}
+            onMoveGroup={moveGroup}
+            currentMonth={gFilt.month}
+            getStdProj={getStdProj}
+            fDate={fDate}
+            Icon={Icon}
+          />
           {tMod && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -2307,7 +1079,17 @@ export default function App() {
         </div>
         
         {/* เพิ่มโค้ดบรรทัดนี้ เพื่อวาง Report ซ่อนไว้สำหรับให้ดึงไปพิมพ์ PDF */}
-        {PReport()}
+        <PrintReport
+          rCfg={rCfg}
+          tasks={tasks}
+          informs={informs}
+          sets={sets}
+          getTStr={getTStr}
+          getProjName={getProjName}
+          checkStaffMatch={checkStaffMatch}
+          chkOvdTimeAware={chkOvdTimeAware}
+          fDate={fDate}
+        />
         
         {cropModal.isOpen && (
           <div className="fixed inset-0 bg-black/90 z-[100000] flex flex-col">

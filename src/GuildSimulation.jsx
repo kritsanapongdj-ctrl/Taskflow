@@ -35,11 +35,12 @@ const AgentWrapper = ({ type, x, y, action, flip, msg, title }) => {
 };
 
 const QuestCard = ({ task, source, onClick }) => {
+  const [now] = useState(() => Date.now());
   const parseDate = (dStr) => {
-    if (!dStr) return Date.now();
-    try { const [dp] = dStr.split(' '); const [d, m, y] = dp.split('/'); return new Date(+y + 2500 - 543, +m - 1, +d).getTime(); } catch { return Date.now(); }
+    if (!dStr) return now;
+    try { const [dp] = dStr.split(' '); const [d, m, y] = dp.split('/'); return new Date(+y + 2500 - 543, +m - 1, +d).getTime(); } catch { return now; }
   };
-  const diffDays = (Date.now() - parseDate(task.reported_date)) / 86400000;
+  const diffDays = (now - parseDate(task.reported_date)) / 86400000;
   const done = task.status === 'จบงาน' || task.status === 'จบงาน(รอใบงาน)';
   const isCrisis  = source === 'jobstatus' && !done && diffDays > 5;
   const isOverdue = source === 'jobstatus' && !done && diffDays > 2 && diffDays <= 5;
