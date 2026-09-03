@@ -1,3 +1,5 @@
+import defaultArchetypesData from '../data/archetypes.json';
+
 export const STAT_KEYS = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
 
 export const TIE_BREAKERS = {
@@ -88,7 +90,7 @@ export const getRubricText = (stat, val) => {
   return stat.rubric.basic;
 };
 
-export const getArchetypeIdentity = (statsObj, archetypesData = []) => {
+export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetypesData) => {
   if (!statsObj) return '-';
   const rawStats = Object.keys(TIE_BREAKERS).map(k => Number(statsObj[k]) || 0);
   const maxStat = Math.max(...rawStats);
@@ -142,7 +144,7 @@ export const getArchetypeIdentity = (statsObj, archetypesData = []) => {
   return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
 };
 
-export const analyzeArchetype = (teamForm, sets = {}, archetypesData = []) => {
+export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultArchetypesData) => {
   const u = teamForm;
   if (!u) return null;
 
