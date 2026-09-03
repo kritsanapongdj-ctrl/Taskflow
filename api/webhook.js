@@ -18,9 +18,9 @@ try {
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-const GROUP_A = ['LA-025', 'LH-402', 'LH-410', 'LH-415', 'NE-419'];
+const GROUP_A = ['LH-410', 'LH-415', 'NE-419'];
 const GROUP_B = ['LH-379', 'LH-392', 'LH-395'];
-const GROUP_A2 = ['LH-120', 'LH-195', 'LH-225'];
+const GROUP_A2 = ['LH-120', 'LH-195', 'LH-225', 'LA-025', 'LH-402'];
 
 // ส่งข้อความตอบกลับไปยัง LINE (Reply API ฟรี 100%)
 async function replyToLine(replyToken, text) {
