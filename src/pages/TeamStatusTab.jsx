@@ -7,7 +7,7 @@ import RadarChart from '../components/charts/RadarChart';
 import archetypesData from '../data/archetypes.json';
 import { getArchetypeIdentity, getStatLevelText, getRubricText } from '../utils/archetypeEngine';
 
-  export default function TeamStatusTab({
+export default function TeamStatusTab({
   teamUnlk,
   setTeamUnlk,
   pwd,
@@ -21,21 +21,11 @@ import { getArchetypeIdentity, getStatLevelText, getRubricText } from '../utils/
   setSelTeam,
   teamEditMode,
   setTeamEditMode,
-  assessMode,
-  setAssessMode,
-  talentSearch,
-  setTalentSearch,
-  talentFilter,
-  setTalentFilter,
-  talentPage,
-  setTalentPage,
-  cropModal,
   setCropModal,
-  onSelectFile,
   saveTeam,
-  Icon,
-  THEME
+  Icon
 }) {
+  const [assessMode, setAssessMode] = useState(false);
     if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
 
     const sList = sets.staffStats || [];

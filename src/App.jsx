@@ -827,20 +827,9 @@ export default function App() {
                   setSelTeam={setSelTeam}
                   teamEditMode={teamEditMode}
                   setTeamEditMode={setTeamEditMode}
-                  assessMode={assessMode}
-                  setAssessMode={setAssessMode}
-                  talentSearch={talentSearch}
-                  setTalentSearch={setTalentSearch}
-                  talentFilter={talentFilter}
-                  setTalentFilter={setTalentFilter}
-                  talentPage={talentPage}
-                  setTalentPage={setTalentPage}
-                  cropModal={cropModal}
                   setCropModal={setCropModal}
-                  onSelectFile={onSelectFile}
                   saveTeam={saveTeam}
                   Icon={Icon}
-                  THEME={THEME}
                 />
               )}
               {tab === 'settings' && (
