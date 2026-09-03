@@ -387,14 +387,79 @@ export default function TeamStatusTab({
                    ))}
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 lg:gap-2">
-                   {outers.map(o => (
-                      <div key={o.k} className="bg-white/5 border border-white/10 rounded-md px-1.5 py-1 lg:px-2 lg:py-1.5 flex flex-col backdrop-blur-md">
-                         <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider">{o.n}</span>
-                         <span className="text-white font-bold text-[10px] sm:text-xs">{o.finalVal} <span className="text-slate-500 text-[8px] sm:text-[9px] font-normal">/10</span></span>
+                {/* The Outer Layer Performance Intelligence */}
+                {(() => {
+                  const outerSummary = analyzeOuterLayer(u, statsObj);
+                  return (
+                    <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2.5">
+                      {/* Header & Performance DNA Profile */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="p-1 rounded bg-[#bca374]/20 text-[#e6d0a7] border border-[#bca374]/30 shadow-xs">
+                            <Icon name="layers" size={13} />
+                          </span>
+                          <div>
+                            <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                              6 แกนสมรรถนะผลงาน (The Outer Layer)
+                            </span>
+                            <strong className="text-xs sm:text-sm text-white font-black drop-shadow tracking-tight">
+                              ⭐ {outerSummary.performanceDna.title}
+                            </strong>
+                          </div>
+                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${
+                          outerSummary.alignmentKey === 'over_achiever'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : outerSummary.alignmentKey === 'under_leveraged'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        }`}>
+                          {outerSummary.alignmentTitle}
+                        </span>
                       </div>
-                   ))}
-                </div>
+
+                      <p className="text-[10px] sm:text-[11px] text-slate-300 font-light leading-snug">
+                        {outerSummary.performanceDna.desc}
+                      </p>
+
+                      {/* HOW vs WHAT Synthesis Bar */}
+                      <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md space-y-1.5">
+                        <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-slate-400 border-b border-white/5 pb-1">
+                          <span>ศักยภาพตั้งต้น (HOW): <strong className="text-[#e6d0a7]">{outerSummary.avgInner}</strong> / 10</span>
+                          <span>ผลสัมฤทธิ์จริง (WHAT): <strong className="text-white">{outerSummary.avgOuter}</strong> / 10</span>
+                          <span className={outerSummary.gap >= 0 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                            Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
+                          </span>
+                        </div>
+                        <p className="text-[9px] sm:text-[10px] text-slate-300 leading-tight">
+                          {outerSummary.alignmentDesc}
+                        </p>
+                      </div>
+
+                      {/* 6 Competency Micro-Cards */}
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-0.5">
+                        {outers.map(o => {
+                          const isHigh = o.finalVal >= 8;
+                          return (
+                            <div 
+                              key={o.k} 
+                              className={`rounded-md p-1.5 flex flex-col backdrop-blur-md border transition-all duration-200 ${
+                                isHigh 
+                                  ? 'bg-[#bca374]/15 border-[#bca374]/40 shadow-[0_0_10px_rgba(188,163,116,0.15)]' 
+                                  : 'bg-white/5 border-white/10 hover:bg-white/10'
+                              }`}
+                            >
+                              <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{o.n}</span>
+                              <span className={`font-black text-[11px] sm:text-xs leading-tight mt-0.5 ${isHigh ? 'text-[#e6d0a7]' : 'text-white'}`}>
+                                {o.finalVal} <span className="text-slate-500 text-[8px] font-normal">/10</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
            </div>
 
