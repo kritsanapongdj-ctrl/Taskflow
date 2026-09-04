@@ -19,15 +19,46 @@ export default function InformJobTab({
   deleteInform,
   Icon
 }) {
-  const ft = informs.filter(
-    (j) =>
-      j.status !== 'ยกเลิก' &&
-      j.date?.startsWith(gFilt.month) &&
-      (gFilt.area === 'ทั้งหมด' || j.area === gFilt.area) &&
-      (gFilt.project === 'ทั้งหมด' || getStdProj(j.project) === gFilt.project) &&
-      (gFilt.status === 'ทั้งหมด' || j.status === gFilt.status) &&
-      checkStaffMatch(j.project, gFilt.staffName)
-  );
+  const currentMonth = gFilt.month || '';
+
+  const ft = informs
+    .filter((j) => {
+      if (j.status === 'ยกเลิก') return false;
+      if (gFilt.area !== 'ทั้งหมด' && j.area !== gFilt.area) return false;
+      if (gFilt.project !== 'ทั้งหมด' && getStdProj(j.project) !== gFilt.project) return false;
+      if (gFilt.status !== 'ทั้งหมด' && j.status !== gFilt.status) return false;
+      if (!checkStaffMatch(j.project, gFilt.staffName)) return false;
+
+      // ตรรกะตรวจจับเดือน:
+      // 1. รายการที่สร้างในเดือนที่เลือกตามปกติ
+      const isCurrentMonth = j.date && j.date.startsWith(currentMonth);
+      // 2. รายการค้างจากเดือนก่อนหน้าที่ยัง "รอดำเนินการ"
+      const isCarriedOver = j.status === 'รอดำเนินการ' && j.date && j.date.slice(0, 7) < currentMonth;
+      // 3. รายการที่ยกยอดมาแล้วเพิ่งเปิดงานในเดือนนี้
+      const isOpenedInCurrentMonth = j.openedMonth === currentMonth;
+
+      return isCurrentMonth || isCarriedOver || isOpenedInCurrentMonth;
+    })
+    .sort((a, b) => {
+      const aCarried = a.status === 'รอดำเนินการ' && a.date && a.date.slice(0, 7) < currentMonth;
+      const bCarried = b.status === 'รอดำเนินการ' && b.date && b.date.slice(0, 7) < currentMonth;
+
+      // ลำดับที่ 1: รายการค้างจากเดือนก่อนหน้าให้ขึ้นบนสุดเสมอ
+      if (aCarried && !bCarried) return -1;
+      if (!aCarried && bCarried) return 1;
+
+      // ลำดับที่ 2: หากเป็นรายการค้างด้วยกัน ให้เรียงวันที่เก่าสุดขึ้นก่อน (ค้างนานสุดจัดการก่อน)
+      if (aCarried && bCarried) {
+        return (a.date || '').localeCompare(b.date || '');
+      }
+
+      // หากเป็นรายการปกติ ให้เรียงวันที่ล่าสุดขึ้นก่อน
+      return (b.date || '').localeCompare(a.date || '');
+    });
+
+  const carriedOverCount = ft.filter(
+    (j) => j.status === 'รอดำเนินการ' && j.date && j.date.slice(0, 7) < currentMonth
+  ).length;
 
   return (
     <div className="space-y-4 animate-in">
@@ -208,32 +239,78 @@ export default function InformJobTab({
           </div>
         </form>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-gray-100 border-b">
-                <tr>
-                  <th className="p-3 w-28">วันที่/ID</th>
-                  <th className="p-3">ข้อมูลเบื้องต้น</th>
-                  <th className="p-3 w-32">สถานะ</th>
-                  <th className="p-3 w-28">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ft.map((j) => (
-                  <tr key={j.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-bold">
-                      {fDate(j.date)}
-                      <div className="text-[9px] text-gray-400 mt-1">{j.id}</div>
-                    </td>
-                    <td className="p-3">
-                      <div className="font-bold text-[#0f2e4a] text-sm">
-                        {getStdProj(j.project)}{' '}
-                        <span className="font-normal text-xs text-gray-500">({j.area})</span>
-                      </div>
-                      <div className="text-gray-500 mt-1">
-                        {j.requesterName} {j.phone && `| เบอร์: ${j.phone}`}
-                      </div>
+        <div className="space-y-3">
+          {carriedOverCount > 0 && (
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-3.5 rounded-xl shadow-sm flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-white/20 rounded-lg backdrop-blur-xs shrink-0">
+                  <Icon name="alert-triangle" size={18} className="text-white" />
+                </span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold leading-tight">
+                    ตรวจพบรายการค้างจากเดือนก่อนหน้าที่ยังไม่ได้เปิด Inform Job จำนวน {carriedOverCount} รายการ
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-amber-100 leading-tight mt-0.5">
+                    ระบบยกยอดมาแสดงผลในเดือนปัจจุบัน ({currentMonth}) เพื่อป้องกันการตกหล่น โปรดตรวจสอบและเปิด Inform Job
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-black bg-white text-amber-800 px-2.5 py-1 rounded-full shadow-xs shrink-0 whitespace-nowrap">
+                ค้าง {carriedOverCount} รายการ
+              </span>
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-gray-100 border-b">
+                  <tr>
+                    <th className="p-3 w-32">วันที่/ID</th>
+                    <th className="p-3">ข้อมูลเบื้องต้น</th>
+                    <th className="p-3 w-32">สถานะ</th>
+                    <th className="p-3 w-28">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ft.map((j) => {
+                    const isCarriedOver = j.status === 'รอดำเนินการ' && j.date && j.date.slice(0, 7) < currentMonth;
+                    const isOpenedFromPrior = j.status === 'เปิด Inform Job แล้ว' && j.openedMonth === currentMonth && j.date && j.date.slice(0, 7) < currentMonth;
+
+                    return (
+                      <tr 
+                        key={j.id} 
+                        className={`border-b transition-colors ${
+                          isCarriedOver 
+                            ? 'bg-amber-50/60 hover:bg-amber-100/70 border-l-4 border-l-amber-500' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <td className="p-3 font-bold">
+                          <div className="flex flex-col items-start gap-1">
+                            <span>{fDate(j.date)}</span>
+                            {isCarriedOver && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                                <Icon name="alert-triangle" size={10} className="text-amber-600" />
+                                ค้างจากเดือนก่อน
+                              </span>
+                            )}
+                            {isOpenedFromPrior && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                📋 เปิดงานในเดือนนี้
+                              </span>
+                            )}
+                            <div className="text-[9px] text-gray-400">{j.id}</div>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-bold text-[#0f2e4a] text-sm">
+                            {getStdProj(j.project)}{' '}
+                            <span className="font-normal text-xs text-gray-500">({j.area})</span>
+                          </div>
+                          <div className="text-gray-500 mt-1">
+                            {j.requesterName} {j.phone && `| เบอร์: ${j.phone}`}
+                          </div>
                       <div className="flex gap-1 mt-1.5 mb-1">
                         {j.jobType && (
                           <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-medium border">
@@ -307,7 +384,8 @@ export default function InformJobTab({
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
                 {ft.length === 0 && (
                   <tr>
                     <td colSpan="4" className="text-center py-10 text-gray-400">
@@ -319,6 +397,7 @@ export default function InformJobTab({
             </table>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

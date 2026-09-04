@@ -32,15 +32,27 @@ export default function PrintReport({
 
   if (rCfg.topic === 'inform') {
     const allPeriodInforms = informs.filter((j) => {
-      if (!j.date || !String(j.date || '').startsWith(fS)) return false;
+      if (!j.date) return false;
       if (rCfg.area !== 'ทั้งหมด' && String(j.area || '').trim() !== rCfg.area) return false;
       const stdP = getStdName(j.project);
       if (rCfg.project !== 'ทั้งหมด' && stdP !== rCfg.project) return false;
       if (rCfg.staffName !== 'ทั้งหมด' && !checkStaffMatch(j.project, rCfg.staffName)) return false;
-      return true;
+
+      const isCurrentPeriod = String(j.date || '').startsWith(fS);
+      const isCarriedOver = !isY && j.status === 'รอดำเนินการ' && String(j.date || '').slice(0, 7) < fS;
+      const isOpenedInPeriod = !isY && j.openedMonth === fS;
+
+      return isCurrentPeriod || isCarriedOver || isOpenedInPeriod;
     });
 
-    const rI = allPeriodInforms.filter((j) => j.status !== 'ยกเลิก');
+    const rI = allPeriodInforms.filter((j) => j.status !== 'ยกเลิก').sort((a, b) => {
+      const aCarried = !isY && a.status === 'รอดำเนินการ' && String(a.date || '').slice(0, 7) < fS;
+      const bCarried = !isY && b.status === 'รอดำเนินการ' && String(b.date || '').slice(0, 7) < fS;
+      if (aCarried && !bCarried) return -1;
+      if (!aCarried && bCarried) return 1;
+      return (b.date || '').localeCompare(a.date || '');
+    });
+
     const rOp = rI.filter((j) => j.status === 'เปิด Inform Job แล้ว');
     const rPd = rI.filter((j) => j.status === 'รอดำเนินการ');
 
@@ -135,33 +147,39 @@ export default function PrintReport({
               </tr>
             </thead>
             <tbody>
-              {rI.map((j) => (
-                <tr key={j.id}>
-                  <td className="border p-2 font-bold text-blue-700">
-                    {fDate(j.date)}
-                    <br />
-                    <span className="text-gray-600 font-normal">{j.informNo || j.id}</span>
-                  </td>
-                  <td className="border p-2">
-                    <div className="font-bold text-gray-800">{j.jobType}</div>
-                    {j.details}
-                    <br />
-                    <span className="text-gray-500 text-[10px]">บริเวณ: {j.location}</span>
-                  </td>
-                  <td className="border p-2">
-                    {getStdName(j.project)}
-                    <br />
-                    <span className="text-gray-500 text-[10px]">{j.requesterName}</span>
-                  </td>
-                  <td
-                    className={`border p-2 font-bold ${
-                      j.status === 'เปิด Inform Job แล้ว' ? 'text-green-600' : 'text-yellow-600'
-                    }`}
-                  >
-                    {j.status}
-                  </td>
-                </tr>
-              ))}
+              {rI.map((j) => {
+                const isCarried = !isY && j.status === 'รอดำเนินการ' && String(j.date || '').slice(0, 7) < fS;
+                return (
+                  <tr key={j.id} className={isCarried ? 'bg-amber-50/50' : ''}>
+                    <td className="border p-2 font-bold text-blue-700">
+                      {fDate(j.date)}
+                      {isCarried && (
+                        <span className="block text-[9px] text-amber-700 font-bold">⚠️ ค้างจากเดือนก่อน</span>
+                      )}
+                      <br />
+                      <span className="text-gray-600 font-normal">{j.informNo || j.id}</span>
+                    </td>
+                    <td className="border p-2">
+                      <div className="font-bold text-gray-800">{j.jobType}</div>
+                      {j.details}
+                      <br />
+                      <span className="text-gray-500 text-[10px]">บริเวณ: {j.location}</span>
+                    </td>
+                    <td className="border p-2">
+                      {getStdName(j.project)}
+                      <br />
+                      <span className="text-gray-500 text-[10px]">{j.requesterName}</span>
+                    </td>
+                    <td
+                      className={`border p-2 font-bold ${
+                        j.status === 'เปิด Inform Job แล้ว' ? 'text-green-600' : 'text-yellow-600'
+                      }`}
+                    >
+                      {j.status}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
