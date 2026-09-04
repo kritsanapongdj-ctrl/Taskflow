@@ -399,6 +399,83 @@ export const analyzeRadarMorphology = (statsObj = {}) => {
   };
 };
 
+export const OUTER_KEYS = ['cx', 'tech', 'sla', 'crisis', 'resource', 'innovation'];
+
+export const OUTER_DEFINITIONS = {
+  cx: {
+    key: 'cx',
+    name: 'Customer Exp.',
+    fullName: 'Customer Experience & Empathy',
+    thai: 'ความพึงพอใจและศิลปะบริการลูกบ้าน',
+    desc: 'มารยาทเข้าบ้าน ความสะอาด และการรับฟังข้อร้องเรียน',
+    color: 'text-pink-500',
+    bg: 'bg-pink-500',
+    badgeBg: 'bg-pink-50 text-pink-700 border-pink-200',
+    formulaDesc: '(CON + SEN) / 2',
+    calc: (s) => Math.round(((Number(s?.con) || 5) + (Number(s?.sen) || 5)) / 2)
+  },
+  tech: {
+    key: 'tech',
+    name: 'Tech. Expertise',
+    fullName: 'Technical Diagnosis & Facility Standards',
+    thai: 'การวินิจฉัยเชิงช่างและมาตรฐานสาธารณูปโภค',
+    desc: 'ทักษะประปา สปริงเกอร์ ไฟฟ้า สโมสร สระว่ายน้ำ บ่อบำบัด',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500',
+    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+    formulaDesc: '(INT + DEX) / 2',
+    calc: (s) => Math.round(((Number(s?.int) || 5) + (Number(s?.dex) || 5)) / 2)
+  },
+  sla: {
+    key: 'sla',
+    name: 'Ops & SLA',
+    fullName: 'Operational Discipline & SLA Speed',
+    thai: 'วินัยเวลา ความรวดเร็ว และการปิดใบงาน',
+    desc: 'ตรงต่อเวลานัดหมาย เคลียร์เคสฉับไว ไม่ดองสถานะรอใบงาน',
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    formulaDesc: '(AGI + DEX) / 2',
+    calc: (s) => Math.round(((Number(s?.agi) || 5) + (Number(s?.dex) || 5)) / 2)
+  },
+  crisis: {
+    key: 'crisis',
+    name: 'Crisis Resolv.',
+    fullName: 'Emergency Response & Crisis Mastery',
+    thai: 'การระงับเหตุฉุกเฉินและภาวะวิกฤต',
+    desc: 'ท่อเมนแตก ปั๊มน้ำดับทั้งโครงการ ไฟดับทั้งซอย ลูกบ้านพิพาทรุนแรง',
+    color: 'text-rose-500',
+    bg: 'bg-rose-500',
+    badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+    formulaDesc: '(STR + CON) / 2',
+    calc: (s) => Math.round(((Number(s?.str) || 5) + (Number(s?.con) || 5)) / 2)
+  },
+  resource: {
+    key: 'resource',
+    name: 'Resource Ctrl.',
+    fullName: 'Cost, Contractor & Material Stewardship',
+    thai: 'การบริหารงบประมาณ ผู้รับเหมา และอะไหล่',
+    desc: 'คุมงบซ่อมแซม ตรวจรับงานผู้รับเหมา ควบคุมคลังอะไหล่ส่วนกลาง',
+    color: 'text-amber-500',
+    bg: 'bg-amber-500',
+    badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+    formulaDesc: '(STR + SEN) / 2',
+    calc: (s) => Math.round(((Number(s?.str) || 5) + (Number(s?.sen) || 5)) / 2)
+  },
+  innovation: {
+    key: 'innovation',
+    name: 'Innovation',
+    fullName: 'Preventive Maintenance & Digital Systems',
+    thai: 'งานเชิงรุก บำรุงรักษาป้องกัน และระบบดิจิทัล',
+    desc: 'แผน PM ปั๊ม/บ่อบำบัด/ตู้ไฟ ใช้ Taskflow คล่องแคล่ว พัฒนาโฟลว์งาน',
+    color: 'text-purple-500',
+    bg: 'bg-purple-500',
+    badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
+    formulaDesc: '(INT + SEN) / 2',
+    calc: (s) => Math.round(((Number(s?.int) || 5) + (Number(s?.sen) || 5)) / 2)
+  }
+};
+
 export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   const str = Number(statsObj.str) || Number(u.str) || 5;
   const agi = Number(statsObj.agi) || Number(u.agi) || 5;
@@ -426,18 +503,19 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   };
 
   const outerMeta = [
-    { key: 'cx', name: 'Customer Exp.', thai: 'ความพึงพอใจลูกค้า' },
-    { key: 'tech', name: 'Tech. Expertise', thai: 'ทักษะเชิงลึก' },
-    { key: 'sla', name: 'Ops & SLA', thai: 'เวลาและความเป๊ะ' },
-    { key: 'crisis', name: 'Crisis Resolv.', thai: 'แก้ปัญหาวิกฤต' },
-    { key: 'resource', name: 'Resource Ctrl.', thai: 'บริหารทรัพยากร' },
-    { key: 'innovation', name: 'Innovation', thai: 'สร้างระบบใหม่' }
+    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'ความพึงพอใจและบริการลูกบ้าน' },
+    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างสาธารณูปโภค' },
+    { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลาและความรวดเร็ว' },
+    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การระงับเหตุฉุกเฉินและวิกฤต' },
+    { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบและผู้รับเหมา' },
+    { key: 'innovation', name: 'Innovation', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุกและระบบดิจิทัล' }
   ];
 
   const avgInner = (str + agi + dex + int + con + sen) / 6;
   const avgOuter = Object.values(actualValues).reduce((a, b) => a + b, 0) / 6;
   const gap = Math.round((avgOuter - avgInner) * 10) / 10;
 
+  // Alignment
   let alignmentKey = 'harmonized';
   let alignmentTitle = 'สมดุลเต็มศักยภาพ (Harmonized)';
   let alignmentDesc = 'ผลสัมฤทธิ์หน้างานจริงสอดคล้องกับศักยภาพตั้งต้นอย่างมั่นคง เป็นไปตามมาตรฐานที่คาดหวัง';
@@ -458,32 +536,222 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     coachingAdvice = 'หัวหน้างานควรสำรวจอุปสรรคหน้างาน เช่น ปริมาณงานหรือสภาพแวดล้อม เพื่อช่วยปลดล็อกพลังแท้จริง';
   }
 
+  // Sorting Outer Axes
   const sortedOuter = outerMeta.map(m => ({ ...m, val: actualValues[m.key] })).sort((a, b) => b.val - a.val);
   const pairKey = [sortedOuter[0].key, sortedOuter[1].key].sort().join('_');
 
+  // Comprehensive 15-Pair Performance DNA Matrix for Housing Estate Operations
   const dnaMap = {
-    'crisis_cx': { title: 'Frontline Shield (เกราะหน้าด่านพิทักษ์ลูกค้า)', desc: 'รับมืออารมณ์ลูกค้าได้ดีเยี่ยมและดับวิกฤตได้เด็ดขาด' },
-    'cx_crisis': { title: 'Frontline Shield (เกราะหน้าด่านพิทักษ์ลูกค้า)', desc: 'รับมืออารมณ์ลูกค้าได้ดีเยี่ยมและดับวิกฤตได้เด็ดขาด' },
-    'innovation_tech': { title: 'System Pioneer (ผู้นำนวัตกรรมระบบ)', desc: 'ริเริ่มระบบดิจิทัลและเทคโนโลยีใหม่เพื่อยกระดับทีม' },
-    'tech_innovation': { title: 'System Pioneer (ผู้นำนวัตกรรมระบบ)', desc: 'ริเริ่มระบบดิจิทัลและเทคโนโลยีใหม่เพื่อยกระดับทีม' },
-    'resource_sla': { title: 'Operational Commander (ผู้คุมวินัยและต้นทุน)', desc: 'งานจบตามเวลาเป๊ะและควบคุมงบประมาณได้อย่างมีประสิทธิภาพ' },
-    'sla_resource': { title: 'Operational Commander (ผู้คุมวินัยและต้นทุน)', desc: 'งานจบตามเวลาเป๊ะและควบคุมงบประมาณได้อย่างมีประสิทธิภาพ' },
-    'crisis_sla': { title: 'Rapid Responder (หน่วยตอบโต้ฉับไว)', desc: 'เข้าถึงจุดเกิดเหตุเร็วและระงับเหตุการณ์ฉุกเฉินได้ทันท่วงที' },
-    'sla_crisis': { title: 'Rapid Responder (หน่วยตอบโต้ฉับไว)', desc: 'เข้าถึงจุดเกิดเหตุเร็วและระงับเหตุการณ์ฉุกเฉินได้ทันท่วงที' },
-    'cx_resource': { title: 'Strategic Negotiator (นักเจรจาพันธมิตร)', desc: 'ประสานงานลูกค้าและคู่ค้าอย่างมืออาชีพเพื่อผลประโยชน์สูงสุด' },
-    'resource_cx': { title: 'Strategic Negotiator (นักเจรจาพันธมิตร)', desc: 'ประสานงานลูกค้าและคู่ค้าอย่างมืออาชีพเพื่อผลประโยชน์สูงสุด' },
-    'sla_tech': { title: 'Precision Architect (สถาปนิกงานประณีต)', desc: 'รักษามาตรฐานงานเชิงลึกและส่งมอบงานตรงเวลา 100%' },
-    'tech_sla': { title: 'Precision Architect (สถาปนิกงานประณีต)', desc: 'รักษามาตรฐานงานเชิงลึกและส่งมอบงานตรงเวลา 100%' },
-    'crisis_innovation': { title: 'Crisis Innovator (นักพลิกวิกฤตด้วยระบบ)', desc: 'แก้ปัญหาเฉพาะหน้าด้วยเครื่องมือและวิธีคิดใหม่ๆ' },
-    'innovation_crisis': { title: 'Crisis Innovator (นักพลิกวิกฤตด้วยระบบ)', desc: 'แก้ปัญหาเฉพาะหน้าด้วยเครื่องมือและวิธีคิดใหม่ๆ' },
-    'cx_tech': { title: 'Consultative Expert (ผู้เชี่ยวชาญบริการ)', desc: 'อธิบายเรื่องเทคนิคยากๆ ให้ลูกค้าเข้าใจง่ายและประทับใจ' },
-    'tech_cx': { title: 'Consultative Expert (ผู้เชี่ยวชาญบริการ)', desc: 'อธิบายเรื่องเทคนิคยากๆ ให้ลูกค้าเข้าใจง่ายและประทับใจ' }
+    'crisis_cx': {
+      title: 'De-escalation Guardian (เกราะหน้าด่านพิทักษ์ความสัมพันธ์)',
+      tag: 'Frontline Shield',
+      desc: 'รับมืออารมณ์ลูกบ้านที่โกรธจัดได้อย่างอยู่หมัด มีความนิ่งในการระงับข้อพิพาทรุนแรง พร้อมประสานงานหน้างานอย่างรอบคอบ'
+    },
+    'crisis_innovation': {
+      title: 'Agile Crisis Innovator (นักพลิกแพลงกู้วิกฤตเฉพาะหน้า)',
+      tag: 'Creative Responder',
+      desc: 'ในสถานการณ์คับขันที่ระบบขัดข้อง สามารถประยุกต์ใช้อุปกรณ์ทดแทนและหาทางออกใหม่ๆ เพื่อกู้ระบบสาธารณูปโภคให้ฟื้นคืนได้เร็วที่สุด'
+    },
+    'crisis_resource': {
+      title: 'Crisis Commander (ผู้บัญชาการสถานการณ์และทรัพยากร)',
+      tag: 'Operations Guardian',
+      desc: 'คุมสถานการณ์ฉุกเฉินได้อย่างสงบนิ่ง และจัดสรรกำลังคน เครื่องจักร ตลอดจนงบประมาณซ่อมแซมได้อย่างคุ้มค่า ปลอดภัย ไม่สิ้นเปลือง'
+    },
+    'crisis_sla': {
+      title: 'Rapid Emergency Responder (หน่วยตอบโต้เหตุฉุกเฉินฉับไว)',
+      tag: 'Rapid Strike',
+      desc: 'ทันทีที่รับแจ้งเหตุฉุกเฉิน (ท่อเมนแตก ไฟดับ พายุพัด) จะเข้าถึงหน้างานเร็วที่สุด วินัยเวลาเป๊ะ ระงับเหตุก่อนสร้างความเสียหายลุกลาม'
+    },
+    'crisis_tech': {
+      title: 'Infrastructure Rescuer (หน่วยกู้วิกฤตสาธารณูปโภค)',
+      tag: 'System Rescuer',
+      desc: 'มีความรู้เชิงช่างลึกซึ้งผสานความกล้าตัดสินใจ สามารถกู้คืนระบบปั๊มน้ำสโมสร ท่อเมนแรงดันสูง หรือระบบบำบัดน้ำเสียที่พังฉุกเฉินได้ปลอดภัย'
+    },
+    'cx_innovation': {
+      title: 'Experience Designer (นักออกแบบประสบการณ์ลูกบ้าน)',
+      tag: 'Service Innovator',
+      desc: 'เข้าใจจิตวิทยาและความต้องการของลูกบ้านอย่างลึกซึ้ง พร้อมริเริ่มนำระบบ Taskflow และการสื่อสารเชิงรุกมาสร้างความประทับใจระดับบอกต่อ'
+    },
+    'cx_resource': {
+      title: 'Value Negotiator (นักประสานประโยชน์เพื่อชุมชน)',
+      tag: 'Diplomatic Steward',
+      desc: 'ประสานงานลูกบ้านและผู้รับเหมาอย่างลงตัว อธิบายเรื่องงบประมาณส่วนกลางได้อย่างโปร่งใส ปกป้องผลประโยชน์ของนิติบุคคลโดยไม่กระทบความสัมพันธ์'
+    },
+    'cx_sla': {
+      title: 'Reliable Ambassador (ทูตบริการฉับไว ตรงเวลาเป็นเลิศ)',
+      tag: 'Trusted Ambassador',
+      desc: 'รักษาเวลานัดหมาย 100% สุภาพ กริยางดงาม แจ้งความคืบหน้ารวดเร็ว ไม่ปล่อยให้ลูกบ้านต้องตามงาน ลูกบ้านไว้วางใจสูงสุด'
+    },
+    'cx_tech': {
+      title: 'Consultative Master (ปรมาจารย์ที่ปรึกษาเชิงช่าง)',
+      tag: 'Consultative Expert',
+      desc: 'วินิจฉัยงานระบบได้เฉียบขาด พร้อมอธิบายสาเหตุและแนวทางซ่อมแซมให้ลูกบ้านเข้าใจง่าย ช่างผู้เป็นที่พึ่งทางใจของลูกบ้าน'
+    },
+    'innovation_resource': {
+      title: 'Facility Asset Optimizer (ผู้วางระบบสินทรัพย์ยั่งยืน)',
+      tag: 'Asset Optimizer',
+      desc: 'จัดระบบคลังอะไหล่ เครื่องมือ และแผน Preventive Maintenance อย่างเป็นระบบ นำเทคโนโลยีมาลดการสูญหายและประหยัดงบประมาณส่วนกลางระยะยาว'
+    },
+    'innovation_sla': {
+      title: 'Agile Workflow Optimizer (ผู้ขับเคลื่อนโฟลว์ความเร็วสูง)',
+      tag: 'Workflow Driver',
+      desc: 'ใช้เครื่องมือใน LH-Taskflow คล่องแคล่ว ลดขั้นตอนที่ซ้ำซ้อน ทำให้การส่งต่องานระหว่างช่างและฝ่ายบริการรวดเร็ว ปิดใบงานในกรอบ SLA ได้เสมอ'
+    },
+    'innovation_tech': {
+      title: 'Smart Facility Engineer (วิศวกรสาธารณูปโภคอัจฉริยะ)',
+      tag: 'Tech Pioneer',
+      desc: 'มีความรู้เชิงช่างระดับสูง และนำระบบตรวจวัด ระบบอัตโนมัติมาดูแลบ่อบำบัด สปริงเกอร์ และตู้ควบคุมไฟ ลดการเกิดปัญหาซ้ำซากได้อย่างยั่งยืน'
+    },
+    'resource_sla': {
+      title: 'Operations Controller (ผู้บัญชาการงานบริการและงบประมาณ)',
+      tag: 'Disciplined Controller',
+      desc: 'บริหารเวลาและทรัพยากรได้อย่างเฉียบคม คุมผู้รับเหมาให้ส่งงานตรงเวลา เบิกจ่ายอะไหล่คุ้มค่า ไร้งานค้างและไร้งบรั่วไหล'
+    },
+    'resource_tech': {
+      title: 'Technical Inspector (ผู้คุมมาตรฐานและต้นทุนเชิงช่าง)',
+      tag: 'Master Inspector',
+      desc: 'รู้เท่าทันเทคนิคเชิงช่าง ตรวจรับงานผู้รับเหมาละเอียดยิบ ไม่ปล่อยให้มีการหมกเม็ด เลือกใช้วัสดุที่ทนทานคุ้มค่าต่องบประมาณโครงการ'
+    },
+    'sla_tech': {
+      title: 'First-Time Fixer (ช่างแม่นยำ ปิดงานตรงกรอบ)',
+      tag: 'Precision Fixer',
+      desc: 'วินิจฉัยอาการเสียแม่นยำ ซ่อมประปา ไฟฟ้า สปริงเกอร์จบในครั้งแรก ไม่เกิดเคสซ่อมซ้ำ และปิดใบงานในระบบได้อย่างรวดเร็วตามกรอบเวลา'
+    }
   };
 
   const performanceDna = dnaMap[pairKey] || {
     title: `${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
-    desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai}`
+    tag: 'Specialist',
+    desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai} ในงานบริการหมู่บ้านจัดสรร`
   };
+
+  // 9-Box Operational Talent Grid (HOW Potential vs WHAT Performance)
+  const howLevel = avgInner >= 7.0 ? 'high' : (avgInner >= 5.0 ? 'med' : 'low');
+  const whatLevel = avgOuter >= 7.0 ? 'high' : (avgOuter >= 5.0 ? 'med' : 'low');
+
+  const talentGridMatrix = {
+    'high_high': {
+      title: '🏆 Star Leader (เสาหลักผู้ขับเคลื่อนโครงการ)',
+      desc: 'ศักยภาพสูงและผลงานจริงยอดเยี่ยมรอบด้าน เป็นเสาหลักที่ไว้ใจได้สูงสุดในการดูแลหมู่บ้าน',
+      badge: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+      action: 'มอบหมายเป็นหัวหน้าชุดซ่อมบำรุง / มอบหมายเคส VIP หรือโครงการปรับปรุงสาธารณูปโภคใหญ่'
+    },
+    'med_high': {
+      title: '🔥 High-Discipline Achiever (นักสู้ผู้ทุ่มเทด้วยวินัยสูง)',
+      desc: 'ผลงานหน้างานโดดเด่นแซงศักยภาพคำนวณ ขยัน มีวินัยสูง และทุ่มเทเพื่อโครงการอย่างแท้จริง',
+      badge: 'bg-teal-50 text-teal-800 border-teal-300',
+      action: 'ชื่นชมและถอดบทเรียนการทำงาน (Best Practice) ส่งเสริมให้เรียนรู้ทักษะเทคนิคเชิงลึกเพิ่มเติม'
+    },
+    'low_high': {
+      title: '⭐ Field Hero (ยอดฝีมือหน้างานตัวจริง)',
+      desc: 'แม้มิติการประเมินพื้นฐานจะยังต่ำ แต่ผลลัพธ์หน้างานจริงแก้ปัญหาได้ดีเยี่ยม ไว้วางใจได้',
+      badge: 'bg-cyan-50 text-cyan-800 border-cyan-300',
+      action: 'เสริมความรู้เชิงทฤษฎีและการใช้ระบบดิจิทัล เพื่อลดความเหนื่อยล้าในการใช้แรงกายเพียงอย่างเดียว'
+    },
+    'high_med': {
+      title: '💎 High-Potential Core (ดาวเด่นรอการขัดเกลา)',
+      desc: 'มีศักยภาพพื้นฐานสูงมาก ผลงานอยู่ในเกณฑ์มาตรฐาน พร้อมทะลุขีดจำกัดสู่ระดับยอดเยี่ยม',
+      badge: 'bg-indigo-50 text-indigo-800 border-indigo-300',
+      action: 'เพิ่มความท้าทาย มอบหมายเคสวิกฤตหรือเคสยากเพื่อให้ได้ปล่อยของและสร้างผลงานเชิงประจักษ์'
+    },
+    'med_med': {
+      title: '⚙️ Dependable Pillar (ฟันเฟืองหลักที่มั่นคง)',
+      desc: 'ผลงานและศักยภาพสอดคล้องกันตามมาตรฐาน เป็นกำลังหลักที่พึ่งพาได้ในงานประจำวัน',
+      badge: 'bg-blue-50 text-blue-800 border-blue-300',
+      action: 'รักษาระดับมาตรฐาน และค้นหาความถนัดเฉพาะทาง 1-2 ด้าน เพื่อสร้างจุดเด่นเฉพาะตัว'
+    },
+    'low_med': {
+      title: '🔨 Steady Operator (ผู้ปฏิบัติงานมาตรฐาน)',
+      desc: 'ทำงานตามหน้าที่และคำสั่งได้ครบถ้วน แต่อาจยังต้องการคำแนะนำในเคสที่ไม่คุ้นเคย',
+      badge: 'bg-slate-50 text-slate-800 border-slate-300',
+      action: 'กำหนดเช็คลิสต์การตรวจงานให้ชัดเจน และจัดคู่หูกับช่างอาวุโสในงานซับซ้อน'
+    },
+    'high_low': {
+      title: '⚠️ Under-Leveraged Talent (ช้างเผือกที่ยังไม่ได้ปล่อยของ)',
+      desc: 'มีศักยภาพแฝงสูงมากแต่ผลงานจริงยังไม่ออก อาจหมดไฟ (Burnout) หรือติดขัดหน้างาน',
+      badge: 'bg-amber-50 text-amber-800 border-amber-300',
+      action: 'พูดคุย One-on-One ทันทีเพื่อค้นหาสาเหตุ (สภาพแวดล้อม ปริมาณงาน หรือการมอบหมายงานไม่ตรงจุด)'
+    },
+    'med_low': {
+      title: '📉 Inconsistent Performer (ผลงานแกว่ง ต้องกระตุ้น)',
+      desc: 'มีพื้นฐานพอใช้แต่ผลงานหน้างานหลุดมาตรฐานบ่อยครั้ง ขาดความสม่ำเสมอในการส่งมอบงาน',
+      badge: 'bg-orange-50 text-orange-800 border-orange-300',
+      action: 'กำหนด Check-point ถี่ขึ้น ติดตามการปิดใบงานรายวัน และทบทวนขั้นตอนระเบียบปฏิบัติงาน'
+    },
+    'low_low': {
+      title: '🚨 Urgent OJT Required (ต้องเข้าโปรแกรมฟื้นฟูเร่งด่วน)',
+      desc: 'ทั้งศักยภาพและผลงานต่ำกว่าเกณฑ์ปฏิบัติงาน เป็นจุดเสี่ยงของทีมที่ต้องได้รับการดูแลใกล้ชิด',
+      badge: 'bg-rose-50 text-rose-800 border-rose-300',
+      action: 'จัดพี่เลี้ยงประกบ 1:1 ห้ามทำงานเดี่ยว เข้าแผนพัฒนาทักษะหน้างาน (OJT) ประเมินผลทุก 15 วัน'
+    }
+  };
+
+  const talentGrid = talentGridMatrix[`${howLevel}_${whatLevel}`] || talentGridMatrix['med_med'];
+
+  // 4-Point Operational Risk Engine
+  const riskAlerts = [];
+
+  // 1. Speed vs Quality Risk
+  if (actualValues.sla - actualValues.tech >= 2) {
+    riskAlerts.push({
+      type: 'quality_speed',
+      level: 'warning',
+      title: '⚠️ เสี่ยงงานรีบแต่หลุด QC (Speed vs Quality Risk)',
+      desc: `ความเร็วสูง (SLA ${actualValues.sla}) แต่วินิจฉัยเชิงช่างต่ำกว่า (TECH ${actualValues.tech}) เสี่ยงซ่อมไม่จบ เกิดเคสซ่อมซ้ำ (Recurring Defect) ควรเน้นตรวจเช็คงานก่อนส่งมอบ`
+    });
+  }
+
+  // 2. Customer Escalation Risk
+  if ((actualValues.tech >= 7 || actualValues.sla >= 7) && actualValues.cx <= 4) {
+    riskAlerts.push({
+      type: 'escalation',
+      level: 'danger',
+      title: '🚨 เสี่ยงเกิดข้อพิพาทรุนแรงกับลูกบ้าน (Customer Escalation Risk)',
+      desc: `ฝีมือช่างหรือความเร็วดีเยี่ยม แต่ทักษะบริการลูกบ้านต่ำ (CX ${actualValues.cx}) มีความเสี่ยงสูงที่จะเกิดการกระทบกระทั่ง ควรฝึก De-escalation และการสื่อสารเชิงบวก`
+    });
+  }
+
+  // 3. Contractor & Cost Leakage Risk
+  if (actualValues.resource <= 4) {
+    riskAlerts.push({
+      type: 'leakage',
+      level: 'warning',
+      title: '💸 เสี่ยงงบประมาณรั่วไหล / ควบคุมผู้รับเหมาไม่ได้ (Contractor Leakage Risk)',
+      desc: `การคุมงบและตรวจรับงานต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) เสี่ยงต่อการถูกผู้รับเหมาหมกเม็ดงาน หรือเบิกอะไหล่ผิดพลาด ควรให้หัวหน้าช่วยตรวจรับงานผู้รับเหมา`
+    });
+  }
+
+  // 4. Firefighting Trap Risk
+  if (actualValues.crisis >= 7 && actualValues.innovation <= 4) {
+    riskAlerts.push({
+      type: 'firefighting',
+      level: 'info',
+      title: '🚒 เสี่ยงติดกับดักวิ่งดับเพลิง (Firefighting Trap)',
+      desc: `แก้เหตุฉุกเฉินเก่ง (CRISIS ${actualValues.crisis}) แต่งานเชิงรุกต่ำ (INNOVATION ${actualValues.innovation}) ทำให้ต้องวิ่งแก้ปัญหาเดิมๆ ซ้ำซาก ควรผลักดันให้ทำแผน PM เชิงป้องกัน`
+    });
+  }
+
+  // Standup Coaching & Assignment Advice
+  const bestFitTaskMap = {
+    cx: 'เหมาะรับเคสบ้านลูกบ้าน VIP, เคสพิพาท หรือบ้านที่กำลังไม่พอใจอย่างรุนแรง',
+    tech: 'เหมาะรับเคสระบบท่อเมนใต้ดิน, แผงควบคุมสโมสร หรือระบบบำบัดน้ำเสียซับซ้อน',
+    sla: 'เหมาะสำหรับกวาดเคสคั่งค้าง, เคสเร่งด่วนตามกรอบเวลา 24 ชม. และบริหารคิวประจำวัน',
+    crisis: 'เหมาะเป็นหัวหน้าเวรรับเหตุฉุกเฉินกลางคืน หรือรับมือน้ำท่วม/พายุ/ไฟดับ',
+    resource: 'เหมาะตรวจรับงานงวดผู้รับเหมา และคุมสต็อกเบิกจ่ายอะไหล่สปริงเกอร์/ไฟฟ้า',
+    innovation: 'เหมาะวางตาราง PM สาธารณูปโภคประจำเดือน และเป็นพี่เลี้ยงเทรนการใช้ระบบ Taskflow'
+  };
+
+  const topKey = sortedOuter[0].key;
+  const bestFitAssignment = bestFitTaskMap[topKey] || 'เหมาะสำหรับงานปฏิบัติการทั่วไปตามที่ได้รับมอบหมาย';
+
+  let pairingRecommendation = 'สามารถปฏิบัติหน้าที่เดี่ยวหรือนำทีมงานปฏิบัติการได้อย่างมั่นใจ';
+  if (actualValues.cx <= 4 && actualValues.tech >= 6) {
+    pairingRecommendation = 'ควรจับคู่กับผู้ที่มีคะแนน CX สูง เพื่อช่วยสื่อสารและสร้างสัมพันธ์กับลูกบ้านขณะเข้าซ่อม';
+  } else if (actualValues.tech <= 4 && actualValues.cx >= 6) {
+    pairingRecommendation = 'ควรจับคู่กับช่างเทคนิคอาวุโส เพื่อเรียนรู้วิธีการวินิจฉัยอาการเสียจริงหน้างาน';
+  } else if (actualValues.sla <= 4) {
+    pairingRecommendation = 'ควรให้หัวหน้างานช่วยจัดลำดับความสำคัญของคิวงานในตอนเช้า (Morning Toolbox Talk)';
+  }
 
   return {
     autoValues,
@@ -497,6 +765,11 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     alignmentBadge,
     coachingAdvice,
     performanceDna,
-    topOuter: sortedOuter
+    topOuter: sortedOuter,
+    talentGrid,
+    riskAlerts,
+    bestFitAssignment,
+    pairingRecommendation
   };
 };
+

@@ -12,7 +12,9 @@ import {
   analyzeRadarMorphology,
   analyzeOuterLayer,
   STAT_DEFINITIONS, 
-  STAT_KEYS 
+  STAT_KEYS,
+  OUTER_DEFINITIONS,
+  OUTER_KEYS
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -407,20 +409,60 @@ export default function TeamStatusTab({
                             </strong>
                           </div>
                         </div>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${
-                          outerSummary.alignmentKey === 'over_achiever'
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                            : outerSummary.alignmentKey === 'under_leveraged'
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                            : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                        }`}>
-                          {outerSummary.alignmentTitle}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {outerSummary.talentGrid && (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md bg-purple-500/20 text-purple-300 border-purple-500/40">
+                              📦 {outerSummary.talentGrid.title}
+                            </span>
+                          )}
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${
+                            outerSummary.alignmentKey === 'over_achiever'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : outerSummary.alignmentKey === 'under_leveraged'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                          }`}>
+                            {outerSummary.alignmentTitle}
+                          </span>
+                        </div>
                       </div>
 
                       <p className="text-[10px] sm:text-[11px] text-slate-300 font-light leading-snug">
                         {outerSummary.performanceDna.desc}
                       </p>
+
+                      {/* Best Fit Assignment & Pairing Recommendation */}
+                      {(outerSummary.bestFitAssignment || outerSummary.pairingRecommendation) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[9px] sm:text-[10px]">
+                          {outerSummary.bestFitAssignment && (
+                            <div className="p-1.5 rounded bg-white/5 border border-white/10 text-slate-300 leading-snug">
+                              <span className="text-[#e6d0a7] font-bold mr-1">🎯 ภารกิจหลักที่เหมาะสม:</span>
+                              {outerSummary.bestFitAssignment}
+                            </div>
+                          )}
+                          {outerSummary.pairingRecommendation && (
+                            <div className="p-1.5 rounded bg-white/5 border border-white/10 text-slate-300 leading-snug">
+                              <span className="text-purple-300 font-bold mr-1">👥 การจับคู่คู่หู (Pairing):</span>
+                              {outerSummary.pairingRecommendation}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Operational Risk Alerts */}
+                      {outerSummary.riskAlerts && outerSummary.riskAlerts.length > 0 && (
+                        <div className="space-y-1">
+                          {outerSummary.riskAlerts.map((r, i) => (
+                            <div key={i} className="text-[9px] sm:text-[10px] p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-200 flex items-start gap-1.5">
+                              <Icon name="alert-triangle" size={13} className="text-rose-400 shrink-0 mt-0.5" />
+                              <div>
+                                <strong className="text-rose-300 font-bold block">{r.title}</strong>
+                                <span>{r.desc} <strong className="text-rose-200 ml-1">💡 แนวทาง: {r.advice}</strong></span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* HOW vs WHAT Synthesis Bar */}
                       <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md space-y-1.5">
@@ -434,12 +476,18 @@ export default function TeamStatusTab({
                         <p className="text-[9px] sm:text-[10px] text-slate-300 leading-tight">
                           {outerSummary.alignmentDesc}
                         </p>
+                        {outerSummary.coachingAdvice && (
+                          <div className="text-[8.5px] sm:text-[9.5px] text-[#e6d0a7] bg-[#bca374]/10 p-1.5 rounded border border-[#bca374]/20 leading-tight">
+                            📢 <strong>โค้ชชิ่งประจำวัน (Standup):</strong> {outerSummary.coachingAdvice}
+                          </div>
+                        )}
                       </div>
 
                       {/* 6 Competency Micro-Cards */}
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-0.5">
                         {outers.map(o => {
                           const isHigh = o.finalVal >= 8;
+                          const def = OUTER_DEFINITIONS[o.k] || {};
                           return (
                             <div 
                               key={o.k} 
@@ -448,8 +496,9 @@ export default function TeamStatusTab({
                                   ? 'bg-[#bca374]/15 border-[#bca374]/40 shadow-[0_0_10px_rgba(188,163,116,0.15)]' 
                                   : 'bg-white/5 border-white/10 hover:bg-white/10'
                               }`}
+                              title={def.desc || o.n}
                             >
-                              <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{o.n}</span>
+                              <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{def.short || o.n}</span>
                               <span className={`font-black text-[11px] sm:text-xs leading-tight mt-0.5 ${isHigh ? 'text-[#e6d0a7]' : 'text-white'}`}>
                                 {o.finalVal} <span className="text-slate-500 text-[8px] font-normal">/10</span>
                               </span>
@@ -624,63 +673,127 @@ export default function TeamStatusTab({
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-200 relative z-10">
-             <h4 className="font-bold text-[#0f2e4a] text-[13px] flex items-center mb-1">
-                <Icon name="layers" size={14} className="mr-2 text-indigo-500" />
-                6 แกนสมรรถนะผลงาน (The Outer Layer)
-             </h4>
-             <p className="text-[10px] text-slate-500 mb-3 leading-snug">
-                * ระบบวิเคราะห์ค่าจากศักยภาพตั้งต้น (HOW) หัวหน้างานสามารถสไลด์ปรับเพิ่ม/ลดคะแนนเพื่อสะท้อนผลลัพธ์หน้างานจริง (WHAT)
-             </p>
-             <div className="grid grid-cols-2 gap-3">
-                {[
-                  { k: 'cx', n: 'Customer Exp.', d: 'ความพึงพอใจลูกค้า' },
-                  { k: 'tech', n: 'Tech. Expertise', d: 'ทักษะเชิงลึก' },
-                  { k: 'sla', n: 'Ops & SLA', d: 'เวลาและความเป๊ะ' },
-                  { k: 'crisis', n: 'Crisis Resolv.', d: 'แก้ปัญหาวิกฤต' },
-                  { k: 'resource', n: 'Resource Ctrl.', d: 'บริหารทรัพยากร' },
-                  { k: 'innovation', n: 'Innovation', d: 'สร้างระบบใหม่' }
-                ].map(out => {
-                   const autoVal = Math.round(
-                      out.k === 'cx' ? (statsObj.con + statsObj.sen)/2 :
-                      out.k === 'tech' ? (statsObj.int + statsObj.dex)/2 :
-                      out.k === 'sla' ? (statsObj.agi + statsObj.dex)/2 :
-                      out.k === 'crisis' ? (statsObj.str + statsObj.con)/2 :
-                      out.k === 'resource' ? (statsObj.str + statsObj.sen)/2 :
-                      (statsObj.int + statsObj.sen)/2
-                   );
-                   const actualVal = (u[out.k] !== null && u[out.k] !== undefined) ? u[out.k] : autoVal;
-                   const isOverride = u[out.k] !== null && u[out.k] !== undefined && u[out.k] !== autoVal;
+             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+               <div>
+                 <h4 className="font-bold text-[#0f2e4a] text-[13px] flex items-center">
+                    <Icon name="layers" size={15} className="mr-1.5 text-indigo-600" />
+                    6 แกนสมรรถนะผลงาน (The Outer Layer)
+                 </h4>
+                 <p className="text-[10px] text-slate-500 leading-snug">
+                    * วิเคราะห์จากศักยภาพตั้งต้น (HOW) ปรับเพิ่ม/ลดผลลัพธ์หน้างานจริง (WHAT) พร้อมเกณฑ์มาตรฐานงานหมู่บ้านจัดสรร
+                 </p>
+               </div>
+               <div className="flex items-center gap-1.5">
+                 <button
+                   type="button"
+                   onClick={() => {
+                     const resetScores = {};
+                     OUTER_KEYS.forEach(k => { resetScores[k] = null; });
+                     setTeamForm({ ...teamForm, ...resetScores });
+                   }}
+                   className="text-[10px] font-bold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded border border-slate-200 transition flex items-center gap-1"
+                   title="รีเซ็ตคะแนนทั้งหมดให้คำนวณจากสูตรศักยภาพตั้งต้น"
+                 >
+                   <Icon name="refresh-cw" size={11} />
+                   <span>รีเซ็ตตาม HOW</span>
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setAssessMode(true)}
+                   className="text-[10px] font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 px-3 py-1 rounded shadow-xs transition flex items-center gap-1.5"
+                 >
+                   <Icon name="clipboard-check" size={13} />
+                   <span>เปิดตัวช่วยประเมิน (Wizard)</span>
+                 </button>
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {OUTER_KEYS.map(k => {
+                   const def = OUTER_DEFINITIONS[k];
+                   const autoVal = def.calc(statsObj);
+                   const actualVal = (u[k] !== null && u[k] !== undefined) ? u[k] : autoVal;
+                   const isOverride = u[k] !== null && u[k] !== undefined && u[k] !== autoVal;
                    const gap = actualVal - autoVal;
+                   const rubricText = getRubricText(k, actualVal);
                    
                    return (
-                     <div key={out.k} className={`bg-white p-2.5 rounded-lg border ${isOverride ? 'border-indigo-200 bg-indigo-50/20' : 'border-slate-200'} shadow-sm flex flex-col justify-between`}>
-                        <div className="flex justify-between items-start mb-1">
+                     <div key={k} className={`p-3 rounded-xl border transition-all duration-200 ${isOverride ? 'border-indigo-300 bg-indigo-50/30 shadow-xs' : 'border-slate-200 bg-white shadow-xs'}`}>
+                        {/* Title & Score */}
+                        <div className="flex justify-between items-start mb-1.5">
                            <div>
-                              <strong className="text-[11px] text-indigo-900 block">{out.n}</strong>
-                              <span className="text-[9px] text-slate-400">{out.d}</span>
+                              <div className="flex items-center gap-1.5">
+                                <strong className="text-[12px] text-slate-900 font-bold">{def.name}</strong>
+                                <span className="text-[10px] text-slate-500 font-medium">({def.thai})</span>
+                              </div>
+                              <span className="text-[9px] text-slate-400 block mt-0.5">{def.desc} • สูตร: {def.formulaDesc}</span>
                            </div>
-                           <span className={`font-bold text-[12px] ${isOverride ? 'text-indigo-600' : 'text-slate-500'}`}>
-                             {actualVal}<span className="text-[9px] text-slate-400">/10</span>
-                           </span>
+                           <div className="flex flex-col items-end">
+                             <div className="flex items-center gap-1">
+                               <span className={`font-black text-sm ${isOverride ? 'text-indigo-600' : 'text-slate-700'}`}>
+                                 {actualVal}
+                               </span>
+                               <span className="text-[10px] text-slate-400 font-normal">/10</span>
+                             </div>
+                             {isOverride && (
+                               <button 
+                                 type="button" 
+                                 className="text-[9px] text-slate-400 hover:text-indigo-600 underline mt-0.5" 
+                                 onClick={() => setTeamForm({...teamForm, [k]: null})}
+                               >
+                                 คืนค่า ({autoVal})
+                               </button>
+                             )}
+                           </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-between">
+
+                        {/* Quick Tier Selection Buttons */}
+                        <div className="grid grid-cols-4 gap-1 mb-2 pt-1 border-t border-slate-100">
+                          {[
+                            { label: '1-3 เริ่มต้น', val: 2, active: actualVal <= 3 },
+                            { label: '4-6 ปฏิบัติได้', val: 5, active: actualVal >= 4 && actualVal <= 6 },
+                            { label: '7-8 ชำนาญ', val: 8, active: actualVal >= 7 && actualVal <= 8 },
+                            { label: '9-10 เชี่ยวชาญ', val: 9, active: actualVal >= 9 }
+                          ].map((tier, ti) => (
+                            <button
+                              key={ti}
+                              type="button"
+                              onClick={() => setTeamForm({ ...teamForm, [k]: tier.val })}
+                              className={`text-[9.5px] py-1 px-1 rounded text-center font-bold border transition ${
+                                tier.active
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {tier.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Slider for fine adjustment */}
+                        <div className="flex items-center gap-2">
                            <input type="range" min="1" max="10" step="1" 
-                              className="w-[70%] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
+                              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
                               value={actualVal} 
-                              onChange={e => setTeamForm({...teamForm, [out.k]: Number(e.target.value)})} 
+                              onChange={e => setTeamForm({...teamForm, [k]: Number(e.target.value)})} 
                            />
-                           {isOverride && (
-                             <button type="button" className="text-[9px] text-slate-400 hover:text-indigo-500 underline ml-1" onClick={() => setTeamForm({...teamForm, [out.k]: null})}>คืนค่า</button>
-                           )}
                         </div>
+
+                        {/* Rubric Guidance Box */}
+                        <div className="mt-2 text-[10px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200 leading-snug">
+                           <strong className="text-slate-800 font-bold block mb-0.5">พฤติกรรมหน้างาน (เกณฑ์ระดับ {actualVal}/10):</strong>
+                           <span>{rubricText}</span>
+                        </div>
+
+                        {/* Gap Warning */}
                         {gap <= -2 && (
-                           <div className="mt-2 text-[10px] text-rose-700 bg-rose-50 p-1.5 rounded font-medium leading-tight border border-rose-100">
-                              ⚠️ ศักยภาพ {autoVal} แต่ผลงาน {actualVal} (Low Result) → ขาดประสบการณ์หน้างาน ควรทำ OJT ด่วน
+                           <div className="mt-1.5 text-[9.5px] text-rose-700 bg-rose-50 p-1.5 rounded font-medium leading-tight border border-rose-200">
+                              ⚠️ ศักยภาพ {autoVal} แต่ผลงาน {actualVal} (Low Result) → ขาดประสบการณ์หน้างานหมู่บ้านจัดสรร ควรทำ OJT ด่วน
                            </div>
                         )}
                         {gap >= 2 && (
-                           <div className="mt-2 text-[10px] text-emerald-700 bg-emerald-50 p-1.5 rounded font-medium leading-tight border border-emerald-100">
-                              ⭐ ผลงาน {actualVal} แซงศักยภาพ {autoVal} → ค้นพบ Best Practice ควรแชร์ต่อในทีม
+                           <div className="mt-1.5 text-[9.5px] text-emerald-700 bg-emerald-50 p-1.5 rounded font-medium leading-tight border border-emerald-200">
+                              ⭐ ผลงาน {actualVal} แซงศักยภาพ {autoVal} → ค้นพบ Best Practice ในโครงการ ควรแชร์ให้ทีมเรียนรู้
                            </div>
                         )}
                      </div>
@@ -692,8 +805,8 @@ export default function TeamStatusTab({
               {(() => {
                 const outerSummary = analyzeOuterLayer(teamForm, statsObj);
                 return (
-                  <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-indigo-900/5 via-slate-50 to-indigo-50/40 border border-indigo-100 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-indigo-900/5 via-slate-50 to-indigo-50/40 border border-indigo-200 shadow-sm space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 shadow-xs">
                           <Icon name="layers" size={15} />
@@ -703,16 +816,39 @@ export default function TeamStatusTab({
                           <strong className="text-xs text-indigo-950 font-black">{outerSummary.performanceDna.title}</strong>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
-                        {outerSummary.alignmentTitle}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {outerSummary.talentGrid && (
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200">
+                            📦 {outerSummary.talentGrid.title}
+                          </span>
+                        )}
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
+                          {outerSummary.alignmentTitle}
+                        </span>
+                      </div>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 mb-3 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       {outerSummary.performanceDna.desc}
                     </p>
 
-                    <div className="p-3 rounded-lg bg-white/90 border border-indigo-100/70 text-[11px] space-y-2">
+                    {/* Operational Risk Alerts */}
+                    {outerSummary.riskAlerts && outerSummary.riskAlerts.length > 0 && (
+                      <div className="space-y-1.5">
+                        {outerSummary.riskAlerts.map((r, i) => (
+                          <div key={i} className="text-[10px] p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2">
+                            <Icon name="alert-triangle" size={14} className="text-rose-500 shrink-0 mt-0.5" />
+                            <div>
+                              <strong className="text-rose-900 font-bold block">{r.title}</strong>
+                              <span>{r.desc} <strong className="text-rose-950 font-bold ml-1">💡 แนวทาง: {r.advice}</strong></span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* HOW vs WHAT Synthesis Bar */}
+                    <div className="p-3 rounded-lg bg-white/90 border border-indigo-100 text-[11px] space-y-2">
                       <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 pb-1.5 border-b border-slate-100">
                         <span>ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong> / 10</span>
                         <span>ผลงานจริง (WHAT): <strong className="text-indigo-600">{outerSummary.avgOuter}</strong> / 10</span>
@@ -723,8 +859,29 @@ export default function TeamStatusTab({
                       <p className="text-slate-700 leading-snug">
                         {outerSummary.alignmentDesc}
                       </p>
-                      <div className="text-[10px] text-indigo-950 bg-indigo-50/80 p-2 rounded-lg border border-indigo-100 font-medium">
-                        💡 <strong>คำแนะนำเชิงบริหาร:</strong> {outerSummary.coachingAdvice}
+                      {outerSummary.talentGrid && (
+                        <div className="text-[10px] text-purple-950 bg-purple-50/80 p-2 rounded-lg border border-purple-100 font-medium leading-snug">
+                          📦 <strong>แผนขับเคลื่อน (9-Box Grid - {outerSummary.talentGrid.title}):</strong> {outerSummary.talentGrid.action}
+                        </div>
+                      )}
+                      {(outerSummary.bestFitAssignment || outerSummary.pairingRecommendation) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                          {outerSummary.bestFitAssignment && (
+                            <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 leading-snug">
+                              <strong className="text-indigo-900 block mb-0.5">🎯 ภารกิจหลักที่เหมาะสม:</strong>
+                              {outerSummary.bestFitAssignment}
+                            </div>
+                          )}
+                          {outerSummary.pairingRecommendation && (
+                            <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 leading-snug">
+                              <strong className="text-purple-900 block mb-0.5">👥 การจับคู่คู่หู (Pairing):</strong>
+                              {outerSummary.pairingRecommendation}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-indigo-950 bg-indigo-50/80 p-2 rounded-lg border border-indigo-100 font-medium leading-snug">
+                        💡 <strong>คำแนะนำเชิงบริหารหน้างาน:</strong> {outerSummary.coachingAdvice}
                       </div>
                     </div>
                   </div>
