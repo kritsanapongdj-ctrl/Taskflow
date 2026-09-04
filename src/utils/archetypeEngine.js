@@ -406,8 +406,8 @@ export const OUTER_DEFINITIONS = {
     key: 'cx',
     name: 'Customer Exp.',
     fullName: 'Customer Experience & Empathy',
-    thai: 'ความพึงพอใจและศิลปะบริการลูกบ้าน',
-    desc: 'มารยาทเข้าบ้าน ความสะอาด และการรับฟังข้อร้องเรียน',
+    thai: 'การรับมือลูกบ้านและศิลปะการประสานงาน',
+    desc: 'รับมือลูกบ้านอารมณ์ร้อน พูดคุยทั่วไป นัดหมาย และอธิบายขั้นตอนการทำงาน',
     color: 'text-pink-500',
     bg: 'bg-pink-500',
     badgeBg: 'bg-pink-50 text-pink-700 border-pink-200',
@@ -419,7 +419,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Tech. Expertise',
     fullName: 'Technical Diagnosis & Facility Standards',
     thai: 'การวินิจฉัยเชิงช่างและมาตรฐานสาธารณูปโภค',
-    desc: 'ทักษะประปา สปริงเกอร์ ไฟฟ้า สโมสร สระว่ายน้ำ บ่อบำบัด',
+    desc: 'ทักษะประปา สปริงเกอร์ ไฟฟ้า สโมสร สระว่ายน้ำ บ่อบำบัด และตรวจงานก่อนส่งงานให้ผู้บังคับบัญชา',
     color: 'text-blue-500',
     bg: 'bg-blue-500',
     badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -442,8 +442,8 @@ export const OUTER_DEFINITIONS = {
     key: 'crisis',
     name: 'Crisis Resolv.',
     fullName: 'Emergency Response & Crisis Mastery',
-    thai: 'การระงับเหตุฉุกเฉินและภาวะวิกฤต',
-    desc: 'ท่อเมนแตก ปั๊มน้ำดับทั้งโครงการ ไฟดับทั้งซอย ลูกบ้านพิพาทรุนแรง',
+    thai: 'การดำเนินการฉุกเฉินในพื้นที่สาธารณูปโภคในโครงการ',
+    desc: 'การดำเนินการฉุกเฉินในพื้นที่สาธารณูปโภคในโครงการ เช่น ท่อเมนแตก ปั๊มน้ำดับทั้งโครงการ ไฟดับทั้งซอย',
     color: 'text-rose-500',
     bg: 'bg-rose-500',
     badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -503,10 +503,10 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   };
 
   const outerMeta = [
-    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'ความพึงพอใจและบริการลูกบ้าน' },
-    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างสาธารณูปโภค' },
+    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'การรับมือลูกบ้านและประสานงาน' },
+    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างและตรวจงาน' },
     { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลาและความรวดเร็ว' },
-    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การระงับเหตุฉุกเฉินและวิกฤต' },
+    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การดำเนินการฉุกเฉินสาธารณูปโภค' },
     { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบและผู้รับเหมา' },
     { key: 'innovation', name: 'Innovation', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุกและระบบดิจิทัล' }
   ];
@@ -545,7 +545,7 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     'crisis_cx': {
       title: 'De-escalation Guardian (เกราะหน้าด่านพิทักษ์ความสัมพันธ์)',
       tag: 'Frontline Shield',
-      desc: 'รับมืออารมณ์ลูกบ้านที่โกรธจัดได้อย่างอยู่หมัด มีความนิ่งในการระงับข้อพิพาทรุนแรง พร้อมประสานงานหน้างานอย่างรอบคอบ'
+      desc: 'รับมือลูกบ้านอารมณ์ร้อนได้อย่างใจเย็นและอยู่หมัด พร้อมดำเนินการฉุกเฉินในพื้นที่สาธารณูปโภคในโครงการได้อย่างรวดเร็วและปลอดภัย'
     },
     'crisis_innovation': {
       title: 'Agile Crisis Innovator (นักพลิกแพลงกู้วิกฤตเฉพาะหน้า)',
@@ -585,7 +585,7 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     'cx_tech': {
       title: 'Consultative Master (ปรมาจารย์ที่ปรึกษาเชิงช่าง)',
       tag: 'Consultative Expert',
-      desc: 'วินิจฉัยงานระบบได้เฉียบขาด พร้อมอธิบายสาเหตุและแนวทางซ่อมแซมให้ลูกบ้านเข้าใจง่าย ช่างผู้เป็นที่พึ่งทางใจของลูกบ้าน'
+      desc: 'วินิจฉัยงานระบบได้เฉียบขาด พูดคุยอธิบายขั้นตอนงานให้ลูกบ้านเข้าใจง่าย และตรวจงานละเอียดก่อนส่งงานให้ผู้บังคับบัญชา'
     },
     'innovation_resource': {
       title: 'Facility Asset Optimizer (ผู้วางระบบสินทรัพย์ยั่งยืน)',
@@ -733,10 +733,10 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
 
   // Standup Coaching & Assignment Advice
   const bestFitTaskMap = {
-    cx: 'เหมาะรับเคสบ้านลูกบ้าน VIP, เคสพิพาท หรือบ้านที่กำลังไม่พอใจอย่างรุนแรง',
-    tech: 'เหมาะรับเคสระบบท่อเมนใต้ดิน, แผงควบคุมสโมสร หรือระบบบำบัดน้ำเสียซับซ้อน',
+    cx: 'เหมาะรับเคสประสานงาน นัดหมาย ติดต่อพูดคุยทั่วไป และรับมือลูกบ้านอารมณ์ร้อนหรือมีข้อกังวลสูง',
+    tech: 'เหมาะรับเคสระบบท่อเมนใต้ดิน แผงควบคุมสโมสร บ่อบำบัดน้ำเสีย และตรวจเช็คมาตรฐานงานก่อนส่งงานให้ผู้บังคับบัญชา',
     sla: 'เหมาะสำหรับกวาดเคสคั่งค้าง, เคสเร่งด่วนตามกรอบเวลา 24 ชม. และบริหารคิวประจำวัน',
-    crisis: 'เหมาะเป็นหัวหน้าเวรรับเหตุฉุกเฉินกลางคืน หรือรับมือน้ำท่วม/พายุ/ไฟดับ',
+    crisis: 'เหมาะรับผิดชอบการดำเนินการฉุกเฉินในพื้นที่สาธารณูปโภคของโครงการ เช่น ท่อเมนแตก ปั๊มดับ ไฟดับทั้งโครงการ',
     resource: 'เหมาะตรวจรับงานงวดผู้รับเหมา และคุมสต็อกเบิกจ่ายอะไหล่สปริงเกอร์/ไฟฟ้า',
     innovation: 'เหมาะวางตาราง PM สาธารณูปโภคประจำเดือน และเป็นพี่เลี้ยงเทรนการใช้ระบบ Taskflow'
   };
