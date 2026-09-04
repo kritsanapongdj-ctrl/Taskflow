@@ -1,4 +1,5 @@
 import React from 'react';
+import { detectSlaCategory, isSlaMismatch } from '../../utils/slaDetector.js';
 
 export default function PrintReport({
   rCfg,
@@ -219,6 +220,31 @@ export default function PrintReport({
   });
   const sortedUbMonths = Object.keys(ubBreakdown).sort();
 
+  const getSlaWarning = (t) => {
+    if (t.slaMismatch?.isMismatch) {
+      return {
+        isMismatch: true,
+        detectedCategory: t.slaMismatch.detectedCategory,
+        detectedDays: t.slaMismatch.detectedDays,
+        userCategory: t.slaMismatch.userCategory || t.slaCategory || 'ไม่มี SLA',
+        matchedKeyword: t.slaMismatch.matchedKeyword
+      };
+    }
+    const det = detectSlaCategory(t.details, sets.slas || []);
+    if (det.hasMatch && isSlaMismatch(det, t.slaCategory)) {
+      return {
+        isMismatch: true,
+        detectedCategory: det.detectedCategory,
+        detectedDays: det.slaDays,
+        userCategory: t.slaCategory || 'ไม่มี SLA',
+        matchedKeyword: det.matchedKeyword
+      };
+    }
+    return null;
+  };
+
+  const slaMismatchCount = rT.filter((t) => getSlaWarning(t) !== null).length;
+
   return (
     <div id="print-area" className="hidden p-8 font-sans bg-white">
       <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6">
@@ -229,6 +255,15 @@ export default function PrintReport({
           รอบ: {isY ? `ปี ${fS}` : `เดือน ${fS}`} | พื้นที่: {rCfg.area} | โครงการ: {rCfg.project}
         </p>
       </div>
+
+      {slaMismatchCount > 0 && (
+        <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between text-xs text-amber-900 font-bold print-break">
+          <span>⚠️ ตรวจพบงานที่ข้อความเข้าข่ายหมวด SLA แต่ผู้ลงงานไม่ได้เลือกหมวด SLA ให้ตรง:</span>
+          <span className="text-amber-900 bg-white px-2.5 py-0.5 rounded border border-amber-300 font-black">
+            {slaMismatchCount} รายการ (โปรดสุ่มตรวจสอบ)
+          </span>
+        </div>
+      )}
       <div className="flex gap-4 mb-8 print-break">
         <div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center">
           <p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p>
@@ -347,12 +382,21 @@ export default function PrintReport({
                   <span className="text-gray-600 font-normal">{getStdName(t.project)}</span>
                 </td>
                 <td className="border p-2">
-                  {t.details}
+                  <div>{t.details}</div>
                   {t.overdueReason && (
                     <div className="mt-1 p-1 bg-red-50 text-red-600 border border-red-200 rounded">
                       <strong>สาเหตุที่ช้า:</strong> {t.overdueReason}
                     </div>
                   )}
+                  {(() => {
+                    const w = getSlaWarning(t);
+                    if (!w) return null;
+                    return (
+                      <div className="mt-1 p-1 bg-amber-50 text-amber-900 border border-amber-300 rounded text-[9px] font-bold">
+                        ⚠️ ข้อสังเกต SLA: เข้าข่ายหมวด "{w.detectedCategory}" ({w.detectedDays} วัน) | ลงเป็น: "{w.userCategory}"
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="border p-2 text-red-600">
                   {t.status}
@@ -428,7 +472,18 @@ export default function PrintReport({
                       <td className="border p-2 font-bold text-gray-600">
                         {t.workOrderNo || t.id}
                       </td>
-                      <td className="border p-2">{t.details}</td>
+                      <td className="border p-2">
+                        <div>{t.details}</div>
+                        {(() => {
+                          const w = getSlaWarning(t);
+                          if (!w) return null;
+                          return (
+                            <div className="mt-1 p-1.5 bg-amber-50 text-amber-900 border border-amber-300 rounded text-[9px] font-bold leading-tight">
+                              ⚠️ ตรวจพบคีย์เวิร์ดเข้าข่ายหมวด SLA: "{w.detectedCategory}" ({w.detectedDays} วัน) | ผู้ลงงานระบุเป็น: "{w.userCategory}"
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="border p-2 text-gray-500">{t.status}</td>
                       <td className="border p-2 text-gray-700">
                         {t.requester}

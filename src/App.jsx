@@ -21,6 +21,7 @@ import OverdueTasksModal from './components/modals/OverdueTasksModal.jsx';
 import CalendarTasksModal from './components/modals/CalendarTasksModal.jsx';
 import BillingModal from './components/modals/BillingModal.jsx';
 import PrintReport from './components/reports/PrintReport.jsx';
+import { detectSlaCategory, isSlaMismatch } from './utils/slaDetector.js';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -419,6 +420,28 @@ export default function App() {
     }
     
     const slaCat = taskForm.slaCategory;
+
+    // ตรวจสอบคีย์เวิร์ด SLA เทียบกับหมวดที่ผู้ใช้เลือก
+    const detectedSla = detectSlaCategory(det, sets.slas || []);
+    let slaMismatchData = null;
+
+    if (detectedSla.hasMatch && isSlaMismatch(detectedSla, slaCat)) {
+      const confirmMsg = `⚠️ แจ้งเตือนการเลือกหมวด SLA:\n\nระบบตรวจพบว่างานนี้เข้าข่ายหมวด SLA:\n🎯 "${detectedSla.detectedCategory}" (${detectedSla.slaDays} วัน)\n(ตรวจพบคีย์เวิร์ด: "${detectedSla.matchedKeyword}")\n\nแต่ท่านเลือกหมวด: "${slaCat}"\n\n• กด [ตกลง] (OK) หากท่านยืนยันจะบันทึกตามนี้ (ระบบจะบันทึกหมายเหตุแจ้งเตือนลงในรายงาน PDF)\n• กด [ยกเลิก] (Cancel) เพื่อกลับไปเลือกหมวด SLA ให้ตรง`;
+      
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+
+      slaMismatchData = {
+        isMismatch: true,
+        detectedCategory: detectedSla.detectedCategory,
+        detectedDays: detectedSla.slaDays,
+        userCategory: slaCat,
+        matchedKeyword: detectedSla.matchedKeyword,
+        confirmedAt: new Date().toISOString()
+      };
+    }
+
     if (slaCat) {
       const slaLimitObj = (sets.slas || []).find(s => getProjName(s) === slaCat);
       if (slaLimitObj) {
@@ -435,7 +458,8 @@ export default function App() {
       id: eTask?eTask.id:`JOB-${Date.now().toString().slice(-4)}`, details: det, requester: taskForm.requester, project: proj, area: taskForm.area, 
       receivedDate: taskForm.receivedDate, slaCategory: slaCat,
       startDate: taskForm.startDate, endDate: taskForm.endDate, status: eTask?eTask.status:'อยู่ระหว่างดำเนินการ', completedDate: eTask?eTask.completedDate:null, 
-      cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'' 
+      cancelReason: eTask?eTask.cancelReason:null, workOrderNo: eTask?eTask.workOrderNo:'', billingStatus: eTask?eTask.billingStatus:'รอส่งเบิก', billingMonth: eTask?eTask.billingMonth:'',
+      slaMismatch: slaMismatchData || null
     };
     
     tD.overdueStatus = (eTask && (eTask.overdueStatus === 'เกินกำหนด' || eTask.overdueStatus === 'ออกใบงานช้า')) ? eTask.overdueStatus : 'ปกติ'; 
