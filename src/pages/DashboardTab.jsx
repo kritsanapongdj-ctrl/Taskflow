@@ -27,13 +27,32 @@ export default function DashboardTab({
       (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tS))
   );
 
-  const mt = aT.filter((t) => t.startDate && t.startDate.startsWith(gFilt.month));
-  const ov = mt.filter(
-    (t) =>
-      t.overdueStatus === 'เกินกำหนด' ||
-      t.overdueStatus === 'ออกใบงานช้า' ||
-      chkOvdTimeAware(t, tS)
-  );
+  const [fYear, fMonth] = (gFilt.month || tS.slice(0, 7)).split('-').map(Number);
+  const mStart = `${gFilt.month}-01`;
+  const lastDay = new Date(fYear, fMonth, 0).getDate();
+  const mEnd = `${gFilt.month}-${String(lastDay).padStart(2, '0')}`;
+
+  const mt = aT.filter((t) => {
+    if (t.startDate && t.startDate.startsWith(gFilt.month)) return true;
+    if (t.endDate && t.endDate.startsWith(gFilt.month)) return true;
+    const s = t.startDate || t.endDate;
+    const e = t.endDate || t.startDate;
+    if (!s || !e) return false;
+    return s <= mEnd && e >= mStart;
+  });
+
+  const isOverdue = (t) =>
+    t.overdueStatus === 'เกินกำหนด' ||
+    t.overdueStatus === 'ออกใบงานช้า' ||
+    chkOvdTimeAware(t, tS);
+
+  const isCurrentMonth = tS.startsWith(gFilt.month);
+  const ovMap = new Map();
+  mt.filter(isOverdue).forEach((t) => ovMap.set(t.id, t));
+  if (isCurrentMonth) {
+    dy.filter(isOverdue).forEach((t) => ovMap.set(t.id, t));
+  }
+  const ov = Array.from(ovMap.values());
 
   const getChartData = (arr) => [
     {
