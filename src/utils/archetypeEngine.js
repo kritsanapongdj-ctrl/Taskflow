@@ -184,8 +184,8 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
   let styleDesc = '';
   let prefix = '';
 
-  if (maxStat >= 8) prefix = 'Master ';
-  else if (maxStat >= 7) prefix = 'Senior ';
+  if (maxStat >= 8 && minStat >= 5) prefix = 'Master ';
+  else if (maxStat >= 7 && minStat >= 4) prefix = 'Senior ';
 
   if (maxStat === minStat) {
     const v = maxStat;
@@ -262,7 +262,16 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
     }
   }
 
-  const archObj = archetypesData.find(a => a.key === archetypeKey);
+  let archObj = archetypesData.find(a => a.key === archetypeKey);
+  if (maxStat <= 4) {
+      archObj = {
+          name: maxStat <= 2 ? 'Novice' : 'Trainee',
+          identity: maxStat <= 2 ? 'The Beginner (ระดับเริ่มต้น)' : 'The Learner (อยู่ในช่วงพัฒนา)',
+          desc: maxStat <= 2 ? 'ทักษะอยู่ในระดับวิกฤต จำเป็นต้องเริ่มฝึกฝนใหม่ตั้งแต่พื้นฐานและอยู่ในความดูแลอย่างใกล้ชิด' : 'ทักษะโดยรวมยังต้องได้รับการขัดเกลาและพัฒนาเพิ่มเติม ไม่ควรรับผิดชอบงานสำคัญเพียงลำพัง',
+          strengths: 'กำลังอยู่ในช่วงเรียนรู้และปรับตัว',
+          weaknesses: archObj ? archObj.weaknesses : ''
+      };
+  }
   let dynamicWeakness = '';
   let weaknessLabel = 'จุดอ่อน:';
   let weaknessColor = 'text-rose-400';
@@ -357,6 +366,12 @@ export const analyzeRadarMorphology = (statsObj = {}) => {
     shapeDesc = 'รูปทรงเกาะกลุ่มรอบมาตรฐานขั้นต้น (5/10) ยังไม่มีมิติใดที่ฉีกเด่นชัดเจน';
     managementAdvice = 'ควรวางแผน Career Path ให้ทดลองงานหลากหลาย เพื่อค้นหา "จุดแข็งเฉพาะตัว" 1-2 ด้าน';
     badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+  } else if (maxVal <= 4) {
+    shapeKey = 'contracted';
+    shapeName = 'ทรงหดตัว (Under-developed Core)';
+    shapeDesc = 'สเตตัสทุกด้านยังอยู่ต่ำกว่าเกณฑ์มาตรฐานขั้นต้น ต้องการการฟื้นฟูโดยด่วน';
+    managementAdvice = 'ต้องมีพี่เลี้ยงดูแลใกล้ชิด และจัดอบรม (OJT) เพื่อยกระดับทักษะพื้นฐานให้ถึงเกณฑ์มาตรฐาน';
+    badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
   } else if (sorted.filter(s => s.val >= 7).length === 3) {
     shapeKey = 'tri_force';
     shapeName = 'ทรงสามเหลี่ยมผสาน (Tri-Force Prism)';
@@ -531,9 +546,10 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   } else if (gap <= -1.2) {
     alignmentKey = 'under_leveraged';
     alignmentTitle = 'ศักยภาพยังไม่ถูกปลดล็อก (Under-Leveraged)';
-    alignmentDesc = `มีศักยภาพแฝงสูง (${avgInner.toFixed(1)}) แต่ผลสัมฤทธิ์หน้างาน (${avgOuter.toFixed(1)}) ยังไม่ออกมาเต็มที่`;
+    const potentialText = avgInner >= 6 ? 'มีศักยภาพแฝงสูง' : (avgInner >= 4 ? 'มีศักยภาพพื้นฐาน' : 'มีศักยภาพประเมินเริ่มต้น');
+    alignmentDesc = `${potentialText} (${avgInner.toFixed(1)}) แต่ผลสัมฤทธิ์หน้างานจริง (${avgOuter.toFixed(1)}) ต่ำกว่าที่ควรจะเป็น`;
     alignmentBadge = 'bg-amber-50 text-amber-700 border-amber-200';
-    coachingAdvice = 'หัวหน้างานควรสำรวจอุปสรรคหน้างาน เช่น ปริมาณงานหรือสภาพแวดล้อม เพื่อช่วยปลดล็อกพลังแท้จริง';
+    coachingAdvice = avgInner >= 5 ? 'หัวหน้างานควรสำรวจอุปสรรคหน้างาน เช่น ปริมาณงานหรือสภาพแวดล้อม เพื่อช่วยปลดล็อกพลังแท้จริง' : 'หัวหน้างานต้องเข้าไปตรวจสอบสาเหตุการทำงานที่ต่ำกว่ามาตรฐานอย่างเร่งด่วน และปรับปรุงกระบวนการดูแลหน้างาน';
   }
 
   // Sorting Outer Axes
@@ -619,11 +635,37 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     }
   };
 
-  const performanceDna = dnaMap[pairKey] || {
-    title: `${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
+  let outerPrefix = '';
+  if (sortedOuter[0].val >= 8 && sortedOuter[1].val >= 7) outerPrefix = 'Master ';
+  else if (sortedOuter[0].val >= 7 && sortedOuter[1].val >= 6) outerPrefix = 'Senior ';
+  else if (sortedOuter[0].val <= 4) outerPrefix = 'Trainee ';
+  else if (sortedOuter[0].val <= 2) outerPrefix = 'Novice ';
+
+  let performanceDna = dnaMap[pairKey] ? { ...dnaMap[pairKey] } : {
+    title: `${outerPrefix}${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
     tag: 'Specialist',
     desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai} ในงานบริการหมู่บ้านจัดสรร`
   };
+  
+  if (dnaMap[pairKey]) {
+      performanceDna.title = outerPrefix + performanceDna.title;
+  }
+
+  // Override DNA for low performers
+  if (sortedOuter[0].val <= 4) {
+    performanceDna = {
+      title: 'Trainee (อยู่ในช่วงพัฒนาทักษะ)',
+      tag: 'Trainee',
+      desc: 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์มาตรฐาน จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิด'
+    };
+  }
+  if (sortedOuter[0].val <= 2) {
+    performanceDna = {
+      title: 'Novice (ระดับเริ่มต้น/ต้องดูแลใกล้ชิด)',
+      tag: 'Novice',
+      desc: 'ทักษะยังอยู่ในระดับวิกฤต ต้องเข้าสู่แผนการฝึกอบรม (OJT) และฟื้นฟูทักษะอย่างเร่งด่วน'
+    };
+  }
 
   // 9-Box Operational Talent Grid (HOW Potential vs WHAT Performance)
   const howLevel = avgInner >= 7.0 ? 'high' : (avgInner >= 5.0 ? 'med' : 'low');
