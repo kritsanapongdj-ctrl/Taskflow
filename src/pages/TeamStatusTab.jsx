@@ -708,7 +708,7 @@ export default function TeamStatusTab({
                </div>
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+             <div className="flex flex-col gap-4">
                 {OUTER_KEYS.map(k => {
                    const def = OUTER_DEFINITIONS[k];
                    const autoVal = def.calc(statsObj);
@@ -748,7 +748,7 @@ export default function TeamStatusTab({
                         </div>
 
                         {/* Quick Tier Selection Buttons */}
-                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-1.5 mb-3 pt-2 border-t border-slate-100">
+                        <div className="flex flex-wrap gap-2 mb-3 pt-2 border-t border-slate-100">
                           {[
                             { label: '1-3 เริ่มต้น', val: 2, active: actualVal <= 3 },
                             { label: '4-6 ปฏิบัติได้', val: 5, active: actualVal >= 4 && actualVal <= 6 },
@@ -759,7 +759,7 @@ export default function TeamStatusTab({
                               key={ti}
                               type="button"
                               onClick={() => setTeamForm({ ...teamForm, [k]: tier.val })}
-                              className={`text-[10px] py-1.5 px-1 rounded-md text-center font-bold border transition whitespace-nowrap ${
+                              className={`flex-1 min-w-[80px] text-[11px] py-2 px-2 rounded-lg text-center font-bold border transition whitespace-nowrap ${
                                 tier.active
                                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                                   : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
