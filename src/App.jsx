@@ -651,16 +651,20 @@ export default function App() {
   const saveTeam = () => {
     if (!teamForm.name) return alert('กรุณาระบุชื่อพนักงาน');
     let ns = [...(sets.staffStats || [])];
-    if (teamForm.id) {
-      const idx = ns.findIndex(x => x.id === teamForm.id);
-      if (idx > -1) ns[idx] = { ...teamForm };
+    let targetForm = { ...teamForm };
+    if (!targetForm.id) {
+      targetForm.id = Date.now().toString();
+      ns.push(targetForm);
     } else {
-      ns.push({ ...teamForm, id: Date.now().toString() });
+      const idx = ns.findIndex(x => x.id === targetForm.id);
+      if (idx > -1) ns[idx] = { ...targetForm };
+      else ns.push(targetForm);
     }
     const newSets = { ...sets, staffStats: ns };
     setSets(newSets);
     saveD('settings', newSets);
-    setSelTeam({ ...teamForm });
+    setTeamForm(targetForm);
+    setSelTeam(targetForm);
     setTeamEditMode(false);
   };
 

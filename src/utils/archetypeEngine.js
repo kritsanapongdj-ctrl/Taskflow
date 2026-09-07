@@ -223,11 +223,16 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
       const pairKey = [...topKeys].sort().join('_');
       mainStyle = prefix + (archetypeMapTop3[pairKey] || 'Hybrid (สายผสมแบบพิเศษ)');
       styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} ผสานเข้ากับ${getDesc(topKeys[1])} และเสริมด้วย${getDesc(topKeys[2])}`;
-    } else {
+    } else if (validStats.length >= 2) {
       const topKeys = [validStats[0][0], validStats[1][0]];
       const pairKey = [...topKeys].sort().join('_');
       mainStyle = prefix + (archetypeMapTop2[pairKey] || 'Specialist (สายเฉพาะทาง)');
       styleDesc = `โดดเด่นด้าน${getDesc(topKeys[0])} และผสานเข้ากับ${getDesc(topKeys[1])} ได้อย่างยอดเยี่ยม`;
+    } else {
+      const topKeys = [sortedStats[0][0], sortedStats[1][0]];
+      const pairKey = [...topKeys].sort().join('_');
+      mainStyle = prefix + (archetypeMapTop2[pairKey] || 'Specialist (สายเฉพาะทาง)');
+      styleDesc = `มีความโดดเด่นด้าน${getDesc(topKeys[0])} (${sortedStats[0][1]}/10) เป็นพิเศษ แต่ทักษะด้าน${getDesc(topKeys[1])} และด้านอื่นๆ ยังต้องได้รับการพัฒนาเพิ่มเติม`;
     }
 
     if (minStat <= 4) {
@@ -259,6 +264,8 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
         const useTop3 = validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1]);
         archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s => s[0]).sort().join('_');
       }
+    } else {
+      archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
     }
   }
 
@@ -747,7 +754,8 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       type: 'quality_speed',
       level: 'warning',
       title: '⚠️ เสี่ยงงานรีบแต่หลุด QC (Speed vs Quality Risk)',
-      desc: `ความเร็วสูง (SLA ${actualValues.sla}) แต่วินิจฉัยเชิงช่างต่ำกว่า (TECH ${actualValues.tech}) เสี่ยงซ่อมไม่จบ เกิดเคสซ่อมซ้ำ (Recurring Defect) ควรเน้นตรวจเช็คงานก่อนส่งมอบ`
+      desc: `ความเร็วสูง (SLA ${actualValues.sla}) แต่วินิจฉัยเชิงช่างต่ำกว่า (TECH ${actualValues.tech}) เสี่ยงซ่อมไม่จบ เกิดเคสซ่อมซ้ำ (Recurring Defect)`,
+      advice: 'เพิ่มขั้นตอน QC ตรวจสอบการทำงานเชิงช่างให้เรียบร้อยก่อนปิดใบงาน'
     });
   }
 
@@ -757,7 +765,8 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       type: 'escalation',
       level: 'danger',
       title: '🚨 เสี่ยงเกิดข้อพิพาทรุนแรงกับลูกบ้าน (Customer Escalation Risk)',
-      desc: `ฝีมือช่างหรือความเร็วดีเยี่ยม แต่ทักษะบริการลูกบ้านต่ำ (CX ${actualValues.cx}) มีความเสี่ยงสูงที่จะเกิดการกระทบกระทั่ง ควรฝึก De-escalation และการสื่อสารเชิงบวก`
+      desc: `ฝีมือช่างหรือความเร็วดีเยี่ยม แต่ทักษะบริการลูกบ้านต่ำ (CX ${actualValues.cx}) มีความเสี่ยงสูงที่จะเกิดการกระทบกระทั่ง`,
+      advice: 'จัดคู่หูที่มี CX สูงช่วยประสานงาน หรือฝึกอบรมทักษะการเจรจาลดความขัดแย้ง'
     });
   }
 
@@ -767,7 +776,8 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       type: 'leakage',
       level: 'warning',
       title: '💸 เสี่ยงงบประมาณรั่วไหล / ควบคุมผู้รับเหมาไม่ได้ (Contractor Leakage Risk)',
-      desc: `การคุมงบและตรวจรับงานต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) เสี่ยงต่อการถูกผู้รับเหมาหมกเม็ดงาน หรือเบิกอะไหล่ผิดพลาด ควรให้หัวหน้าช่วยตรวจรับงานผู้รับเหมา`
+      desc: `การคุมงบและตรวจรับงานต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) เสี่ยงต่อการถูกผู้รับเหมาหมกเม็ดงาน หรือเบิกอะไหล่ผิดพลาด`,
+      advice: 'ให้หัวหน้างานช่วยตรวจรับมอบงานผู้รับเหมาและควบคุมการเบิกจ่ายอะไหล่'
     });
   }
 
@@ -777,7 +787,8 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       type: 'firefighting',
       level: 'info',
       title: '🚒 เสี่ยงติดกับดักวิ่งดับเพลิง (Firefighting Trap)',
-      desc: `แก้เหตุฉุกเฉินเก่ง (CRISIS ${actualValues.crisis}) แต่งานเชิงรุกต่ำ (INNOVATION ${actualValues.innovation}) ทำให้ต้องวิ่งแก้ปัญหาเดิมๆ ซ้ำซาก ควรผลักดันให้ทำแผน PM เชิงป้องกัน`
+      desc: `แก้เหตุฉุกเฉินเก่ง (CRISIS ${actualValues.crisis}) แต่งานเชิงรุกต่ำ (INNOVATION ${actualValues.innovation}) ทำให้ต้องวิ่งแก้ปัญหาเดิมๆ ซ้ำซาก`,
+      advice: 'วางแผนงานบำรุงรักษาเชิงป้องกัน (PM) เพื่อลดการเกิดเหตุฉุกเฉินซ้ำซาก'
     });
   }
 

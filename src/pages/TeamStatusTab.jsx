@@ -196,10 +196,14 @@ export default function TeamStatusTab({
             const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
             mainStyleRaw = (archetypeMapTop3[topKeys.sort().join('_')] || 'Hybrid (สายผสมผสาน)');
             styleDesc = `โดดเด่นอย่างมากด้าน ${getDesc(topKeys[0])}, ${getDesc(topKeys[1])} และ ${getDesc(topKeys[2])}`;
-         } else {
+         } else if (validStats.length >= 2) {
             const topKeys = [validStats[0][0], validStats[1][0]];
             mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
             styleDesc = `ความเชี่ยวชาญพิเศษด้าน ${getDesc(topKeys[0])} ผสานกับ ${getDesc(topKeys[1])}`;
+         } else {
+            const topKeys = [sortedStats[0][0], sortedStats[1][0]];
+            mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
+            styleDesc = `มีความโดดเด่นด้าน ${getDesc(topKeys[0])} (${sortedStats[0][1]}/10) เป็นพิเศษ แต่ทักษะด้าน ${getDesc(topKeys[1])} และด้านอื่นๆ ยังต้องได้รับการพัฒนาเพิ่มเติมเพื่อรองรับงาน`;
          }
          if (minStat <= 4) {
             const weakReasons = { str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง', agi: 'งานด่วนที่ต้องการผลลัพธ์รวดเร็ว', dex: 'งานที่ต้องใช้ความละเอียดถูกต้องสูงและแข่งกับเวลา', int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน', con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ', sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า' };
@@ -223,6 +227,8 @@ export default function TeamStatusTab({
               } else {
                  archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
               }
+           } else {
+              archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
            }
         }
         
@@ -908,7 +914,7 @@ export default function TeamStatusTab({
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
             {sList.map(s => (
               <div key={s.id} onClick={()=>{setSelTeam(s); setTeamForm({...s});}} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
-                {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{s.name.substring(0,2)}</div>}
+                {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{(s?.name || '').substring(0,2)}</div>}
                 <div className="truncate flex-1">
                   <div className="font-bold text-sm truncate">{s.name}</div>
                   <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
