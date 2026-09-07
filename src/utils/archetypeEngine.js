@@ -635,36 +635,44 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     }
   };
 
-  let outerPrefix = '';
-  if (sortedOuter[0].val >= 8 && sortedOuter[1].val >= 7) outerPrefix = 'Master ';
-  else if (sortedOuter[0].val >= 7 && sortedOuter[1].val >= 6) outerPrefix = 'Senior ';
-  else if (sortedOuter[0].val <= 4) outerPrefix = 'Trainee ';
-  else if (sortedOuter[0].val <= 2) outerPrefix = 'Novice ';
+  let performanceDna;
 
-  let performanceDna = dnaMap[pairKey] ? { ...dnaMap[pairKey] } : {
-    title: `${outerPrefix}${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
-    tag: 'Specialist',
-    desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai} ในงานบริการหมู่บ้านจัดสรร`
-  };
-  
-  if (dnaMap[pairKey]) {
-      performanceDna.title = outerPrefix + performanceDna.title;
-  }
-
-  // Override DNA for low performers
-  if (sortedOuter[0].val <= 4) {
-    performanceDna = {
-      title: 'Trainee (อยู่ในช่วงพัฒนาทักษะ)',
-      tag: 'Trainee',
-      desc: 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์มาตรฐาน จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิด'
-    };
-  }
   if (sortedOuter[0].val <= 2) {
+    // Red Zone
     performanceDna = {
-      title: 'Novice (ระดับเริ่มต้น/ต้องดูแลใกล้ชิด)',
-      tag: 'Novice',
-      desc: 'ทักษะยังอยู่ในระดับวิกฤต ต้องเข้าสู่แผนการฝึกอบรม (OJT) และฟื้นฟูทักษะอย่างเร่งด่วน'
+      title: 'Novice (พนักงานระดับเริ่มต้น / ต้องประเมินผลงานเร่งด่วน)',
+      tag: 'Needs PIP',
+      desc: 'สมรรถนะโดยรวมอยู่ในระดับวิกฤต ไม่สามารถปฏิบัติงานตามมาตรฐานได้ ต้องเข้าสู่แผนฟื้นฟูและประเมินผลงานอย่างใกล้ชิด ห้ามปล่อยให้ปฏิบัติหน้าที่เพียงลำพัง'
     };
+  } else if (sortedOuter[0].val <= 4) {
+    // Orange Zone
+    performanceDna = {
+      title: 'Trainee (พนักงานฝึกหัด / อยู่ในช่วงพัฒนาทักษะ)',
+      tag: 'Needs Mentoring',
+      desc: 'สมรรถนะหน้างานยังต่ำกว่าเกณฑ์มาตรฐานที่คาดหวัง สามารถทำงานพื้นฐานได้แต่ยังต้องมีระบบพี่เลี้ยง (Mentoring) คอยตรวจสอบคุณภาพงานอย่างสม่ำเสมอ'
+    };
+  } else if (avgOuter <= 4.5 || sortedOuter[5].val <= 2) {
+    // Yellow Zone
+    performanceDna = {
+      title: 'Unbalanced Contributor (ผลงานไม่คงที่ / ต้องอุดช่องโหว่)',
+      tag: 'Focus Improvement',
+      desc: 'มีทักษะบางด้านที่พอใช้งานได้ แต่มีจุดบอดที่รุนแรงในมิติอื่น ทำให้ผลงานโดยรวมขาดความสม่ำเสมอ ต้องเร่งพัฒนาจุดอ่อนเพื่อไม่ให้เป็นภาระของทีม'
+    };
+  } else {
+    // Mastery Track (15-Pair DNA)
+    let outerPrefix = '';
+    if (sortedOuter[0].val >= 8 && sortedOuter[1].val >= 7) outerPrefix = 'Master ';
+    else if (sortedOuter[0].val >= 7 && sortedOuter[1].val >= 6) outerPrefix = 'Senior ';
+
+    performanceDna = dnaMap[pairKey] ? { ...dnaMap[pairKey] } : {
+      title: `${sortedOuter[0].name} & ${sortedOuter[1].name} Specialist`,
+      tag: 'Specialist',
+      desc: `โดดเด่นด้าน ${sortedOuter[0].thai} ผสานกับ ${sortedOuter[1].thai} ในงานบริการหมู่บ้านจัดสรร`
+    };
+    
+    if (dnaMap[pairKey]) {
+        performanceDna.title = outerPrefix + performanceDna.title;
+    }
   }
 
   // 9-Box Operational Talent Grid (HOW Potential vs WHAT Performance)
