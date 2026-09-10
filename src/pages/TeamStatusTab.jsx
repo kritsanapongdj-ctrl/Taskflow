@@ -240,23 +240,34 @@ export default function TeamStatusTab({
             const lowestStatValue = sortedStats[5][1];
             const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
             
-            const weakBehaviorDefs = { 
-                str: 'อาจขาดความเด็ดขาดในการลุยงาน หรือลังเลที่จะตัดสินใจแก้ปัญหาเฉพาะหน้า (STR)', 
-                agi: 'อาจตอบสนองต่อปัญหาได้ช้า และปรับตัวไม่ทันเมื่อสถานการณ์เปลี่ยนแปลงกะทันหัน (AGI)', 
-                dex: 'อาจมีข้อผิดพลาดในรายละเอียดเอกสาร ขาดความประณีตในการตรวจงาน หรือบริหารเวลาได้ไม่ดีนัก (DEX)', 
-                int: 'อาจใช้เครื่องมือ/เทคโนโลยีช่วยทำงานได้ไม่คล่อง หรือจัดลำดับกระบวนการทำงานได้ไม่เป็นระบบพอ (INT)', 
-                con: 'อาจทนรับความกดดันจากงานที่ยืดเยื้อไม่ได้ดีนัก และเสี่ยงต่อภาวะหมดไฟได้ง่าย (CON)', 
-                sen: 'อาจควบคุมอารมณ์ได้ไม่ดีเมื่อถูกยั่วยุ สื่อสารเจตนาคลาดเคลื่อน หรือขาดศิลปะในการเจรจา (SEN)' 
+            const subStandardBehaviorDefs = { 
+                str: 'อาจต้องเพิ่มความมั่นใจในการตัดสินใจลุยงานเฉพาะหน้า (STR)', 
+                agi: 'ความคล่องตัวในการปรับตัวรับมือกับงานด่วนฉุกเฉินยังต้องเสริมเพิ่มเติม (AGI)', 
+                dex: 'ควรมี Check-list ตรวจทานความประณีตของเอกสารและรายละเอียดซ้ำ (DEX)', 
+                int: 'การประยุกต์ใช้เครื่องมือดิจิทัลหรือระบบงานซับซ้อนยังต้องได้รับการแนะนำ (INT)', 
+                con: 'การยืนระยะในงานที่มีแรงกดดันสูงและยืดเยื้ออาจต้องได้รับการสนับสนุนจากทีม (CON)', 
+                sen: 'การสื่อสารเจรจาในสถานการณ์ตึงเครียดควรปรึกษาหัวหน้างานหรือทีมก่อน (SEN)' 
             };
-            const weakBehaviors = lowestStats.map(s => weakBehaviorDefs[s[0]]).join(' รวมถึง ');
 
-            if (lowestStatValue <= 4) {
-                weaknessLabel = "จุดอ่อน:";
-                dynamicWeakness = `${weakBehaviors} (สเตตัสต่ำกว่าเกณฑ์มาตรฐาน: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแล`;
-            } else {
-                weaknessLabel = "ข้อควรระวัง:";
+            if (lowestStatValue >= 7) {
+                weaknessLabel = "จุดเด่นรอบด้าน:";
+                weaknessColor = "text-emerald-400";
+                dynamicWeakness = "มีทักษะระดับสูงครบทุกมิติ ไร้จุดอ่อนในการปฏิบัติงาน สามารถเป็นเสาหลักและพี่เลี้ยงถ่ายทอดความรู้ให้ทีมได้อย่างดีเยี่ยม";
+            } else if (lowestStatValue >= 5) {
+                weaknessLabel = "ข้อเสนอแนะในการพัฒนา:";
+                weaknessColor = "text-sky-300";
+                const statNames = lowestStats.map(s => s[0].toUpperCase()).join(', ');
+                dynamicWeakness = `ทักษะทุกด้านผ่านเกณฑ์มาตรฐานขึ้นไป (ไม่มีจุดบกพร่องต่ำกว่าเกณฑ์) โดยด้าน ${statNames} (${lowestStatValue}/10) อยู่ในระดับมาตรฐานการทำงานทั่วไป ซึ่งสามารถพัฒนาต่อยอดเป็นทักษะเสริมเพื่อความรอบด้านยิ่งขึ้น`;
+            } else if (lowestStatValue >= 3) {
+                weaknessLabel = "จุดที่ควรเสริมทักษะ:";
                 weaknessColor = "text-amber-400";
-                dynamicWeakness = `${weakBehaviors} แม้จะอยู่ในระดับที่สอบผ่าน (${lowestStatValue}/10) แต่ถือเป็นจุดที่ยังอ่อนที่สุดเมื่อเทียบกับศักยภาพด้านอื่นของพนักงาน`;
+                const devBehaviors = lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ');
+                dynamicWeakness = `${devBehaviors} (คะแนน: ${lowestStatValue}/10) ควรได้รับการสนับสนุนหรือมีพี่เลี้ยงช่วยแนะนำในการปฏิบัติงานจริง`;
+            } else {
+                weaknessLabel = "จุดบอดวิกฤต:";
+                weaknessColor = "text-rose-400 font-bold";
+                const crisisBehaviors = lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ');
+                dynamicWeakness = `${crisisBehaviors} (สเตตัสต่ำกว่าเกณฑ์มาตรฐานมาก: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแลอย่างใกล้ชิดและหลีกเลี่ยงการมอบหมายงานสำคัญเพียงลำพัง`;
             }
 
             bottomDescText = (

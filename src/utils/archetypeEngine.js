@@ -287,21 +287,32 @@ export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultAr
     const lowestStatValue = sortedStats[5][1];
     const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
 
-    const weakBehaviorDefs = {
-      str: 'อาจขาดความเด็ดขาดในการลุยงาน หรือลังเลที่จะตัดสินใจแก้ปัญหาเฉพาะหน้า (STR)',
-      agi: 'อาจตอบสนองต่อปัญหาได้ช้า และปรับตัวไม่ทันเมื่อสถานการณ์เปลี่ยนแปลงกะทันหัน (AGI)',
-      dex: 'อาจมีข้อผิดพลาดในรายละเอียดเอกสาร ขาดความประณีตในการตรวจงาน หรือบริหารเวลาได้ไม่ดีนัก (DEX)',
-      int: 'อาจติดการทำงานแบบเดิมๆ ที่ใช้แรงและเวลา ขาดการนำเครื่องมือหรือระบบเข้ามาช่วยผ่อนแรง (INT)',
-      con: 'อาจหมดพลังได้ง่ายเมื่อต้องแบกรับแรงกดดันสูง หรือยืนระยะในงานที่ยืดเยื้อได้ยาก (CON)',
-      sen: 'อาจสื่อสารตรงเกินไปจนกระทบความรู้สึก หรืออ่านสถานการณ์ความขัดแย้งของลูกค้าและช่างไม่ออก (SEN)'
+    const subStandardBehaviorDefs = {
+      str: 'อาจต้องเพิ่มความมั่นใจในการตัดสินใจลุยงานเฉพาะหน้า (STR)',
+      agi: 'ความคล่องตัวในการปรับตัวรับมือกับงานด่วนฉุกเฉินยังต้องเสริมเพิ่มเติม (AGI)',
+      dex: 'ควรมี Check-list ตรวจทานความประณีตของเอกสารและรายละเอียดซ้ำ (DEX)',
+      int: 'การประยุกต์ใช้เครื่องมือดิจิทัลหรือระบบงานซับซ้อนยังต้องได้รับการแนะนำ (INT)',
+      con: 'การยืนระยะในงานที่มีแรงกดดันสูงและยืดเยื้ออาจต้องได้รับการสนับสนุนจากทีม (CON)',
+      sen: 'การสื่อสารเจรจาในสถานการณ์ตึงเครียดควรปรึกษาหัวหน้างานหรือทีมก่อน (SEN)'
     };
 
-    if (lowestStatValue <= 4) {
-      weaknessLabel = lowestStatValue <= 2 ? 'จุดบอดวิกฤต (Crisis Gap):' : 'จุดที่ควรพัฒนาเร่งด่วน:';
-      weaknessColor = lowestStatValue <= 2 ? 'text-rose-500 font-bold' : 'text-amber-400';
-      dynamicWeakness = lowestStats.map(s => weakBehaviorDefs[s[0]]).join(' รวมถึง ');
+    if (lowestStatValue >= 7) {
+      weaknessLabel = 'จุดเด่นรอบด้าน:';
+      weaknessColor = 'text-emerald-400';
+      dynamicWeakness = 'มีทักษะระดับสูงครบทุกมิติ ไร้จุดอ่อนในการปฏิบัติงาน สามารถเป็นเสาหลักและพี่เลี้ยงถ่ายทอดความรู้ให้ทีมได้อย่างดีเยี่ยม';
+    } else if (lowestStatValue >= 5) {
+      weaknessLabel = 'ข้อเสนอแนะในการพัฒนา:';
+      weaknessColor = 'text-sky-300';
+      const statNames = lowestStats.map(s => s[0].toUpperCase()).join(', ');
+      dynamicWeakness = `ทักษะทุกด้านผ่านเกณฑ์มาตรฐานขึ้นไป (ไม่มีจุดบกพร่องต่ำกว่าเกณฑ์) โดยด้าน ${statNames} (${lowestStatValue}/10) อยู่ในระดับมาตรฐานการทำงานทั่วไป ซึ่งสามารถพัฒนาต่อยอดเป็นทักษะเสริมเพื่อความรอบด้านยิ่งขึ้น`;
+    } else if (lowestStatValue >= 3) {
+      weaknessLabel = 'จุดที่ควรเสริมทักษะ:';
+      weaknessColor = 'text-amber-400';
+      dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (คะแนน: ${lowestStatValue}/10) ควรได้รับการสนับสนุนหรือมีพี่เลี้ยงช่วยแนะนำในการปฏิบัติงานจริง`;
     } else {
-      dynamicWeakness = archObj.weaknesses;
+      weaknessLabel = 'จุดบอดวิกฤต:';
+      weaknessColor = 'text-rose-500 font-bold';
+      dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (สเตตัสต่ำกว่าเกณฑ์มาตรฐานมาก: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแลอย่างใกล้ชิด`;
     }
   }
 
