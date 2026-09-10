@@ -97,8 +97,15 @@ async function handleSummary(projectList, groupName) {
       return true;
     }
 
-    // 3. งานกำลังดำเนินการ / อยู่ระหว่างดำเนินการ
-    if (status === 'อยู่ระหว่างดำเนินการ' || status.includes('ดำเนินการ')) {
+    // 3. งานกำลังดำเนินการ / อยู่ระหว่างดำเนินการ / รอดำเนินการ / ติดปัญหา/รออะไหล่
+    if (
+      status === 'อยู่ระหว่างดำเนินการ' ||
+      status === 'กำลังดำเนินการ' ||
+      status === 'รอดำเนินการ' ||
+      status === 'ติดปัญหา/รออะไหล่' ||
+      status.includes('ดำเนินการ') ||
+      status.includes('รออะไหล่')
+    ) {
       return true;
     }
 
@@ -119,7 +126,7 @@ async function handleSummary(projectList, groupName) {
 ${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปัญหา: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}`).join('\n')}
 
 ข้อกำหนด:
-1. ห้ามแสดงงานที่ขึ้นสถานะ "จบงาน" เด็ดขาด (แสดงเฉพาะ "อยู่ระหว่างดำเนินการ" และ "จบงาน(รอใบงาน)")
+1. ห้ามแสดงงานที่ขึ้นสถานะ "จบงาน" เด็ดขาด (แสดงเฉพาะ "รอดำเนินการ", "กำลังดำเนินการ", "ติดปัญหา/รออะไหล่", และ "จบงาน(รอใบงาน)")
 2. สรุปแยกตามโครงการ แจ้งสถานะงานให้ชัดเจน
 3. ใช้ Emoji ประกอบให้น่าอ่าน และจัดย่อหน้าให้ดูสะอาดตา
 4. ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป ให้เน้นข้อมูลจริง
@@ -158,7 +165,13 @@ ${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปั�
     byProject[proj].forEach((t, idx) => {
       const emoji = getEmoji(t.details || t.task_name);
       let status = t.status || 'อยู่ระหว่างดำเนินการ';
-      let stEmoji = status.includes('รอใบงาน') ? '🟠' : '🟡';
+      let stEmoji = status.includes('รอใบงาน')
+        ? '🟠'
+        : status === 'ติดปัญหา/รออะไหล่'
+        ? '🔴'
+        : status === 'รอดำเนินการ'
+        ? '⚪'
+        : '🟡';
 
       fallbackMsg += `${idx + 1}. ${t.details || t.task_name || 'ไม่ระบุปัญหา'} ${emoji} (สถานะ: ${stEmoji} ${status})\n`;
     });

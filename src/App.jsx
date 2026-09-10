@@ -21,6 +21,7 @@ import OverdueTasksModal from './components/modals/OverdueTasksModal.jsx';
 import CalendarTasksModal from './components/modals/CalendarTasksModal.jsx';
 import BillingModal from './components/modals/BillingModal.jsx';
 import PrintReport from './components/reports/PrintReport.jsx';
+import ChangelogModal, { CURRENT_VERSION } from './components/modals/ChangelogModal.jsx';
 import { detectSlaCategory, isSlaMismatch } from './utils/slaDetector.js';
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
@@ -138,6 +139,27 @@ export default function App() {
 
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', staffName: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
   const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' });
+  const [showChangelog, setShowChangelog] = useState(false);
+
+  useEffect(() => {
+    try {
+      const viewedVer = localStorage.getItem('lh_taskflow_viewed_version');
+      if (viewedVer !== CURRENT_VERSION) {
+        setShowChangelog(true);
+      }
+    } catch (e) {
+      console.error("Error reading version from localStorage:", e);
+    }
+  }, []);
+
+  const handleDismissChangelog = () => {
+    try {
+      localStorage.setItem('lh_taskflow_viewed_version', CURRENT_VERSION);
+    } catch (e) {
+      console.error("Error saving version to localStorage:", e);
+    }
+    setShowChangelog(false);
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -468,13 +490,17 @@ export default function App() {
 
   const initSt = (id, val) => {
     const t = tasks.find(x => x.id === id);
-    if(val === 'จบงาน') {
-        const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
-        setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate });
+    if (!t) return;
+    if (val === 'จบงาน') {
+      const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
+      setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate });
     } else if (val === 'เลื่อนงาน') {
-        setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+    } else if (val === 'ยกเลิก') {
+      setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
     } else {
-        setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+      // อัปเดตสถานะตรงสู่ Firestore สำหรับ: 'รอดำเนินการ', 'กำลังดำเนินการ', 'ติดปัญหา/รออะไหล่'
+      saveD('task', { ...t, status: val });
     }
   };
 
@@ -716,7 +742,27 @@ export default function App() {
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm"><div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div><button type="button" onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }} className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a]">{loading?<Icon name="loader2" size={16} className="animate-spin"/>:<Icon name="database" size={16}/>}</button></header>
+            <header className="bg-white h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div>
+                <button
+                  type="button"
+                  onClick={() => setShowChangelog(true)}
+                  className="text-[11px] font-bold text-[#bca374] bg-[#bca374]/15 hover:bg-[#bca374]/25 active:scale-95 px-2.5 py-0.5 rounded-full flex items-center gap-1 transition cursor-pointer"
+                  title="ดูรายการอัปเดตเวอร์ชันใหม่"
+                >
+                  <Icon name="sparkles" size={13} /> {CURRENT_VERSION}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
+                className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a] transition cursor-pointer"
+                title="รีเฟรชข้อมูล"
+              >
+                {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
+              </button>
+            </header>
             {tab !== 'settings' && (
               <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center text-sm shadow-sm z-10 sticky top-14">
                 <span className="font-bold text-gray-500 mr-2"><Icon name="filter" size={16} className="inline mr-1"/> ตัวกรอง:</span>
@@ -966,6 +1012,13 @@ export default function App() {
           setCropModal={setCropModal}
           onCropComplete={onCropComplete}
           onSave={saveCroppedImage}
+          Icon={Icon}
+        />
+
+        <ChangelogModal
+          isOpen={showChangelog}
+          onClose={() => setShowChangelog(false)}
+          onDismiss={handleDismissChangelog}
           Icon={Icon}
         />
       </div>

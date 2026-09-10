@@ -29,3 +29,4 @@ scripts/archive/
 *.cjs
 output.json
 
+.vercel
