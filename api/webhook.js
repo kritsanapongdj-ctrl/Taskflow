@@ -82,14 +82,27 @@ async function handleSummary(projectList, groupName) {
   const dd = String(now.getDate()).padStart(2,'0');
   const todayStr = `${yyyy}-${mm}-${dd}`;
   
+  // กรองเฉพาะงานที่อยู่ระหว่างดำเนินการ และ จบงาน(รอใบงาน) เท่านั้น (ตัด "จบงาน" ทุกรูปแบบ และ "ยกเลิก" ออก 100%)
   const todaysTasks = allTasks.filter(t => {
-    if (t.status === 'ยกเลิก') return false;
-    if (t.reported_date && !t.startDate) {
-       if (t.status === 'จบงาน' || t.status === 'จบงาน(รอใบงาน)') return false;
-       return true;
+    const status = (t.status || '').trim();
+
+    // 1. ตัดงานที่ยกเลิก และงานที่จบงานแล้วออก 100%
+    if (status === 'ยกเลิก' || status === 'จบงาน' || (status.startsWith('จบงาน') && !status.includes('รอใบงาน'))) {
+      return false;
     }
-    if (todayStr >= t.startDate && todayStr <= t.endDate) return true;
-    if (!t.status?.startsWith('จบงาน') && todayStr > t.endDate) return true;
+
+    // 2. งานจบงาน(รอใบงาน) - แสดงเฉพาะที่ยังไม่ได้ส่งเบิก
+    if (status === 'จบงาน(รอใบงาน)' || (status.includes('จบงาน') && status.includes('รอใบงาน'))) {
+      if (t.billingStatus === 'ส่งเบิกแล้ว') return false;
+      return true;
+    }
+
+    // 3. งานกำลังดำเนินการ / อยู่ระหว่างดำเนินการ
+    if (status === 'อยู่ระหว่างดำเนินการ' || status.includes('ดำเนินการ')) {
+      return true;
+    }
+
+    // สถานะอื่นๆ ทั้งหมด ปฏิเสธทั้งหมด
     return false;
   });
   
@@ -103,13 +116,14 @@ async function handleSummary(projectList, groupName) {
 ข้อมูล:
 ทีม: กลุ่ม ${groupName}
 รายการงานวันนี้:
-${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปัญหา: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'รอดำเนินการ'}`).join('\n')}
+${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปัญหา: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}`).join('\n')}
 
 ข้อกำหนด:
-1. สรุปแยกตามโครงการ แจ้งสถานะงานให้ชัดเจน
-2. ใช้ Emoji ประกอบให้น่าอ่าน และจัดย่อหน้าให้ดูสะอาดตา
-3. ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป ให้เน้นข้อมูลจริง
-4. ลงท้ายด้วยประโยคให้กำลังใจทีมงาน`;
+1. ห้ามแสดงงานที่ขึ้นสถานะ "จบงาน" เด็ดขาด (แสดงเฉพาะ "อยู่ระหว่างดำเนินการ" และ "จบงาน(รอใบงาน)")
+2. สรุปแยกตามโครงการ แจ้งสถานะงานให้ชัดเจน
+3. ใช้ Emoji ประกอบให้น่าอ่าน และจัดย่อหน้าให้ดูสะอาดตา
+4. ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป ให้เน้นข้อมูลจริง
+5. ลงท้ายด้วยประโยคให้กำลังใจทีมงาน`;
 
   const geminiResponse = await askGemini(prompt);
   if (geminiResponse && !geminiResponse.includes('Error')) {
@@ -143,12 +157,8 @@ ${groupTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, ปั�
     fallbackMsg += `\n📌 ${proj}\n`;
     byProject[proj].forEach((t, idx) => {
       const emoji = getEmoji(t.details || t.task_name);
-      let status = t.status || 'รอดำเนินการ';
-      let stEmoji = '⚪';
-      if (status.includes('จบงาน(รอใบงาน)')) stEmoji = '🟠';
-      else if (status.includes('จบงาน')) stEmoji = '🟢';
-      else if (status.includes('ดำเนินการ')) stEmoji = '🟡';
-      else if (status.includes('เลื่อนงาน')) stEmoji = '🟣';
+      let status = t.status || 'อยู่ระหว่างดำเนินการ';
+      let stEmoji = status.includes('รอใบงาน') ? '🟠' : '🟡';
 
       fallbackMsg += `${idx + 1}. ${t.details || t.task_name || 'ไม่ระบุปัญหา'} ${emoji} (สถานะ: ${stEmoji} ${status})\n`;
     });
