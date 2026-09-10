@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Home, Sparkles, List, X, ShieldAlert, Clock, Filter, Activity, Users, Crosshair, ChevronRight, BookOpen, Book, Target, Shield, Sword, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 
-const BGM_URL = '/bgm.mp3';
+// BGM_URL ถูกนำออกชั่วคราวเพื่อลดขนาด Deployment Storage บน Vercel (เดิม 87MB)
+const BGM_URL = null;
 
 import { AgentPixelArt } from './AgentPixelArt';
 import ClassEmblem from './ClassEmblem';
@@ -348,7 +349,7 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
 
   return (
     <div className="fixed inset-0 bg-stone-900 text-stone-100 flex flex-col font-sans overflow-hidden z-[9999]">
-      <audio ref={audioRef} loop src={BGM_URL} />
+      {BGM_URL && <audio ref={audioRef} loop src={BGM_URL} />}
       <div className="h-14 bg-stone-800/95 border-b border-stone-600 flex items-center justify-between px-4 shadow-lg z-30 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={() => setTab('dashboard')} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded shadow font-bold transition-colors text-sm">
@@ -359,9 +360,11 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
             <Sparkles className="w-5 h-5 text-amber-400" /> LH Guild Simulator
           </h1>
         </div>
-        <button onClick={() => { if(isPlaying) { audioRef.current.pause(); setIsPlaying(false); } else { audioRef.current.play().catch(()=>{}); setIsPlaying(true); } }} className="p-2 hover:bg-stone-700 rounded-full transition-colors">
-          {isPlaying ? <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" /> : <Sparkles className="w-5 h-5 text-stone-500" />}
-        </button>
+        {BGM_URL && (
+          <button onClick={() => { if(isPlaying) { audioRef.current?.pause(); setIsPlaying(false); } else { audioRef.current?.play().catch(()=>{}); setIsPlaying(true); } }} className="p-2 hover:bg-stone-700 rounded-full transition-colors">
+            {isPlaying ? <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" /> : <Sparkles className="w-5 h-5 text-stone-500" />}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 relative bg-[url('/tavern-bg.jpg')] bg-cover bg-center overflow-hidden">
