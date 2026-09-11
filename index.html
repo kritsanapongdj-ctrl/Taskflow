@@ -4,9 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LH Task-Flow</title>
-    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap)" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Fallback error handler to prevent permanent blank screen if bundle loading fails
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML.trim() === '')) {
+          root.innerHTML = '<div style="padding:40px 20px;text-align:center;font-family:\'Prompt\',sans-serif;max-width:480px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #fee2e2;">' +
+            '<div style="font-size:40px;margin-bottom:12px;">⚠️</div>' +
+            '<h3 style="color:#0f2e4a;margin:0 0 8px 0;font-size:18px;font-weight:bold;">พบปัญหาการโหลดหน้าเว็บ</h3>' +
+            '<p style="color:#64748b;font-size:13px;line-height:1.6;margin-bottom:20px;">อาจเกิดจากไฟล์เวอร์ชันเก่าตกค้างในแคชของอุปกรณ์ กรุณากดปุ่มด้านล่างเพื่อล้างแคชและรีเฟรช</p>' +
+            '<button onclick="try{localStorage.clear();sessionStorage.clear();}catch(err){}location.reload(true);" style="padding:10px 24px;background:#0f2e4a;color:white;border-radius:8px;border:none;cursor:pointer;font-weight:bold;font-size:14px;">ล้างแคชและรีเฟรช</button>' +
+          '</div>';
+        }
+      });
+    </script>
   </head>
   <body class="bg-[#f8f9fa] text-slate-800 m-0 p-0">
     <div id="root"></div>
