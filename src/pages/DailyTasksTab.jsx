@@ -47,11 +47,19 @@ export default function DailyTasksTab({
         </span>
       );
     }
-    if (status === 'ติดปัญหา/รออะไหล่') {
+    if (status === 'ติดปัญหา/รออะไหล่' || status === 'รออะไหล่/ติดปัญหา') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0 shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-          ติดปัญหา/รออะไหล่
+          ⚠️ รออะไหล่/ติดปัญหา
+        </span>
+      );
+    }
+    if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') {
+      return (
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+          📅 เลื่อนวันจบ
         </span>
       );
     }
@@ -97,7 +105,13 @@ export default function DailyTasksTab({
           const od = chkOvdTimeAware(t, getTStr());
           const isOverdue = od && !t.status?.startsWith('จบงาน');
           const currentSelectVal =
-            t.status === 'อยู่ระหว่างดำเนินการ' ? 'กำลังดำเนินการ' : t.status;
+            t.status === 'อยู่ระหว่างดำเนินการ'
+              ? 'กำลังดำเนินการ'
+              : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
+              ? 'เลื่อนวันจบ'
+              : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
+              ? 'รออะไหล่/ติดปัญหา'
+              : t.status;
 
           return (
             <div
@@ -139,6 +153,20 @@ export default function DailyTasksTab({
                     </span>
                   )}
                 </div>
+
+                {/* Sub-reason banners */}
+                {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
+                  <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-lg border border-rose-200 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
+                    <span className="break-words font-medium">{t.issueReason}</span>
+                  </div>
+                )}
+                {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
+                  <div className="mt-2 text-xs text-indigo-700 bg-indigo-50/90 px-2.5 py-1.5 rounded-lg border border-indigo-200 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">📅 เหตุผลเลื่อน:</span>
+                    <span className="break-words font-medium">{t.postponeReason}</span>
+                  </div>
+                )}
               </div>
 
               {/* Duration & Overdue Status */}
@@ -177,13 +205,11 @@ export default function DailyTasksTab({
                   >
                     <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
                     <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
-                    <option value="ติดปัญหา/รออะไหล่">⚠️ ติดปัญหา/รออะไหล่</option>
+                    <option value="รออะไหล่/ติดปัญหา">⚠️ รออะไหล่/ติดปัญหา</option>
+                    <option value="เลื่อนวันจบ">📅 เลื่อนวันจบ</option>
                     <option value="จบงาน">✅ จบงาน</option>
                     {t.status === 'จบงาน(รอใบงาน)' && (
                       <option value="จบงาน(รอใบงาน)">📋 จบงาน (รอใบงาน)</option>
-                    )}
-                    {t.status === 'เลื่อนงาน' && (
-                      <option value="เลื่อนงาน">📅 เลื่อนงาน</option>
                     )}
                   </select>
                 </div>
@@ -234,13 +260,19 @@ export default function DailyTasksTab({
             {vT.map((t) => {
               const od = chkOvdTimeAware(t, getTStr());
               const currentSelectVal =
-                t.status === 'อยู่ระหว่างดำเนินการ' ? 'กำลังดำเนินการ' : t.status;
+                t.status === 'อยู่ระหว่างดำเนินการ'
+                  ? 'กำลังดำเนินการ'
+                  : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
+                  ? 'เลื่อนวันจบ'
+                  : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
+                  ? 'รออะไหล่/ติดปัญหา'
+                  : t.status;
 
               return (
                 <tr key={t.id} className="border-b hover:bg-gray-50/80 transition">
                   <td className="p-4">
                     <div className="font-medium text-slate-800">{t.details}</div>
-                    <div className="text-[10px] text-gray-400 mt-1 flex gap-1.5 items-center">
+                    <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-1.5 items-center">
                       <span>
                         {t.id} | {t.requester}
                       </span>
@@ -255,6 +287,18 @@ export default function DailyTasksTab({
                         </span>
                       )}
                     </div>
+                    {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
+                      <div className="mt-1.5 text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
+                        <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
+                        <span className="truncate">{t.issueReason}</span>
+                      </div>
+                    )}
+                    {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
+                      <div className="mt-1.5 text-xs text-indigo-700 bg-indigo-50/90 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center gap-1 max-w-full">
+                        <span className="font-bold shrink-0">📅 เหตุผลเลื่อน:</span>
+                        <span className="truncate">{t.postponeReason}</span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4 font-bold text-[#bca374]">
                     {getStdProj(t.project)}
@@ -285,13 +329,11 @@ export default function DailyTasksTab({
                       >
                         <option value="รอดำเนินการ">รอดำเนินการ</option>
                         <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                        <option value="ติดปัญหา/รออะไหล่">ติดปัญหา/รออะไหล่</option>
+                        <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
+                        <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
                         <option value="จบงาน">จบงาน</option>
                         {t.status === 'จบงาน(รอใบงาน)' && (
                           <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
-                        )}
-                        {t.status === 'เลื่อนงาน' && (
-                          <option value="เลื่อนงาน">เลื่อนงาน</option>
                         )}
                       </select>
                       <button

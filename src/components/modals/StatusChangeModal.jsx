@@ -11,7 +11,8 @@ export default function StatusChangeModal({
   if (!isOpen) return null;
 
   const isConfirmDisabled =
-    ((sMod.type === 'cancel' || sMod.type === 'postpone') && !sMod.reason.trim()) ||
+    ((sMod.type === 'cancel' || sMod.type === 'postpone' || sMod.type === 'issue') && !sMod.reason.trim()) ||
+    (sMod.type === 'postpone' && !sMod.postponeDate) ||
     (sMod.type === 'complete' && !sMod.noWO && !sMod.workOrderNo.trim()) ||
     (sMod.type === 'complete' && sMod.isOverdue && !sMod.overdueReason.trim());
 
@@ -23,14 +24,18 @@ export default function StatusChangeModal({
             sMod.type === 'cancel'
               ? 'text-red-500'
               : sMod.type === 'postpone'
-              ? 'text-amber-500'
+              ? 'text-amber-600'
+              : sMod.type === 'issue'
+              ? 'text-rose-600'
               : 'text-green-500'
           }`}
         >
           {sMod.type === 'cancel'
             ? 'ยกเลิกงาน'
             : sMod.type === 'postpone'
-            ? 'เลื่อนวันจบงาน'
+            ? '📅 ขอเลื่อนวันจบงาน'
+            : sMod.type === 'issue'
+            ? '⚠️ รออะไหล่ / ติดปัญหา'
             : 'ยืนยันจบงาน'}
         </h3>
         <div className="space-y-3">
@@ -43,6 +48,23 @@ export default function StatusChangeModal({
                 value={sMod.reason}
                 onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
               />
+            </div>
+          )}
+          {sMod.type === 'issue' && (
+            <div>
+              <label className="text-xs font-bold text-rose-600">
+                สาเหตุที่ติดปัญหา หรือ อะไหล่ที่รอ (บังคับระบุ) *
+              </label>
+              <textarea
+                rows="3"
+                className="w-full border border-rose-300 rounded p-2 text-sm resize-none bg-rose-50 focus:ring-1 focus:ring-rose-500 outline-none"
+                placeholder="ระบุรายละเอียดสาเหตุที่ติดปัญหา หรือชิ้นส่วนอะไหล่ที่รอ..."
+                value={sMod.reason}
+                onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
+              />
+              <p className="text-[10px] text-gray-500 mt-1">
+                📧 ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันทีที่กดยืนยัน
+              </p>
             </div>
           )}
           {sMod.type === 'postpone' && (
@@ -65,6 +87,9 @@ export default function StatusChangeModal({
                   value={sMod.reason}
                   onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
                 />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  📧 ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันทีที่กดยืนยัน
+                </p>
               </div>
             </div>
           )}

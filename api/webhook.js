@@ -87,7 +87,8 @@ const getEmoji = (text) => {
 const getStatusBadge = (status) => {
   if (status === 'จบงาน') return '✅ จบงาน';
   if (status === 'จบงาน(รอใบงาน)') return '📋 จบงาน(รอใบงาน)';
-  if (status === 'ติดปัญหา/รออะไหล่') return '⚠️ ติดปัญหา/รออะไหล่';
+  if (status === 'ติดปัญหา/รออะไหล่' || status === 'รออะไหล่/ติดปัญหา') return '⚠️ รออะไหล่/ติดปัญหา';
+  if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') return '📅 เลื่อนวันจบ';
   if (status === 'รอดำเนินการ') return '⏳ รอดำเนินการ';
   return '⚙️ กำลังดำเนินการ';
 };
@@ -140,20 +141,21 @@ async function handleSummary(projectList, groupName) {
   const doneCount = todaysTasks.filter(t => t.status === 'จบงาน').length;
   const waitWoCount = todaysTasks.filter(t => t.status === 'จบงาน(รอใบงาน)').length;
   const inProgCount = todaysTasks.filter(t => t.status === 'กำลังดำเนินการ' || t.status === 'อยู่ระหว่างดำเนินการ').length;
-  const blockedCount = todaysTasks.filter(t => t.status === 'ติดปัญหา/รออะไหล่').length;
+  const blockedCount = todaysTasks.filter(t => t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา').length;
+  const postponedCount = todaysTasks.filter(t => t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน').length;
   const pendingCount = todaysTasks.filter(t => t.status === 'รอดำเนินการ').length;
   
   const prompt = `ทำหน้าที่เป็นผู้ช่วยสรุปงานประจำวัน (Daily Tasks Report)
 ข้อมูล:
 ทีม: กลุ่ม ${groupName} ประจำวันที่ ${fDateThai(todayStr)}
-ภาพรวม: ทั้งหมด ${todaysTasks.length} งาน (จบงานแล้ว: ${doneCount}, จบงานรอใบงาน: ${waitWoCount}, กำลังดำเนินการ: ${inProgCount}, ติดปัญหา/รออะไหล่: ${blockedCount}, รอดำเนินการ: ${pendingCount})
+ภาพรวม: ทั้งหมด ${todaysTasks.length} งาน (จบงานแล้ว: ${doneCount}, จบงานรอใบงาน: ${waitWoCount}, กำลังดำเนินการ: ${inProgCount}, ติดปัญหา/รออะไหล่: ${blockedCount}${postponedCount > 0 ? `, เลื่อนวันจบ: ${postponedCount}` : ''}, รอดำเนินการ: ${pendingCount})
 รายการงานวันนี้:
-${todaysTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, งาน: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}${t.workOrderNo ? ' (WO: ' + t.workOrderNo + ')' : ''}`).join('\n')}
+${todaysTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, งาน: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}${t.workOrderNo ? ' (WO: ' + t.workOrderNo + ')' : ''}${t.issueReason ? ' [สาเหตุ: ' + t.issueReason + ']' : ''}${t.postponeReason ? ' [เลื่อนจบ: ' + t.postponeReason + ']' : ''}`).join('\n')}
 
 ข้อกำหนด:
 1. สรุปรายงานประจำวันของวันนี้ โดยแสดงสถานะจริงของทุกงาน (ทั้งที่จบแล้ว, รอใบงาน, กำลังทำ, หรือติดปัญหา) ไม่ต้องตัดงานที่จบแล้วออก
 2. สรุปแยกตามโครงการอย่างชัดเจน
-3. ใช้ Emoji ประกอบให้น่าอ่าน เช่น ✅ จบงาน, 📋 จบงาน(รอใบงาน), ⚙️ กำลังดำเนินการ, ⚠️ รออะไหล่, ⏳ รอดำเนินการ
+3. ใช้ Emoji ประกอบให้น่าอ่าน เช่น ✅ จบงาน, 📋 จบงาน(รอใบงาน), ⚙️ กำลังดำเนินการ, ⚠️ รออะไหล่, 📅 เลื่อนวันจบ, ⏳ รอดำเนินการ
 4. กระชับ ชัดเจน ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป
 5. ลงท้ายด้วยประโยคให้กำลังใจทีมงานสั้นๆ`;
 
@@ -165,7 +167,7 @@ ${todaysTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, งา
   // Fallback (ถ้า AI พัง หรือยังไม่ได้ใส่ Key)
   let fallbackMsg = `📋 สรุปงานประจำวัน กลุ่ม ${groupName}\n`;
   fallbackMsg += `📅 ประจำวันที่: ${fDateThai(todayStr)}\n`;
-  fallbackMsg += `📊 ภาพรวม: ${todaysTasks.length} งาน (✅ จบ ${doneCount} | 📋 รอใบงาน ${waitWoCount} | ⚙️ กำลังทำ ${inProgCount} | ⚠️ รออะไหล่ ${blockedCount} | ⏳ รอดำเนินการ ${pendingCount})\n`;
+  fallbackMsg += `📊 ภาพรวม: ${todaysTasks.length} งาน (✅ จบ ${doneCount} | 📋 รอใบงาน ${waitWoCount} | ⚙️ กำลังทำ ${inProgCount} | ⚠️ รออะไหล่ ${blockedCount}${postponedCount > 0 ? ` | 📅 เลื่อนวันจบ ${postponedCount}` : ''} | ⏳ รอดำเนินการ ${pendingCount})\n`;
   fallbackMsg += `─────────────────────────\n`;
 
   const byProject = {};

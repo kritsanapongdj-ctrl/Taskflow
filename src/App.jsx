@@ -494,12 +494,14 @@ export default function App() {
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
       setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate });
-    } else if (val === 'เลื่อนงาน') {
-      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+    } else if (val === 'เลื่อนวันจบ' || val === 'เลื่อนงาน') {
+      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: t.postponeReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr() });
+    } else if (val === 'รออะไหล่/ติดปัญหา' || val === 'ติดปัญหา/รออะไหล่') {
+      setSMod({ isOpen: true, taskId: id, type: 'issue', reason: t.issueReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr() });
     } else if (val === 'ยกเลิก') {
       setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
     } else {
-      // อัปเดตสถานะตรงสู่ Firestore สำหรับ: 'รอดำเนินการ', 'กำลังดำเนินการ', 'ติดปัญหา/รออะไหล่'
+      // อัปเดตสถานะตรงสู่ Firestore สำหรับ: 'รอดำเนินการ', 'กำลังดำเนินการ'
       saveD('task', { ...t, status: val });
     }
   };
@@ -519,11 +521,39 @@ export default function App() {
     const t = tasks.find(x => x.id === sMod.taskId);
     if (t) {
         let nT = { ...t };
-        if(sMod.type === 'cancel') { nT.status = 'ยกเลิก'; nT.cancelReason = sMod.reason; nT.emailAlert = { action: 'ยกเลิกงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: t.details }; }
+        const ems = getTargetEms(t.project);
+        const targetEmails = ems.length > 0 ? ems : (sets.emails || []).map(e => e.split('|')[0]);
+
+        if(sMod.type === 'cancel') { 
+            nT.status = 'ยกเลิก'; 
+            nT.cancelReason = sMod.reason; 
+            nT.emailAlert = { action: 'ยกเลิกงาน', reason: sMod.reason, emails: targetEmails, project: t.project, details: t.details }; 
+        }
+        else if(sMod.type === 'issue') {
+            nT.status = 'ติดปัญหา/รออะไหล่';
+            nT.issueReason = sMod.reason;
+            nT.issueReportedAt = new Date().toISOString();
+            nT.emailAlert = { 
+                action: 'งานติดปัญหา/รออะไหล่', 
+                reason: sMod.reason, 
+                emails: targetEmails, 
+                project: t.project, 
+                details: `โครงการ: ${t.project} (${t.area || '-'})\nชื่องาน: ${t.details}\nผู้แจ้ง: ${t.requester || '-'}\nช่วงเวลาปฏิบัติงาน: ${fDate(t.startDate)} - ${fDate(t.endDate)}\nสาเหตุที่ติดปัญหา/รออะไหล่: ${sMod.reason}` 
+            };
+        }
         else if(sMod.type === 'postpone') { 
-            nT.status = 'อยู่ระหว่างดำเนินการ'; 
+            nT.status = 'เลื่อนวันจบ'; 
+            nT.previousEndDate = t.endDate;
             nT.endDate = sMod.postponeDate; 
-            nT.emailAlert = { action: 'ขอเลื่อนวันจบงาน', reason: sMod.reason, emails: getTargetEms(t.project), project: t.project, details: `รายละเอียดงาน: ${t.details}\nวันที่เริ่มเดิม: ${fDate(t.startDate)}\nวันที่จบเดิม: ${fDate(t.endDate)}\nวันที่ขอเลื่อนไป: ${fDate(sMod.postponeDate)}` }; 
+            nT.postponeReason = sMod.reason;
+            nT.postponedAt = new Date().toISOString();
+            nT.emailAlert = { 
+                action: 'ขอเลื่อนวันจบงาน', 
+                reason: sMod.reason, 
+                emails: targetEmails, 
+                project: t.project, 
+                details: `โครงการ: ${t.project} (${t.area || '-'})\nชื่องาน: ${t.details}\nผู้แจ้ง: ${t.requester || '-'}\nวันที่เริ่มเดิม: ${fDate(t.startDate)}\nวันที่จบเดิม: ${fDate(t.endDate)}\nวันที่ขอเลื่อนไปใหม่: ${fDate(sMod.postponeDate)}\nเหตุผลที่ขอเลื่อน: ${sMod.reason}` 
+            }; 
         }
         else if(sMod.type === 'complete') { 
             if (sMod.noWO) {
@@ -533,7 +563,7 @@ export default function App() {
                 if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(nT, getTStr()) || nT.completedDate > nT.endDate) { 
                     nT.overdueStatus = t.overdueStatus === 'ออกใบงานช้า' ? 'ออกใบงานช้า' : 'เกินกำหนด'; 
                     if (chkOvdTimeAware(nT, getTStr()) || nT.completedDate > nT.endDate) {
-                        nT.emailAlert = { action: 'ปิดงานล่าช้ากว่ากำหนด', reason: `ปิดงานเวลา ${new Date().toLocaleTimeString('th-TH')} น. (เลยเวลาตัดเกณฑ์ของวันจบงาน)`, emails: getTargetEms(nT.project), project: nT.project, details: t.details }; 
+                        nT.emailAlert = { action: 'ปิดงานล่าช้ากว่ากำหนด', reason: `ปิดงานเวลา ${new Date().toLocaleTimeString('th-TH')} น. (เลยเวลาตัดเกณฑ์ของวันจบงาน)`, emails: targetEmails, project: nT.project, details: t.details }; 
                     }
                 }
             } else {
@@ -554,7 +584,7 @@ export default function App() {
                     if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(nT, getTStr()) || nT.completedDate > nT.endDate) { 
                         nT.overdueStatus = t.overdueStatus === 'ออกใบงานช้า' ? 'ออกใบงานช้า' : 'เกินกำหนด'; 
                         if (chkOvdTimeAware(nT, getTStr()) || nT.completedDate > nT.endDate) {
-                            nT.emailAlert = { action: 'ปิดงานล่าช้ากว่ากำหนด', reason: `ปิดงานเวลา ${new Date().toLocaleTimeString('th-TH')} น. (เลยเวลาตัดเกณฑ์ของวันจบงาน)`, emails: getTargetEms(nT.project), project: nT.project, details: t.details }; 
+                            nT.emailAlert = { action: 'ปิดงานล่าช้ากว่ากำหนด', reason: `ปิดงานเวลา ${new Date().toLocaleTimeString('th-TH')} น. (เลยเวลาตัดเกณฑ์ของวันจบงาน)`, emails: targetEmails, project: nT.project, details: t.details }; 
                         }
                     }
                 }
@@ -562,7 +592,7 @@ export default function App() {
         }
         saveD('task', nT);
     }
-    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '' });
+    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() });
   };
 
   const upS = (k, v, arr=true) => { setSets(prev => { let nS = {...prev}; if(arr) { const val = (v || '').trim(); if(!val || (nS[k]||[]).includes(val)) return prev; nS[k] = [...(nS[k]||[]), val]; setSInp(p => ({...p, [k]:'', projArea:'', slaDays:''})); } else { nS[k] = v; } saveD('settings', nS); return nS; }); };
@@ -969,7 +999,7 @@ export default function App() {
 
           <StatusChangeModal
             isOpen={sMod.isOpen}
-            onClose={() => setSMod({ ...sMod, isOpen: false, noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() })}
+            onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() })}
             onConfirm={cfSt}
             sMod={sMod}
             setSMod={setSMod}
