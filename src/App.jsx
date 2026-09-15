@@ -437,8 +437,7 @@ export default function App() {
     const proj = taskForm.project;
     
     if(eTask && eTask.startDate !== taskForm.startDate) {
-      if(!sRsn) return alert('โปรดระบุเหตุผลที่เปลี่ยนวันเริ่มงาน');
-      det += `\n[เปลี่ยนวันเริ่ม: ${sRsn}]`; ePl = { action: 'ขอเปลี่ยนวันเริ่มงาน', reason: sRsn, emails: getTargetEms(proj), project: proj, details: det };
+      det += `\n[เปลี่ยนวันเริ่ม: ${fDate(eTask.startDate)} -> ${fDate(taskForm.startDate)}]`;
     }
     
     const slaCat = taskForm.slaCategory;
@@ -493,13 +492,15 @@ export default function App() {
     if (!t) return;
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
-      setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate });
+      setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: t.overdueReason||'', postponeDate: t.endDate, postponeStartDate: t.startDate || getTStr() });
+    } else if (val === 'เลื่อนวันเริ่ม') {
+      setSMod({ isOpen: true, taskId: id, type: 'postpone_start', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate, postponeStartDate: t.startDate || getTStr() });
     } else if (val === 'เลื่อนวันจบ' || val === 'เลื่อนงาน') {
-      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: t.postponeReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr() });
+      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: t.postponeReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr(), postponeStartDate: t.startDate });
     } else if (val === 'รออะไหล่/ติดปัญหา' || val === 'ติดปัญหา/รออะไหล่') {
-      setSMod({ isOpen: true, taskId: id, type: 'issue', reason: t.issueReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr() });
+      setSMod({ isOpen: true, taskId: id, type: 'issue', reason: t.issueReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr(), postponeStartDate: t.startDate });
     } else if (val === 'ยกเลิก') {
-      setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate });
+      setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate, postponeStartDate: t.startDate });
     } else {
       // อัปเดตสถานะตรงสู่ Firestore สำหรับ: 'รอดำเนินการ', 'กำลังดำเนินการ'
       saveD('task', { ...t, status: val });
@@ -529,7 +530,21 @@ export default function App() {
             nT.cancelReason = sMod.reason; 
             nT.emailAlert = { action: 'ยกเลิกงาน', reason: sMod.reason, emails: targetEmails, project: t.project, details: t.details }; 
         }
+        else if(sMod.type === 'postpone_start') {
+            // ข้อกำหนด 1.1: เลื่อนวันเริ่ม สามารถเลื่อนได้ไม่ต้องส่งอีเมล์มาให้ผู้ดูแล
+            nT.status = 'เลื่อนวันเริ่ม';
+            nT.previousStartDate = t.startDate;
+            nT.startDate = sMod.postponeStartDate;
+            if (nT.endDate && nT.endDate < nT.startDate) {
+                nT.endDate = nT.startDate;
+            }
+            if (sMod.reason && sMod.reason.trim()) {
+                nT.startPostponeReason = sMod.reason.trim();
+            }
+            nT.startPostponedAt = new Date().toISOString();
+        }
         else if(sMod.type === 'issue') {
+            // ข้อกำหนด 2: ฟังก์ชั่น รออะไหล่/ติดปัญหา จะต้องระบุสาเหตุและกดยืนยันเช่นกัน และระบบจะส่งเมล์แจ้งผู้ดูแลให้ทราบ
             nT.status = 'ติดปัญหา/รออะไหล่';
             nT.issueReason = sMod.reason;
             nT.issueReportedAt = new Date().toISOString();
@@ -542,17 +557,18 @@ export default function App() {
             };
         }
         else if(sMod.type === 'postpone') { 
+            // ข้อกำหนด 1.2: เลื่อนวันจบ จะเด้ง Pop up ให้ระบุสาเหตุที่เลื่อน ยืนยันอีกครั้ง เมื่อกดยืนยัน ระบบจะส่งเมล์แจ้งผู้ดูแลให้ทราบ
             nT.status = 'เลื่อนวันจบ'; 
             nT.previousEndDate = t.endDate;
             nT.endDate = sMod.postponeDate; 
-            nT.postponeReason = sMod.reason;
-            nT.postponedAt = new Date().toISOString();
+            nT.postponeReason = sMod.reason; 
+            nT.postponedAt = new Date().toISOString(); 
             nT.emailAlert = { 
                 action: 'ขอเลื่อนวันจบงาน', 
                 reason: sMod.reason, 
                 emails: targetEmails, 
                 project: t.project, 
-                details: `โครงการ: ${t.project} (${t.area || '-'})\nชื่องาน: ${t.details}\nผู้แจ้ง: ${t.requester || '-'}\nวันที่เริ่มเดิม: ${fDate(t.startDate)}\nวันที่จบเดิม: ${fDate(t.endDate)}\nวันที่ขอเลื่อนไปใหม่: ${fDate(sMod.postponeDate)}\nเหตุผลที่ขอเลื่อน: ${sMod.reason}` 
+                details: `โครงการ: ${t.project} (${t.area || '-'})\nชื่องาน: ${t.details}\nผู้แจ้ง: ${t.requester || '-'}\nวันที่เริ่มเดิม: ${fDate(t.startDate)}\nวันที่จบเดิม: ${fDate(t.endDate)}\nวันที่ขอเลื่อนจบไปใหม่: ${fDate(sMod.postponeDate)}\nสาเหตุที่ขอเลื่อนวันจบ: ${sMod.reason}` 
             }; 
         }
         else if(sMod.type === 'complete') { 
@@ -592,7 +608,7 @@ export default function App() {
         }
         saveD('task', nT);
     }
-    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() });
+    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' });
   };
 
   const upS = (k, v, arr=true) => { setSets(prev => { let nS = {...prev}; if(arr) { const val = (v || '').trim(); if(!val || (nS[k]||[]).includes(val)) return prev; nS[k] = [...(nS[k]||[]), val]; setSInp(p => ({...p, [k]:'', projArea:'', slaDays:''})); } else { nS[k] = v; } saveD('settings', nS); return nS; }); };
@@ -999,7 +1015,7 @@ export default function App() {
 
           <StatusChangeModal
             isOpen={sMod.isOpen}
-            onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() })}
+            onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' })}
             onConfirm={cfSt}
             sMod={sMod}
             setSMod={setSMod}

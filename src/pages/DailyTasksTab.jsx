@@ -55,6 +55,14 @@ export default function DailyTasksTab({
         </span>
       );
     }
+    if (status === 'เลื่อนวันเริ่ม') {
+      return (
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1 shrink-0 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+          📅 เลื่อนวันเริ่ม
+        </span>
+      );
+    }
     if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') {
       return (
         <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0 shadow-2xs">
@@ -107,6 +115,8 @@ export default function DailyTasksTab({
           const currentSelectVal =
             t.status === 'อยู่ระหว่างดำเนินการ'
               ? 'กำลังดำเนินการ'
+              : t.status === 'เลื่อนวันเริ่ม'
+              ? 'เลื่อนวันเริ่ม'
               : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
               ? 'เลื่อนวันจบ'
               : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
@@ -155,6 +165,12 @@ export default function DailyTasksTab({
                 </div>
 
                 {/* Sub-reason banners */}
+                {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
+                  <div className="mt-2 text-xs text-sky-700 bg-sky-50/90 px-2.5 py-1.5 rounded-lg border border-sky-200 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">📅 เหตุผลเลื่อนวันเริ่ม:</span>
+                    <span className="break-words font-medium">{t.startPostponeReason}</span>
+                  </div>
+                )}
                 {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
                   <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-lg border border-rose-200 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
@@ -206,6 +222,7 @@ export default function DailyTasksTab({
                     <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
                     <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
                     <option value="รออะไหล่/ติดปัญหา">⚠️ รออะไหล่/ติดปัญหา</option>
+                    <option value="เลื่อนวันเริ่ม">📅 เลื่อนวันเริ่ม</option>
                     <option value="เลื่อนวันจบ">📅 เลื่อนวันจบ</option>
                     <option value="จบงาน">✅ จบงาน</option>
                     {t.status === 'จบงาน(รอใบงาน)' && (
@@ -262,6 +279,8 @@ export default function DailyTasksTab({
               const currentSelectVal =
                 t.status === 'อยู่ระหว่างดำเนินการ'
                   ? 'กำลังดำเนินการ'
+                  : t.status === 'เลื่อนวันเริ่ม'
+                  ? 'เลื่อนวันเริ่ม'
                   : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
                   ? 'เลื่อนวันจบ'
                   : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
@@ -287,6 +306,12 @@ export default function DailyTasksTab({
                         </span>
                       )}
                     </div>
+                    {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
+                      <div className="mt-1.5 text-xs text-sky-700 bg-sky-50/90 px-2 py-0.5 rounded border border-sky-200 inline-flex items-center gap-1 max-w-full">
+                        <span className="font-bold shrink-0">📅 หมายเหตุเลื่อนวันเริ่ม:</span>
+                        <span className="truncate">{t.startPostponeReason}</span>
+                      </div>
+                    )}
                     {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
                       <div className="mt-1.5 text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
                         <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
@@ -330,6 +355,7 @@ export default function DailyTasksTab({
                         <option value="รอดำเนินการ">รอดำเนินการ</option>
                         <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
                         <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
+                        <option value="เลื่อนวันเริ่ม">เลื่อนวันเริ่ม</option>
                         <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
                         <option value="จบงาน">จบงาน</option>
                         {t.status === 'จบงาน(รอใบงาน)' && (

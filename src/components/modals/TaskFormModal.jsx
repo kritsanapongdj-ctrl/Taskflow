@@ -222,16 +222,17 @@ export default function TaskFormModal({
 
           {showStartReason && (
             <div className="mt-2 animate-in">
-              <label className="text-[10px] font-bold text-red-500">
-                เหตุผลที่เลื่อนวันเริ่ม (บังคับ) *
+              <label className="text-[10px] font-bold text-sky-700">
+                หมายเหตุการเปลี่ยนวันเริ่มงาน (ถ้ามี)
               </label>
               <textarea
-                required
                 value={sRsn}
                 onChange={(e) => setSReason(e.target.value)}
                 rows="2"
-                className="w-full border border-red-300 rounded p-2 text-sm outline-none bg-red-50"
+                placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..."
+                className="w-full border border-sky-300 rounded p-2 text-sm outline-none bg-sky-50 focus:bg-white"
               />
+              <p className="text-[10px] text-sky-600 mt-0.5">ℹ️ เลื่อนวันเริ่มงานได้ทันทีโดยไม่ต้องส่งอีเมลแจ้งผู้ดูแล</p>
             </div>
           )}
           <div className="text-right mt-4 flex gap-2">
@@ -248,7 +249,6 @@ export default function TaskFormModal({
             </button>
             <button
               type="submit"
-              disabled={showStartReason && !sRsn.trim()}
               className="bg-[#0f2e4a] text-white px-4 py-2 rounded text-sm font-bold flex-1 disabled:opacity-50"
             >
               บันทึก

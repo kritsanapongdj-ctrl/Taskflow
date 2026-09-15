@@ -11,6 +11,7 @@ export default function StatusChangeModal({
   if (!isOpen) return null;
 
   const isConfirmDisabled =
+    (sMod.type === 'postpone_start' && !sMod.postponeStartDate) ||
     ((sMod.type === 'cancel' || sMod.type === 'postpone' || sMod.type === 'issue') && !sMod.reason.trim()) ||
     (sMod.type === 'postpone' && !sMod.postponeDate) ||
     (sMod.type === 'complete' && !sMod.noWO && !sMod.workOrderNo.trim()) ||
@@ -23,6 +24,8 @@ export default function StatusChangeModal({
           className={`font-bold text-lg mb-3 ${
             sMod.type === 'cancel'
               ? 'text-red-500'
+              : sMod.type === 'postpone_start'
+              ? 'text-sky-600'
               : sMod.type === 'postpone'
               ? 'text-amber-600'
               : sMod.type === 'issue'
@@ -32,8 +35,10 @@ export default function StatusChangeModal({
         >
           {sMod.type === 'cancel'
             ? 'ยกเลิกงาน'
+            : sMod.type === 'postpone_start'
+            ? '📅 เลื่อนวันเริ่มงาน'
             : sMod.type === 'postpone'
-            ? '📅 ขอเลื่อนวันจบงาน'
+            ? '📅 เลื่อนวันจบงาน'
             : sMod.type === 'issue'
             ? '⚠️ รออะไหล่ / ติดปัญหา'
             : 'ยืนยันจบงาน'}
@@ -50,46 +55,77 @@ export default function StatusChangeModal({
               />
             </div>
           )}
+          {sMod.type === 'postpone_start' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-sky-700">วันที่เริ่มงานใหม่ *</label>
+                <input
+                  type="date"
+                  className="w-full border border-sky-300 rounded p-2 text-sm bg-sky-50 focus:ring-1 focus:ring-sky-500 outline-none"
+                  value={sMod.postponeStartDate}
+                  onChange={(e) => setSMod({ ...sMod, postponeStartDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">หมายเหตุ/เหตุผล (ถ้ามี)</label>
+                <textarea
+                  rows="2"
+                  className="w-full border rounded p-2 text-sm resize-none bg-gray-50 focus:bg-white outline-none"
+                  placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..."
+                  value={sMod.reason}
+                  onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
+                />
+              </div>
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-2.5 text-[11px] text-sky-800 flex items-start gap-1.5">
+                <span className="text-sky-600 font-bold shrink-0">ℹ️</span>
+                <span>สามารถเลื่อนวันเริ่มงานได้ทันที <strong>โดยไม่ต้องส่งอีเมลแจ้งผู้ดูแล</strong></span>
+              </div>
+            </div>
+          )}
           {sMod.type === 'issue' && (
-            <div>
-              <label className="text-xs font-bold text-rose-600">
-                สาเหตุที่ติดปัญหา หรือ อะไหล่ที่รอ (บังคับระบุ) *
-              </label>
-              <textarea
-                rows="3"
-                className="w-full border border-rose-300 rounded p-2 text-sm resize-none bg-rose-50 focus:ring-1 focus:ring-rose-500 outline-none"
-                placeholder="ระบุรายละเอียดสาเหตุที่ติดปัญหา หรือชิ้นส่วนอะไหล่ที่รอ..."
-                value={sMod.reason}
-                onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
-              />
-              <p className="text-[10px] text-gray-500 mt-1">
-                📧 ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันทีที่กดยืนยัน
-              </p>
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-xs font-bold text-rose-600">
+                  สาเหตุที่ติดปัญหา หรือ อะไหล่ที่รอ (บังคับระบุ) *
+                </label>
+                <textarea
+                  rows="3"
+                  className="w-full border border-rose-300 rounded p-2 text-sm resize-none bg-rose-50 focus:ring-1 focus:ring-rose-500 outline-none"
+                  placeholder="ระบุรายละเอียดสาเหตุที่ติดปัญหา หรือชิ้นส่วนอะไหล่ที่รอ..."
+                  value={sMod.reason}
+                  onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
+                />
+              </div>
+              <div className="bg-rose-50 border border-rose-200 rounded-lg p-2 text-[11px] text-rose-800 flex items-start gap-1.5">
+                <span className="text-rose-600 font-bold shrink-0">📧</span>
+                <span>เมื่อกดยืนยัน <strong>ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันที</strong></span>
+              </div>
             </div>
           )}
           {sMod.type === 'postpone' && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-amber-600">วันที่ขอเลื่อนไป *</label>
+                <label className="text-xs font-bold text-amber-600">วันที่ขอเลื่อนจบไปใหม่ *</label>
                 <input
                   type="date"
-                  className="w-full border rounded p-2 text-sm bg-amber-50"
+                  className="w-full border border-amber-300 rounded p-2 text-sm bg-amber-50 focus:ring-1 focus:ring-amber-500 outline-none"
                   value={sMod.postponeDate}
                   onChange={(e) => setSMod({ ...sMod, postponeDate: e.target.value })}
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-amber-600">เหตุผลที่ขอเลื่อน *</label>
+                <label className="text-xs font-bold text-amber-600">สาเหตุที่ขอเลื่อนวันจบ (บังคับระบุ) *</label>
                 <textarea
                   rows="2"
-                  className="w-full border rounded p-2 text-sm resize-none bg-amber-50"
-                  placeholder="ระบุเหตุผล..."
+                  className="w-full border border-amber-300 rounded p-2 text-sm resize-none bg-amber-50 focus:ring-1 focus:ring-amber-500 outline-none"
+                  placeholder="ระบุสาเหตุที่จำเป็นต้องเลื่อนวันจบงาน..."
                   value={sMod.reason}
                   onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
                 />
-                <p className="text-[10px] text-gray-500 mt-1">
-                  📧 ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันทีที่กดยืนยัน
-                </p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-800 flex items-start gap-1.5">
+                <span className="text-amber-600 font-bold shrink-0">📧</span>
+                <span>เมื่อกดยืนยัน <strong>ระบบจะส่งอีเมลแจ้งเตือนผู้ดูแลโครงการทันที</strong></span>
               </div>
             </div>
           )}
