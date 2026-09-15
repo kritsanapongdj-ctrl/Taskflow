@@ -32,10 +32,10 @@ export default function TeamStatusTab({
   teamEditMode,
   setTeamEditMode,
   setCropModal,
-  setCropImg,
+  setCropImg: _setCropImg,
   saveTeam,
   Icon,
-  setAlert
+  setAlert: _setAlert
 }) {
   const [assessMode, setAssessMode] = useState(false);
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
@@ -428,7 +428,19 @@ export default function TeamStatusTab({
                         </div>
                         <div className="flex items-center gap-1.5">
                           {outerSummary.talentGrid && (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md bg-purple-500/20 text-purple-300 border-purple-500/40">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${
+                              outerSummary.talentGrid.title.includes('🚨')
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                : outerSummary.talentGrid.title.includes('🌱')
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : outerSummary.talentGrid.title.includes('🏆') || outerSummary.talentGrid.title.includes('🔥')
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : outerSummary.talentGrid.title.includes('💎')
+                                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                                : outerSummary.talentGrid.title.includes('🔨')
+                                ? 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+                                : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                            }`}>
                               📦 {outerSummary.talentGrid.title}
                             </span>
                           )}
@@ -835,7 +847,7 @@ export default function TeamStatusTab({
                       </div>
                       <div className="flex items-center gap-1.5">
                         {outerSummary.talentGrid && (
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200">
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.talentGrid.badge || 'bg-purple-50 text-purple-700 border-purple-200'}`}>
                             📦 {outerSummary.talentGrid.title}
                           </span>
                         )}

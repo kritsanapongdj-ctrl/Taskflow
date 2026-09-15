@@ -1,4 +1,4 @@
-import defaultArchetypesData from '../data/archetypes.json';
+import defaultArchetypesData from '../data/archetypes.json' with { type: 'json' };
 
 export const STAT_KEYS = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
 
@@ -146,7 +146,7 @@ export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetype
   return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
 };
 
-export const analyzeArchetype = (teamForm, sets = {}, archetypesData = defaultArchetypesData) => {
+export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultArchetypesData) => {
   const u = teamForm;
   if (!u) return null;
 
@@ -536,12 +536,12 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   };
 
   const outerMeta = [
-    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'การรับมือลูกบ้านและประสานงาน' },
-    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างและตรวจงาน' },
-    { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลาและความรวดเร็ว' },
-    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การดำเนินการฉุกเฉินสาธารณูปโภค' },
-    { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบและผู้รับเหมา' },
-    { key: 'innovation', name: 'Innovation', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุกและระบบดิจิทัล' }
+    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'การรับมือลูกบ้านและประสานงาน', rawVal: (con + sen) / 2, statSum: con + sen },
+    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างและตรวจงาน', rawVal: (int + dex) / 2, statSum: int + dex },
+    { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลาและความรวดเร็ว', rawVal: (agi + dex) / 2, statSum: agi + dex },
+    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การดำเนินการฉุกเฉินสาธารณูปโภค', rawVal: (str + con) / 2, statSum: str + con },
+    { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบและผู้รับเหมา', rawVal: (str + sen) / 2, statSum: str + sen },
+    { key: 'innovation', name: 'Innovation', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุกและระบบดิจิทัล', rawVal: (int + sen) / 2, statSum: int + sen }
   ];
 
   const avgInner = (str + agi + dex + int + con + sen) / 6;
@@ -570,8 +570,12 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     coachingAdvice = avgInner >= 5 ? 'หัวหน้างานควรสำรวจอุปสรรคหน้างาน เช่น ปริมาณงานหรือสภาพแวดล้อม เพื่อช่วยปลดล็อกพลังแท้จริง' : 'หัวหน้างานต้องเข้าไปตรวจสอบสาเหตุการทำงานที่ต่ำกว่ามาตรฐานอย่างเร่งด่วน และปรับปรุงกระบวนการดูแลหน้างาน';
   }
 
-  // Sorting Outer Axes
-  const sortedOuter = outerMeta.map(m => ({ ...m, val: actualValues[m.key] })).sort((a, b) => b.val - a.val);
+  // Sorting Outer Axes with fair tie-breaker based on raw unrounded float average & stat sum
+  const sortedOuter = outerMeta.map(m => {
+    const val = actualValues[m.key];
+    const tieScore = (val * 1000) + (m.rawVal * 10) + (m.statSum * 0.1);
+    return { ...m, val, tieScore };
+  }).sort((a, b) => b.tieScore - a.tieScore);
   const pairKey = [sortedOuter[0].key, sortedOuter[1].key].sort().join('_');
 
   // Comprehensive 15-Pair Performance DNA Matrix for Housing Estate Operations
@@ -694,8 +698,13 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   }
 
   // 9-Box Operational Talent Grid (HOW Potential vs WHAT Performance)
-  const howLevel = avgInner >= 7.0 ? 'high' : (avgInner >= 5.0 ? 'med' : 'low');
-  const whatLevel = avgOuter >= 7.0 ? 'high' : (avgOuter >= 5.0 ? 'med' : 'low');
+  const getGridLevel = (score) => {
+    if (score >= 6.8) return 'high';
+    if (score >= 4.5) return 'med';
+    return 'low';
+  };
+  const howLevel = getGridLevel(avgInner);
+  const whatLevel = getGridLevel(avgOuter);
 
   const talentGridMatrix = {
     'high_high': {
@@ -746,11 +755,16 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       badge: 'bg-orange-50 text-orange-800 border-orange-300',
       action: 'กำหนด Check-point ถี่ขึ้น ติดตามการปิดใบงานรายวัน และทบทวนขั้นตอนระเบียบปฏิบัติงาน'
     },
-    'low_low': {
-      title: '🚨 Urgent OJT Required (ต้องเข้าโปรแกรมฟื้นฟูเร่งด่วน)',
-      desc: 'ทั้งศักยภาพและผลงานต่ำกว่าเกณฑ์ปฏิบัติงาน เป็นจุดเสี่ยงของทีมที่ต้องได้รับการดูแลใกล้ชิด',
+    'low_low': (avgOuter < 3.0 || avgInner < 3.0) ? {
+      title: '🚨 Urgent PIP Required (ต้องเข้าโปรแกรมฟื้นฟูเร่งด่วน)',
+      desc: 'ทั้งศักยภาพและผลงานต่ำกว่าเกณฑ์ปฏิบัติงานอย่างมีนัยสำคัญ เป็นจุดเสี่ยงของทีมที่ต้องได้รับการดูแลใกล้ชิด',
       badge: 'bg-rose-50 text-rose-800 border-rose-300',
-      action: 'จัดพี่เลี้ยงประกบ 1:1 ห้ามทำงานเดี่ยว เข้าแผนพัฒนาทักษะหน้างาน (OJT) ประเมินผลทุก 15 วัน'
+      action: 'จัดพี่เลี้ยงประกบ 1:1 ห้ามทำงานเดี่ยว เข้าแผนพัฒนาผลงาน (PIP) ประเมินผลทุก 15 วัน'
+    } : {
+      title: '🌱 Developing Operator (ผู้ปฏิบัติงานพัฒนาทักษะ)',
+      desc: 'อยู่ในช่วงพัฒนาทักษะและเรียนรู้งานโครงการ กำลังสั่งสมประสบการณ์เพื่อยกระดับสู่มาตรฐาน',
+      badge: 'bg-amber-50 text-amber-800 border-amber-300',
+      action: 'จัดพี่เลี้ยงประกบแนะนำหน้างาน กำหนด Check-point สม่ำเสมอ และติดตามการทำงานอย่างต่อเนื่อง'
     }
   };
 
@@ -803,6 +817,24 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     });
   }
 
+  const dnaBestFitMap = {
+    'crisis_cx': 'เหมาะสำหรับงานเข้าเจรจาระงับข้อพิพาทรุนแรง ลูกบ้านอารมณ์ร้อน และการควบคุมสถานการณ์ฉุกเฉินเฉพาะหน้าในโครงการ',
+    'crisis_innovation': 'เหมาะสำหรับงานแก้ปัญหาเฉพาะหน้าในภาวะวิกฤต การประยุกต์ใช้อุปกรณ์กู้คืนระบบสาธารณูปโภค และงานซ่อมฉุกเฉินที่ซับซ้อน',
+    'crisis_resource': 'เหมาะสำหรับงานบัญชาการเหตุการณ์ฉุกเฉิน การจัดสรรเครื่องจักรและกำลังคน ตลอดจนควบคุมงบประมาณซ่อมแซมเร่งด่วน',
+    'crisis_sla': 'เหมาะสำหรับหน่วยเคลื่อนที่เร็วระงับเหตุฉุกเฉิน (ท่อเมนแตก ไฟดับ พายุพัด) ที่ต้องเข้าถึงหน้างานทันทีและหยุดยั้งความเสียหาย',
+    'crisis_tech': 'เหมาะสำหรับงานกู้คืนระบบสาธารณูปโภคหลัก (ปั๊มน้ำสโมสร บ่อบำบัด หม้อแปลง) ที่ต้องใช้วินิจฉัยเชิงวิศวกรรมขั้นสูง',
+    'cx_innovation': 'เหมาะสำหรับงานออกแบบประสบการณ์บริการลูกบ้าน การนำระบบดิจิทัล/Taskflow มาปรับปรุงการบริการ และงานรับฟังลูกบ้านเชิงรุก',
+    'cx_resource': 'เหมาะสำหรับงานประสานประโยชน์ลูกบ้านและผู้รับเหมา การเจรจาอธิบายข้อกำหนดระเบียบโครงการ และการจัดซื้อจัดจ้างที่เป็นธรรม',
+    'cx_sla': 'เหมาะสำหรับงานนัดหมายบริการด่วน การสื่อสารแจ้งสถานะงานซ่อมแบบเรียลไทม์ และงานบริการที่ต้องการความประทับใจระดับบอกต่อ',
+    'cx_tech': 'เหมาะสำหรับงานที่ปรึกษาเชิงช่าง (Consultative Master) ตรวจสอบปัญหาซับซ้อน อธิบายให้ลูกบ้านเข้าใจง่าย และสร้างความเชื่อมั่น',
+    'innovation_resource': 'เหมาะสำหรับงานวางแผนสินทรัพย์ระยะยาว การบริหารคลังอะไหล่และอุปกรณ์ และการลดต้นทุนซ่อมบำรุงด้วยแผน PM',
+    'innovation_sla': 'เหมาะสำหรับงานบริหารโฟลว์งานในระบบ LH-Taskflow การติดตามและกระตุ้นการปิดใบงานให้ตรงเวลา และการลดขั้นตอนซ้ำซ้อน',
+    'innovation_tech': 'เหมาะสำหรับงานวิศวกรรมอัจฉริยะ (Smart Facility) การติดตั้งและดูแลระบบอัตโนมัติ และการแก้ปัญหางานระบบเชิงลึก',
+    'resource_sla': 'เหมาะสำหรับงานควบคุมผู้รับเหมาให้ส่งมอบงานตรงเวลา การบริหารรอบเวลาเบิกจ่าย และการคุมต้นทุนไม่ให้บานปลาย',
+    'resource_tech': 'เหมาะสำหรับงานตรวจรับมอบงานผู้รับเหมาอย่างละเอียด การตรวจสอบสเปกวัสดุอุปกรณ์ และการควบคุมมาตรฐานงานช่างของโครงการ',
+    'sla_tech': 'เหมาะสำหรับงานช่างซ่อมบำรุงที่เน้น First-Time Fix วินิจฉัยแม่นยำ ปิดงานจบไวในรอบเดียว และไม่เกิดเคสซ่อมซ้ำ'
+  };
+
   const bestFitTaskMap = {
     cx: 'เหมาะสำหรับงานที่ต้องเน้นการเจรจาต่อรอง การสื่อสารเพื่อลดความขัดแย้ง และงานบริการที่ต้องการความเห็นอกเห็นใจสูง',
     tech: 'เหมาะสำหรับงานที่ต้องการความรู้เชิงลึกทางวิศวกรรม งานตรวจสอบมาตรฐานที่ซับซ้อน และงานที่ต้องอาศัยความแม่นยำสูง',
@@ -812,16 +844,57 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     innovation: 'เหมาะสำหรับงานวางแผนเชิงรุก งานบำรุงรักษาเชิงป้องกัน (PM) และการริเริ่มนำระบบดิจิทัลมาปรับปรุงกระบวนการ'
   };
 
-  const topKey = sortedOuter[0].key;
-  const bestFitAssignment = bestFitTaskMap[topKey] || 'เหมาะสำหรับงานปฏิบัติการทั่วไปตามที่ได้รับมอบหมาย';
+  let bestFitAssignment;
+  if (sortedOuter[0].val <= 2 || performanceDna.tag === 'Needs PIP') {
+    bestFitAssignment = 'เน้นการฝึกอบรมทักษะพื้นฐานในศูนย์การเรียนรู้ ปฏิบัติงานร่วมกับหัวหน้างานอย่างใกล้ชิด และยังไม่ควรปล่อยให้รับเคสเดี่ยว';
+  } else if (sortedOuter[0].val <= 4 || performanceDna.tag === 'Needs Mentoring') {
+    if (sortedOuter[0].key === 'tech' || sortedOuter[0].key === 'sla') {
+      bestFitAssignment = 'เหมาะสำหรับงานสนับสนุนช่างพี่เลี้ยง งานตรวจเช็กตามรอบบำรุงรักษาเชิงป้องกัน (PM) และงานซ่อมบำรุงพื้นฐานที่ไม่ซับซ้อน';
+    } else if (sortedOuter[0].key === 'cx') {
+      bestFitAssignment = 'เหมาะสำหรับงานต้อนรับและประสานงานเบื้องต้น รับฟังความต้องการลูกบ้าน และส่งต่องานซ่อมให้ทีมช่าง';
+    } else {
+      bestFitAssignment = 'เหมาะสำหรับงานช่วยจัดเตรียมเครื่องมือ อุปกรณ์ และสนับสนุนงานปฏิบัติการภาคสนามตามคำสั่งหัวหน้างาน';
+    }
+  } else if (avgOuter <= 4.5 || sortedOuter[5].val <= 2) {
+    const strongPillar = sortedOuter[0].thai;
+    const weakPillar = sortedOuter[5].thai;
+    bestFitAssignment = `เหมาะสำหรับงานที่เน้น ${strongPillar} เป็นหลัก โดยควรมีทีมงานช่วยดูแลและตรวจสอบในด้าน ${weakPillar} เพื่อลดความผิดพลาดหน้างาน`;
+  } else if (dnaBestFitMap[pairKey]) {
+    bestFitAssignment = dnaBestFitMap[pairKey];
+  } else {
+    const topKey = sortedOuter[0].key;
+    bestFitAssignment = bestFitTaskMap[topKey] || 'เหมาะสำหรับงานปฏิบัติการทั่วไปตามที่ได้รับมอบหมาย';
+  }
 
   let pairingRecommendation = 'สามารถปฏิบัติหน้าที่เดี่ยวหรือนำทีมงานปฏิบัติการได้อย่างมั่นใจ';
-  if (actualValues.cx <= 4 && actualValues.tech >= 6) {
+  const lowestAxis = sortedOuter[sortedOuter.length - 1];
+
+  if (sortedOuter[0].val <= 2 || performanceDna.tag === 'Needs PIP') {
+    pairingRecommendation = 'ต้องจัดหัวหน้างานหรือช่างระดับ Specialist ประกบ 1:1 ห้ามปล่อยให้ปฏิบัติงานเดี่ยว';
+  } else if (sortedOuter[0].val <= 4 || performanceDna.tag === 'Needs Mentoring') {
+    pairingRecommendation = 'ควรจับคู่กับช่างเทคนิคอาวุโส (Senior Technician) เป็นพี่เลี้ยงคอยให้คำแนะนำหน้างานอย่างใกล้ชิด';
+  } else if (actualValues.cx <= 4 && actualValues.tech >= 6) {
     pairingRecommendation = 'ควรจับคู่กับผู้ที่มีคะแนน CX สูง เพื่อช่วยสื่อสารและสร้างสัมพันธ์กับลูกบ้านขณะเข้าซ่อม';
   } else if (actualValues.tech <= 4 && actualValues.cx >= 6) {
     pairingRecommendation = 'ควรจับคู่กับช่างเทคนิคอาวุโส เพื่อเรียนรู้วิธีการวินิจฉัยอาการเสียจริงหน้างาน';
-  } else if (actualValues.sla <= 4) {
-    pairingRecommendation = 'ควรให้หัวหน้างานช่วยจัดลำดับความสำคัญของคิวงานในตอนเช้า (Morning Toolbox Talk)';
+  } else if (lowestAxis.val <= 4) {
+    if (lowestAxis.key === 'tech') {
+      pairingRecommendation = 'ควรจับคู่กับช่างผู้เชี่ยวชาญเชิงเทคนิค (Technical Specialist) เพื่อช่วยวินิจฉัยและตรวจรับงาน ป้องกันเคสซ่อมซ้ำ';
+    } else if (lowestAxis.key === 'cx') {
+      pairingRecommendation = 'ควรจับคู่กับทีมงานที่มีทักษะ CX สูง เพื่อเป็นตัวแทนสื่อสาร อธิบายขั้นตอนงาน และสร้างความสัมพันธ์เชิงบวกกับลูกบ้าน';
+    } else if (lowestAxis.key === 'resource') {
+      pairingRecommendation = 'ควรให้หัวหน้างานหรือผู้จัดการโครงการช่วยตรวจสอบการเบิกจ่ายอะไหล่ และร่วมตรวจรับมอบงานผู้รับเหมาอย่างรัดกุม';
+    } else if (lowestAxis.key === 'sla') {
+      pairingRecommendation = 'ควรจับคู่กับทีมงานที่มีความคล่องตัวสูง (Agile Driver) และร่วม Morning Toolbox Talk เพื่อจัดลำดับความสำคัญของคิวงาน';
+    } else if (lowestAxis.key === 'crisis') {
+      pairingRecommendation = 'ควรหลีกเลี่ยงการส่งออกรับเหตุฉุกเฉินเดี่ยว และจับคู่กับหน่วยตอบโต้เหตุฉุกเฉิน (Rapid Responder)';
+    } else if (lowestAxis.key === 'innovation') {
+      pairingRecommendation = 'ควรมีพี่เลี้ยงช่วยแนะนำการใช้ระบบดิจิทัล (Taskflow) และร่วมวางแผนงานบำรุงรักษาเชิงป้องกัน (PM)';
+    }
+  } else if (sortedOuter[0].val >= 7) {
+    pairingRecommendation = 'มีสมรรถนะโดดเด่น สามารถปฏิบัติหน้าที่เดี่ยวได้อย่างมั่นใจ หรือทำหน้าที่เป็นพี่เลี้ยง (Mentor) ถ่ายทอดทักษะให้ทีมงาน';
+  } else {
+    pairingRecommendation = 'ผลงานอยู่ในเกณฑ์มาตรฐาน สามารถปฏิบัติหน้าที่เดี่ยวได้ และหมุนเวียนจับคู่เพื่อเสริมทักษะข้ามสายงาน (Cross-functional)';
   }
 
   return {
