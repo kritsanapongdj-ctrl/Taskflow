@@ -1,0 +1,17 @@
+# Scratch and test files
+scratch/
+*.test.js
+*.spec.js
+
+# Data files and spreadsheets
+*.csv
+
+# Documentation and temporary notes
+*.md
+!README.md
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

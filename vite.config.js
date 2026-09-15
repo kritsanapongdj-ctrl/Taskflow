@@ -12,7 +12,9 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             if (id.includes('firebase')) return 'vendor-firebase';
             if (id.includes('xlsx')) return 'vendor-xlsx';
-            if (id.includes('recharts') || id.includes('lucide-react') || id.includes('react-easy-crop')) return 'vendor-ui';
+            if (id.includes('recharts')) return 'vendor-recharts';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (id.includes('react-easy-crop')) return 'vendor-crop';
             if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
             return 'vendor';
           }

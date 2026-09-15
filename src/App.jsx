@@ -93,6 +93,7 @@ const getTStr = () => new Date().toISOString().split('T')[0];
 const getMStr = () => getTStr().slice(0, 7);
 const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const extM = (v) => v ? String(v).slice(0, 7) : '';
 const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m = String(timeStr).match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : "17:30"; };
 const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Array.from(new Set(data.flatMap(Object.keys))); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
 
@@ -211,6 +212,41 @@ export default function App() {
     return () => { unsubTasks(); unsubInfs(); unsubSets(); };
   }, [user]);
 
+  const chkOvdTimeAware = (t, rD = getTStr()) => { 
+    if (!t.endDate || t.status === 'ยกเลิก') return false; 
+    if (t.status?.startsWith('จบงาน')) return (t.completedDate || '') > t.endDate; 
+    if (rD > t.endDate) return true;
+    if (rD === t.endDate) {
+      const now = new Date(), cH = now.getHours(), cM = now.getMinutes();
+      const tP = (sets.overdueTime || "17:30").split(":");
+      const tH = parseInt(tP[0] || 17), tM = parseInt(tP[1] || 30);
+      if (cH > tH || (cH === tH && cM >= tM)) return true;
+    }
+    return false; 
+  };
+
+  const isTaskOvd = (t, checkDate = getTStr()) => {
+    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
+    if (!t.status?.startsWith('จบงาน') && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
+    return false;
+  };
+
+  const saveD = async (t, d) => {
+    if (!user) return;
+    try {
+      if (t === 'task') await setDoc(getDocRef('Tasks', d.id), d);
+      else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
+      else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
+      
+      fetch(API_URL, { 
+        method: "POST", mode: "no-cors", 
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+        body: JSON.stringify({ type: t, data: d }) 
+      }).catch(()=>{});
+
+    } catch (e) { console.error("Error saving data:", e); }
+  };
+
   useEffect(() => {
     if (!user || tasks.length === 0) return;
     const today = getTStr();
@@ -267,22 +303,6 @@ export default function App() {
       updates.forEach(u => saveD('task', u));
     }
   }, [tasks, user]);
-
-  const saveD = async (t, d) => {
-    if (!user) return;
-    try {
-      if (t === 'task') await setDoc(getDocRef('Tasks', d.id), d);
-      else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
-      else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
-      
-      fetch(API_URL, { 
-        method: "POST", mode: "no-cors", 
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-        body: JSON.stringify({ type: t, data: d }) 
-      }).catch(()=>{});
-
-    } catch (e) { console.error("Error saving data:", e); }
-  };
 
   const getProjName = (str) => str ? String(str).split('|')[0] : '';
   const getProjArea = (str) => str ? String(str).split('|')[1] || '' : '';
@@ -373,25 +393,6 @@ export default function App() {
     setLoading(false);
   };
 
-  const chkOvdTimeAware = (t, rD = getTStr()) => { 
-    if (!t.endDate || t.status === 'ยกเลิก') return false; 
-    if (t.status?.startsWith('จบงาน')) return (t.completedDate || '') > t.endDate; 
-    if (rD > t.endDate) return true;
-    if (rD === t.endDate) {
-      const now = new Date(), cH = now.getHours(), cM = now.getMinutes();
-      const tP = (sets.overdueTime || "17:30").split(":");
-      const tH = parseInt(tP[0] || 17), tM = parseInt(tP[1] || 30);
-      if (cH > tH || (cH === tH && cM >= tM)) return true;
-    }
-    return false; 
-  };
-
-  const isTaskOvd = (t, checkDate = getTStr()) => {
-    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
-    if (!t.status?.startsWith('จบงาน') && t.status !== 'ยกเลิก') return chkOvdTimeAware(t, checkDate);
-    return false;
-  };
-
   const handleClearData = async () => {
     const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมดใน Firebase:');
     if (confirmCode !== '1312') return;
@@ -412,7 +413,7 @@ export default function App() {
 
   const testEmailSystem = () => { window.open(`${API_URL}?action=testEmail`, '_blank'); };
   const forceScanRealTasks = () => { if(!window.confirm('ระบบจะสั่งให้หลังบ้านกวาดตรวจงานที่เกินกำหนดทั้งหมดและยิงอีเมลแจ้งเตือน "ของจริง" ทันที ยืนยันหรือไม่?')) return; fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'forceCheckAlerts', data: {} }) }).catch(()=>{}); alert('ส่งคำสั่งตรวจสอบไปยังระบบเรียบร้อยแล้ว โปรดรอประมาณ 10-30 วินาที และเปิดหน้า Google Sheets แถบ "SystemLogs" เพื่อดูผลการสแกนครับ'); };
-  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) {} finally { setLoading(false); } };
+  const installTrigger = async () => { setLoading(true); try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ type: 'setupTrigger', data: {} }) }); alert('ติดตั้งระบบแจ้งเตือนอัตโนมัติเรียบร้อย'); } catch(e) { console.error('Install trigger error:', e); } finally { setLoading(false); } };
 
   const openTaskModal = (task = null) => {
     try {
@@ -508,15 +509,14 @@ export default function App() {
   };
 
   const cfSt = () => {
+    let cleanWo = '';
     if (sMod.type === 'complete') {
       if (sMod.isOverdue && !sMod.overdueReason.trim()) return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
-      let cleanWo = '';
       if (!sMod.noWO) {
         const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/;
-        cleanWo = sMod.workOrderNo.trim().toUpperCase();
+        cleanWo = (sMod.workOrderNo || '').trim().toUpperCase();
         if (!woRegex.test(cleanWo)) return alert('รูปแบบเลขที่ใบงานไม่ถูกต้อง!\nต้องเป็น: อักษร 2 ตัว - เลข 3 ตัว - เลข 7 ตัว\nตัวอย่าง: LH-123-1234567');
       }
-      sMod.workOrderNo = cleanWo;
     }
     
     const t = tasks.find(x => x.id === sMod.taskId);
@@ -584,7 +584,7 @@ export default function App() {
                 }
             } else {
                 nT.status = 'จบงาน'; 
-                nT.workOrderNo = sMod.workOrderNo; 
+                nT.workOrderNo = cleanWo; 
                 
                 if (t.status === 'จบงาน(รอใบงาน)') {
                     const cDate = new Date(t.completedDate).getTime();
@@ -654,40 +654,6 @@ export default function App() {
     }
   }, [sets.emails]);
 
-  const addEmailMappingV2 = () => {
-    const em = emForm.email.trim().toLowerCase();
-    if (!em || !em.includes('@')) return alert('กรุณากรอกอีเมลให้ถูกต้อง');
-    if (emForm.selectedProjs.length === 0) return alert('กรุณาเลือกโครงการอย่างน้อย 1 โครงการ');
-    
-    let nEms = [...(sets.emails||[])];
-    const idx = nEms.findIndex(x => x.toLowerCase().startsWith(em + '|'));
-    
-    let existingProjs = [];
-    if (idx > -1) {
-       const oldParts = nEms[idx].split('|');
-       existingProjs = oldParts[1] ? oldParts[1].split(',') : [];
-    }
-
-    const allProjs = Array.from(new Set([...existingProjs, ...emForm.selectedProjs]));
-    const projsStr = allProjs.join(',');
-    
-    let staffName = emForm.name.trim();
-    if (!staffName && idx > -1) {
-        staffName = nEms[idx].split('|')[2] || '';
-    }
-    if (!staffName) staffName = em.split('@')[0];
-    
-    const fullStr = `${em}|${projsStr}|${staffName}`;
-
-    if (idx > -1) { nEms[idx] = fullStr; } 
-    else { nEms.push(fullStr); }
-    
-    setSets({...sets, emails: nEms}); saveD('settings', {...sets, emails: nEms}); 
-    setEmForm({ name: '', email: '', selectedProjs: [] });
-  };
-
-  const rmEmailProj = (emStr, pRm) => { const parts = emStr.split('|'), em = parts[0], name = parts[2] || ''; let projs = parts[1].split(',').filter(x => x !== pRm); let nEms = (sets.emails||[]).filter(x => x !== emStr); if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}${name ? '|'+name : ''}`); saveD('settings', {...sets, emails: nEms}); };
-  
   const subInf = (e) => { 
       e.preventDefault(); 
       if (!informForm.requesterName) return alert('กรุณาระบุชื่อผู้แจ้ง');

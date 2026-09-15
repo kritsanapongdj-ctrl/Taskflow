@@ -213,30 +213,30 @@ export default function TeamStatusTab({
       }
 
       let archetypeKey = 'novice';
-        let identityText = '-';
-        let bottomDescText = <>{styleDesc}</>;
+      let identityText;
+      let bottomDescText;
   
-        if (maxStat <= 5) {
-           if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-              archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-           }
-        } else {
-           if (validStats.length >= 2) {
-              if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-                 archetypeKey = 'all_rounder';
-              } else {
-                 archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
-              }
-           } else {
-              archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-           }
-        }
-        
-        const archObj = archetypesData.find(a => a.key === archetypeKey);
-        if (archObj && validStats.length >= 2) {
-            let dynamicWeakness = "";
-            let weaknessLabel = "จุดอ่อน:";
-            let weaknessColor = "text-rose-400";
+      if (maxStat <= 5) {
+         if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
+            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
+         }
+      } else {
+         if (validStats.length >= 2) {
+            if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
+               archetypeKey = 'all_rounder';
+            } else {
+               archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
+            }
+         } else {
+            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
+         }
+      }
+      
+      const archObj = archetypesData.find(a => a.key === archetypeKey);
+      if (archObj && validStats.length >= 2) {
+          let dynamicWeakness;
+          let weaknessLabel;
+          let weaknessColor;
             const lowestStatValue = sortedStats[5][1];
             const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
             

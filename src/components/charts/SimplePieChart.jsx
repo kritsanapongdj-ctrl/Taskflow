@@ -7,33 +7,33 @@ import {
   Tooltip as RechartsTooltip
 } from 'recharts';
 
+// Custom Glassmorphic Tooltip matching LH-TaskFlow theme
+const CustomTooltip = ({ active, payload, total }) => {
+  if (active && payload && payload.length) {
+    const item = payload[0];
+    const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
+    return (
+      <div className="bg-[#0f2e4a]/95 backdrop-blur-md border border-[#bca374]/50 shadow-xl rounded-xl px-3.5 py-2 text-white text-xs z-50 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="w-2.5 h-2.5 rounded-full shadow-sm"
+            style={{ backgroundColor: item.payload.color || item.fill }}
+          />
+          <span className="font-bold text-slate-200">{item.name}</span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-base font-black text-[#bca374]">{item.value}</span>
+          <span className="text-[10px] text-slate-400">({pct}%)</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function SimplePieChart({ data = [], title }) {
   const total = data.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   const validData = data.filter((item) => Number(item.value) > 0);
-
-  // Custom Glassmorphic Tooltip matching LH-TaskFlow theme
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const item = payload[0];
-      const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
-      return (
-        <div className="bg-[#0f2e4a]/95 backdrop-blur-md border border-[#bca374]/50 shadow-xl rounded-xl px-3.5 py-2 text-white text-xs z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className="w-2.5 h-2.5 rounded-full shadow-sm"
-              style={{ backgroundColor: item.payload.color || item.fill }}
-            />
-            <span className="font-bold text-slate-200">{item.name}</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-black text-[#bca374]">{item.value}</span>
-            <span className="text-[10px] text-slate-400">({pct}%)</span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="flex flex-col items-center w-full select-none">
@@ -54,7 +54,7 @@ export default function SimplePieChart({ data = [], title }) {
           <>
             <ResponsiveContainer width="100%" height={220} minWidth={200} minHeight={220}>
               <PieChart>
-                <RechartsTooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip total={total} />} />
                 <Pie
                   data={validData}
                   dataKey="value"
