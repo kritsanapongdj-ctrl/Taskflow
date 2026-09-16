@@ -168,7 +168,7 @@ export default function StaffAssessmentReportModal({
           className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none"
           aria-hidden="true"
         >
-          <div className="w-[380px] h-[380px] text-slate-400 opacity-[0.045] transform -rotate-12">
+          <div className="w-[640px] h-[640px] max-w-none text-slate-500 opacity-[0.08] transform -rotate-12 pointer-events-none select-none">
             <ClassEmblem archetypeKey={archetypeKey} size="100%" />
           </div>
         </div>
@@ -209,44 +209,44 @@ export default function StaffAssessmentReportModal({
           <div className="col-span-5 flex flex-col gap-2.5">
             
             {/* Box 1: Employee Hero Card */}
-            <div className="p-2.5 rounded-xl border border-[#bca374]/40 bg-gradient-to-br from-slate-50 via-white to-[#bca374]/10 shadow-xs relative overflow-hidden">
+            <div className="p-3 rounded-xl border border-[#bca374]/40 bg-gradient-to-br from-slate-50/95 via-white/95 to-[#bca374]/15 shadow-xs relative overflow-hidden">
               {/* Large Faint Gray Class Emblem Watermark inside Hero Card */}
               <div 
-                className="absolute -right-3 -bottom-5 w-32 h-32 text-slate-400 opacity-[0.14] pointer-events-none select-none z-0"
+                className="absolute -right-4 -bottom-6 w-40 h-40 text-slate-400 opacity-[0.16] pointer-events-none select-none z-0"
                 aria-hidden="true"
               >
                 <ClassEmblem archetypeKey={archetypeKey} size="100%" />
               </div>
 
-              <div className="flex items-center gap-3 relative z-10">
+              <div className="flex items-center gap-3.5 relative z-10">
                 <div className="relative shrink-0">
                   {staff.image ? (
                     <img
                       src={staff.image}
                       alt={staff.name}
-                      className="w-14 h-14 rounded-xl object-cover border-2 border-[#bca374] shadow-xs"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-[#bca374] shadow-sm"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-xl bg-[#0f2e4a] text-[#e6d0a7] border-2 border-[#bca374] flex items-center justify-center font-black text-lg shadow-xs">
+                    <div className="w-20 h-20 rounded-2xl bg-[#0f2e4a] text-[#e6d0a7] border-2 border-[#bca374] flex items-center justify-center font-black text-2xl shadow-sm">
                       {(staff.name || 'TH').substring(0, 2)}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0f2e4a] border border-[#bca374] flex items-center justify-center text-white shadow-xs">
-                    <ClassEmblem archetypeKey={archetypeKey} size="12" />
+                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#0f2e4a] border border-[#bca374] flex items-center justify-center text-white shadow-xs">
+                    <ClassEmblem archetypeKey={archetypeKey} size="14" />
                   </div>
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <span className="text-[9px] font-bold text-[#bca374] tracking-wider uppercase block truncate">
+                  <span className="text-[9.5px] font-bold text-[#bca374] tracking-wider uppercase block truncate">
                     {role?.name || 'ช่างเทคนิคปฏิบัติการ'}
                   </span>
-                  <h2 className="text-sm font-black text-[#0f2e4a] truncate leading-tight">
+                  <h2 className="text-base font-black text-[#0f2e4a] truncate leading-tight mt-0.5">
                     {staff.name}
                   </h2>
-                  <div className="text-[10px] font-black text-indigo-900 mt-0.5 leading-tight truncate">
+                  <div className="text-[10.5px] font-black text-indigo-900 mt-0.5 leading-tight truncate">
                     {enTitle}
                   </div>
-                  <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-900 border border-amber-200 mt-0.5">
+                  <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-900 border border-amber-200 mt-1">
                     {identityText}
                   </span>
                 </div>
@@ -260,7 +260,7 @@ export default function StaffAssessmentReportModal({
             </div>
 
             {/* Box 2: The Inner Potential (Radar & Stat Bars) */}
-            <div className="p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs flex flex-col gap-2">
+            <div className="p-2.5 rounded-xl border border-slate-200 bg-white/92 shadow-xs flex flex-col gap-2 backdrop-blur-xs">
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-100">
                 <div className="flex items-center gap-1 text-[#0f2e4a] font-bold text-[11px]">
                   <Icon name="shield" size={13} className="text-[#bca374]" />
@@ -319,7 +319,7 @@ export default function StaffAssessmentReportModal({
           <div className="col-span-7 flex flex-col gap-2.5">
             
             {/* Box 3: The Outer Layer Performance */}
-            <div className="p-2.5 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-slate-50 shadow-xs flex flex-col gap-1.5">
+            <div className="p-2.5 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white/92 to-slate-50/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
               <div className="flex justify-between items-center pb-1.5 border-b border-indigo-100/70">
                 <div className="flex items-center gap-1 text-[#0f2e4a] font-bold text-[11px]">
                   <Icon name="layers" size={13} className="text-indigo-600" />
@@ -374,7 +374,7 @@ export default function StaffAssessmentReportModal({
             </div>
 
             {/* Box 4: HOW vs WHAT Gap & 9-Box Grid */}
-            <div className="p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs flex flex-col gap-1.5">
+            <div className="p-2.5 rounded-xl border border-slate-200 bg-white/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
               <div className="flex justify-between items-center text-[9.5px] pb-1 border-b border-slate-100">
                 <span className="font-bold text-slate-700">
                   ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong>
@@ -420,7 +420,7 @@ export default function StaffAssessmentReportModal({
             )}
 
             {/* Box 6: Operational Assignment & Strategic Pairing (Tight, Compact Layout) */}
-            <div className="p-2.5 rounded-xl border border-[#bca374]/30 bg-gradient-to-br from-amber-50/20 via-white to-slate-50 shadow-xs flex flex-col gap-1.5">
+            <div className="p-2.5 rounded-xl border border-[#bca374]/30 bg-gradient-to-br from-amber-50/30 via-white/92 to-slate-50/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
               <div className="text-[10px] font-bold text-[#0f2e4a] flex items-center gap-1 pb-1 border-b border-slate-100">
                 <Icon name="compass" size={13} className="text-[#bca374]" />
                 <span>การมอบหมายภารกิจและการบริหารทีม (RPG Quest & Synergy)</span>
