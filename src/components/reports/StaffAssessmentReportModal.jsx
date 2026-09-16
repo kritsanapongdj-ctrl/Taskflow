@@ -42,7 +42,10 @@ export default function StaffAssessmentReportModal({
   const archAnalysis = analyzeArchetype(staff, sets, archetypesData) || {};
   const archetypeKey = archAnalysis.archetypeKey || 'novice';
   const enTitle = archAnalysis.mainStyle || 'Specialist';
-  const identityText = staff.potentialIdentity || getArchetypeIdentity(statsObj, archetypesData);
+  const rawIdentity = staff.potentialIdentity || getArchetypeIdentity(statsObj, archetypesData);
+  const identityBadgeText = (rawIdentity && rawIdentity !== enTitle)
+    ? rawIdentity
+    : (archAnalysis.archObj?.identity || rawIdentity);
   const styleDesc = archAnalysis.styleDesc || '';
   const weaknessText = archAnalysis.dynamicWeakness || '';
 
@@ -101,7 +104,7 @@ export default function StaffAssessmentReportModal({
           #print-staff-sheet {
             display: block !important;
             visibility: visible !important;
-            position: static !important;
+            position: relative !important;
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 auto !important;
@@ -163,12 +166,12 @@ export default function StaffAssessmentReportModal({
         ref={reportRef}
         className="w-full max-w-[210mm] bg-white text-slate-800 shadow-2xl rounded-xl p-5 sm:p-6 border border-slate-200 flex flex-col gap-2.5 select-text relative overflow-hidden"
       >
-        {/* Background Watermark: Large Faint Gray Class Emblem for the entire sheet */}
+        {/* Background Watermark: Class Emblem approx 50% of A4 Paper, Soft Faint Gray Shadow */}
         <div 
           className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none"
           aria-hidden="true"
         >
-          <div className="w-[640px] h-[640px] max-w-none text-slate-500 opacity-[0.08] transform -rotate-12 pointer-events-none select-none">
+          <div className="w-[105mm] h-[105mm] max-w-[50%] aspect-square text-slate-400 opacity-[0.08] pointer-events-none select-none flex items-center justify-center">
             <ClassEmblem archetypeKey={archetypeKey} size="100%" />
           </div>
         </div>
@@ -212,7 +215,7 @@ export default function StaffAssessmentReportModal({
             <div className="p-3 rounded-xl border border-[#bca374]/40 bg-gradient-to-br from-slate-50/95 via-white/95 to-[#bca374]/15 shadow-xs relative overflow-hidden">
               {/* Large Faint Gray Class Emblem Watermark inside Hero Card */}
               <div 
-                className="absolute -right-4 -bottom-6 w-40 h-40 text-slate-400 opacity-[0.16] pointer-events-none select-none z-0"
+                className="absolute -right-4 -bottom-6 w-36 h-36 text-slate-400 opacity-[0.14] pointer-events-none select-none z-0"
                 aria-hidden="true"
               >
                 <ClassEmblem archetypeKey={archetypeKey} size="100%" />
@@ -224,36 +227,38 @@ export default function StaffAssessmentReportModal({
                     <img
                       src={staff.image}
                       alt={staff.name}
-                      className="w-20 h-20 rounded-2xl object-cover border-2 border-[#bca374] shadow-sm"
+                      className="w-[115px] h-[130px] rounded-2xl object-cover border-2 border-[#bca374] shadow-md"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-[#0f2e4a] text-[#e6d0a7] border-2 border-[#bca374] flex items-center justify-center font-black text-2xl shadow-sm">
+                    <div className="w-[115px] h-[130px] rounded-2xl bg-gradient-to-br from-[#0f2e4a] to-[#1e3a5f] text-[#e6d0a7] border-2 border-[#bca374] flex items-center justify-center font-black text-3xl shadow-md">
                       {(staff.name || 'TH').substring(0, 2)}
                     </div>
                   )}
-                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#0f2e4a] border border-[#bca374] flex items-center justify-center text-white shadow-xs">
-                    <ClassEmblem archetypeKey={archetypeKey} size="14" />
+                  <div className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-[#0f2e4a] border-2 border-[#bca374] flex items-center justify-center text-white shadow-md">
+                    <ClassEmblem archetypeKey={archetypeKey} size="16" />
                   </div>
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <span className="text-[9.5px] font-bold text-[#bca374] tracking-wider uppercase block truncate">
+                  <span className="text-[10px] font-bold text-[#bca374] tracking-wider uppercase block truncate">
                     {role?.name || 'ช่างเทคนิคปฏิบัติการ'}
                   </span>
-                  <h2 className="text-base font-black text-[#0f2e4a] truncate leading-tight mt-0.5">
+                  <h2 className="text-[15px] font-black text-[#0f2e4a] leading-tight mt-0.5 break-words">
                     {staff.name}
                   </h2>
-                  <div className="text-[10.5px] font-black text-indigo-900 mt-0.5 leading-tight truncate">
+                  <div className="text-[10.5px] font-black text-indigo-900 mt-1 leading-tight break-words">
                     {enTitle}
                   </div>
-                  <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-900 border border-amber-200 mt-1">
-                    {identityText}
-                  </span>
+                  {identityBadgeText && (
+                    <span className="inline-block text-[8.5px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 mt-1.5 leading-tight break-words">
+                      {identityBadgeText}
+                    </span>
+                  )}
                 </div>
               </div>
 
               {styleDesc && (
-                <p className="text-[8.5px] text-slate-600 font-light italic mt-2 pt-1.5 border-t border-slate-100 leading-snug relative z-10">
+                <p className="text-[8.5px] text-slate-600 font-light italic mt-2.5 pt-2 border-t border-slate-200/70 leading-snug relative z-10">
                   "{styleDesc}"
                 </p>
               )}
