@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import ClassEmblem from '../ClassEmblem';
 import AssessmentModal from '../AssessmentModal';
 import RadarChart from '../components/charts/RadarChart';
+import StaffAssessmentReportModal from '../components/reports/StaffAssessmentReportModal';
 import archetypesData from '../data/archetypes.json';
 import { 
   getArchetypeIdentity, 
@@ -40,6 +41,7 @@ export default function TeamStatusTab({
   const [assessMode, setAssessMode] = useState(false);
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
   const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
+  const [staffReportModalOpen, setStaffReportModalOpen] = useState(false);
     if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
 
     const sList = sets.staffStats || [];
@@ -334,6 +336,14 @@ export default function TeamStatusTab({
 
            <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
               <div className="absolute top-4 right-4 z-20 flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setStaffReportModalOpen(true)} 
+                    title="พิมพ์ / ส่งออกรายงานประเมินรายบุคคล (Character Sheet A4)" 
+                    className="bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/30 text-sky-200 hover:text-white p-2 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center"
+                  >
+                    <Icon name="printer" size={18} />
+                  </button>
                   <button 
                     type="button" 
                     onClick={() => setCinematicViewMode(cinematicViewMode === 'spider' ? 'avatar' : 'spider')} 
@@ -999,6 +1009,16 @@ export default function TeamStatusTab({
 
                       <div className="flex gap-2 pt-4">
                         <button type="button" onClick={saveTeam} className="flex-1 bg-[#0f2e4a] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#1a3f63] flex justify-center items-center"><Icon name="save" size={16} className="mr-2"/> บันทึกข้อมูล</button>
+                        {teamForm.id && !selTeam?.isNew && (
+                          <button 
+                            type="button" 
+                            onClick={() => setStaffReportModalOpen(true)} 
+                            title="พิมพ์ / ส่งออกรายงานประเมินรายบุคคล (Character Sheet A4)" 
+                            className="bg-sky-50 hover:bg-sky-100 text-sky-700 px-3 py-2.5 rounded-lg font-bold border border-sky-200 flex items-center shadow-xs transition"
+                          >
+                            <Icon name="printer" size={16} className="mr-1.5" /> รายงาน A4
+                          </button>
+                        )}
                         {teamForm.id && !selTeam?.isNew && <button type="button" onClick={()=>{setTeamEditMode(false); setTeamForm({...selTeam});}} className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg font-bold hover:bg-slate-200">ยกเลิก</button>}
                         {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); const newSets = {...sets, staffStats: ns}; setSets(newSets); saveD('settings', newSets); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
                       </div>
@@ -1097,6 +1117,13 @@ export default function TeamStatusTab({
             </div>
           ))}
         </div>
+        <StaffAssessmentReportModal 
+          isOpen={staffReportModalOpen} 
+          onClose={() => setStaffReportModalOpen(false)} 
+          staff={teamForm?.id ? teamForm : selTeam} 
+          sets={sets} 
+          Icon={Icon} 
+        />
       </div>
     );
   };
