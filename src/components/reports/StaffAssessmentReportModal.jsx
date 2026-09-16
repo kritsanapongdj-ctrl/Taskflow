@@ -161,13 +161,23 @@ export default function StaffAssessmentReportModal({
       <div
         id="print-staff-sheet"
         ref={reportRef}
-        className="w-full max-w-[210mm] bg-white text-slate-800 shadow-2xl rounded-xl p-5 sm:p-6 border border-slate-200 flex flex-col gap-2.5 select-text"
+        className="w-full max-w-[210mm] bg-white text-slate-800 shadow-2xl rounded-xl p-5 sm:p-6 border border-slate-200 flex flex-col gap-2.5 select-text relative overflow-hidden"
       >
+        {/* Background Watermark: Large Faint Gray Class Emblem for the entire sheet */}
+        <div 
+          className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none"
+          aria-hidden="true"
+        >
+          <div className="w-[380px] h-[380px] text-slate-400 opacity-[0.045] transform -rotate-12">
+            <ClassEmblem archetypeKey={archetypeKey} size="100%" />
+          </div>
+        </div>
+
         {/* Top Gold Accent Stripe */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#0f2e4a] via-[#bca374] to-[#0f2e4a] rounded-t"></div>
 
         {/* 1. Header & Organization Branding */}
-        <div className="flex items-start justify-between pb-2 border-b border-slate-200">
+        <div className="flex items-start justify-between pb-2 border-b border-slate-200 relative z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[#0f2e4a] text-[#e6d0a7] flex items-center justify-center font-black text-base shadow-sm border border-[#bca374]">
               LH
@@ -193,14 +203,22 @@ export default function StaffAssessmentReportModal({
         </div>
 
         {/* 2. Main 2-Column Balanced Grid: Top-aligned, Natural Stacking */}
-        <div className="grid grid-cols-12 gap-3.5 items-start">
+        <div className="grid grid-cols-12 gap-3.5 items-start relative z-10">
           
           {/* LEFT COLUMN (5/12 Cols): Profile & Inner Potential (HOW) */}
           <div className="col-span-5 flex flex-col gap-2.5">
             
             {/* Box 1: Employee Hero Card */}
-            <div className="p-2.5 rounded-xl border border-[#bca374]/40 bg-gradient-to-br from-slate-50 via-white to-[#bca374]/10 shadow-xs">
-              <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl border border-[#bca374]/40 bg-gradient-to-br from-slate-50 via-white to-[#bca374]/10 shadow-xs relative overflow-hidden">
+              {/* Large Faint Gray Class Emblem Watermark inside Hero Card */}
+              <div 
+                className="absolute -right-3 -bottom-5 w-32 h-32 text-slate-400 opacity-[0.14] pointer-events-none select-none z-0"
+                aria-hidden="true"
+              >
+                <ClassEmblem archetypeKey={archetypeKey} size="100%" />
+              </div>
+
+              <div className="flex items-center gap-3 relative z-10">
                 <div className="relative shrink-0">
                   {staff.image ? (
                     <img
@@ -235,7 +253,7 @@ export default function StaffAssessmentReportModal({
               </div>
 
               {styleDesc && (
-                <p className="text-[8.5px] text-slate-600 font-light italic mt-2 pt-1.5 border-t border-slate-100 leading-snug">
+                <p className="text-[8.5px] text-slate-600 font-light italic mt-2 pt-1.5 border-t border-slate-100 leading-snug relative z-10">
                   "{styleDesc}"
                 </p>
               )}
@@ -433,7 +451,7 @@ export default function StaffAssessmentReportModal({
         </div>
 
         {/* 3. Footer & Official 2-Party Sign-off Section */}
-        <div className="pt-2 border-t border-slate-200 mt-1 flex flex-col gap-1.5">
+        <div className="pt-2 border-t border-slate-200 mt-1 flex flex-col gap-1.5 relative z-10">
           <div className="grid grid-cols-2 gap-6 text-[8.5px] text-slate-700">
             <div className="border border-dashed border-slate-300 rounded-lg p-2 text-center">
               <span className="font-bold text-slate-500 block mb-2.5">ผู้รับการประเมิน (พนักงาน)</span>
