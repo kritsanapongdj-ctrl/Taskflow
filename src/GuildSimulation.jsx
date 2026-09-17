@@ -7,30 +7,139 @@ import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRad
 // BGM_URL ถูกนำออกชั่วคราวเพื่อลดขนาด Deployment Storage บน Vercel (เดิม 87MB)
 const BGM_URL = null;
 
-import { AgentPixelArt } from './AgentPixelArt';
 import ClassEmblem from './ClassEmblem';
 import archetypesData from './data/archetypes.json';
 
-const AgentWrapper = ({ type, x, y, action, flip, msg, title }) => {
+/* ─── CSS Living Motion (injected once) ─── */
+const AGENT_STYLES = `
+  @keyframes agentBreathe {
+    0%, 100% { transform: scaleY(1) translateY(0px); }
+    50%       { transform: scaleY(0.96) translateY(3px); }
+  }
+  @keyframes agentFloat {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-5px); }
+  }
+  @keyframes agentAlert {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    20%       { transform: translateY(-14px) scale(1.08); }
+    40%       { transform: translateY(-6px) scale(1.04); }
+    60%       { transform: translateY(-10px) scale(1.06); }
+    80%       { transform: translateY(-3px) scale(1.02); }
+  }
+  @keyframes agentWalk {
+    0%, 100% { transform: translateY(0px); }
+    25%       { transform: translateY(-4px); }
+    75%       { transform: translateY(-2px); }
+  }
+  @keyframes agentWork {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25%       { transform: rotate(-3deg) scale(1.02); }
+    75%       { transform: rotate(3deg) scale(1.02); }
+  }
+  @keyframes agentGlow {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(251,191,36,0.6)); }
+    50%       { filter: drop-shadow(0 0 14px rgba(251,191,36,1)); }
+  }
+  @keyframes agentAlertGlow {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(239,68,68,0.7)); }
+    50%       { filter: drop-shadow(0 0 20px rgba(239,68,68,1)); }
+  }
+  @keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`;
+if (typeof document !== 'undefined' && !document.getElementById('agent-png-styles')) {
+  const s = document.createElement('style');
+  s.id = 'agent-png-styles';
+  s.textContent = AGENT_STYLES;
+  document.head.appendChild(s);
+}
+
+/* ─── AgentPng: PNG img with CSS Living Motion ─── */
+const AGENT_SRCS = {
+  scout:     '/agent1.png',
+  wizard:    '/agent2.png',
+  watcher:   '/agent3.png',
+  evaluator: '/agent4.png',
+};
+
+const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
   const isWalking = action === 'walking';
   const isWorking = action === 'working';
-  
-  const currentFps = isWalking ? 6 : (isWorking ? 4 : 2);
+  const isAlert   = action === 'alert';
+
+  const getAnimation = () => {
+    if (isAlert)   return 'agentAlert 0.7s ease-in-out 3';
+    if (isWalking) return 'agentWalk 0.5s ease-in-out infinite';
+    if (isWorking) return 'agentWork 1.2s ease-in-out infinite';
+    return 'agentBreathe 3s ease-in-out infinite';
+  };
+
+  const getGlow = () => {
+    if (isAlert || isWorking) return 'agentAlertGlow 1s ease-in-out infinite';
+    return 'agentGlow 2.5s ease-in-out infinite';
+  };
+
+  const imgStyle = {
+    width: '72px',
+    height: 'auto',
+    imageRendering: 'pixelated',
+    transform: flip ? 'scaleX(-1)' : 'scaleX(1)',
+    animation: getAnimation(),
+    filter: isAlert ? 'drop-shadow(0 0 12px rgba(239,68,68,1))' : undefined,
+    transition: 'transform 0.3s ease',
+    cursor: onClick ? 'pointer' : 'default',
+  };
+
+  const glowStyle = {
+    animation: getGlow(),
+  };
 
   return (
-    <div 
-      className="absolute transition-all ease-linear flex flex-col items-center z-20" 
-      style={{ left: `${x}%`, top: `${y}%`, transitionDuration: isWalking ? '2000ms' : '500ms' }}
+    <div
+      className="absolute flex flex-col items-center z-20"
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        transitionDuration: isWalking ? '2200ms' : '600ms',
+        transition: 'left 2200ms ease-in-out, top 2200ms ease-in-out',
+      }}
+      onClick={onClick}
     >
-      <div className={`${isWorking && type === 'watcher' ? 'bg-red-900 border-red-500 animate-pulse' : 'bg-black/80 border-gray-600'} text-white text-[10px] px-2 py-1 rounded-md border mb-2 whitespace-nowrap shadow-lg absolute -top-12 z-30`}>
+      {/* Speech bubble */}
+      <div
+        key={msg}
+        className={`
+          ${isAlert || isWorking ? 'bg-red-900/95 border-red-500 text-red-100' : 'bg-black/85 border-amber-600/60 text-amber-100'}
+          text-[10px] px-2.5 py-1 rounded-lg border mb-1 whitespace-nowrap shadow-xl
+          backdrop-blur-sm pointer-events-none
+        `}
+        style={{ animation: 'msgFadeIn 0.3s ease-out', fontSize: '10px', letterSpacing: '0.02em' }}
+      >
         {msg}
       </div>
-      
-      <div className="bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded border border-gray-600 mb-1 z-30">
+
+      {/* Agent name tag */}
+      <div className="bg-black/75 text-amber-300 text-[9px] px-2 py-0.5 rounded border border-amber-700/50 mb-1.5 font-bold tracking-wide pointer-events-none">
         {title}
       </div>
-      
-      <AgentPixelArt type={type} flip={flip} fps={currentFps} scale={4} showGlow={true} />
+
+      {/* PNG sprite */}
+      <div style={glowStyle}>
+        <img
+          src={AGENT_SRCS[type] || '/agent1.png'}
+          alt={title}
+          style={imgStyle}
+          draggable={false}
+        />
+      </div>
+
+      {/* Hover ring */}
+      {onClick && (
+        <div className="absolute inset-0 rounded-full border-2 border-transparent hover:border-amber-400/50 transition-colors pointer-events-none" />
+      )}
     </div>
   );
 };
@@ -367,17 +476,36 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         )}
       </div>
 
-      <div className="flex-1 relative bg-[url('/tavern-bg.jpg')] bg-cover bg-center overflow-hidden">
-        <div className="absolute inset-0 bg-black/30 pointer-events-none z-0" />
-        <AgentWrapper type="scout" title="🕵️ Agent 1 (Scout)" {...a1} />
-        <AgentWrapper type="wizard" title="🧠 Agent 2 (Dispatcher)" {...a2} />
-        <AgentWrapper type="watcher" title="⏱️ Agent 3 (Watcher)" {...a3} />
-        <AgentWrapper type="evaluator" title="📊 Agent 4 (Evaluator)" {...a4} />
+      {/* ═══ Tavern Scene ═══ */}
+      <div className="flex-1 relative overflow-hidden">
 
-        {/* จุดกดซ่อนบอร์ดในฉากหลัง (ย้ายไปทับกระดานไม้ฝั่งซ้าย) */}
-        <div 
+        {/* Layer 0: Video background loop */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/tavern-bg.jpg"
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src="/tavern-loop.mp4" type="video/mp4" />
+          {/* Fallback: static jpg if video can't load */}
+          Your browser does not support the video tag.
+        </video>
+
+        {/* Layer 1: Translucent dark overlay for contrast */}
+        <div className="absolute inset-0 bg-black/25 pointer-events-none z-10" />
+
+        {/* Layer 2: Agent PNGs with CSS Living Motion */}
+        <AgentPng type="scout"     title="🕵️ Scout"      {...a1} />
+        <AgentPng type="wizard"    title="🧠 Dispatcher"  {...a2} />
+        <AgentPng type="watcher"   title="⏱️ Watcher"    {...a3} />
+        <AgentPng type="evaluator" title="📊 Evaluator"   {...a4} />
+
+        {/* Layer 3: Quest Board invisible hotspot (left side of tavern) */}
+        <div
           onClick={() => setShowQuestBoard(true)}
-          className="absolute z-20 cursor-pointer hover:bg-white/20 transition-colors border-2 border-transparent hover:border-amber-400/50 flex items-center justify-center group rounded-lg"
+          className="absolute z-20 cursor-pointer hover:bg-white/10 transition-colors border-2 border-transparent hover:border-amber-400/40 flex items-center justify-center group rounded-lg"
           style={{ left: '4%', top: '22%', width: '20%', height: '38%' }}
         >
           <div className="bg-black/90 text-amber-400 text-xs font-bold px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity border border-amber-600 pointer-events-none shadow-xl whitespace-nowrap">
