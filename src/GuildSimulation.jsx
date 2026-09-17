@@ -4,9 +4,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 
-// URL วิดีโอพื้นหลังจาก Firebase Storage หรือ CDN ภายนอก (ป้องกัน Vercel Storage เต็ม)
-// เมื่อได้ Download URL จาก Firebase Storage ให้นำมาวางแทน URL ด้านล่างนี้ได้เลย
-const TAVERN_VIDEO_URL = "https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT_ID.appspot.com/o/tavern-loop.mp4?alt=media"; 
+// URL วิดีโอพื้นหลังจาก Supabase Storage (ฟรี ไม่กิน Storage ของ Vercel)
+const TAVERN_VIDEO_URL = "https://jtimqkfefiuvptggbeiz.supabase.co/storage/v1/object/public/media/tavern-loop.mp4"; 
 const TAVERN_FALLBACK_IMG = "/tavern-bg.jpg";
 
 import ClassEmblem from './ClassEmblem';
@@ -84,8 +83,16 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
     return 'agentGlow 2.5s ease-in-out infinite';
   };
 
+  // ขนาดตัวละครตามสัดส่วนความลึก (Perspective Depth) ให้สมดุลกับคนในฉาก
+  const agentSizes = {
+    scout: '120px',      // ยืนใกล้โต๊ะซ้าย
+    wizard: '115px',     // ยืนแถวบาร์ด้านหลัง
+    watcher: '135px',    // ยืนโต๊ะกลาง
+    evaluator: '145px',  // ยืนโต๊ะหน้า
+  };
+
   const imgStyle = {
-    width: '72px',
+    width: agentSizes[type] || '130px',
     height: 'auto',
     imageRendering: 'pixelated',
     transform: flip ? 'scaleX(-1)' : 'scaleX(1)',
