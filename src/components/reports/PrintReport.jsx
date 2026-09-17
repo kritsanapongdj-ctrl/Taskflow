@@ -406,6 +406,11 @@ export default function PrintReport({
                       <strong>สาเหตุที่ช้า:</strong> {t.overdueReason}
                     </div>
                   )}
+                  {t.issueReason && (
+                    <div className="mt-1 p-1 bg-amber-50 text-amber-900 border border-amber-200 rounded text-[9px]">
+                      <strong>⚠️ ประวัติรออะไหล่:</strong> {t.issueReason}
+                    </div>
+                  )}
                   {(() => {
                     const w = getSlaWarning(t);
                     if (!w) return null;

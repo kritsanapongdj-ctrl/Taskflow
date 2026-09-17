@@ -11,6 +11,7 @@ export default function DailyTasksTab({
   openTaskModal,
   initSt,
   deleteTask,
+  onOpenTimeline,
   Icon
 }) {
   const tD = gFilt.date;
@@ -162,6 +163,17 @@ export default function DailyTasksTab({
                       WO: {t.workOrderNo}
                     </span>
                   )}
+                  {onOpenTimeline && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenTimeline(t)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      title="ดูประวัติไทม์ไลน์ของงานนี้"
+                    >
+                      <Icon name="clock" size={11} className="text-[#0f2e4a]" />
+                      <span>ไทม์ไลน์</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Sub-reason banners */}
@@ -175,6 +187,23 @@ export default function DailyTasksTab({
                   <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-lg border border-rose-200 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
                     <span className="break-words font-medium">{t.issueReason}</span>
+                  </div>
+                )}
+                {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50/90 px-2.5 py-1.5 rounded-lg border border-amber-200 flex items-start justify-between gap-1.5">
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚠️ ประวัติรออะไหล่:</span>
+                      <span className="break-words font-medium">{t.issueReason}</span>
+                    </div>
+                    {onOpenTimeline && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenTimeline(t)}
+                        className="text-[10px] font-bold text-amber-700 underline shrink-0 hover:text-amber-900 cursor-pointer"
+                      >
+                        ไทม์ไลน์
+                      </button>
+                    )}
                   </div>
                 )}
                 {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
@@ -230,6 +259,17 @@ export default function DailyTasksTab({
                     )}
                   </select>
                 </div>
+
+                {onOpenTimeline && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTimeline(t)}
+                    className="w-11 h-11 shrink-0 rounded-xl bg-slate-100 text-slate-600 hover:text-[#0f2e4a] hover:bg-slate-200 active:scale-95 flex items-center justify-center transition shadow-xs cursor-pointer"
+                    title="ดูประวัติไทม์ไลน์งาน"
+                  >
+                    <Icon name="clock" size={18} />
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -305,6 +345,17 @@ export default function DailyTasksTab({
                           {t.overdueStatus}
                         </span>
                       )}
+                      {onOpenTimeline && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenTimeline(t)}
+                          className="text-slate-400 hover:text-[#0f2e4a] inline-flex items-center gap-0.5 font-bold cursor-pointer"
+                          title="ดูประวัติไทม์ไลน์"
+                        >
+                          <Icon name="clock" size={10} />
+                          <span>ไทม์ไลน์</span>
+                        </button>
+                      )}
                     </div>
                     {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
                       <div className="mt-1.5 text-xs text-sky-700 bg-sky-50/90 px-2 py-0.5 rounded border border-sky-200 inline-flex items-center gap-1 max-w-full">
@@ -316,6 +367,21 @@ export default function DailyTasksTab({
                       <div className="mt-1.5 text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
                         <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
                         <span className="truncate">{t.issueReason}</span>
+                      </div>
+                    )}
+                    {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
+                      <div className="mt-1.5 text-xs text-amber-800 bg-amber-50/90 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 max-w-full">
+                        <span className="font-bold shrink-0">⚠️ ประวัติรออะไหล่:</span>
+                        <span className="truncate">{t.issueReason}</span>
+                        {onOpenTimeline && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenTimeline(t)}
+                            className="text-[10px] font-bold text-amber-700 underline shrink-0 hover:text-amber-900 cursor-pointer ml-1"
+                          >
+                            ไทม์ไลน์
+                          </button>
+                        )}
                       </div>
                     )}
                     {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
@@ -362,6 +428,16 @@ export default function DailyTasksTab({
                           <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
                         )}
                       </select>
+                      {onOpenTimeline && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenTimeline(t)}
+                          className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-gray-100 rounded hover:bg-gray-200 transition cursor-pointer"
+                          title="ดูประวัติไทม์ไลน์งาน"
+                        >
+                          <Icon name="clock" size={14} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleEdit(t)}
