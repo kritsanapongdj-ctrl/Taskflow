@@ -7,6 +7,7 @@ import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRad
 // URL วิดีโอพื้นหลังจาก Supabase Storage (ฟรี ไม่กิน Storage ของ Vercel)
 const TAVERN_VIDEO_URL = "https://jtimqkfefiuvptggbeiz.supabase.co/storage/v1/object/public/media/tavern-loop.mp4"; 
 const TAVERN_FALLBACK_IMG = "/tavern-bg.jpg";
+const BGM_URL = null;
 
 import ClassEmblem from './ClassEmblem';
 import archetypesData from './data/archetypes.json';
