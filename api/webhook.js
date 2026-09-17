@@ -100,6 +100,35 @@ const fDateThai = (ds) => {
   return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+// ฟังก์ชันคำนวณระยะเวลาคงเหลือสำหรับออกใบงาน (SLA ภายใน 3 วันหลังจบงาน)
+const getWorkOrderCountdownText = (t, todayStr) => {
+  const cDateStr = t.completedDate || t.endDate || todayStr;
+  try {
+    const dCompleted = new Date(cDateStr.slice(0, 10) + 'T00:00:00+07:00');
+    const dToday = new Date(todayStr.slice(0, 10) + 'T00:00:00+07:00');
+    if (isNaN(dCompleted.getTime()) || isNaN(dToday.getTime())) {
+      return '(⏳ SLA 3 วัน)';
+    }
+    const diffMs = dToday.getTime() - dCompleted.getTime();
+    const daysPassed = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    const SLA = 3;
+    const daysLeft = SLA - daysPassed;
+
+    if (daysLeft > 1) {
+      return `(⏳ เหลือเวลาอีก ${daysLeft} วัน)`;
+    } else if (daysLeft === 1) {
+      return `(⏳ เหลือเวลาอีก 1 วัน)`;
+    } else if (daysLeft === 0) {
+      return `(⚠️ วันนี้วันสุดท้าย!)`;
+    } else {
+      const overdueDays = Math.abs(daysLeft);
+      return `(🚨 เกินกำหนดมา ${overdueDays} วัน!)`;
+    }
+  } catch (e) {
+    return '(⏳ SLA 3 วัน)';
+  }
+};
+
 // 1. ฟังก์ชันสำหรับคำสั่ง !สรุปงาน (ดึงเฉพาะงานวันนี้ - ไม่สนสถานะ)
 async function handleSummary(projectList, groupName) {
   const snap = await getDocs(collection(db, 'artifacts', 'default-app-id', 'public', 'data', 'Tasks'));
@@ -152,14 +181,19 @@ async function handleSummary(projectList, groupName) {
 ทีม: กลุ่ม ${groupName} ประจำวันที่ ${fDateThai(todayStr)}
 ภาพรวม: ทั้งหมด ${todaysTasks.length} งาน (จบงานแล้ว: ${doneCount}, จบงานรอใบงาน: ${waitWoCount}, กำลังดำเนินการ: ${inProgCount}, ติดปัญหา/รออะไหล่: ${blockedCount}${postponedStartCount > 0 ? `, เลื่อนวันเริ่ม: ${postponedStartCount}` : ''}${postponedCount > 0 ? `, เลื่อนวันจบ: ${postponedCount}` : ''}, รอดำเนินการ: ${pendingCount})
 รายการงานวันนี้:
-${todaysTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, งาน: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}${t.workOrderNo ? ' (WO: ' + t.workOrderNo + ')' : ''}${t.issueReason ? ' [สาเหตุ: ' + t.issueReason + ']' : ''}${t.startPostponeReason ? ' [เลื่อนเริ่ม: ' + t.startPostponeReason + ']' : ''}${t.postponeReason ? ' [เลื่อนจบ: ' + t.postponeReason + ']' : ''}`).join('\n')}
+${todaysTasks.map((t, i) => {
+  const isWaitWo = (t.status === 'จบงาน(รอใบงาน)' || (t.status || '').includes('รอใบงาน')) && !t.workOrderNo;
+  const woCountdown = isWaitWo ? ` ${getWorkOrderCountdownText(t, todayStr)}` : '';
+  return `${i+1}. โครงการ: ${t.project}, งาน: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}${woCountdown}${t.workOrderNo ? ' (WO: ' + t.workOrderNo + ')' : ''}${t.issueReason ? ' [สาเหตุ: ' + t.issueReason + ']' : ''}${t.startPostponeReason ? ' [เลื่อนเริ่ม: ' + t.startPostponeReason + ']' : ''}${t.postponeReason ? ' [เลื่อนจบ: ' + t.postponeReason + ']' : ''}`;
+}).join('\n')}
 
 ข้อกำหนด:
 1. สรุปรายงานประจำวันของวันนี้ โดยแสดงสถานะจริงของทุกงาน (ทั้งที่จบแล้ว, รอใบงาน, กำลังทำ, หรือติดปัญหา) ไม่ต้องตัดงานที่จบแล้วออก
-2. สรุปแยกตามโครงการอย่างชัดเจน
-3. ใช้ Emoji ประกอบให้น่าอ่าน เช่น ✅ จบงาน, 📋 จบงาน(รอใบงาน), ⚙️ กำลังดำเนินการ, ⚠️ รออะไหล่, 📅 เลื่อนวันเริ่ม, 📅 เลื่อนวันจบ, ⏳ รอดำเนินการ
-4. กระชับ ชัดเจน ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป
-5. ลงท้ายด้วยประโยคให้กำลังใจทีมงานสั้นๆ`;
+2. สำหรับงานที่สถานะเป็น "จบงาน(รอใบงาน)" ที่ยังไม่มีเลข WO ให้คงข้อความแจ้งเตือนระยะเวลาออกใบงานที่ระบุไว้ด้วยเสมอ เช่น (⏳ เหลือเวลาอีก X วัน), (⚠️ วันนี้วันสุดท้าย!), หรือ (🚨 เกินกำหนดมา X วัน!)
+3. สรุปแยกตามโครงการอย่างชัดเจน
+4. ใช้ Emoji ประกอบให้น่าอ่าน เช่น ✅ จบงาน, 📋 จบงาน(รอใบงาน), ⚙️ กำลังดำเนินการ, ⚠️ รออะไหล่, 📅 เลื่อนวันเริ่ม, 📅 เลื่อนวันจบ, ⏳ รอดำเนินการ
+5. กระชับ ชัดเจน ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป
+6. ลงท้ายด้วยประโยคให้กำลังใจทีมงานสั้นๆ`;
 
   const geminiResponse = await askGemini(prompt);
   if (geminiResponse && !geminiResponse.includes('Error')) {
@@ -184,8 +218,10 @@ ${todaysTasks.map((t, i) => `${i+1}. โครงการ: ${t.project}, งา
     byProject[proj].forEach((t, idx) => {
       const icon = getEmoji(t.details || t.task_name);
       const st = getStatusBadge(t.status || 'อยู่ระหว่างดำเนินการ');
+      const isWaitWo = (t.status === 'จบงาน(รอใบงาน)' || (t.status || '').includes('รอใบงาน')) && !t.workOrderNo;
+      const woCountdown = isWaitWo ? ` ${getWorkOrderCountdownText(t, todayStr)}` : '';
       const woTag = t.workOrderNo ? ` [WO: ${t.workOrderNo}]` : '';
-      fallbackMsg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'} ${icon}\n   สถานะ: ${st}${woTag}\n`;
+      fallbackMsg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'} ${icon}\n   สถานะ: ${st}${woCountdown}${woTag}\n`;
     });
   }
 
@@ -257,8 +293,8 @@ async function handlePendingWorkOrders(projectList, groupName) {
           daysWaiting = Math.floor((nowMs - new Date(cDate).getTime()) / (1000 * 60 * 60 * 24));
           daysWaiting = Math.max(daysWaiting, 0);
         }
-        const warning = daysWaiting > 3 ? ' ⚠️ เกิน 3 วัน' : '';
-        msg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'}\n   🗓️ ปิดงาน: ${fDateThai(cDate)} (⏳ รอมา ${daysWaiting} วัน${warning})\n   [ID: ${t.id}]\n`;
+        const countdown = getWorkOrderCountdownText(t, todayStr);
+        msg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'}\n   🗓️ ปิดงาน: ${fDateThai(cDate)} (⏳ รอมา ${daysWaiting} วัน | ${countdown.replace(/[()]/g, '')})\n   [ID: ${t.id}]\n`;
       });
     }
     msg += `─────────────────────────\n`;
