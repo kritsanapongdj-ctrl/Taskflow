@@ -63,10 +63,10 @@ if (typeof document !== 'undefined' && !document.getElementById('agent-png-style
 const SUPABASE_STORAGE_URL = "https://jtimqkfefiuvptggbeiz.supabase.co/storage/v1/object/public/media";
 
 const AGENT_SRCS = {
-  scout:     `${SUPABASE_STORAGE_URL}/agent1.webp`,
-  wizard:    `${SUPABASE_STORAGE_URL}/agent2.webp`,
-  watcher:   `${SUPABASE_STORAGE_URL}/agent3.webp`,
-  evaluator: `${SUPABASE_STORAGE_URL}/agent4.webp`,
+  scout:     `${SUPABASE_STORAGE_URL}/agent1.webp?v=2`,
+  wizard:    `${SUPABASE_STORAGE_URL}/agent2.webp?v=2`,
+  watcher:   `${SUPABASE_STORAGE_URL}/agent3.webp?v=2`,
+  evaluator: `${SUPABASE_STORAGE_URL}/agent4.webp?v=2`,
 };
 
 const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
@@ -76,7 +76,7 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
 
   const getAnimation = () => {
     if (isAlert) return 'agentAlert 0.7s ease-in-out 3';
-    return undefined; // Luma WebP มีแอนิเมชันในตัวอยู่แล้ว ไม่ต้องบิดเบี้ยวด้วย CSS
+    return undefined; // Luma WebP มีแอนิเมชันในตัวอยู่แล้ว
   };
 
   const getGlow = () => {
@@ -85,17 +85,17 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
     return 'agentGlow 3s ease-in-out infinite';
   };
 
-  // ขนาดตัวละครตามสัดส่วนความลึก (Perspective Depth) ให้สมดุลกับคนในฉาก
-  const agentSizes = {
-    scout: '125px',      // ยืนใกล้โต๊ะซ้าย / กระดานเควสต์
-    wizard: '115px',     // ยืนประจำที่เคาน์เตอร์บาร์ด้านหลัง
-    watcher: '135px',    // ยืนโต๊ะกลาง / เตาผิง
+  // ขนาดความสูงของตัวละครตาม Perspective ให้สมดุลกับคนในฉาก (คนในฉากสูงประมาณ 120-140px)
+  const agentHeights = {
+    scout: '130px',      // ยืนใกล้โต๊ะซ้าย / กระดานเควสต์
+    wizard: '125px',     // ยืนประจำที่เคาน์เตอร์ด้านหลัง
+    watcher: '140px',    // ยืนโต๊ะกลาง / เตาผิง
     evaluator: '145px',  // ยืนโต๊ะหน้า
   };
 
   const imgStyle = {
-    width: agentSizes[type] || '130px',
-    height: 'auto',
+    height: agentHeights[type] || '135px',
+    width: 'auto',
     transform: flip ? 'scaleX(-1)' : 'scaleX(1)',
     animation: getAnimation(),
     filter: isAlert ? 'drop-shadow(0 0 16px rgba(239,68,68,1))' : undefined,
@@ -337,10 +337,10 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [jobStatusTasks, setJobStatusTasks] = useState([]);
   const [filterProj, setFilterProj] = useState('');
 
-  const [a1, setA1] = useState({ x: 13, y: 52, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
-  const [a2, setA2] = useState({ x: 37, y: 31, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
-  const [a3, setA3] = useState({ x: 58, y: 50, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
-  const [a4, setA4] = useState({ x: 26, y: 70, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
+  const [a1, setA1] = useState({ x: 10, y: 50, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
+  const [a2, setA2] = useState({ x: 36, y: 34, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
+  const [a3, setA3] = useState({ x: 63, y: 58, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
+  const [a4, setA4] = useState({ x: 19, y: 72, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
 
   // 1. ดึงข้อมูลจากฐานข้อมูล lh_scraper โดยตรง
   useEffect(() => {
