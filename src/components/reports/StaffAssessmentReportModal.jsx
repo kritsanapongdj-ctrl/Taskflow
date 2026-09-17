@@ -190,7 +190,7 @@ export default function StaffAssessmentReportModal({
                 LH TASK-FLOW
               </h1>
               <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
-                ฝ่ายบริหารงานบริการชุมชนและจัดการสินทรัพย์ • การประเมินสมรรถนะบุคลากร
+                ฝ่ายบริหารและจัดการสินทรัพย์ • การประเมินสมรรถนะบุคลากร
               </p>
             </div>
           </div>
