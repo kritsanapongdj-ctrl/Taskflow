@@ -3,27 +3,36 @@ import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import * as XLSX from 'xlsx';
-import GuildSimulation from './GuildSimulation.jsx';
 import TaskFormModal from './components/modals/TaskFormModal.jsx';
 import StatusChangeModal from './components/modals/StatusChangeModal.jsx';
-import InformDetailModal from './components/modals/InformDetailModal.jsx';
-import InformStatusModal from './components/modals/InformStatusModal.jsx';
-import AvatarCropModal from './components/modals/AvatarCropModal.jsx';
 import DashboardTab from './pages/DashboardTab.jsx';
 import DailyTasksTab from './pages/DailyTasksTab.jsx';
-import MonthlyCalendarTab from './pages/MonthlyCalendarTab.jsx';
-import KanbanBillingTab from './pages/KanbanBillingTab.jsx';
-import InformJobTab from './pages/InformJobTab.jsx';
-import TeamStatusTab from './pages/TeamStatusTab.jsx';
-import SettingsTab from './pages/SettingsTab.jsx';
-import OverdueTasksModal from './components/modals/OverdueTasksModal.jsx';
-import CalendarTasksModal from './components/modals/CalendarTasksModal.jsx';
-import BillingModal from './components/modals/BillingModal.jsx';
 import PrintReport from './components/reports/PrintReport.jsx';
 import ChangelogModal, { CURRENT_VERSION } from './components/modals/ChangelogModal.jsx';
-import JobTimelineModal from './components/modals/JobTimelineModal.jsx';
 import { detectSlaCategory, isSlaMismatch } from './utils/slaDetector.js';
+
+// Lazy-loaded heavy tabs and modals
+const GuildSimulation = React.lazy(() => import('./GuildSimulation.jsx'));
+const TeamStatusTab = React.lazy(() => import('./pages/TeamStatusTab.jsx'));
+const MonthlyCalendarTab = React.lazy(() => import('./pages/MonthlyCalendarTab.jsx'));
+const KanbanBillingTab = React.lazy(() => import('./pages/KanbanBillingTab.jsx'));
+const InformJobTab = React.lazy(() => import('./pages/InformJobTab.jsx'));
+const SettingsTab = React.lazy(() => import('./pages/SettingsTab.jsx'));
+
+const OverdueTasksModal = React.lazy(() => import('./components/modals/OverdueTasksModal.jsx'));
+const CalendarTasksModal = React.lazy(() => import('./components/modals/CalendarTasksModal.jsx'));
+const BillingModal = React.lazy(() => import('./components/modals/BillingModal.jsx'));
+const InformDetailModal = React.lazy(() => import('./components/modals/InformDetailModal.jsx'));
+const InformStatusModal = React.lazy(() => import('./components/modals/InformStatusModal.jsx'));
+const AvatarCropModal = React.lazy(() => import('./components/modals/AvatarCropModal.jsx'));
+const JobTimelineModal = React.lazy(() => import('./components/modals/JobTimelineModal.jsx'));
+
+const TabLoadingSpinner = () => (
+  <div className="flex-1 flex flex-col items-center justify-center p-16 text-slate-400">
+    <div className="w-8 h-8 border-3 border-[#0f2e4a] border-t-transparent rounded-full animate-spin mb-3"></div>
+    <span className="text-xs font-semibold text-slate-500">กำลังโหลดโมดูล...</span>
+  </div>
+);
 
 // ⚠️ นำลิงก์ Web App (GAS) เดิมมาใส่ เพื่อให้ระบบยังคงสั่งส่งอีเมลได้
 const API_URL = "https://script.google.com/macros/s/AKfycbxrAOQLMQ3l3PcB800hUeMly_oi-jL4s8ZjlWncuCx9seMqSHMeZb0D9CxjyKpOZuaEmw/exec";
@@ -241,6 +250,38 @@ export default function App() {
       else if (t === 'informJob') await setDoc(getDocRef('InformJobs', d.id), d);
       else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), d);
       
+      // ส่งอีเมลแจ้งเตือนผ่าน Brevo Serverless API ทันทีหากมี emailAlert
+      if (d && d.emailAlert) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            alert: d.emailAlert,
+            task: {
+              id: d.id,
+              project: d.project,
+              details: d.details,
+              requester: d.requester,
+              startDate: d.startDate,
+              endDate: d.endDate,
+              status: d.status,
+              workOrderNo: d.workOrderNo
+            }
+          })
+        })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            console.log(`[Brevo] Alert sent via ${res.provider} to:`, res.recipients);
+          } else {
+            console.warn('[Brevo] Alert dispatch notice:', res);
+          }
+        })
+        .catch(err => {
+          console.warn('[Brevo] Request error, fallback active:', err);
+        });
+      }
+
       fetch(API_URL, { 
         method: "POST", mode: "no-cors", 
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
@@ -474,7 +515,9 @@ export default function App() {
         const diffDays = Math.ceil((new Date(taskForm.endDate) - new Date(taskForm.startDate)) / (1000 * 60 * 60 * 24));
         if (diffDays > limitDays) {
            if(!window.confirm(`⚠️ ระยะเวลาทำงาน ${diffDays} วัน เกินกว่า SLA ของหมวดงานนี้ (${limitDays} วัน)\nระบบจะบันทึกงานตามปกติ แต่จะส่งอีเมลแจ้งผู้ดูแลโครงการทันที! ยืนยันหรือไม่?`)) return; 
-           if(!ePl) ePl = { action: 'บันทึกงานเกินเวลา SLA', reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน (เกิน SLA ที่ตั้งไว้ ${limitDays} วัน)`, emails: getTargetEms(proj), project: proj, details: det };
+           const ems = getTargetEms(proj);
+           const targetEmails = ems.length > 0 ? ems : (sets.emails || []).map(e => e.split('|')[0]);
+           if(!ePl) ePl = { action: 'บันทึกงานเกินเวลา SLA', reason: `ผู้แจ้งตั้งเวลาทำงาน ${diffDays} วัน (เกิน SLA ที่ตั้งไว้ ${limitDays} วัน)`, emails: targetEmails, project: proj, details: det };
         }
       }
     }
@@ -897,132 +940,134 @@ export default function App() {
               </div>
             )}
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
-              {tab === 'dashboard' && (
-                <DashboardTab
-                  tasks={tasks}
-                  gFilt={gFilt}
-                  THEME={THEME}
-                  getTStr={getTStr}
-                  getStdProj={getStdProj}
-                  checkStaffMatch={checkStaffMatch}
-                  chkOvdTimeAware={chkOvdTimeAware}
-                  onOpenOverdueModal={(ov) => setOPop({ isOpen: true, tasks: ov })}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'simulation' && (
-                <GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />
-              )}
-              {tab === 'daily' && (
-                <DailyTasksTab
-                  tasks={tasks}
-                  gFilt={gFilt}
-                  getTStr={getTStr}
-                  getStdProj={getStdProj}
-                  checkStaffMatch={checkStaffMatch}
-                  chkOvdTimeAware={chkOvdTimeAware}
-                  fDate={fDate}
-                  openTaskModal={openTaskModal}
-                  initSt={initSt}
-                  deleteTask={deleteTask}
-                  onOpenTimeline={(task) => setTimelineTask(task)}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'monthly' && (
-                <MonthlyCalendarTab
-                  tasks={tasks}
-                  gFilt={gFilt}
-                  getTStr={getTStr}
-                  getStdProj={getStdProj}
-                  checkStaffMatch={checkStaffMatch}
-                  pYMD={pYMD}
-                  onOpenCalendarModal={(date, tasks) => setCPop({ isOpen: true, date, tasks })}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'kanban' && (
-                <KanbanBillingTab
-                  tasks={tasks}
-                  gFilt={gFilt}
-                  groupTasks={groupTasks}
-                  getStdProj={getStdProj}
-                  checkStaffMatch={checkStaffMatch}
-                  onOpenBillingModal={(group, type) => setBMod({ isOpen: true, group, type })}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'inform' && (
-                <InformJobTab
-                  informs={informs}
-                  iTab={iTab}
-                  setITab={setITab}
-                  informForm={informForm}
-                  setInformForm={setInformForm}
-                  subInf={subInf}
-                  gFilt={gFilt}
-                  sets={sets}
-                  getProjName={getProjName}
-                  getProjArea={getProjArea}
-                  getStdProj={getStdProj}
-                  checkStaffMatch={checkStaffMatch}
-                  fDate={fDate}
-                  openInfModal={(id, type) => setIMod({ isOpen: true, type, id, val: '' })}
-                  setInfView={setInfView}
-                  deleteInform={deleteInform}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'team' && (
-                <TeamStatusTab
-                  teamUnlk={teamUnlk}
-                  setTeamUnlk={setTeamUnlk}
-                  pwd={pwd}
-                  setPwd={setPwd}
-                  sets={sets}
-                  setSets={setSets}
-                  saveD={saveD}
-                  teamForm={teamForm}
-                  setTeamForm={setTeamForm}
-                  selTeam={selTeam}
-                  setSelTeam={setSelTeam}
-                  teamEditMode={teamEditMode}
-                  setTeamEditMode={setTeamEditMode}
-                  setCropModal={setCropModal}
-                  saveTeam={saveTeam}
-                  Icon={Icon}
-                />
-              )}
-              {tab === 'settings' && (
-                <SettingsTab
-                  setUnlk={setUnlk}
-                  setSetUnlk={setSetUnlk}
-                  pwd={pwd}
-                  setPwd={setPwd}
-                  tasks={tasks}
-                  informs={informs}
-                  sets={sets}
-                  setSets={setSets}
-                  saveD={saveD}
-                  rCfg={rCfg}
-                  setRConfig={setRConfig}
-                  sInp={sInp}
-                  setSInp={setSInp}
-                  upS={upS}
-                  dlS={dlS}
-                  clearSList={clearSList}
-                  getProjName={getProjName}
-                  getProjArea={getProjArea}
-                  testEmailSystem={testEmailSystem}
-                  forceScanRealTasks={forceScanRealTasks}
-                  installTrigger={installTrigger}
-                  runMigration={runMigration}
-                  downloadCSV={downloadCSV}
-                  handleClearData={handleClearData}
-                  getTStr={getTStr}
-                  Icon={Icon}
-                />
-              )}
+              <React.Suspense fallback={<TabLoadingSpinner />}>
+                {tab === 'dashboard' && (
+                  <DashboardTab
+                    tasks={tasks}
+                    gFilt={gFilt}
+                    THEME={THEME}
+                    getTStr={getTStr}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    chkOvdTimeAware={chkOvdTimeAware}
+                    onOpenOverdueModal={(ov) => setOPop({ isOpen: true, tasks: ov })}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'simulation' && (
+                  <GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />
+                )}
+                {tab === 'daily' && (
+                  <DailyTasksTab
+                    tasks={tasks}
+                    gFilt={gFilt}
+                    getTStr={getTStr}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    chkOvdTimeAware={chkOvdTimeAware}
+                    fDate={fDate}
+                    openTaskModal={openTaskModal}
+                    initSt={initSt}
+                    deleteTask={deleteTask}
+                    onOpenTimeline={(task) => setTimelineTask(task)}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'monthly' && (
+                  <MonthlyCalendarTab
+                    tasks={tasks}
+                    gFilt={gFilt}
+                    getTStr={getTStr}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    pYMD={pYMD}
+                    onOpenCalendarModal={(date, tasks) => setCPop({ isOpen: true, date, tasks })}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'kanban' && (
+                  <KanbanBillingTab
+                    tasks={tasks}
+                    gFilt={gFilt}
+                    groupTasks={groupTasks}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    onOpenBillingModal={(group, type) => setBMod({ isOpen: true, group, type })}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'inform' && (
+                  <InformJobTab
+                    informs={informs}
+                    iTab={iTab}
+                    setITab={setITab}
+                    informForm={informForm}
+                    setInformForm={setInformForm}
+                    subInf={subInf}
+                    gFilt={gFilt}
+                    sets={sets}
+                    getProjName={getProjName}
+                    getProjArea={getProjArea}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    fDate={fDate}
+                    openInfModal={(id, type) => setIMod({ isOpen: true, type, id, val: '' })}
+                    setInfView={setInfView}
+                    deleteInform={deleteInform}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'team' && (
+                  <TeamStatusTab
+                    teamUnlk={teamUnlk}
+                    setTeamUnlk={setTeamUnlk}
+                    pwd={pwd}
+                    setPwd={setPwd}
+                    sets={sets}
+                    setSets={setSets}
+                    saveD={saveD}
+                    teamForm={teamForm}
+                    setTeamForm={setTeamForm}
+                    selTeam={selTeam}
+                    setSelTeam={setSelTeam}
+                    teamEditMode={teamEditMode}
+                    setTeamEditMode={setTeamEditMode}
+                    setCropModal={setCropModal}
+                    saveTeam={saveTeam}
+                    Icon={Icon}
+                  />
+                )}
+                {tab === 'settings' && (
+                  <SettingsTab
+                    setUnlk={setUnlk}
+                    setSetUnlk={setSetUnlk}
+                    pwd={pwd}
+                    setPwd={setPwd}
+                    tasks={tasks}
+                    informs={informs}
+                    sets={sets}
+                    setSets={setSets}
+                    saveD={saveD}
+                    rCfg={rCfg}
+                    setRConfig={setRConfig}
+                    sInp={sInp}
+                    setSInp={setSInp}
+                    upS={upS}
+                    dlS={dlS}
+                    clearSList={clearSList}
+                    getProjName={getProjName}
+                    getProjArea={getProjArea}
+                    testEmailSystem={testEmailSystem}
+                    forceScanRealTasks={forceScanRealTasks}
+                    installTrigger={installTrigger}
+                    runMigration={runMigration}
+                    downloadCSV={downloadCSV}
+                    handleClearData={handleClearData}
+                    getTStr={getTStr}
+                    Icon={Icon}
+                  />
+                )}
+              </React.Suspense>
             </div>
           </main>
           <nav className="md:hidden fixed bottom-0 w-full bg-white border-t flex justify-around p-2 z-[999]">
@@ -1031,89 +1076,102 @@ export default function App() {
             ))}
           </nav>
 
-          <OverdueTasksModal
-            isOpen={oPop.isOpen}
-            onClose={() => setOPop({ isOpen: false, tasks: [] })}
-            tasks={oPop.tasks}
-            currentMonth={gFilt.month}
-            onManageTask={(t) => {
-              setOPop({ isOpen: false, tasks: [] });
-              setGilt({ ...gFilt, date: t.endDate });
-              setTab('daily');
-            }}
-            fDate={fDate}
-            Icon={Icon}
-          />
+          <React.Suspense fallback={null}>
+            {oPop.isOpen && (
+              <OverdueTasksModal
+                isOpen={oPop.isOpen}
+                onClose={() => setOPop({ isOpen: false, tasks: [] })}
+                tasks={oPop.tasks}
+                currentMonth={gFilt.month}
+                onManageTask={(t) => {
+                  setOPop({ isOpen: false, tasks: [] });
+                  setGilt({ ...gFilt, date: t.endDate });
+                  setTab('daily');
+                }}
+                fDate={fDate}
+                Icon={Icon}
+              />
+            )}
 
-          <CalendarTasksModal
-            isOpen={cPop.isOpen}
-            onClose={() => setCPop({ isOpen: false, date: null, tasks: [] })}
-            date={cPop.date}
-            tasks={cPop.tasks}
-            onManageDate={(date) => {
-              setCPop({ isOpen: false, date: null, tasks: [] });
-              setGilt({ ...gFilt, date });
-              setTab('daily');
-            }}
-            fDate={fDate}
-            chkOvdTimeAware={chkOvdTimeAware}
-            getTStr={getTStr}
-            Icon={Icon}
-          />
+            {cPop.isOpen && (
+              <CalendarTasksModal
+                isOpen={cPop.isOpen}
+                onClose={() => setCPop({ isOpen: false, date: null, tasks: [] })}
+                date={cPop.date}
+                tasks={cPop.tasks}
+                onManageDate={(date) => {
+                  setCPop({ isOpen: false, date: null, tasks: [] });
+                  setGilt({ ...gFilt, date });
+                  setTab('daily');
+                }}
+                fDate={fDate}
+                chkOvdTimeAware={chkOvdTimeAware}
+                getTStr={getTStr}
+                Icon={Icon}
+              />
+            )}
 
-          <BillingModal
-            isOpen={bMod.isOpen}
-            onClose={() => setBMod({ isOpen: false, group: null, type: '' })}
-            group={bMod.group}
-            type={bMod.type}
-            onMoveGroup={moveGroup}
-            currentMonth={gFilt.month}
-            getStdProj={getStdProj}
-            fDate={fDate}
-            Icon={Icon}
-          />
-          <TaskFormModal
-            isOpen={tMod}
-            onClose={() => { setTMod(false); setSReason(''); setShowStartReason(false); }}
-            onSubmit={subT}
-            taskForm={taskForm}
-            setTaskForm={setTaskForm}
-            eTask={eTask}
-            REQ_TYPES={REQ_TYPES}
-            sets={sets}
-            getProjName={getProjName}
-            getProjArea={getProjArea}
-            checkStaffMatch={checkStaffMatch}
-            showStartReason={showStartReason}
-            setShowStartReason={setShowStartReason}
-            sRsn={sRsn}
-            setSReason={setSReason}
-            Icon={Icon}
-          />
+            {bMod.isOpen && (
+              <BillingModal
+                isOpen={bMod.isOpen}
+                onClose={() => setBMod({ isOpen: false, group: null, type: '' })}
+                group={bMod.group}
+                type={bMod.type}
+                onMoveGroup={moveGroup}
+                currentMonth={gFilt.month}
+                getStdProj={getStdProj}
+                fDate={fDate}
+                Icon={Icon}
+              />
+            )}
 
-          <StatusChangeModal
-            isOpen={sMod.isOpen}
-            onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' })}
-            onConfirm={cfSt}
-            sMod={sMod}
-            setSMod={setSMod}
-            getTStr={getTStr}
-          />
+            <TaskFormModal
+              isOpen={tMod}
+              onClose={() => { setTMod(false); setSReason(''); setShowStartReason(false); }}
+              onSubmit={subT}
+              taskForm={taskForm}
+              setTaskForm={setTaskForm}
+              eTask={eTask}
+              REQ_TYPES={REQ_TYPES}
+              sets={sets}
+              getProjName={getProjName}
+              getProjArea={getProjArea}
+              checkStaffMatch={checkStaffMatch}
+              showStartReason={showStartReason}
+              setShowStartReason={setShowStartReason}
+              sRsn={sRsn}
+              setSReason={setSReason}
+              Icon={Icon}
+            />
 
-          <InformDetailModal
-            inform={infView}
-            onClose={() => setInfView(null)}
-            fDate={fDate}
-            Icon={Icon}
-          />
+            <StatusChangeModal
+              isOpen={sMod.isOpen}
+              onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' })}
+              onConfirm={cfSt}
+              sMod={sMod}
+              setSMod={setSMod}
+              getTStr={getTStr}
+            />
 
-          <InformStatusModal
-            isOpen={iMod.isOpen}
-            onClose={() => setIMod({ ...iMod, isOpen: false })}
-            onConfirm={cfInf}
-            iMod={iMod}
-            setIMod={setIMod}
-          />
+            {infView && (
+              <InformDetailModal
+                inform={infView}
+                onClose={() => setInfView(null)}
+                fDate={fDate}
+                Icon={Icon}
+              />
+            )}
+
+            {iMod.isOpen && (
+              <InformStatusModal
+                isOpen={iMod.isOpen}
+                onClose={() => setIMod({ ...iMod, isOpen: false })}
+                onConfirm={cfInf}
+                iMod={iMod}
+                setIMod={setIMod}
+              />
+            )}
+          </React.Suspense>
         </div>
         
         {/* เพิ่มโค้ดบรรทัดนี้ เพื่อวาง Report ซ่อนไว้สำหรับให้ดึงไปพิมพ์ PDF */}
@@ -1129,29 +1187,35 @@ export default function App() {
           fDate={fDate}
         />
         
-        <AvatarCropModal
-          isOpen={cropModal.isOpen}
-          onClose={() => setCropModal({ ...cropModal, isOpen: false })}
-          cropModal={cropModal}
-          setCropModal={setCropModal}
-          onCropComplete={onCropComplete}
-          onSave={saveCroppedImage}
-          Icon={Icon}
-        />
+        <React.Suspense fallback={null}>
+          {cropModal.isOpen && (
+            <AvatarCropModal
+              isOpen={cropModal.isOpen}
+              onClose={() => setCropModal({ ...cropModal, isOpen: false })}
+              cropModal={cropModal}
+              setCropModal={setCropModal}
+              onCropComplete={onCropComplete}
+              onSave={saveCroppedImage}
+              Icon={Icon}
+            />
+          )}
 
-        <ChangelogModal
-          isOpen={showChangelog}
-          onClose={() => setShowChangelog(false)}
-          onDismiss={handleDismissChangelog}
-          Icon={Icon}
-        />
+          <ChangelogModal
+            isOpen={showChangelog}
+            onClose={() => setShowChangelog(false)}
+            onDismiss={handleDismissChangelog}
+            Icon={Icon}
+          />
 
-        <JobTimelineModal
-          isOpen={!!timelineTask}
-          task={timelineTask}
-          onClose={() => setTimelineTask(null)}
-          Icon={Icon}
-        />
+          {timelineTask && (
+            <JobTimelineModal
+              isOpen={!!timelineTask}
+              task={timelineTask}
+              onClose={() => setTimelineTask(null)}
+              Icon={Icon}
+            />
+          )}
+        </React.Suspense>
       </div>
     </React.Fragment>
   );
