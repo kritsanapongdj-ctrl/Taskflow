@@ -29,4 +29,8 @@ scripts/archive/
 *.cjs
 output.json
 
+# Heavy media assets (hosted on Supabase Storage CDN)
+public/*.mp4
+public/agent*.webp
+
 .vercel

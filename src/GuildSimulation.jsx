@@ -58,12 +58,14 @@ if (typeof document !== 'undefined' && !document.getElementById('agent-png-style
   document.head.appendChild(s);
 }
 
-/* ─── AgentPng: PNG img with CSS Living Motion ─── */
+/* ─── Supabase Storage Media CDN ─── */
+const SUPABASE_STORAGE_URL = "https://jtimqkfefiuvptggbeiz.supabase.co/storage/v1/object/public/media";
+
 const AGENT_SRCS = {
-  scout:     '/agent1.png',
-  wizard:    '/agent2.png',
-  watcher:   '/agent3.png',
-  evaluator: '/agent4.png',
+  scout:     `${SUPABASE_STORAGE_URL}/agent1.webp`,
+  wizard:    `${SUPABASE_STORAGE_URL}/agent2.webp`,
+  watcher:   `${SUPABASE_STORAGE_URL}/agent3.webp`,
+  evaluator: `${SUPABASE_STORAGE_URL}/agent4.webp`,
 };
 
 const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
@@ -72,34 +74,31 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
   const isAlert   = action === 'alert';
 
   const getAnimation = () => {
-    if (isAlert)   return 'agentAlert 0.7s ease-in-out 3';
-    if (isWalking) return 'agentWalk 0.5s ease-in-out infinite';
-    if (isWorking) return 'agentWork 1.2s ease-in-out infinite';
-    return 'agentBreathe 3s ease-in-out infinite';
+    if (isAlert) return 'agentAlert 0.7s ease-in-out 3';
+    return undefined; // Luma WebP มีแอนิเมชันในตัวอยู่แล้ว ไม่ต้องบิดเบี้ยวด้วย CSS
   };
 
   const getGlow = () => {
-    if (isAlert || isWorking) return 'agentAlertGlow 1s ease-in-out infinite';
-    return 'agentGlow 2.5s ease-in-out infinite';
+    if (isAlert) return 'agentAlertGlow 1s ease-in-out infinite';
+    if (isWorking) return 'agentGlow 1.5s ease-in-out infinite';
+    return 'agentGlow 3s ease-in-out infinite';
   };
 
   // ขนาดตัวละครตามสัดส่วนความลึก (Perspective Depth) ให้สมดุลกับคนในฉาก
   const agentSizes = {
-    scout: '120px',      // ยืนใกล้โต๊ะซ้าย
-    wizard: '115px',     // ยืนแถวบาร์ด้านหลัง
-    watcher: '135px',    // ยืนโต๊ะกลาง
+    scout: '125px',      // ยืนใกล้โต๊ะซ้าย / กระดานเควสต์
+    wizard: '115px',     // ยืนประจำที่เคาน์เตอร์บาร์ด้านหลัง
+    watcher: '135px',    // ยืนโต๊ะกลาง / เตาผิง
     evaluator: '145px',  // ยืนโต๊ะหน้า
   };
 
   const imgStyle = {
     width: agentSizes[type] || '130px',
     height: 'auto',
-    imageRendering: 'pixelated',
     transform: flip ? 'scaleX(-1)' : 'scaleX(1)',
     animation: getAnimation(),
-    filter: isAlert ? 'drop-shadow(0 0 12px rgba(239,68,68,1))' : undefined,
+    filter: isAlert ? 'drop-shadow(0 0 16px rgba(239,68,68,1))' : undefined,
     transition: 'transform 0.3s ease',
-    cursor: onClick ? 'pointer' : 'default',
   };
 
   const glowStyle = {
@@ -108,7 +107,7 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
 
   return (
     <div
-      className="absolute flex flex-col items-center z-20"
+      className="absolute flex flex-col items-center z-20 cursor-pointer group select-none"
       style={{
         left: `${x}%`,
         top: `${y}%`,
@@ -121,9 +120,9 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
       <div
         key={msg}
         className={`
-          ${isAlert || isWorking ? 'bg-red-900/95 border-red-500 text-red-100' : 'bg-black/85 border-amber-600/60 text-amber-100'}
+          ${isAlert ? 'bg-red-900/95 border-red-500 text-red-100 animate-bounce' : (isWorking ? 'bg-amber-900/95 border-amber-500 text-amber-100' : 'bg-black/85 border-amber-600/60 text-amber-100')}
           text-[10px] px-2.5 py-1 rounded-lg border mb-1 whitespace-nowrap shadow-xl
-          backdrop-blur-sm pointer-events-none
+          backdrop-blur-sm pointer-events-none group-hover:scale-105 transition-transform
         `}
         style={{ animation: 'msgFadeIn 0.3s ease-out', fontSize: '10px', letterSpacing: '0.02em' }}
       >
@@ -131,24 +130,25 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
       </div>
 
       {/* Agent name tag */}
-      <div className="bg-black/75 text-amber-300 text-[9px] px-2 py-0.5 rounded border border-amber-700/50 mb-1.5 font-bold tracking-wide pointer-events-none">
+      <div className="bg-black/80 text-amber-300 text-[9px] px-2 py-0.5 rounded border border-amber-700/50 mb-1 font-bold tracking-wide pointer-events-none group-hover:border-amber-400 transition-colors">
         {title}
       </div>
 
-      {/* PNG sprite */}
-      <div style={glowStyle}>
+      {/* WebP sprite animation */}
+      <div style={glowStyle} className="group-hover:scale-105 transition-transform">
         <img
-          src={AGENT_SRCS[type] || '/agent1.png'}
+          src={AGENT_SRCS[type]}
           alt={title}
           style={imgStyle}
           draggable={false}
+          loading="eager"
         />
       </div>
 
-      {/* Hover ring */}
-      {onClick && (
-        <div className="absolute inset-0 rounded-full border-2 border-transparent hover:border-amber-400/50 transition-colors pointer-events-none" />
-      )}
+      {/* Hover prompt */}
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[8px] text-amber-200 bg-black/90 px-1.5 py-0.5 rounded border border-amber-500 mt-1 pointer-events-none">
+        คลิกดูข้อมูล
+      </div>
     </div>
   );
 };
@@ -336,10 +336,10 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [jobStatusTasks, setJobStatusTasks] = useState([]);
   const [filterProj, setFilterProj] = useState('');
 
-  const [a1, setA1] = useState({ x: 10, y: 55, action: 'idle', flip: false, msg: 'สแตนด์บาย' });
-  const [a2, setA2] = useState({ x: 30, y: 40, action: 'idle', flip: false, msg: 'สแตนด์บาย' });
-  const [a3, setA3] = useState({ x: 50, y: 65, action: 'idle', flip: false, msg: 'สแตนด์บาย' });
-  const [a4, setA4] = useState({ x: 20, y: 80, action: 'idle', flip: false, msg: 'สแตนด์บาย' });
+  const [a1, setA1] = useState({ x: 13, y: 52, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
+  const [a2, setA2] = useState({ x: 37, y: 31, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
+  const [a3, setA3] = useState({ x: 58, y: 50, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
+  const [a4, setA4] = useState({ x: 26, y: 70, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
 
   // 1. ดึงข้อมูลจากฐานข้อมูล lh_scraper โดยตรง
   useEffect(() => {
@@ -350,54 +350,77 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         const arr = Object.values(data).sort((a, b) => b.reported_timestamp - a.reported_timestamp);
         setJobStatusTasks(arr);
         
-        // Agent 1: Scout - React to new incoming tasks
+        // Agent 1: Scout - เดินไปส่องกระดานเควสต์เมื่อมีงานใหม่เข้า
         const hasNew = arr.some(t => t.notified_new);
         if (hasNew) {
-          setA1(p => ({ ...p, action: 'walking', x: 15, flip: false, msg: 'พบข้อมูลใหม่!' }));
-          setTimeout(() => setA1(p => ({ ...p, action: 'working', msg: 'กำลังเรียบเรียงเควสต์...' })), 2000);
-          setTimeout(() => setA1(p => ({ ...p, action: 'idle', msg: 'สแตนด์บาย' })), 5000);
+          setA1(p => ({ ...p, action: 'walking', x: 9, y: 38, flip: true, msg: 'พบเควสต์ใหม่!' }));
+          setTimeout(() => setA1(p => ({ ...p, action: 'working', msg: 'กำลังสำรวจรายละเอียด...' })), 2200);
+          setTimeout(() => setA1(p => ({ ...p, action: 'walking', x: 13, y: 52, flip: false, msg: 'รายงานเควสต์เข้าบอร์ด' })), 5000);
+          setTimeout(() => setA1(p => ({ ...p, action: 'idle', msg: 'ลาดตระเวนเควสต์' })), 7500);
         }
       }
     });
     return () => unsub();
   }, [db]);
 
-  // Agent 2: Wizard Dispatcher - Less frequent, more idle
+  // Agent 2: Wizard Dispatcher - ยืนประจำการที่เคาน์เตอร์บาร์ (Stationary ไม่สไลด์ลอย) ร่ายเวทจัดสรรงาน
   useEffect(() => {
+    const wizardMsgs = [
+      'ร่ายเวทส่งสารงานช่าง...',
+      'วิเคราะห์สายงานประจำวัน',
+      'จัดสรรงานช่างเข้าพื้นที่',
+      'ระบบเวทมนตร์พร้อมใช้งาน',
+      'สื่อสารกับกิลด์ภายนอก'
+    ];
+    let idx = 0;
     const loop = setInterval(() => {
-      if (Math.random() > 0.7) {
-        setA2(p => ({ ...p, action: 'walking', x: 55, y: 40, flip: false, msg: 'ตรวจบอร์ดเควสต์' }));
-        setTimeout(() => {
-          setA2(p => ({ ...p, action: 'working', msg: 'จัดระเบียบเควสต์' }));
-          setTimeout(() => {
-            setA2(p => ({ ...p, action: 'walking', x: 30, flip: true, msg: 'เดินกลับโต๊ะ' }));
-            setTimeout(() => setA2(p => ({ ...p, action: 'idle', msg: 'สแตนด์บาย', flip: false })), 2000);
-          }, 3000);
-        }, 2000);
-      }
-    }, 25000); // 25 seconds
+      idx = (idx + 1) % wizardMsgs.length;
+      setA2(p => ({ ...p, action: 'working', msg: wizardMsgs[idx] }));
+      setTimeout(() => {
+        setA2(p => ({ ...p, action: 'idle' }));
+      }, 4000);
+    }, 18000);
     return () => clearInterval(loop);
   }, []);
 
-  // Agent 3: Assassin Watcher - Patrols occasionally
+  // Agent 3: Watcher - ยืนคุมกลางกิลด์หน้าเตาผิง ตรวจจับงาน Overdue/SLA
   useEffect(() => {
-    const waypoints = [ {x: 45, y: 70}, {x: 65, y: 75}, {x: 40, y: 50} ];
-    const loop = setInterval(() => {
-      const wp = waypoints[Math.floor(Math.random() * waypoints.length)];
-      setA3(p => ({ ...p, action: 'walking', x: wp.x, y: wp.y, flip: wp.x < p.x, msg: 'เดินลาดตระเวน' }));
-      setTimeout(() => setA3(p => ({ ...p, action: 'idle', msg: 'เฝ้าระวัง' })), 2000);
-    }, 20000);
-    return () => clearInterval(loop);
-  }, []);
+    const overdueCount = (tasks || []).filter(t => {
+      const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า';
+      return isOvd && !t.status?.startsWith('จบงาน');
+    }).length;
 
-  // Agent 4: Professor Evaluator
+    if (overdueCount > 0) {
+      setA3(p => ({
+        ...p,
+        action: 'alert',
+        msg: `⚠️ พบงานล่าช้า ${overdueCount} งาน!`
+      }));
+    } else {
+      setA3(p => ({
+        ...p,
+        action: 'idle',
+        msg: '⏱️ SLA ปกติทุกโครงการ'
+      }));
+    }
+  }, [tasks]);
+
+  // Agent 4: Evaluator - ประจำโต๊ะวางแผน บันทึกสถิติและประเมินงาน
   useEffect(() => {
+    const evalMsgs = [
+      'บันทึกสถิติกิลด์',
+      'คำนวณอัตราความสำเร็จ',
+      'อัปเดตเกียรติยศนักผจญภัย',
+      'ตรวจสอบรายงานประจำสัปดาห์'
+    ];
+    let idx = 0;
     const loop = setInterval(() => {
-      if (Math.random() > 0.6) {
-        setA4(p => ({ ...p, action: 'working', msg: 'กำลังประมวลผลสถิติ' }));
-        setTimeout(() => setA4(p => ({ ...p, action: 'idle', msg: 'สแตนด์บาย' })), 4000);
-      }
-    }, 30000);
+      idx = (idx + 1) % evalMsgs.length;
+      setA4(p => ({ ...p, action: 'working', msg: evalMsgs[idx] }));
+      setTimeout(() => {
+        setA4(p => ({ ...p, action: 'idle' }));
+      }, 5000);
+    }, 22000);
     return () => clearInterval(loop);
   }, []);
 
@@ -504,11 +527,11 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         {/* Layer 1: Translucent dark overlay for contrast */}
         <div className="absolute inset-0 bg-black/25 pointer-events-none z-10" />
 
-        {/* Layer 2: Agent PNGs with CSS Living Motion */}
-        <AgentPng type="scout"     title="🕵️ Scout"      {...a1} />
-        <AgentPng type="wizard"    title="🧠 Dispatcher"  {...a2} />
-        <AgentPng type="watcher"   title="⏱️ Watcher"    {...a3} />
-        <AgentPng type="evaluator" title="📊 Evaluator"   {...a4} />
+        {/* Layer 2: Agent WebP Animations from Supabase CDN */}
+        <AgentPng type="scout"     title="🕵️ Scout"      {...a1} onClick={() => setShowQuestBoard(true)} />
+        <AgentPng type="wizard"    title="🧠 Dispatcher"  {...a2} onClick={() => setShowBotActivity(true)} />
+        <AgentPng type="watcher"   title="⏱️ Watcher"    {...a3} onClick={() => setShowQuestBoard(true)} />
+        <AgentPng type="evaluator" title="📊 Evaluator"   {...a4} onClick={() => setShowRoster(true)} />
 
         {/* Layer 3: Quest Board invisible hotspot (left side of tavern) */}
         <div
