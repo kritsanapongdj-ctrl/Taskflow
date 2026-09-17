@@ -4,8 +4,10 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { Radar, RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 
-// BGM_URL ถูกนำออกชั่วคราวเพื่อลดขนาด Deployment Storage บน Vercel (เดิม 87MB)
-const BGM_URL = null;
+// URL วิดีโอพื้นหลังจาก Firebase Storage หรือ CDN ภายนอก (ป้องกัน Vercel Storage เต็ม)
+// เมื่อได้ Download URL จาก Firebase Storage ให้นำมาวางแทน URL ด้านล่างนี้ได้เลย
+const TAVERN_VIDEO_URL = "https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT_ID.appspot.com/o/tavern-loop.mp4?alt=media"; 
+const TAVERN_FALLBACK_IMG = "/tavern-bg.jpg";
 
 import ClassEmblem from './ClassEmblem';
 import archetypesData from './data/archetypes.json';
@@ -479,18 +481,17 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
       {/* ═══ Tavern Scene ═══ */}
       <div className="flex-1 relative overflow-hidden">
 
-        {/* Layer 0: Video background loop */}
+        {/* Layer 0: Video background loop (จาก CDN / Firebase Storage) */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          poster="/tavern-bg.jpg"
+          poster={TAVERN_FALLBACK_IMG}
           className="absolute inset-0 w-full h-full object-cover z-0"
         >
+          {TAVERN_VIDEO_URL && <source src={TAVERN_VIDEO_URL} type="video/mp4" />}
           <source src="/tavern-loop.mp4" type="video/mp4" />
-          {/* Fallback: static jpg if video can't load */}
-          Your browser does not support the video tag.
         </video>
 
         {/* Layer 1: Translucent dark overlay for contrast */}
