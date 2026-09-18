@@ -85,16 +85,16 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
     return 'agentGlow 3s ease-in-out infinite';
   };
 
-  // ขนาดความสูงของตัวละครตาม Perspective ให้สมดุลกับคนในฉาก (คนในฉากสูงประมาณ 120-140px)
+  // ขนาดความสูงของตัวละครตาม Perspective ให้สมดุลกับคนในฉาก (คนในฉากสูงประมาณ 180-220px)
   const agentHeights = {
-    scout: '130px',      // ยืนใกล้โต๊ะซ้าย / กระดานเควสต์
-    wizard: '125px',     // ยืนประจำที่เคาน์เตอร์ด้านหลัง
-    watcher: '140px',    // ยืนโต๊ะกลาง / เตาผิง
-    evaluator: '145px',  // ยืนโต๊ะหน้า
+    scout: '185px',      // หน่วยสอดแนม (ยืนส่องกล้องริมระเบียงหน้าต่าง)
+    wizard: '200px',     // จอมเวท (ยืนร่ายเวทมนตร์ทางเดินกลาง)
+    watcher: '225px',    // อัศวินเฝ้าระวัง (สวมเกราะเต็มตัว ยืนข้างเตาผิง)
+    evaluator: '210px',  // นักปราชญ์ (ยืนเปิดสมุดบันทึก มุมโต๊ะซ้ายล่าง)
   };
 
   const imgStyle = {
-    height: agentHeights[type] || '135px',
+    height: agentHeights[type] || '195px',
     width: 'auto',
     transform: flip ? 'scaleX(-1)' : 'scaleX(1)',
     animation: getAnimation(),
@@ -112,6 +112,7 @@ const AgentPng = ({ type, x, y, action, flip, msg, title, onClick }) => {
       style={{
         left: `${x}%`,
         top: `${y}%`,
+        transform: 'translate(-50%, -100%)', // Feet Anchor: ปักหลักที่เท้า ให้เท้าสัมผัสพื้นแน่น ไม่ลอย
         transitionDuration: isWalking ? '2200ms' : '600ms',
         transition: 'left 2200ms ease-in-out, top 2200ms ease-in-out',
       }}
@@ -337,10 +338,11 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [jobStatusTasks, setJobStatusTasks] = useState([]);
   const [filterProj, setFilterProj] = useState('');
 
-  const [a1, setA1] = useState({ x: 10, y: 50, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
-  const [a2, setA2] = useState({ x: 36, y: 34, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
-  const [a3, setA3] = useState({ x: 63, y: 58, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
-  const [a4, setA4] = useState({ x: 19, y: 72, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
+  // พิกัดยึดตามจุดสัมผัสเท้า (Feet Anchor) ที่คำนวณเข้ากับองค์ประกอบฉากจริง 100%
+  const [a1, setA1] = useState({ x: 11, y: 69, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
+  const [a2, setA2] = useState({ x: 30.5, y: 98, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
+  const [a3, setA3] = useState({ x: 86, y: 82, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
+  const [a4, setA4] = useState({ x: 6, y: 96, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
 
   // 1. ดึงข้อมูลจากฐานข้อมูล lh_scraper โดยตรง
   useEffect(() => {
@@ -354,9 +356,9 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         // Agent 1: Scout - เดินไปส่องกระดานเควสต์เมื่อมีงานใหม่เข้า
         const hasNew = arr.some(t => t.notified_new);
         if (hasNew) {
-          setA1(p => ({ ...p, action: 'walking', x: 9, y: 38, flip: true, msg: 'พบเควสต์ใหม่!' }));
+          setA1(p => ({ ...p, action: 'walking', x: 8, y: 64, flip: true, msg: 'พบเควสต์ใหม่!' }));
           setTimeout(() => setA1(p => ({ ...p, action: 'working', msg: 'กำลังสำรวจรายละเอียด...' })), 2200);
-          setTimeout(() => setA1(p => ({ ...p, action: 'walking', x: 13, y: 52, flip: false, msg: 'รายงานเควสต์เข้าบอร์ด' })), 5000);
+          setTimeout(() => setA1(p => ({ ...p, action: 'walking', x: 11, y: 69, flip: false, msg: 'รายงานเควสต์เข้าบอร์ด' })), 5000);
           setTimeout(() => setA1(p => ({ ...p, action: 'idle', msg: 'ลาดตระเวนเควสต์' })), 7500);
         }
       }
