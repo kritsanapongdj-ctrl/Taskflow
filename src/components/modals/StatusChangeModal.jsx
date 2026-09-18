@@ -10,12 +10,37 @@ export default function StatusChangeModal({
 }) {
   if (!isOpen) return null;
 
-  const isConfirmDisabled =
-    (sMod.type === 'postpone_start' && !sMod.postponeStartDate) ||
-    ((sMod.type === 'cancel' || sMod.type === 'postpone' || sMod.type === 'issue') && !sMod.reason.trim()) ||
-    (sMod.type === 'postpone' && !sMod.postponeDate) ||
-    (sMod.type === 'complete' && !sMod.noWO && !sMod.workOrderNo.trim()) ||
-    (sMod.type === 'complete' && sMod.isOverdue && !sMod.overdueReason.trim());
+  const handleConfirmClick = () => {
+    if (sMod.type === 'cancel' && !sMod.reason?.trim()) {
+      return alert('กรุณาระบุเหตุผลในการยกเลิกงาน');
+    }
+    if (sMod.type === 'postpone_start' && !sMod.postponeStartDate) {
+      return alert('กรุณาระบุวันที่เริ่มงานใหม่');
+    }
+    if (sMod.type === 'issue' && !sMod.reason?.trim()) {
+      return alert('กรุณาระบุสาเหตุที่ติดปัญหา หรืออะไหล่ที่รอ');
+    }
+    if (sMod.type === 'postpone') {
+      if (!sMod.postponeDate) return alert('กรุณาระบุวันที่ขอเลื่อนจบไปใหม่');
+      if (!sMod.reason?.trim()) return alert('กรุณาระบุสาเหตุที่ขอเลื่อนวันจบงาน');
+    }
+    if (sMod.type === 'complete') {
+      if (sMod.isOverdue && !sMod.overdueReason?.trim()) {
+        return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
+      }
+      if (!sMod.noWO && !sMod.workOrderNo?.trim()) {
+        return alert('กรุณาระบุเลขที่ใบงาน (เช่น LH-123-1234567) หรือ ติ๊กเลือก "ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน" ด้านล่าง');
+      }
+      if (!sMod.noWO) {
+        const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/;
+        const cleanWo = (sMod.workOrderNo || '').trim().toUpperCase();
+        if (!woRegex.test(cleanWo)) {
+          return alert('รูปแบบเลขที่ใบงานไม่ถูกต้อง!\nต้องเป็น: อักษร 2 ตัว - เลข 3 ตัว - เลข 7 ตัว\nตัวอย่าง: LH-123-1234567');
+        }
+      }
+    }
+    onConfirm();
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
@@ -183,6 +208,15 @@ export default function StatusChangeModal({
                     </span>
                   </label>
                 )}
+
+                {!sMod.forceWO && !sMod.noWO && !sMod.workOrderNo?.trim() && (
+                  <div className="mt-2 text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200 flex items-start gap-1.5 animate-fadeIn">
+                    <span className="text-amber-600 font-bold shrink-0">💡</span>
+                    <span>
+                      หากยังไม่มีเลขใบงาน ให้<strong>ติ๊กถูกที่ช่องสี่เหลี่ยมด้านบน</strong> เพื่อขอจบงานหน้างานก่อนได้ครับ
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -202,15 +236,14 @@ export default function StatusChangeModal({
                 postponeDate: getTStr ? getTStr() : ''
               });
             }}
-            className="flex-1 bg-gray-100 p-2 text-xs font-bold rounded"
+            className="flex-1 bg-gray-100 hover:bg-gray-200 p-2 text-xs font-bold rounded transition cursor-pointer"
           >
             ปิด
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={isConfirmDisabled}
-            className="flex-1 bg-[#0f2e4a] text-white p-2 text-xs font-bold rounded disabled:opacity-50 shadow-sm active:scale-95 transition-all"
+            onClick={handleConfirmClick}
+            className="flex-1 bg-[#0f2e4a] hover:bg-[#1a3f63] text-white p-2 text-xs font-bold rounded shadow-sm active:scale-95 transition-all cursor-pointer"
           >
             ยืนยัน
           </button>
