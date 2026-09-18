@@ -339,8 +339,10 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
   const [filterProj, setFilterProj] = useState('');
 
   // พิกัดยึดตามจุดสัมผัสเท้า (Feet Anchor) ที่คำนวณเข้ากับองค์ประกอบฉากจริง 100%
-  const [a1, setA1] = useState({ x: 11, y: 69, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
-  const [a2, setA2] = useState({ x: 30.5, y: 98, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
+  // a1 Scout: เดินลาดตระเวนบนพื้นชั้นล่างของโรงเตี๋ยม
+  // a2 Wizard: ลอยร่ายเวทที่กรอบหน้าต่าง (levitation — เหมาะกับ wizard มากกว่า scout)
+  const [a1, setA1] = useState({ x: 22, y: 91, action: 'idle', flip: false, msg: 'ลาดตระเวนเควสต์' });
+  const [a2, setA2] = useState({ x: 11, y: 72, action: 'idle', flip: false, msg: 'พลังเวทพร้อมปฏิบัติการ' });
   const [a3, setA3] = useState({ x: 86, y: 82, action: 'idle', flip: false, msg: 'เฝ้าระวังกำหนดเวลา' });
   const [a4, setA4] = useState({ x: 6, y: 96, action: 'idle', flip: false, msg: 'บันทึกสถิติกิลด์' });
 
@@ -356,9 +358,9 @@ export default function GuildSimulation({ tasks, sets, setTab, db }) {
         // Agent 1: Scout - เดินไปส่องกระดานเควสต์เมื่อมีงานใหม่เข้า
         const hasNew = arr.some(t => t.notified_new);
         if (hasNew) {
-          setA1(p => ({ ...p, action: 'walking', x: 8, y: 64, flip: true, msg: 'พบเควสต์ใหม่!' }));
+          setA1(p => ({ ...p, action: 'walking', x: 28, y: 90, flip: true, msg: 'พบเควสต์ใหม่!' }));
           setTimeout(() => setA1(p => ({ ...p, action: 'working', msg: 'กำลังสำรวจรายละเอียด...' })), 2200);
-          setTimeout(() => setA1(p => ({ ...p, action: 'walking', x: 11, y: 69, flip: false, msg: 'รายงานเควสต์เข้าบอร์ด' })), 5000);
+          setTimeout(() => setA1(p => ({ ...p, action: 'walking', x: 22, y: 91, flip: false, msg: 'รายงานเควสต์เข้าบอร์ด' })), 5000);
           setTimeout(() => setA1(p => ({ ...p, action: 'idle', msg: 'ลาดตระเวนเควสต์' })), 7500);
         }
       }
