@@ -164,8 +164,15 @@ export default function TeamStatusTab({
       else if (maxStat >= 6) prefix = 'Adept ';
 
       const getDesc = (k) => {
-         const defaults = { str: 'พลังดันงาน', agi: 'ความไว', dex: 'ความละเอียด', int: 'เทคโนโลยี', con: 'ทนทาน', sen: 'วุฒิภาวะทางอารมณ์' };
-         return defaults[k];
+         const defaults = { 
+            str: 'การขับเคลื่อนและลงมือทำอย่างเด็ดขาด', 
+            agi: 'ความรวดเร็วคล่องตัวในการแก้ปัญหา', 
+            dex: 'ความประณีตแม่นยำและมาตรฐานงาน', 
+            int: 'การพัฒนาระบบและประยุกต์ใช้เทคโนโลยี', 
+            con: 'ความอดทนหนักแน่นต่อแรงกดดัน', 
+            sen: 'การประสานงานและครองใจผู้คน' 
+         };
+         return defaults[k] || k;
       };
 
       let mainStyleRaw = ''; let styleDesc = ''; let useTop3 = false;
