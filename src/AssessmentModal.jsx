@@ -49,11 +49,16 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
   useEffect(() => {
     if (isOpen && staff) {
-      // Initialize inner stats
+      // Initialize inner stats with saved sub-criteria if available
       const initInner = {};
       stats.forEach(s => {
-        const val = Number(staff[s.id]) || 5;
-        initInner[s.id] = [val, val, val];
+        const savedList = staff.innerScores?.[s.id] || staff.subScores?.[s.id];
+        if (Array.isArray(savedList) && savedList.length === 3) {
+          initInner[s.id] = savedList.map(v => Math.min(Math.max(Number(v) || 5, 1), 10));
+        } else {
+          const val = Math.min(Math.max(Number(staff[s.id]) || 5, 1), 10);
+          initInner[s.id] = [val, val, val];
+        }
       });
       setInnerScores(initInner);
 
@@ -61,19 +66,21 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
       const initOuter = {};
       const initCustomized = {};
       const currentInner = {
-        str: Number(staff.str) || 5,
-        agi: Number(staff.agi) || 5,
-        dex: Number(staff.dex) || 5,
-        int: Number(staff.int) || 5,
-        con: Number(staff.con) || 5,
-        sen: Number(staff.sen) || 5
+        str: Math.round(initInner.str.reduce((a, b) => a + b, 0) / 3),
+        agi: Math.round(initInner.agi.reduce((a, b) => a + b, 0) / 3),
+        dex: Math.round(initInner.dex.reduce((a, b) => a + b, 0) / 3),
+        int: Math.round(initInner.int.reduce((a, b) => a + b, 0) / 3),
+        con: Math.round(initInner.con.reduce((a, b) => a + b, 0) / 3),
+        sen: Math.round(initInner.sen.reduce((a, b) => a + b, 0) / 3)
       };
 
       OUTER_KEYS.forEach(k => {
         const autoVal = getBaselineOuter(k, currentInner);
         if (staff[k] !== undefined && staff[k] !== null) {
           initOuter[k] = Number(staff[k]);
-          initCustomized[k] = Number(staff[k]) !== autoVal;
+          initCustomized[k] = (staff.outerCustomized && staff.outerCustomized[k] !== undefined)
+            ? !!staff.outerCustomized[k]
+            : Number(staff[k]) !== autoVal;
         } else {
           initOuter[k] = autoVal;
           initCustomized[k] = false;
@@ -91,18 +98,29 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   if (!isOpen || !staff) return null;
 
   const handleInnerScoreChange = (statId, index, value) => {
-    const newScores = { ...innerScores };
-    newScores[statId][index] = parseInt(value, 10);
+    const val = Math.min(Math.max(parseInt(value, 10) || 1, 1), 10);
+    const updatedStatList = [...(innerScores[statId] || [5, 5, 5])];
+    updatedStatList[index] = val;
+
+    const newScores = {
+      ...innerScores,
+      [statId]: updatedStatList
+    };
     setInnerScores(newScores);
+
+    const getListAvg = (list) => {
+      if (!list || list.length === 0) return 5;
+      return Math.round(list.reduce((a, b) => a + b, 0) / list.length);
+    };
 
     // Update un-customized outer scores according to updated inner averages
     const updatedInnerStats = {
-      str: statId === 'str' ? Math.round(newScores.str.reduce((a, b) => a + b, 0) / newScores.str.length) : calculateAverage('str'),
-      agi: statId === 'agi' ? Math.round(newScores.agi.reduce((a, b) => a + b, 0) / newScores.agi.length) : calculateAverage('agi'),
-      dex: statId === 'dex' ? Math.round(newScores.dex.reduce((a, b) => a + b, 0) / newScores.dex.length) : calculateAverage('dex'),
-      int: statId === 'int' ? Math.round(newScores.int.reduce((a, b) => a + b, 0) / newScores.int.length) : calculateAverage('int'),
-      con: statId === 'con' ? Math.round(newScores.con.reduce((a, b) => a + b, 0) / newScores.con.length) : calculateAverage('con'),
-      sen: statId === 'sen' ? Math.round(newScores.sen.reduce((a, b) => a + b, 0) / newScores.sen.length) : calculateAverage('sen')
+      str: statId === 'str' ? getListAvg(updatedStatList) : getListAvg(newScores.str),
+      agi: statId === 'agi' ? getListAvg(updatedStatList) : getListAvg(newScores.agi),
+      dex: statId === 'dex' ? getListAvg(updatedStatList) : getListAvg(newScores.dex),
+      int: statId === 'int' ? getListAvg(updatedStatList) : getListAvg(newScores.int),
+      con: statId === 'con' ? getListAvg(updatedStatList) : getListAvg(newScores.con),
+      sen: statId === 'sen' ? getListAvg(updatedStatList) : getListAvg(newScores.sen)
     };
 
     const newOuter = { ...outerScores };
@@ -149,14 +167,31 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   const currentOuterAnalysis = analyzeOuterLayer(outerScores, currentInnerStatsObj);
 
   const handleSave = () => {
+    const getListAvg = (list) => {
+      if (!list || list.length === 0) return 5;
+      return Math.round(list.reduce((a, b) => a + b, 0) / list.length);
+    };
+
+    const calculatedInner = {
+      str: getListAvg(innerScores.str),
+      agi: getListAvg(innerScores.agi),
+      dex: getListAvg(innerScores.dex),
+      int: getListAvg(innerScores.int),
+      con: getListAvg(innerScores.con),
+      sen: getListAvg(innerScores.sen)
+    };
+
     const payload = {
-      ...currentInnerStatsObj,
+      ...calculatedInner,
+      innerScores: JSON.parse(JSON.stringify(innerScores)),
+      subScores: JSON.parse(JSON.stringify(innerScores)),
       cx: outerScores.cx,
       tech: outerScores.tech,
       sla: outerScores.sla,
       crisis: outerScores.crisis,
       resource: outerScores.resource,
-      innovation: outerScores.innovation
+      innovation: outerScores.innovation,
+      outerCustomized: { ...outerCustomized }
     };
     onSave(payload);
   };

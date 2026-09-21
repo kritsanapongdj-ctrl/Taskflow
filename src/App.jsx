@@ -880,7 +880,7 @@ export default function App() {
       targetForm.id = Date.now().toString();
       ns.push(targetForm);
     } else {
-      const idx = ns.findIndex(x => x.id === targetForm.id);
+      const idx = ns.findIndex(x => String(x.id) === String(targetForm.id));
       if (idx > -1) ns[idx] = { ...targetForm };
       else ns.push(targetForm);
     }

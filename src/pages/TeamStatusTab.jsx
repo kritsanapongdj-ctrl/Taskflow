@@ -107,9 +107,19 @@ export default function TeamStatusTab({
 
             const potentialIdentity = getArchetypeIdentity(stats, archetypesData);
             
+            const parseScore = (v, fb = 5) => (typeof v === 'number' && v >= 1 && v <= 10) ? Math.round(v) : fb;
+            const innerScores = {
+              str: [parseScore(row[10], str), parseScore(row[11], str), parseScore(row[12], str)],
+              agi: [parseScore(row[13], agi), parseScore(row[14], agi), parseScore(row[15], agi)],
+              dex: [parseScore(row[16], dex), parseScore(row[17], dex), parseScore(row[18], dex)],
+              int: [parseScore(row[19], int), parseScore(row[20], int), parseScore(row[21], int)],
+              con: [parseScore(row[23], con), parseScore(row[24], con), parseScore(row[25], con)],
+              sen: [parseScore(row[26], sen), parseScore(row[29], sen), parseScore(row[30], sen)]
+            };
+
             const existingIdx = ns.findIndex(x => x.name === name);
             const newObj = {
-              name: name, str, agi, dex, int, con, sen, archetypeKey, potentialIdentity
+              name: name, str, agi, dex, int, con, sen, archetypeKey, potentialIdentity, innerScores, subScores: innerScores
             };
             if(existingIdx > -1) {
               ns[existingIdx] = {...ns[existingIdx], ...newObj};
@@ -321,18 +331,25 @@ export default function TeamStatusTab({
             <AssessmentModal 
                isOpen={assessMode} 
                onClose={() => setAssessMode(false)} 
-               staff={teamForm} 
+               staff={teamForm?.id ? teamForm : selTeam} 
                onSave={(newStats) => {
                   const ns = [...(sets.staffStats||[])];
-                  const idx = ns.findIndex(x => x.id === teamForm.id);
+                  const currentTarget = (teamForm?.id ? teamForm : selTeam) || {};
+                  const targetId = String(currentTarget.id || '');
+                  const idx = ns.findIndex(x => String(x.id) === targetId);
+                  let updatedStaff;
                   if (idx >= 0) {
-                     ns[idx] = { ...ns[idx], ...newStats };
+                     updatedStaff = { ...ns[idx], ...newStats };
+                     ns[idx] = updatedStaff;
+                  } else {
+                     updatedStaff = { ...currentTarget, ...newStats, id: targetId || Date.now().toString() };
+                     ns.push(updatedStaff);
                   }
                   const newSets = { ...sets, staffStats: ns };
                   setSets(newSets);
                   saveD('settings', newSets);
-                  setTeamForm({ ...teamForm, ...newStats });
-                  setSelTeam({ ...selTeam, ...newStats });
+                  setTeamForm(updatedStaff);
+                  setSelTeam(updatedStaff);
                   setAssessMode(false);
                   alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
                }}
