@@ -6,7 +6,9 @@ import archetypesData from '../../data/archetypes.json' with { type: 'json' };
 import { 
   analyzeOuterLayer, 
   analyzeArchetype, 
-  getArchetypeIdentity
+  getArchetypeIdentity,
+  UNIVERSAL_BASELINE,
+  getRoleTargetProfile
 } from '../../utils/archetypeEngine';
 
 export default function StaffAssessmentReportModal({
@@ -277,9 +279,24 @@ export default function StaffAssessmentReportModal({
               </div>
 
               {/* Compact Vector Radar Chart */}
-              <div className="w-full flex justify-center py-0.5">
+              <div className="w-full flex flex-col items-center justify-center py-0.5">
                 <div className="w-[140px] h-[140px]">
-                  <RadarChart userStats={userStats} />
+                  <RadarChart 
+                    userStats={userStats} 
+                    showBaseline={true}
+                    roleTargetStats={archAnalysis.roleProfile?.targetStats}
+                  />
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-0.5 text-[7.5px] text-slate-500 font-medium">
+                  <span className="flex items-center gap-0.5">
+                    <span className="w-2 h-1 rounded bg-[#0f2e4a]"></span> จริง
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <span className="w-2 h-0 border-t border-dashed border-[#bca374]"></span> ฐาน 5
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <span className="w-2 h-0 border-t border-dashed border-[#0284c7]"></span> เป้า {archAnalysis.roleProfile?.shortRole || 'ตำแหน่ง'}
+                  </span>
                 </div>
               </div>
 
@@ -292,30 +309,63 @@ export default function StaffAssessmentReportModal({
                   { key: 'INT', val: statsObj.int, label: 'ทักษะเชิงช่าง & ดิจิทัล', color: 'bg-blue-500' },
                   { key: 'CON', val: statsObj.con, label: 'ความทนทาน & บริการด้วยใจ', color: 'bg-orange-500' },
                   { key: 'SEN', val: statsObj.sen, label: 'จิตวิทยา & สื่อสารลูกบ้าน', color: 'bg-purple-500' }
-                ].map((s) => (
-                  <div key={s.key} className="text-[8.5px]">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="font-bold text-slate-700">
-                        {s.key} <span className="font-normal text-slate-400 text-[8px] ml-0.5">({s.label})</span>
-                      </span>
-                      <span className="font-bold text-[#0f2e4a]">{s.val}/10</span>
+                ].map((s) => {
+                  const kLower = s.key.toLowerCase();
+                  const isCore = archAnalysis.roleProfile?.coreFocus?.includes(kLower);
+                  const targetVal = archAnalysis.roleProfile?.targetStats?.[kLower] || 5;
+                  return (
+                    <div key={s.key} className="text-[8.5px]">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="font-bold text-slate-700 flex items-center gap-1">
+                          {s.key} <span className="font-normal text-slate-400 text-[8px]">({s.label})</span>
+                          {isCore && <span className="text-[7px] font-bold text-sky-800 bg-sky-50 px-1 py-0.2 rounded border border-sky-200">★เป้า {targetVal}</span>}
+                        </span>
+                        <span className="font-bold text-[#0f2e4a]">{s.val}/10</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${s.color} rounded-full`}
+                          style={{ width: `${(s.val / 10) * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${s.color} rounded-full`}
-                        style={{ width: `${(s.val / 10) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {weaknessText && (
-                <div className="mt-1 p-2 rounded-lg bg-slate-50 border border-slate-200 text-[8.5px] text-slate-600 leading-snug">
-                  <strong className="text-slate-800 block mb-0.5">💡 ข้อสังเกตเชิงพัฒนา:</strong>
-                  {weaknessText}
-                </div>
-              )}
+              {/* Role Benchmark & Constructive Growth Feedback */}
+              <div className="mt-1 space-y-1">
+                {archAnalysis.signatureStrengths && archAnalysis.signatureStrengths.length > 0 && (
+                  <div className="p-1.5 rounded-lg bg-emerald-50/90 border border-emerald-200 text-[8px] text-emerald-950 leading-snug">
+                    <strong className="text-emerald-950 font-bold block mb-0.5 flex items-center gap-1">
+                      <span>⭐</span> จุดเด่นประจำตัว (Signature Strengths ≥ 7):
+                    </strong>
+                    <span>
+                      {archAnalysis.signatureStrengths.map(st => `${st.key.toUpperCase()} (${st.val})`).join(', ')} — มีความเชี่ยวชาญสูง
+                    </span>
+                  </div>
+                )}
+
+                {archAnalysis.considerations && archAnalysis.considerations.length > 0 ? (
+                  <div className="p-1.5 rounded-lg bg-amber-50/90 border border-amber-200 text-[8px] text-amber-950 leading-snug">
+                    <strong className="text-amber-950 font-bold block mb-0.5 flex items-center gap-1">
+                      <span>💡</span> จุดที่ควรพิจารณาและสนับสนุน (≤ 4):
+                    </strong>
+                    <div className="space-y-0.5">
+                      {archAnalysis.considerations.map(c => (
+                        <div key={c.key} className="text-slate-700">
+                          • <strong>{c.key.toUpperCase()} ({c.val}/10)</strong>: {c.roleStatus} — {c.advice}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[8px] text-slate-600 leading-snug">
+                    <strong className="text-slate-800 font-bold block mb-0.5">✅ เกณฑ์มาตรฐานองค์กร (ฐาน 5):</strong>
+                    ผ่านเกณฑ์มาตรฐานทุกมิติ (≥ 5 ทุกค่า) สอดคล้องตามมาตรฐานบริษัท
+                  </div>
+                )}
+              </div>
             </div>
 
           </div>

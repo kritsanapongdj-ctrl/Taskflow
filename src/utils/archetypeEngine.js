@@ -2,6 +2,88 @@ import defaultArchetypesData from '../data/archetypes.json' with { type: 'json' 
 
 export const STAT_KEYS = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
 
+export const UNIVERSAL_BASELINE = 5;
+
+export const ROLE_TARGET_PROFILES = {
+  admin: {
+    key: 'admin',
+    name: 'ธุรการบริการ (Customer Service Admin)',
+    shortRole: 'ธุรการ',
+    baseline: 5,
+    targetStats: { str: 5, agi: 6, dex: 7, int: 7, con: 6, sen: 6 },
+    targetArray: [5, 6, 7, 7, 6, 6],
+    coreFocus: ['dex', 'int', 'con', 'sen', 'agi'],
+    flexibleStats: ['str'],
+    mission: 'ดูแลระบบใบงาน LHAppServ ตรวจสอบเอกสารค่าใช้จ่าย 9 หมวดใน LHServ Portal วินัยในงาน Routine และประสานงานลูกบ้าน',
+    strengthDesc: 'มีความแม่นยำด้านเอกสารสูง ใช้ระบบดิจิทัลคล่องแคล่ว มีวินัยต่องาน Routine และมีจิตวิทยาบริการยอดเยี่ยม'
+  },
+  foreman: {
+    key: 'foreman',
+    name: 'ผู้ควบคุมงาน (Customer Service Foreman)',
+    shortRole: 'โฟร์แมน',
+    baseline: 5,
+    targetStats: { str: 7, agi: 7, dex: 6, int: 5, con: 7, sen: 5 },
+    targetArray: [7, 7, 6, 5, 7, 5],
+    coreFocus: ['str', 'agi', 'dex', 'con'],
+    flexibleStats: ['int', 'sen'],
+    mission: 'ควบคุมงานระบบสาธารณูปโภค 6 หมวด (ประปา สระว่ายน้ำ ไฟฟ้า สวน) ตรวจรับงานผู้รับเหมา และแก้ปัญหาฉุกเฉินหน้างาน',
+    strengthDesc: 'ขับเคลื่อนงานหน้างานเด็ดขาด รุดหน้าเข้าพื้นที่ฉับไว อึดทนต่อสภาพแวดล้อม และมีมาตรฐานการตรวจงานช่างเข้มงวด'
+  },
+  officer: {
+    key: 'officer',
+    name: 'เจ้าหน้าที่บริการ (Customer Service Officer)',
+    shortRole: 'เจ้าหน้าที่',
+    baseline: 5,
+    targetStats: { str: 6, agi: 6, dex: 6, int: 6, con: 6, sen: 6 },
+    targetArray: [6, 6, 6, 6, 6, 6],
+    coreFocus: ['str', 'agi', 'dex', 'int', 'con', 'sen'],
+    flexibleStats: [],
+    mission: 'บริหารจัดการภาพรวมโครงการ ควบคุมยอดงานค้าง Wait คุมงบประมาณต้นทุนทางอ้อมรวม 9 หมวด และกำกับดูแลทีมโฟร์แมนและธุรการ',
+    strengthDesc: 'มีความสมดุลรอบด้านในการบริหารโครงการ ตัดสินใจเชิงกลยุทธ์ และเป็นตัวแทนบริษัทในการเจรจาเคสสำคัญ'
+  }
+};
+
+export const getRoleTargetProfile = (roleOrClass) => {
+  if (!roleOrClass) return ROLE_TARGET_PROFILES.officer;
+  const str = (typeof roleOrClass === 'string' ? roleOrClass : (roleOrClass.name || roleOrClass.title || roleOrClass.key || '')).toLowerCase();
+  if (str.includes('admin') || str.includes('ธุรการ') || str.includes('ประสาน')) return ROLE_TARGET_PROFILES.admin;
+  if (str.includes('foreman') || str.includes('โฟร์แมน') || str.includes('ช่าง') || str.includes('ผู้ควบคุม')) return ROLE_TARGET_PROFILES.foreman;
+  return ROLE_TARGET_PROFILES.officer;
+};
+
+export const DATA_ANCHOR_GUIDE = {
+  str: {
+    source: 'LHAppServ & LHServ Portal (54012)',
+    metrics: 'อัตราการปิดเคสวิกฤตหน้างาน (ท่อเมนแตก, ปั๊มดับ) และการตัดสินใจแก้ปัญหา',
+    baselineRule: 'ระดับ 5: ตัดสินใจแก้ปัญหาหน้างานตามขั้นตอนมาตรฐานได้สำเร็จ งานไม่สะดุด'
+  },
+  agi: {
+    source: 'LHAppServ & Taskflow (Response Time)',
+    metrics: 'ความเร็วในการตอบสนองรับเรื่อง และการกระจายงานตามกรอบ SLA',
+    baselineRule: 'ระดับ 5: ตอบสนองและประสานงานรับแจ้งซ่อมตาม SLA ไม่ดองสถานะเรื่อง'
+  },
+  dex: {
+    source: 'LHServ Portal (9 หมวดงบประมาณ) & LHAppServ',
+    metrics: 'ความถูกต้องของข้อมูลแปลง/เลขที่อ้างอิง และอัตรางานซ่อมซ้ำ (Recurring Defect)',
+    baselineRule: 'ระดับ 5: ข้อมูลถูกต้องตามมาตรฐาน ตรวจสอบงานละเอียด เอกสารไม่ตีกลับ'
+  },
+  int: {
+    source: 'Taskflow System & LHAppServ',
+    metrics: 'การใช้งาน Taskflow รายวัน และการนำประวัติงานซ่อมมาวางแผน PM',
+    baselineRule: 'ระดับ 5: ใช้ระบบ Taskflow และเครื่องมือดิจิทัลติดตามงานได้อย่างคล่องแคล่ว'
+  },
+  con: {
+    source: 'Daily Work Logs & Customer Escalations',
+    metrics: 'วินัยในงาน Routine ประจำวัน และการควบคุมอารมณ์ภายใต้ความกดดัน',
+    baselineRule: 'ระดับ 5: ทำงานต่อเนื่องตามเป้าหมาย คุมอารมณ์และสมาธิในงาน Routine ได้มั่นคง'
+  },
+  sen: {
+    source: 'Customer Logs & Contractor Meetings',
+    metrics: 'มารยาทการสื่อสาร Service Mind และการประสานงานลดข้อขัดแย้ง',
+    baselineRule: 'ระดับ 5: มี Service Mind สื่อสารสุภาพ เจรจาประสานงานได้ราบรื่น'
+  }
+};
+
 export const TIE_BREAKERS = {
   str: 0.06,
   agi: 0.05,
@@ -146,9 +228,11 @@ export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetype
   return POTENTIAL_IDENTITY_MAP[topKeys.join('_')] || '-';
 };
 
-export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultArchetypesData) => {
+export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultArchetypesData, roleInput = null) => {
   const u = teamForm;
   if (!u) return null;
+
+  const roleProfile = getRoleTargetProfile(roleInput || u.role || u.classId || _sets?.staffClasses?.find?.(c => c.id === u.classId));
 
   const rawStats = Object.keys(TIE_BREAKERS).map(k => [k, Number(u[k]) || 0]);
   const sortedStats = [...rawStats].sort((a, b) => b[1] - a[1]);
@@ -237,16 +321,22 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
 
     if (minStat <= 4) {
       const weakReasons = {
-        str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง',
-        agi: 'งานด่วนที่ต้องการผลลัพธ์รวดเร็ว',
-        dex: 'งานที่ต้องใช้ความละเอียดถูกต้องสูงและแข่งกับเวลา',
-        int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน',
-        con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ',
-        sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า'
+        str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง (STR)',
+        agi: 'งานด่วนที่ต้องการการสลับตอบสนองฉับไว (AGI)',
+        dex: 'งานที่ต้องใช้ความละเอียดถูกต้องระดับสูง (DEX)',
+        int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน (INT)',
+        con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ (CON)',
+        sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า (SEN)'
       };
-      const weakNames = sortedStats.filter(s => s[1] <= 4).map(s => weakReasons[s[0]]).filter(Boolean);
-      if (weakNames.length > 0) {
-        styleDesc += ` แต่ทั้งนี้ พนักงานยังไม่เหมาะที่จะมอบหมายให้ทำ${weakNames.join(' รวมถึง ')} เนื่องจากสเตตัสในด้านดังกล่าวยังอยู่ในระดับต่ำ`;
+      const nonCoreWeaks = sortedStats.filter(s => s[1] <= 4 && roleProfile.flexibleStats.includes(s[0]));
+      const coreWeaks = sortedStats.filter(s => s[1] <= 4 && !roleProfile.flexibleStats.includes(s[0]));
+      
+      if (coreWeaks.length > 0) {
+        const names = coreWeaks.map(s => weakReasons[s[0]]).filter(Boolean);
+        styleDesc += ` ทั้งนี้ ในด้าน${names.join(' และ ')} ยังอยู่ในเกณฑ์ที่ควรได้รับการพัฒนาเสริมทักษะเพิ่มเติมเพื่อให้สอดคล้องกับมาตรฐานของตำแหน่ง`;
+      } else if (nonCoreWeaks.length > 0) {
+        const names = nonCoreWeaks.map(s => weakReasons[s[0]]).filter(Boolean);
+        styleDesc += ` สำหรับ${names.join(' และ ')} ซึ่งมิใช่งานหลักของตำแหน่ง${roleProfile.shortRole} สามารถจัดทีมงานหรือคู่หูเข้ามาช่วยหนุนเสริมได้อย่างมีประสิทธิภาพ`;
       }
     }
   }
@@ -304,17 +394,52 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
       weaknessLabel = 'ข้อเสนอแนะในการพัฒนา:';
       weaknessColor = 'text-sky-300';
       const statNames = lowestStats.map(s => s[0].toUpperCase()).join(', ');
-      dynamicWeakness = `ทักษะทุกด้านผ่านเกณฑ์มาตรฐานขึ้นไป (ไม่มีจุดบกพร่องต่ำกว่าเกณฑ์) โดยด้าน ${statNames} (${lowestStatValue}/10) อยู่ในระดับมาตรฐานการทำงานทั่วไป ซึ่งสามารถพัฒนาต่อยอดเป็นทักษะเสริมเพื่อความรอบด้านยิ่งขึ้น`;
-    } else if (lowestStatValue >= 3) {
-      weaknessLabel = 'จุดที่ควรเสริมทักษะ:';
-      weaknessColor = 'text-amber-400';
-      dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (คะแนน: ${lowestStatValue}/10) ควรได้รับการสนับสนุนหรือมีพี่เลี้ยงช่วยแนะนำในการปฏิบัติงานจริง`;
+      dynamicWeakness = `ทักษะทุกด้านผ่านเกณฑ์มาตรฐานองค์กร (Universal Baseline 5/10) ครบถ้วน โดยด้าน ${statNames} (${lowestStatValue}/10) อยู่ในระดับมาตรฐานการทำงานทั่วไป ซึ่งสามารถพัฒนาต่อยอดสู่ความเป็นเลิศตามสายอาชีพ`;
     } else {
-      weaknessLabel = 'จุดบอดวิกฤต:';
-      weaknessColor = 'text-rose-500 font-bold';
-      dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (สเตตัสต่ำกว่าเกณฑ์มาตรฐานมาก: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแลอย่างใกล้ชิด`;
+      const isAllFlexible = lowestStats.every(s => roleProfile.flexibleStats.includes(s[0]));
+      if (isAllFlexible) {
+        weaknessLabel = 'จุดพิจารณาเพื่อการสนับสนุน:';
+        weaknessColor = 'text-amber-400 font-medium';
+        dynamicWeakness = `สเตตัสในด้าน ${lowestStats.map(s => s[0].toUpperCase()).join(', ')} (${lowestStatValue}/10) อยู่ในระดับที่ควรได้รับการสนับสนุน ซึ่งสอดคล้องกับธรรมชาติของงาน${roleProfile.shortRole} หัวหน้างานสามารถมอบหมายให้คู่หูหรือทีมงานช่วยเสริมในมิตินี้`;
+      } else if (lowestStatValue >= 3) {
+        weaknessLabel = 'จุดที่ควรเสริมทักษะ:';
+        weaknessColor = 'text-amber-400';
+        dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (คะแนน: ${lowestStatValue}/10) ควรได้รับการสนับสนุนหรือมีพี่เลี้ยงช่วยแนะนำในการปฏิบัติงานจริง`;
+      } else {
+        weaknessLabel = 'จุดบอดที่ต้องดูแลใกล้ชิด:';
+        weaknessColor = 'text-rose-500 font-bold';
+        dynamicWeakness = `${lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ')} (สเตตัสต่ำกว่าเกณฑ์มาตรฐานมาก: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแลอย่างใกล้ชิด`;
+      }
     }
   }
+
+  const signatureStrengths = sortedStats.filter(s => s[1] >= 7).map(s => ({
+    key: s[0],
+    val: s[1],
+    name: STAT_DEFINITIONS[s[0]]?.name || s[0].toUpperCase(),
+    desc: getDesc(s[0])
+  }));
+
+  const standardPass = sortedStats.filter(s => s[1] >= 5 && s[1] < 7).map(s => ({
+    key: s[0],
+    val: s[1],
+    name: STAT_DEFINITIONS[s[0]]?.name || s[0].toUpperCase(),
+    desc: getDesc(s[0])
+  }));
+
+  const considerations = sortedStats.filter(s => s[1] <= 4).map(s => {
+    const isCore = roleProfile.coreFocus.includes(s[0]);
+    return {
+      key: s[0],
+      val: s[1],
+      name: STAT_DEFINITIONS[s[0]]?.name || s[0].toUpperCase(),
+      isCore,
+      roleStatus: isCore ? 'จุดสำคัญของตำแหน่งที่ต้องพัฒนา' : 'จุดสนับสนุน (ทีม/คู่หูช่วยเสริมได้)',
+      advice: isCore 
+        ? `ควรเน้นการโค้ชชิ่งและกำหนด Check-list ตรวจสอบในด้าน ${s[0].toUpperCase()}`
+        : `เป็นธรรมชาติของสายงาน${roleProfile.shortRole} สามารถจัดคู่หูที่ถนัดด้านนี้มาช่วยเสริมได้`
+    };
+  });
 
   return {
     rawStats,
@@ -327,7 +452,12 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     archObj,
     dynamicWeakness,
     weaknessLabel,
-    weaknessColor
+    weaknessColor,
+    universalBaseline: UNIVERSAL_BASELINE,
+    roleProfile,
+    signatureStrengths,
+    standardPass,
+    considerations
   };
 };
 
@@ -779,11 +909,13 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
 
   const talentGrid = talentGridMatrix[`${howLevel}_${whatLevel}`] || talentGridMatrix['med_med'];
 
-  // 4-Point Operational Risk Engine
+  // 4-Point Operational Risk Engine (Role-Smart Filter)
   const riskAlerts = [];
+  const userRoleStr = (typeof u.role === 'string' ? u.role : u.role?.name || u.potentialIdentity || '').toLowerCase();
+  const isAdminOrCoord = userRoleStr.includes('admin') || userRoleStr.includes('ประสาน') || userRoleStr.includes('ธุรการ');
 
-  // 1. Speed vs Quality Risk
-  if (actualValues.sla - actualValues.tech >= 2) {
+  // 1. Speed vs Quality Risk (สำหรับสายงานภาคสนาม/ช่าง)
+  if (!isAdminOrCoord && (actualValues.sla - actualValues.tech >= 2)) {
     riskAlerts.push({
       type: 'quality_speed',
       level: 'warning',
@@ -799,19 +931,25 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
       type: 'escalation',
       level: 'danger',
       title: '🚨 เสี่ยงเกิดข้อพิพาทรุนแรงกับลูกบ้าน (Customer Escalation Risk)',
-      desc: `ฝีมือช่างหรือความเร็วดีเยี่ยม แต่ทักษะบริการลูกบ้านต่ำ (CX ${actualValues.cx}) มีความเสี่ยงสูงที่จะเกิดการกระทบกระทั่ง`,
+      desc: `ความเชี่ยวชาญหรือความเร็วดีเยี่ยม แต่ทักษะบริการลูกบ้านต่ำ (CX ${actualValues.cx}) มีความเสี่ยงที่จะเกิดการกระทบกระทั่ง`,
       advice: 'จัดคู่หูที่มี CX สูงช่วยประสานงาน หรือฝึกอบรมทักษะการเจรจาลดความขัดแย้ง'
     });
   }
 
-  // 3. Contractor & Cost Leakage Risk
+  // 3. Contractor & Cost Leakage Risk (ปรับคำอธิบายตามบทบาท)
   if (actualValues.resource <= 4) {
     riskAlerts.push({
       type: 'leakage',
       level: 'warning',
-      title: '💸 เสี่ยงงบประมาณรั่วไหล / ควบคุมผู้รับเหมาไม่ได้ (Contractor Leakage Risk)',
-      desc: `การคุมงบและตรวจรับงานต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) เสี่ยงต่อการถูกผู้รับเหมาหมกเม็ดงาน หรือเบิกอะไหล่ผิดพลาด`,
-      advice: 'ให้หัวหน้างานช่วยตรวจรับมอบงานผู้รับเหมาและควบคุมการเบิกจ่ายอะไหล่'
+      title: isAdminOrCoord 
+        ? '📑 เสี่ยงเอกสารเบิกจ่ายงบประมาณคลาดเคลื่อน (Expense Documentation Risk)'
+        : '💸 เสี่ยงงบประมาณรั่วไหล / ควบคุมผู้รับเหมาไม่ได้ (Contractor Leakage Risk)',
+      desc: isAdminOrCoord
+        ? `การดูแลเอกสารส่งเบิกหรือรหัสบัญชีงบประมาณต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) อาจทำให้เอกสารเบิกจ่าย 9 หมวดในระบบ LHServ Portal ตีกลับหรือล่าช้า`
+        : `การคุมงบและตรวจรับงานต่ำกว่าเกณฑ์ (RESOURCE ${actualValues.resource}) เสี่ยงต่อการถูกผู้รับเหมาหมกเม็ดงาน หรือเบิกอะไหล่ผิดพลาด`,
+      advice: isAdminOrCoord
+        ? 'จัดทำ Check-list ตรวจสอบรหัสบัญชี (54010-54021) และใบส่งของก่อนส่งเบิก'
+        : 'ให้หัวหน้างานช่วยตรวจรับมอบงานผู้รับเหมาและควบคุมการเบิกจ่ายอะไหล่'
     });
   }
 

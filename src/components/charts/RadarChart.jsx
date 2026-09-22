@@ -4,7 +4,9 @@ export default function RadarChart({
   baseStats = [],
   userStats = [],
   selectedAxis = null,
-  onSelectAxis = null
+  onSelectAxis = null,
+  showBaseline = true,
+  roleTargetStats = null
 }) {
   const max = 10;
   const size = 250;
@@ -31,6 +33,14 @@ export default function RadarChart({
   const levels = [2, 4, 6, 8, 10];
   const safeStats = userStats.length === 6 ? userStats : [5, 5, 5, 5, 5, 5];
   const polygonPoints = safeStats.map((v, i) => getPoint(v, i)).join(' ');
+
+  const targetStatsArray = Array.isArray(roleTargetStats) 
+    ? roleTargetStats 
+    : (roleTargetStats && typeof roleTargetStats === 'object')
+      ? [roleTargetStats.str, roleTargetStats.agi, roleTargetStats.dex, roleTargetStats.int, roleTargetStats.con, roleTargetStats.sen]
+      : (Array.isArray(baseStats) && baseStats.length === 6)
+        ? baseStats
+        : null;
 
   return (
     <div className="relative w-full h-full max-w-[280px] mx-auto flex items-center justify-center select-none">
@@ -82,6 +92,34 @@ export default function RadarChart({
             />
           );
         })}
+
+        {/* Universal Baseline Polygon (Level 5) */}
+        {showBaseline && (
+          <polygon
+            points={statDefs.map((_, i) => getPoint(5, i)).join(' ')}
+            fill="rgba(188, 163, 116, 0.06)"
+            stroke="#bca374"
+            strokeWidth="1.6"
+            strokeDasharray="4 3"
+            style={{ transition: 'all 0.5s ease-out' }}
+          >
+            <title>Universal Baseline: เกณฑ์มาตรฐานร่วมบริษัท (ระดับ 5)</title>
+          </polygon>
+        )}
+
+        {/* Role Target Profile Polygon (ความเป็นเลิศประจำตำแหน่ง) */}
+        {targetStatsArray && (
+          <polygon
+            points={targetStatsArray.map((v, i) => getPoint(Number(v) || 5, i)).join(' ')}
+            fill="rgba(14, 165, 233, 0.05)"
+            stroke="#0284c7"
+            strokeWidth="1.6"
+            strokeDasharray="3 3"
+            style={{ transition: 'all 0.5s ease-out' }}
+          >
+            <title>Role Target Profile: เป้าหมายความเป็นเลิศประจำตำแหน่ง</title>
+          </polygon>
+        )}
 
         {/* Dynamic Animated Polygon with Spring Curve */}
         <polygon

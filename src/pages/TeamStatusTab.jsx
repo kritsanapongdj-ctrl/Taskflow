@@ -15,7 +15,11 @@ import {
   STAT_DEFINITIONS, 
   STAT_KEYS,
   OUTER_DEFINITIONS,
-  OUTER_KEYS
+  OUTER_KEYS,
+  UNIVERSAL_BASELINE,
+  ROLE_TARGET_PROFILES,
+  getRoleTargetProfile,
+  DATA_ANCHOR_GUIDE
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -599,6 +603,8 @@ export default function TeamStatusTab({
                         userStats={[statsObj.str, statsObj.agi, statsObj.dex, statsObj.int, statsObj.con, statsObj.sen]}
                         selectedAxis={selectedRadarAxis}
                         onSelectAxis={(idx, key) => setSelectedRadarAxis(selectedRadarAxis === key ? null : key)}
+                        showBaseline={true}
+                        roleTargetStats={getRoleTargetProfile(role || u.classId || u.potentialIdentity).targetStats}
                       />
                     </div>
                     {(() => {
@@ -659,79 +665,165 @@ export default function TeamStatusTab({
       
       const analysis = analyzeArchetype(u, sets, archetypesData);
       if (!analysis) return null;
-      const { mainStyle, styleDesc } = analysis;
+      const { 
+        mainStyle, 
+        styleDesc, 
+        roleProfile, 
+        universalBaseline = UNIVERSAL_BASELINE, 
+        signatureStrengths = [], 
+        standardPass = [], 
+        considerations = [] 
+      } = analysis;
 
-      const strengths = [];
-      const gaps = [];
-      STAT_KEYS.forEach((k) => {
-        const uVal = Number(u[k]) || 5;
-        const s = STAT_DEFINITIONS[k];
-        if (uVal >= 8) strengths.push({ ...s, uVal });
-        else if (uVal <= 4) gaps.push({ ...s, uVal });
-      });
-
-      strengths.sort((a, b) => b.uVal - a.uVal);
-      gaps.sort((a, b) => a.uVal - b.uVal);
+      const profile = roleProfile || getRoleTargetProfile(role || u.classId || u.potentialIdentity);
 
       return (
         <div className="mt-6 pt-4 w-full text-left relative z-10 font-sans">
           <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="user" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ (Talent Discovery)
+            <Icon name="user" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ & เกณฑ์มาตรฐานตำแหน่ง (Talent & Benchmark)
           </h4>
+
+          {/* Role Target Profile Card */}
+          <div className="mb-3.5 p-3 rounded-xl bg-gradient-to-r from-slate-50 via-sky-50/30 to-blue-50/20 border border-sky-200/80 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                <span className="font-bold text-xs text-[#0f2e4a]">
+                  🎯 เกณฑ์ตำแหน่ง: {profile.roleName}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100/80 text-amber-900 border border-amber-200">
+                มาตรฐานร่วมระดับองค์กร: {universalBaseline} ทุกค่า
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 mb-2 leading-relaxed">
+              {profile.description}
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+              <span className="font-bold text-slate-600 mr-1">สเตตัสเป้าหมาย:</span>
+              {Object.entries(profile.targetStats).map(([k, v]) => {
+                const isCore = profile.coreFocus.includes(k);
+                return (
+                  <span 
+                    key={k} 
+                    className={`px-2 py-0.5 rounded font-bold border ${
+                      isCore 
+                        ? 'bg-sky-100 text-sky-800 border-sky-300' 
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {k.toUpperCase()}: {v} {isCore && '★'}
+                  </span>
+                );
+              })}
+              <span className="text-[9px] text-slate-400 ml-1">(*★ = ทักษะหลักประจำตำแหน่ง)</span>
+            </div>
+          </div>
           
-          <div className="mb-4 text-[12px] p-3 rounded bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-sm relative z-10">
+          {/* Work Style Tendency */}
+          <div className="mb-4 text-[12px] p-3 rounded-xl bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-xs relative z-10">
              <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ แนวโน้มการทำงาน (Work Style Tendency):</strong>
              <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{mainStyle}</span>
              <span className="block text-slate-600 leading-relaxed ml-3">{styleDesc}</span>
           </div>
 
           <div className="grid grid-cols-1 gap-3 mt-2 relative z-10">
-            <div className="bg-emerald-50/70 p-3 rounded border border-emerald-200 relative overflow-hidden">
-              <strong className="text-emerald-800 text-[13px] flex items-center mb-2"><Icon name="trendingUp" size={14} className="mr-1.5 text-emerald-600"/> จุดเด่น (Strengths)</strong>
-              {strengths.length > 0 ? (
-                <ul className="text-[12px] text-slate-700 space-y-1.5 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
-                  {strengths.map(s => (
-                    <li key={s.key} className="py-1">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-medium">{s.name}</span>
-                        <span className="font-bold text-emerald-700">
-                          {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
+            {/* Signature Strengths (>= 7) */}
+            <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 relative overflow-hidden">
+              <strong className="text-emerald-800 text-[13px] flex items-center mb-2">
+                <Icon name="trendingUp" size={14} className="mr-1.5 text-emerald-600"/> 
+                จุดเด่นประจำตัว (Signature Strengths ≥ 7)
+              </strong>
+              {signatureStrengths.length > 0 ? (
+                <ul className="text-[12px] text-slate-700 space-y-2 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
+                  {signatureStrengths.map(s => {
+                    const isCore = profile.coreFocus.includes(s.key);
+                    return (
+                      <li key={s.key} className="py-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#0f2e4a]">{s.name} ({s.key.toUpperCase()})</span>
+                            {isCore && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                ★ แกนหลักตำแหน่ง
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-bold text-emerald-700">
+                            {s.val}/10 <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.val)})</span>
+                          </span>
+                        </div>
+                        <div className="text-slate-600 leading-snug">▶ {getRubricText(s.key, s.val)}</div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="text-[11px] text-slate-500 relative z-10 ml-2">
+                  ทุกสเตตัสอยู่ในระดับมาตรฐาน (ไม่มีค่าที่พุ่งสูงเกินเกณฑ์ปกติ)
+                </div>
+              )}
+            </div>
+
+            {/* Standard Baseline (5-6) */}
+            {standardPass.length > 0 && (
+              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 relative overflow-hidden">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5">
+                  <span className="flex items-center gap-1">
+                    <Icon name="checkCircle" size={13} className="text-blue-500" />
+                    ผ่านเกณฑ์มาตรฐานบริษัท (Baseline Standard 5-6):
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">พร้อมปฏิบัติงานตามมาตรฐาน</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {standardPass.map(s => (
+                    <span key={s.key} className="text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium">
+                      <strong>{s.key.toUpperCase()}</strong>: {s.val}/10
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Developmental Considerations (<= 4) */}
+            <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 relative overflow-hidden mt-1">
+              <strong className="text-amber-900 text-[13px] flex items-center mb-2">
+                <Icon name="alertCircle" size={14} className="mr-1.5 text-amber-600"/> 
+                จุดที่ควรพิจารณาและสนับสนุน (Developmental Considerations ≤ 4)
+              </strong>
+              {considerations.length > 0 ? (
+                <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-amber-300 ml-1">
+                  {considerations.map(s => (
+                    <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-amber-100 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-[#0f2e4a]">{s.name} ({s.key.toUpperCase()})</strong>
+                          <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border ${
+                            s.isCore 
+                              ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                              : 'bg-sky-100 text-sky-800 border-sky-200'
+                          }`}>
+                            {s.roleStatus}
+                          </span>
+                        </div>
+                        <span className="font-bold text-amber-700">
+                           {s.val}/10 <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.val)})</span>
                         </span>
                       </div>
-                      <div className="text-slate-600 leading-snug">▶ {getRubricText(s, s.uVal)}</div>
+                      <div className="text-slate-600 leading-snug mb-1">
+                        ▶ {getRubricText(s.key, s.val)}
+                      </div>
+                      <div className="text-[10.5px] text-amber-900 font-medium bg-white/80 p-1.5 rounded-lg border border-amber-200/60 inline-block mt-0.5">
+                         💡 <strong>แนวทางสนับสนุน:</strong> {s.advice}
+                      </div>
                     </li>
                   ))}
                 </ul>
-              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่มีสเตตัสระดับสูง</div>}
-            </div>
-
-            <div className="bg-orange-50/70 p-3 rounded border border-orange-200 relative overflow-hidden mt-1">
-              <strong className="text-orange-800 text-[13px] flex items-center mb-2"><Icon name="alertCircle" size={14} className="mr-1.5 text-orange-600"/> สิ่งที่ควรพัฒนา (Gaps)</strong>
-              {gaps.length > 0 ? (
-                <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-orange-300 ml-1">
-                  {gaps.map(s => {
-                    const baseTarget = role?.baseStats?.[s.key] ? Number(role.baseStats[s.key]) : null;
-                    const isBelowTarget = baseTarget && s.uVal < baseTarget;
-                    return (
-                    <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-orange-100 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <strong className="text-[#0f2e4a]">{s.name}</strong>
-                        <span className="font-bold text-orange-600">
-                           {s.uVal} <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.uVal)})</span>
-                        </span>
-                      </div>
-                      <div className="text-orange-700 leading-snug mb-1">
-                        ▶ {getRubricText(s, s.uVal)}
-                      </div>
-                      {isBelowTarget && (
-                        <div className="text-[10px] text-rose-600 font-medium bg-rose-50 p-1 rounded inline-block mt-0.5">
-                           * เป้าหมายของตำแหน่ง {role.name} คือระดับ {baseTarget}
-                        </div>
-                      )}
-                    </li>
-                  )})}
-                </ul>
-              ) : <div className="text-[11px] text-slate-500 relative z-10 ml-2">ไม่พบความเสี่ยงที่น่ากังวล</div>}
+              ) : (
+                <div className="text-[11px] text-emerald-700 font-medium relative z-10 ml-2">
+                  ✅ ทุกสเตตัสผ่านเกณฑ์มาตรฐานบริษัท (≥ 5 ทุกค่า) ไม่พบจุดที่ต้องกังวล
+                </div>
+              )}
             </div>
           </div>
 
@@ -1064,7 +1156,25 @@ export default function TeamStatusTab({
                              userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
                              selectedAxis={selectedRadarAxis}
                              onSelectAxis={(idx, key) => setSelectedRadarAxis(selectedRadarAxis === key ? null : key)}
+                             showBaseline={true}
+                             roleTargetStats={getRoleTargetProfile(classMap[teamForm.classId] || teamForm.classId || teamForm.potentialIdentity).targetStats}
                           />
+                        </div>
+
+                        {/* Radar Legend */}
+                        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2 mb-1 text-[10px] font-medium text-slate-600">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-3 h-2 rounded bg-gradient-to-r from-[#0f2e4a] to-[#1e3a8a]"></span>
+                            <span>ประเมินจริง</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-3 h-0 border-t-2 border-dashed border-[#bca374]"></span>
+                            <span>ฐานมาตรฐาน (5)</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-3 h-0 border-t-2 border-dashed border-[#0284c7]"></span>
+                            <span>เป้าหมาย ({getRoleTargetProfile(classMap[teamForm.classId] || teamForm.classId || teamForm.potentialIdentity).shortRole})</span>
+                          </span>
                         </div>
 
                         {/* Radar Morphology Live Interpretation Card */}
@@ -1104,26 +1214,42 @@ export default function TeamStatusTab({
                                 const val = statsObj[statKey];
                                 const lvlText = getStatLevelText(val);
                                 const rubricText = getRubricText(statKey, val);
+                                const anchorGuide = DATA_ANCHOR_GUIDE[statKey];
                                 
                                 return (
-                                  <div className="mt-2.5 p-2.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-[11px] animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <div className="flex justify-between items-center mb-1">
-                                      <strong className="text-[#0f2e4a] flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-[#bca374]"></span>
+                                  <div className="mt-2.5 p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-[11px] animate-in fade-in slide-in-from-top-1 duration-200 shadow-xs">
+                                    <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-amber-200/60">
+                                      <strong className="text-[#0f2e4a] flex items-center gap-1.5 font-bold">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[#bca374]"></span>
                                         {statDef.label} ({statDef.name}) : ระดับ {val}/10 ({lvlText})
                                       </strong>
                                       <button 
                                         type="button" 
                                         onClick={() => setSelectedRadarAxis(null)} 
-                                        className="text-[9px] text-slate-400 hover:text-slate-600 px-1 rounded hover:bg-amber-100"
+                                        className="text-[10px] text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded hover:bg-amber-100 font-semibold"
                                       >
-                                        ปิด ✕
+                                        ✕ ปิด
                                       </button>
                                     </div>
-                                    <p className="text-slate-700 text-[10px] leading-relaxed mb-1.5">
-                                      <strong>พฤติกรรมหน้างาน:</strong> {rubricText}
+                                    <p className="text-slate-700 text-[10.5px] leading-relaxed mb-2">
+                                      <strong className="text-slate-900">พฤติกรรมหน้างาน:</strong> {rubricText}
                                     </p>
-                                    <div className="text-[9px] text-amber-900 bg-white/80 p-1.5 rounded border border-amber-100 font-medium">
+
+                                    {/* LH Operational Data Grounding */}
+                                    {anchorGuide && (
+                                      <div className="mb-2 p-2 rounded-lg bg-white/90 border border-amber-200/70 space-y-1 text-[10px]">
+                                        <div className="text-[#0f2e4a] flex items-start gap-1">
+                                          <span className="font-bold shrink-0">📊 แหล่งข้อมูลอ้างอิง LH:</span>
+                                          <span className="text-slate-700">{anchorGuide.lhSource}</span>
+                                        </div>
+                                        <div className="text-indigo-950 flex items-start gap-1">
+                                          <span className="font-bold shrink-0">⚖️ เกณฑ์มาตรฐาน 5 คะแนน:</span>
+                                          <span className="text-indigo-900 font-medium">{anchorGuide.level5Rule}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className="text-[9.5px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-100 font-medium">
                                       🚀 <strong>เกณฑ์สู่ระดับถัดไป:</strong> {val >= 9 ? 'รักษามาตรฐานระดับปรมาจารย์ และเป็นพี่เลี้ยงถ่ายทอดความรู้แก่ทีม' : 'พัฒนาความเร็วและความสม่ำเสมอในงานซ้ำซ้อน และลดข้อผิดพลาดหน้างาน'}
                                     </div>
                                   </div>
