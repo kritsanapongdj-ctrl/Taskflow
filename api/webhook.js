@@ -624,6 +624,9 @@ export default async function handler(req, res) {
             projectQuery = param;
           }
         }
+        else if (upperClean === 'อัปเดตงบ' || upperClean === 'อัพเดตงบ' || upperClean === 'UPDATE' || upperClean === 'ดึงงบ' || upperClean === 'อัปเดต' || upperClean === 'อัพเดต') {
+          action = 'update_guide';
+        }
 
         if (action) {
           let responseText = '';
@@ -645,6 +648,15 @@ export default async function handler(req, res) {
             responseText = await handleProjectBudget(projectQuery);
           } else if (action === 'over_budget') {
             responseText = await handleOverBudget();
+          } else if (action === 'update_guide') {
+            responseText = `💡 วิธีอัปเดตข้อมูลลงไฟล์ Excel และระบบ LINE:\n` +
+              `─────────────────────────\n` +
+              `เนื่องจากการดึงข้อมูลค่าใช้จ่ายต้องล็อกอินผ่านเครือข่าย LH ภายใน:\n\n` +
+              `🖥️ สามารถกดอัปเดตได้ง่ายๆ จากคอมพิวเตอร์ของคุณ:\n` +
+              `1. ดับเบิ้ลคลิกไฟล์ [อัปเดตงบประมาณ_LH.bat] บนหน้า Desktop\n` +
+              `   (หรือรัน 'npm run update-budget' ใน Terminal)\n` +
+              `2. ระบบจะล็อกอิน ดึงยอดจริง + คำนวณ Forecast ลงไฟล์ Excel ให้ครบ 9 โครงการ และซิงค์ขึ้น LINE ให้เรียบร้อยทันทีครับ!\n\n` +
+              `📁 ไฟล์ Excel: C:\\Users\\krits\\lh-scraper\\LH_Indirect_Expenses_Report.xlsx`;
           } else if (action === 'help') {
             responseText = `🤖 เมนูคำสั่ง LH TaskFlow Bot\n` +
               `─────────────────────────\n` +
