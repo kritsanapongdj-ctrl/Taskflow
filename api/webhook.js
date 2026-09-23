@@ -20,7 +20,7 @@ const auth = getAuth(app);
 
 const GROUP_A = ['LH-410', 'LH-415', 'NE-419'];
 const GROUP_B = ['LH-379', 'LH-392', 'LH-395'];
-const GROUP_A2 = ['LH-120', 'LH-195', 'LH-225', 'LA-025', 'LH-402'];
+const GROUP_A2 = ['LA-025', 'LH-329', 'LH-402', 'LH-120', 'LH-195', 'LH-225'];
 const ALL_PROJECTS = [...GROUP_A, ...GROUP_B, ...GROUP_A2];
 
 // ส่งข้อความตอบกลับไปยัง LINE (Reply API ฟรี 100%)
@@ -99,6 +99,8 @@ const fDateThai = (ds) => {
   const d = new Date(ds);
   return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
 };
+
+const fNum = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ฟังก์ชันคำนวณระยะเวลาคงเหลือสำหรับออกใบงาน (SLA ภายใน 3 วันหลังจบงาน)
 const getWorkOrderCountdownText = (t, todayStr) => {
@@ -346,13 +348,212 @@ async function handleCheck(projectList, groupName) {
   return msg;
 }
 
+// Helper ค้นหาโครงการจากรหัสหรือชื่อโครงการ
+function findProject(projects, query) {
+  if (!query) return null;
+  const q = query.trim().toUpperCase().replace(/[\s\-_]/g, '');
+
+  // 1. ตรงกับรหัสโครงการเป๊ะๆ
+  for (const [key, p] of Object.entries(projects)) {
+    const keyClean = key.toUpperCase().replace(/[\s\-_]/g, '');
+    const codeClean = (p.code || '').toUpperCase().replace(/[\s\-_]/g, '');
+    if (keyClean === q || codeClean === q) return p;
+  }
+  // 2. ค้นหาบางส่วนของรหัส (เช่น 410 -> LH-410)
+  for (const [key, p] of Object.entries(projects)) {
+    const keyClean = key.toUpperCase().replace(/[\s\-_]/g, '');
+    const codeClean = (p.code || '').toUpperCase().replace(/[\s\-_]/g, '');
+    if (keyClean.includes(q) || codeClean.includes(q)) return p;
+  }
+  // 3. ค้นหาจากชื่อโครงการ
+  for (const [key, p] of Object.entries(projects)) {
+    const nameClean = (p.fullName || '').toUpperCase();
+    if (nameClean.includes(query.trim().toUpperCase())) return p;
+  }
+  return null;
+}
+
+// 4. ฟังก์ชันสำหรับคำสั่ง !งบ, !งบA, !งบB, !งบA2 (สรุปภาพรวมงบประมาณ & คาดการณ์สิ้นปี)
+async function handleBudgetOverview(targetGroup) {
+  try {
+    const docSnap = await getDoc(doc(db, "artifacts", "default-app-id", "public", "data", "lh_scraper", "budget_forecast"));
+    if (!docSnap.exists()) {
+      return "❌ ยังไม่พบข้อมูลงบประมาณในระบบ\nกรุณารันบอทอัปเดตงบประมาณจากระบบ LH Portal ก่อนครับ";
+    }
+
+    const data = docSnap.data();
+    const projects = data.projects || {};
+    const groupName = targetGroup === 'ALL' ? 'ทั้งหมดทุกโครงการ' : `กลุ่ม ${targetGroup}`;
+
+    const filtered = Object.values(projects).filter(p => {
+      if (targetGroup === 'ALL') return true;
+      return p.group === targetGroup;
+    });
+
+    if (filtered.length === 0) {
+      return `❌ ไม่พบข้อมูลงบประมาณสำหรับ ${groupName} ครับ`;
+    }
+
+    let totalActual = 0;
+    let totalForecast = 0;
+    let totalLanding = 0;
+    let totalBgt = 0;
+
+    let msg = `📊 สรุปงบประมาณ & คาดการณ์ (Forecast)\n`;
+    msg += `👥 ทีม: ${groupName} (หน่วย: พันบาท)\n`;
+    msg += `─────────────────────────\n`;
+
+    filtered.forEach(p => {
+      totalActual += p.totalYtdActual || 0;
+      totalForecast += p.totalYtgForecast || 0;
+      totalLanding += p.totalFyLanding || 0;
+      totalBgt += p.totalBudget || 0;
+      const diff = p.totalVariance || 0;
+      const diffSign = diff > 0 ? '+' : '';
+
+      msg += `\n📌 [${p.code}] ${p.fullName}\n`;
+      msg += `   • จ่ายจริง 8 ด.: ${fNum(p.totalYtdActual)} พันบ.\n`;
+      msg += `   • Forecast 4 ด.: ${fNum(p.totalYtgForecast)} พันบ.\n`;
+      msg += `   • สิ้นปี (FY): ${fNum(p.totalFyLanding)} / งบ: ${fNum(p.totalBudget)}\n`;
+      msg += `   • สถานะ: ${p.overallStatus} (${diffSign}${fNum(diff)} พันบ. / ${p.totalVariancePct})\n`;
+    });
+
+    const netDiff = parseFloat((totalLanding - totalBgt).toFixed(2));
+    const netStatus = netDiff > 0 ? '🚨 เสี่ยงเกินงบ' : '✅ ในงบ';
+    const netSign = netDiff > 0 ? '+' : '';
+    const netPct = totalBgt > 0 ? ((netDiff / totalBgt) * 100).toFixed(1) + '%' : '0%';
+
+    msg += `─────────────────────────\n`;
+    msg += `📈 รวมทั้งสิ้น (${groupName}):\n`;
+    msg += `• จ่ายจริง 8 เดือน: ${fNum(totalActual)} พันบ.\n`;
+    msg += `• คาดการณ์จบปี: ${fNum(totalLanding)} พันบ.\n`;
+    msg += `• งบประมาณทั้งปี: ${fNum(totalBgt)} พันบ.\n`;
+    msg += `• ผลต่างสุทธิ: ${netStatus} (${netSign}${fNum(netDiff)} พันบ. / ${netPct})\n`;
+    msg += `─────────────────────────\n`;
+    msg += `🕒 ข้อมูล ณ วันที่: ${data.updatedDateThai || '-'}\n`;
+    msg += `💡 พิมพ์ '!งบ [รหัส]' เพื่อดู 9 หมวดบัญชี (เช่น !งบ 410, !งบ LA-025)`;
+
+    return msg;
+  } catch (err) {
+    console.error("handleBudgetOverview Error:", err);
+    return "❌ เกิดข้อผิดพลาดในการดึงข้อมูลงบประมาณ กรุณาลองใหม่อีกครั้งครับ";
+  }
+}
+
+// 5. ฟังก์ชันสำหรับคำสั่ง !งบ [รหัส] (เจาะลึก 9 หมวดบัญชี + ใบสำคัญจ่าย PV)
+async function handleProjectBudget(projectQuery) {
+  try {
+    const docSnap = await getDoc(doc(db, "artifacts", "default-app-id", "public", "data", "lh_scraper", "budget_forecast"));
+    if (!docSnap.exists()) {
+      return "❌ ยังไม่พบข้อมูลในระบบ กรุณารันบอทอัปเดตงบประมาณก่อนครับ";
+    }
+
+    const data = docSnap.data();
+    const projects = data.projects || {};
+    const proj = findProject(projects, projectQuery);
+
+    if (!proj) {
+      const avail = Object.keys(projects).join(', ');
+      return `❌ ไม่พบรหัสโครงการ "${projectQuery}" ครับ\n📌 โครงการที่มีข้อมูล: ${avail}\n💡 ตัวอย่างการพิมพ์: !งบ 410, !งบ LA-025, !งบ 379`;
+    }
+
+    const pDiff = proj.totalVariance || 0;
+    const pSign = pDiff > 0 ? '+' : '';
+
+    let msg = `💰 รายละเอียดงบ & Forecast\n`;
+    msg += `📌 [${proj.code}] ${proj.fullName}\n`;
+    msg += `👥 กลุ่ม: กลุ่ม ${proj.group} (หน่วย: พันบาท)\n`;
+    msg += `─────────────────────────\n`;
+    msg += `📊 ภาพรวมโครงการ:\n`;
+    msg += `• จ่ายจริง 8 เดือน: ${fNum(proj.totalYtdActual)} พันบ.\n`;
+    msg += `• คาดการณ์ 4 เดือน: ${fNum(proj.totalYtgForecast)} พันบ.\n`;
+    msg += `• คาดการณ์จบปี (FY): ${fNum(proj.totalFyLanding)} พันบ.\n`;
+    msg += `• งบประมาณทั้งปี: ${fNum(proj.totalBudget)} พันบ.\n`;
+    msg += `• ผลต่างสุทธิ: ${proj.overallStatus} (${pSign}${fNum(pDiff)} พันบ. / ${proj.totalVariancePct})\n`;
+    msg += `─────────────────────────\n`;
+    msg += `📑 แยกราย 9 หมวดบัญชี:\n`;
+
+    (proj.expenses || []).forEach((e, idx) => {
+      const diffS = e.variance > 0 ? '+' : '';
+      const badge = e.variance > 0 ? '🚨' : '✅';
+      msg += `\n${idx + 1}. ${e.title}\n`;
+      msg += `   จริง: ${fNum(e.ytdActual)} | สิ้นปี: ${fNum(e.fyLanding)}\n`;
+      msg += `   งบ: ${fNum(e.fullYearBudget)} | ผลต่าง: ${badge} ${diffS}${fNum(e.variance)} พันบ. (${e.variancePct})\n`;
+    });
+
+    if (proj.vouchers && proj.vouchers.length > 0) {
+      msg += `─────────────────────────\n`;
+      msg += `🧾 ใบสำคัญจ่าย PV ล่าสุด (${proj.vouchers.length} รายการ):\n`;
+      proj.vouchers.slice(0, 3).forEach((v) => {
+        msg += `• ${v.date} [${v.pvNo}] ${v.amount} บ.\n   ${v.vendor} (${v.workDesc})\n`;
+      });
+    }
+
+    msg += `─────────────────────────\n`;
+    msg += `🕒 ข้อมูล ณ วันที่: ${data.updatedDateThai || '-'}`;
+    return msg;
+  } catch (err) {
+    console.error("handleProjectBudget Error:", err);
+    return "❌ เกิดข้อผิดพลาดในการดึงข้อมูลโครงการ กรุณาลองใหม่อีกครั้งครับ";
+  }
+}
+
+// 6. ฟังก์ชันสำหรับคำสั่ง !เกินงบ (แจ้งเตือนเฉพาะโครงการและหมวดที่เสี่ยงเกินงบ)
+async function handleOverBudget() {
+  try {
+    const docSnap = await getDoc(doc(db, "artifacts", "default-app-id", "public", "data", "lh_scraper", "budget_forecast"));
+    if (!docSnap.exists()) {
+      return "❌ ยังไม่พบข้อมูลในระบบ กรุณารันบอทอัปเดตงบประมาณก่อนครับ";
+    }
+
+    const data = docSnap.data();
+    const projects = data.projects || {};
+
+    let overCount = 0;
+    let msg = `🚨 รายการที่มีความเสี่ยง "เกินงบประมาณ"\n`;
+    msg += `(คาดการณ์จบปีสิ้นสุดเกินงบประมาณ | หน่วย: พันบาท)\n`;
+    msg += `─────────────────────────\n`;
+
+    for (const [code, p] of Object.entries(projects)) {
+      const overExpenses = (p.expenses || []).filter(e => e.variance > 0);
+      if (p.totalVariance > 0 || overExpenses.length > 0) {
+        overCount++;
+        const pDiff = p.totalVariance || 0;
+        const pSign = pDiff > 0 ? '+' : '';
+        msg += `\n📌 [${p.code}] ${p.fullName} (กลุ่ม ${p.group})\n`;
+        msg += `   ภาพรวม: ${p.overallStatus} (${pSign}${fNum(pDiff)} พันบ. / ${p.totalVariancePct})\n`;
+        if (overExpenses.length > 0) {
+          msg += `   หมวดที่เกินงบ:\n`;
+          overExpenses.forEach(e => {
+            msg += `   ⚠️ ${e.title}: เกิน +${fNum(e.variance)} พันบ. (${e.variancePct})\n`;
+          });
+        }
+      }
+    }
+
+    if (overCount === 0) {
+      return `🎉 ยอดเยี่ยมมาก! ทุกโครงการคาดการณ์ค่าใช้จ่ายสิ้นปีอยู่ในกรอบงบประมาณทั้งหมด (ไม่มีรายการเกินงบ)`;
+    }
+
+    msg += `─────────────────────────\n`;
+    msg += `📊 พบโครงการที่ต้องเฝ้าระวัง: ${overCount} โครงการ\n`;
+    msg += `🕒 ข้อมูล ณ วันที่: ${data.updatedDateThai || '-'}\n`;
+    msg += `💡 พิมพ์ '!งบ [รหัส]' เพื่อดูรายละเอียดรายโครงการ`;
+
+    return msg;
+  } catch (err) {
+    console.error("handleOverBudget Error:", err);
+    return "❌ เกิดข้อผิดพลาดในการดึงข้อมูลรายการเกินงบ กรุณาลองใหม่อีกครั้งครับ";
+  }
+}
+
 // จุดรับสัญญาณจาก LINE Webhook
 export default async function handler(req, res) {
   // บังคับให้รับเฉพาะ POST Request
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
-  
+
   try {
     const events = req.body.events;
     if (!events || events.length === 0) {
@@ -366,35 +567,64 @@ export default async function handler(req, res) {
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
         const rawText = (event.message.text || '').trim();
-        const text = rawText.toUpperCase();
         const replyToken = event.replyToken;
-        
+
+        // ถอด prefix ! หรือ / ออกเพื่อให้รองรับทั้ง 2 แบบ หรือพิมพ์ข้อความตรงๆ
+        const cleanText = rawText.replace(/^[!\/]/, '').trim();
+        const upperClean = cleanText.toUpperCase();
+
         let targetGroup = null;
         let action = null;
-        
-        // 1. คำสั่ง !สรุปงาน (งานประจำวัน - เฉพาะวันนี้ ไม่สนสถานะ)
-        if (text === '!สรุปงานA') { action = 'summary'; targetGroup = 'A'; }
-        else if (text === '!สรุปงานB') { action = 'summary'; targetGroup = 'B'; }
-        else if (text === '!สรุปงานA2') { action = 'summary'; targetGroup = 'A2'; }
-        else if (text === '!สรุปงาน') { action = 'summary'; targetGroup = 'ALL'; }
-        
-        // 2. คำสั่งใหม่ !รอใบงาน (งานค้างสถานะจบงานรอใบงาน - คั่นด้วยเดือนและโครงการ)
-        else if (text === '!รอใบงานA') { action = 'pending_wo'; targetGroup = 'A'; }
-        else if (text === '!รอใบงานB') { action = 'pending_wo'; targetGroup = 'B'; }
-        else if (text === '!รอใบงานA2') { action = 'pending_wo'; targetGroup = 'A2'; }
-        else if (text === '!รอใบงาน') { action = 'pending_wo'; targetGroup = 'ALL'; }
-        
-        // 3. คำสั่ง !เช็คงาน (ดึงงานแจ้งซ่อมสาธารณูปโภคจากบอทสอดแนม)
-        else if (text === '!เช็คงานA') { action = 'check'; targetGroup = 'A'; }
-        else if (text === '!เช็คงานB') { action = 'check'; targetGroup = 'B'; }
-        else if (text === '!เช็คงานA2') { action = 'check'; targetGroup = 'A2'; }
-        else if (text === '!เช็คงาน') { action = 'check'; targetGroup = 'ALL'; }
+        let projectQuery = null;
 
-        // 4. คำสั่งช่วยเหลือ !คำสั่ง หรือ !HELP
-        else if (text === '!คำสั่ง' || text === '!HELP' || text === 'HELP' || text === 'คำสั่ง') {
+        // เมนูช่วยเหลือ
+        if (upperClean === 'คำสั่ง' || upperClean === 'HELP' || upperClean === 'เมนู') {
           action = 'help';
         }
-        
+        // 1. คำสั่ง !สรุปงาน (งานประจำวัน - เฉพาะวันนี้ ไม่สนสถานะ)
+        else if (upperClean === 'สรุปงานA') { action = 'summary'; targetGroup = 'A'; }
+        else if (upperClean === 'สรุปงานB') { action = 'summary'; targetGroup = 'B'; }
+        else if (upperClean === 'สรุปงานA2') { action = 'summary'; targetGroup = 'A2'; }
+        else if (upperClean === 'สรุปงาน') { action = 'summary'; targetGroup = 'ALL'; }
+
+        // 2. คำสั่งใหม่ !รอใบงาน (งานค้างสถานะจบงานรอใบงาน - คั่นด้วยเดือนและโครงการ)
+        else if (upperClean === 'รอใบงานA') { action = 'pending_wo'; targetGroup = 'A'; }
+        else if (upperClean === 'รอใบงานB') { action = 'pending_wo'; targetGroup = 'B'; }
+        else if (upperClean === 'รอใบงานA2') { action = 'pending_wo'; targetGroup = 'A2'; }
+        else if (upperClean === 'รอใบงาน') { action = 'pending_wo'; targetGroup = 'ALL'; }
+
+        // 3. คำสั่ง !เช็คงาน (ดึงงานแจ้งซ่อมสาธารณูปโภคจากบอทสอดแนม)
+        else if (upperClean === 'เช็คงานA') { action = 'check'; targetGroup = 'A'; }
+        else if (upperClean === 'เช็คงานB') { action = 'check'; targetGroup = 'B'; }
+        else if (upperClean === 'เช็คงานA2') { action = 'check'; targetGroup = 'A2'; }
+        else if (upperClean === 'เช็คงาน') { action = 'check'; targetGroup = 'ALL'; }
+
+        // 4. คำสั่งแจ้งเตือนเกินงบ
+        else if (upperClean === 'เกินงบ' || upperClean === 'เสี่ยงเกินงบ') {
+          action = 'over_budget';
+        }
+
+        // 5. คำสั่งงบประมาณภาพรวม
+        else if (upperClean === 'งบA') { action = 'budget_overview'; targetGroup = 'A'; }
+        else if (upperClean === 'งบB') { action = 'budget_overview'; targetGroup = 'B'; }
+        else if (upperClean === 'งบA2') { action = 'budget_overview'; targetGroup = 'A2'; }
+        else if (upperClean === 'งบ' || upperClean === 'งบประมาณ') { action = 'budget_overview'; targetGroup = 'ALL'; }
+
+        // 6. คำสั่งงบประมาณเจาะลึกรายโครงการ (เช่น !งบ 410, !งบ LA-025, /งบ LH-379, !งบ410)
+        else if (upperClean.startsWith('งบ ') || upperClean.startsWith('งบ-') || upperClean.startsWith('งบประมาณ ')) {
+          action = 'project_budget';
+          projectQuery = cleanText.replace(/^(งบประมาณ|งบ)[ -]*/i, '').trim();
+        } else if (/^งบ([A-Z0-9\-]+)$/i.test(cleanText)) {
+          const param = cleanText.match(/^งบ([A-Z0-9\-]+)$/i)[1].toUpperCase();
+          if (param === 'A') { action = 'budget_overview'; targetGroup = 'A'; }
+          else if (param === 'B') { action = 'budget_overview'; targetGroup = 'B'; }
+          else if (param === 'A2') { action = 'budget_overview'; targetGroup = 'A2'; }
+          else {
+            action = 'project_budget';
+            projectQuery = param;
+          }
+        }
+
         if (action) {
           let responseText = '';
           const projectList = targetGroup === 'A' ? GROUP_A 
@@ -402,37 +632,46 @@ export default async function handler(req, res) {
             : targetGroup === 'A2' ? GROUP_A2 
             : ALL_PROJECTS;
           const groupName = targetGroup === 'ALL' ? 'ทั้งหมดทุกโครงการ' : targetGroup;
-          
+
           if (action === 'summary') {
             responseText = await handleSummary(projectList, groupName);
           } else if (action === 'pending_wo') {
             responseText = await handlePendingWorkOrders(projectList, groupName);
           } else if (action === 'check') {
             responseText = await handleCheck(projectList, groupName);
+          } else if (action === 'budget_overview') {
+            responseText = await handleBudgetOverview(targetGroup);
+          } else if (action === 'project_budget') {
+            responseText = await handleProjectBudget(projectQuery);
+          } else if (action === 'over_budget') {
+            responseText = await handleOverBudget();
           } else if (action === 'help') {
-            responseText = `🤖 ยินดีต้อนรับสู่ LH TaskFlow Bot!\n` +
-              `รายการคำสั่งที่สามารถใช้งานได้:\n\n` +
-              `📋 สรุปงานประจำวัน (เฉพาะงานวันนี้):\n` +
-              `• !สรุปงานA (กลุ่ม A: LH-410, LH-415, NE-419)\n` +
-              `• !สรุปงานB (กลุ่ม B: LH-379, LH-392, LH-395)\n` +
-              `• !สรุปงานA2 (กลุ่ม A2: LH-120, LH-195, LH-225, LA-025, LH-402)\n` +
-              `• !สรุปงาน (ดูทุกกลุ่มรวมกัน)\n\n` +
-              `📑 ติดตามงานค้างใบงาน (แยกตามเดือนและโครงการ):\n` +
-              `• !รอใบงานA\n` +
-              `• !รอใบงานB\n` +
-              `• !รอใบงานA2\n` +
-              `• !รอใบงาน (ดูทุกกลุ่มรวมกัน)\n\n` +
-              `🔍 เช็คงานแจ้งซ่อมสาธารณูปโภค (จากบอทสอดแนม):\n` +
-              `• !เช็คงานA, !เช็คงานB, !เช็คงานA2`;
+            responseText = `🤖 เมนูคำสั่ง LH TaskFlow Bot\n` +
+              `─────────────────────────\n` +
+              `📋 สรุปงานประจำวัน (งานวันนี้):\n` +
+              `• !สรุปงาน (ดูภาพรวมทุกโครงการ)\n` +
+              `• !สรุปงานA, !สรุปงานB, !สรุปงานA2\n\n` +
+              `📑 ติดตามงานค้างใบงาน (ค้าง WO):\n` +
+              `• !รอใบงาน (ดูทั้งหมดแยกตามเดือน)\n` +
+              `• !รอใบงานA, !รอใบงานB, !รอใบงานA2\n\n` +
+              `🔍 เช็คงานแจ้งซ่อมส่วนกลาง (บอทสอดแนม):\n` +
+              `• !เช็คงาน (ดูภาพรวม)\n` +
+              `• !เช็คงานA, !เช็คงานB, !เช็คงานA2\n\n` +
+              `💰 งบประมาณ & คาดการณ์สิ้นปี (Forecast):\n` +
+              `• !งบ (สรุปงบภาพรวมทุกกลุ่ม)\n` +
+              `• !งบA, !งบB, !งบA2 (สรุปงบแยกกลุ่ม)\n` +
+              `• !งบ [รหัส] (เจาะลึก 9 หมวด + PV เช่น !งบ 410, !งบ LA-025)\n` +
+              `• !เกินงบ (ดูรายการที่เสี่ยงเกินงบสิ้นปี)\n\n` +
+              `*(พิมพ์นำหน้าด้วย ! หรือ / หรือพิมพ์คำสั่งตรงๆ ได้เลยครับ)*`;
           }
-          
+
           if (responseText) {
-             await replyToLine(replyToken, responseText);
+            await replyToLine(replyToken, responseText);
           }
         }
       }
     }
-    
+
     // ตอบ 200 OK ให้ LINE ทันที
     return res.status(200).send('OK');
   } catch (error) {
