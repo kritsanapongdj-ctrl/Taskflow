@@ -21,7 +21,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
   const stats = [
     { id: 'str', label: 'STR (Strength)', sub: 'พลังขับเคลื่อนและการตัดสินใจ', color: 'text-rose-500', bg: 'bg-rose-500', lightBg: 'bg-rose-50' },
-    { id: 'agi', label: 'AGI (Agility)', sub: 'ความรวดเร็วและการปรับตัว', color: 'text-emerald-500', bg: 'bg-emerald-50', lightBg: 'bg-emerald-50' },
+    { id: 'agi', label: 'AGI (Agility)', sub: 'ความรวดเร็วและการปรับตัว', color: 'text-emerald-500', bg: 'bg-emerald-500', lightBg: 'bg-emerald-50' },
     { id: 'dex', label: 'DEX (Dexterity)', sub: 'ความแม่นยำและมาตรฐานคุณภาพ', color: 'text-amber-500', bg: 'bg-amber-500', lightBg: 'bg-amber-50' },
     { id: 'int', label: 'INT (Intelligence)', sub: 'ระบบเทคโนโลยีและการจัดการ', color: 'text-blue-500', bg: 'bg-blue-500', lightBg: 'bg-blue-50' },
     { id: 'con', label: 'CON (Constitution)', sub: 'ความทรหดและการควบคุมอารมณ์', color: 'text-orange-500', bg: 'bg-orange-500', lightBg: 'bg-orange-50' },
@@ -201,16 +201,16 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     const rubrics = rubricsData[statId][index].levels;
     const v = String(currentScore);
     const levelMap = {
-      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (Crisis)", color: "text-red-700" },
-      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (Poor)", color: "text-red-500" },
-      "3": { text: rubrics["3"], level: "ต้องการการดูแล (Needs Help)", color: "text-orange-600" },
-      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (Below Average)", color: "text-orange-500" },
-      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (Standard)", color: "text-emerald-600" },
-      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (Good)", color: "text-emerald-500" },
-      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (Advanced)", color: "text-blue-500" },
-      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (Expert)", color: "text-blue-600" },
-      "9": { text: rubrics["9"], level: "ระดับผู้นำ (Mastery)", color: "text-purple-500" },
-      "10": { text: rubrics["10"], level: "ระดับตำนาน (Legendary)", color: "text-purple-600" }
+      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (CRISIS)", color: "text-red-700" },
+      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (POOR)", color: "text-red-500" },
+      "3": { text: rubrics["3"], level: "ต้องการการดูแล (NEEDS HELP)", color: "text-orange-600" },
+      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (BELOW AVERAGE)", color: "text-orange-500" },
+      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (STANDARD)", color: "text-emerald-600" },
+      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (GOOD)", color: "text-emerald-500" },
+      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (ADVANCED)", color: "text-blue-500" },
+      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (EXPERT)", color: "text-blue-600" },
+      "9": { text: rubrics["9"], level: "ระดับผู้นำ (MASTERY)", color: "text-purple-500" },
+      "10": { text: rubrics["10"], level: "ระดับตำนาน (LEGENDARY)", color: "text-purple-600" }
     };
     return levelMap[v] || levelMap["5"];
   };
@@ -220,16 +220,16 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     const rubrics = rubricsData[outerKey][0].levels;
     const v = String(currentScore);
     const levelMap = {
-      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (Crisis)", color: "text-red-700" },
-      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (Poor)", color: "text-red-500" },
-      "3": { text: rubrics["3"], level: "ต้องการการดูแล (Needs Help)", color: "text-orange-600" },
-      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (Below Average)", color: "text-orange-500" },
-      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (Standard)", color: "text-emerald-600" },
-      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (Good)", color: "text-emerald-500" },
-      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (Advanced)", color: "text-blue-500" },
-      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (Expert)", color: "text-blue-600" },
-      "9": { text: rubrics["9"], level: "ระดับผู้นำ (Mastery)", color: "text-purple-500" },
-      "10": { text: rubrics["10"], level: "ระดับตำนาน (Legendary)", color: "text-purple-600" }
+      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (CRISIS)", color: "text-red-700" },
+      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (POOR)", color: "text-red-500" },
+      "3": { text: rubrics["3"], level: "ต้องการการดูแล (NEEDS HELP)", color: "text-orange-600" },
+      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (BELOW AVERAGE)", color: "text-orange-500" },
+      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (STANDARD)", color: "text-emerald-600" },
+      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (GOOD)", color: "text-emerald-500" },
+      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (ADVANCED)", color: "text-blue-500" },
+      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (EXPERT)", color: "text-blue-600" },
+      "9": { text: rubrics["9"], level: "ระดับผู้นำ (MASTERY)", color: "text-purple-500" },
+      "10": { text: rubrics["10"], level: "ระดับตำนาน (LEGENDARY)", color: "text-purple-600" }
     };
     return levelMap[v] || levelMap["5"];
   };
@@ -353,7 +353,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
                         <span className="text-xs font-black">{s.label.split(' ')[0]}</span>
                         <span className="text-[10px] text-slate-400 font-normal">{s.sub}</span>
                       </div>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full text-white font-black ${s.bg}`}>
+                      <span className={`text-xs w-6 h-6 rounded-full flex items-center justify-center text-white font-black shrink-0 ${s.bg}`}>
                         {avg}
                       </span>
                     </button>
@@ -365,8 +365,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
               <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-white space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                   <div>
-                    <h3 className={`text-xl font-black flex items-center gap-2 ${stats.find(s => s.id === activeInnerTab).color}`}>
-                      <Icon name="activity" size={20} />
+                    <h3 className={`text-xl font-black ${stats.find(s => s.id === activeInnerTab).color}`}>
                       {stats.find(s => s.id === activeInnerTab).label}
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -415,8 +414,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
                         {/* Dynamic Guideline Box */}
                         <div className={`p-3.5 rounded-lg border bg-white ${guide.color.replace('text-', 'border-').replace('500', '200')} shadow-xs`}>
-                          <div className={`text-[11px] font-black uppercase mb-1 flex items-center gap-1.5 ${guide.color}`}>
-                            <Icon name="check-circle" size={13} />
+                          <div className={`text-[11px] font-black uppercase mb-1 ${guide.color}`}>
                             {guide.level}
                           </div>
                           <p className="text-xs text-slate-700 leading-relaxed">
