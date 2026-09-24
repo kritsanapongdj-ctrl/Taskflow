@@ -20,12 +20,12 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   const [activeOuterTab, setActiveOuterTab] = useState('cx');
 
   const stats = [
-    { id: 'str', label: 'STR (Strength)', sub: 'พลังขับเคลื่อน & ตัดสินใจ', color: 'text-rose-500', bg: 'bg-rose-500', lightBg: 'bg-rose-50' },
-    { id: 'agi', label: 'AGI (Agility)', sub: 'ความรวดเร็ว & ยืดหยุ่น', color: 'text-emerald-500', bg: 'bg-emerald-50', lightBg: 'bg-emerald-50' },
-    { id: 'dex', label: 'DEX (Dexterity)', sub: 'ความละเอียด & รอบคอบ', color: 'text-amber-500', bg: 'bg-amber-500', lightBg: 'bg-amber-50' },
-    { id: 'int', label: 'INT (Intelligence)', sub: 'ระบบ & เทคโนโลยี', color: 'text-blue-500', bg: 'bg-blue-500', lightBg: 'bg-blue-50' },
-    { id: 'con', label: 'CON (Constitution)', sub: 'ความทนทาน & คุมอารมณ์', color: 'text-orange-500', bg: 'bg-orange-500', lightBg: 'bg-orange-50' },
-    { id: 'sen', label: 'SEN (Sense)', sub: 'จิตวิทยา & เจรจาต่อรอง', color: 'text-purple-500', bg: 'bg-purple-500', lightBg: 'bg-purple-50' }
+    { id: 'str', label: 'STR (Strength)', sub: 'พลังขับเคลื่อนและการตัดสินใจ', color: 'text-rose-500', bg: 'bg-rose-500', lightBg: 'bg-rose-50' },
+    { id: 'agi', label: 'AGI (Agility)', sub: 'ความรวดเร็วและการปรับตัว', color: 'text-emerald-500', bg: 'bg-emerald-50', lightBg: 'bg-emerald-50' },
+    { id: 'dex', label: 'DEX (Dexterity)', sub: 'ความแม่นยำและมาตรฐานคุณภาพ', color: 'text-amber-500', bg: 'bg-amber-500', lightBg: 'bg-amber-50' },
+    { id: 'int', label: 'INT (Intelligence)', sub: 'ระบบเทคโนโลยีและการจัดการ', color: 'text-blue-500', bg: 'bg-blue-500', lightBg: 'bg-blue-50' },
+    { id: 'con', label: 'CON (Constitution)', sub: 'ความทรหดและการควบคุมอารมณ์', color: 'text-orange-500', bg: 'bg-orange-500', lightBg: 'bg-orange-50' },
+    { id: 'sen', label: 'SEN (Sense)', sub: 'การเจรจาและความเข้าใจผู้คน', color: 'text-purple-500', bg: 'bg-purple-500', lightBg: 'bg-purple-50' }
   ];
 
   const calculateAverage = (statId) => {

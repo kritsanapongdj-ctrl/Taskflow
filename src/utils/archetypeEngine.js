@@ -1,4 +1,5 @@
 import defaultArchetypesData from '../data/archetypes.json' with { type: 'json' };
+import rubricsData from '../data/rubrics.json' with { type: 'json' };
 
 export const STAT_KEYS = ['str', 'agi', 'dex', 'int', 'con', 'sen'];
 
@@ -95,83 +96,126 @@ export const TIE_BREAKERS = {
 
 export const STAT_DEFINITIONS = {
   str: { 
-    key: 'str', name: 'STR (Strength)', group: 'The Heavy Lifters', desc: 'Execution & Impact', 
-    rubric: {
-      basic: 'ลังเล ไม่กล้าตัดสินใจในเรื่องพื้นฐาน ต้องรอรับคำสั่งเสมอ',
-      intermediate: 'ตัดสินใจแก้ปัญหาเฉพาะหน้าตามคู่มือและขั้นตอนมาตรฐานได้ดี',
-      advanced: 'กล้าตัดสินใจในเคสซับซ้อนหน้างาน มีพลังขับเคลื่อนงานสูง',
-      mastery: 'ตัดสินใจเชิงกลยุทธ์ในภาวะวิกฤต เป็นผู้นำขับเคลื่อนผลลัพธ์ขององค์กร'
-    }
+    key: 'str', 
+    label: 'STR',
+    name: 'STR (Strength)', 
+    thai: 'พลังขับเคลื่อนและการตัดสินใจ',
+    group: 'The Heavy Lifters', 
+    desc: 'พลังขับเคลื่อนและการตัดสินใจ (Core Execution, Problem Solving & Supervision)', 
+    categories: [
+      { name: 'พลังในการขับเคลื่อนงานหลัก (Core Execution)' },
+      { name: 'การตัดสินใจแก้ปัญหาเฉพาะหน้า (Problem Solving & Decision Making)' },
+      { name: 'การควบคุมผู้ปฏิบัติงานและผลลัพธ์ (Supervision & Result Control)' }
+    ]
   },
   agi: { 
-    key: 'agi', name: 'AGI (Agility)', group: 'The Precision Engine', desc: 'Speed & Adaptability', 
-    rubric: {
-      basic: 'ตอบสนองและรับงานล่าช้า ต้องได้รับการติดตามทวงถามซ้ำ',
-      intermediate: 'ตอบสนองรวดเร็วตามเกณฑ์เวลา SLA และปรับตัวตามขั้นตอนได้ราบรื่น',
-      advanced: 'ตอบสนองฉับไว เข้าถึงพื้นที่หน้างานทันที ระงับเหตุได้รวดเร็ว',
-      mastery: 'คาดการณ์ความเสี่ยงล่วงหน้า วางระบบส่งต่องานที่เป็นมาตรฐานรวดเร็วที่สุด'
-    }
+    key: 'agi', 
+    label: 'AGI',
+    name: 'AGI (Agility)', 
+    thai: 'ความรวดเร็วและการปรับตัว',
+    group: 'The Precision Engine', 
+    desc: 'ความรวดเร็วและการปรับตัว (Responsiveness, Adaptability & Field Agility)', 
+    categories: [
+      { name: 'ความรวดเร็วในการตอบสนอง (Responsiveness)' },
+      { name: 'การปรับตัวรับมือความเปลี่ยนแปลง (Adaptability)' },
+      { name: 'การเข้าถึงพื้นที่และการลงมือปฏิบัติ (Field Agility & Action)' }
+    ]
   },
   dex: { 
-    key: 'dex', name: 'DEX (Dexterity)', group: 'The Precision Engine', desc: 'Precision & Quality', 
-    rubric: {
-      basic: 'บันทึกข้อมูลไม่ครบถ้วนหรือมีข้อผิดพลาดบ่อย ตรวจงานไม่ละเอียด',
-      intermediate: 'บันทึกข้อมูลและตรวจสอบคุณภาพงานได้ถูกต้องครบถ้วนตามเกณฑ์มาตรฐาน',
-      advanced: 'ข้อมูลแม่นยำสูง ตรวจพบจุดบกพร่องเชิงลึก งานประณีตเรียบร้อย',
-      mastery: 'ข้อมูลสมบูรณ์แบบ ไร้ข้อผิดพลาด 100% กำหนดมาตรฐานคุณภาพระดับองค์กร'
-    }
+    key: 'dex', 
+    label: 'DEX',
+    name: 'DEX (Dexterity)', 
+    thai: 'ความแม่นยำและมาตรฐานคุณภาพ',
+    group: 'The Precision Engine', 
+    desc: 'ความแม่นยำและมาตรฐานคุณภาพ (Data Accuracy, Time Management & Quality Control)', 
+    categories: [
+      { name: 'ความถูกต้องแม่นยำของข้อมูล (Data Accuracy)' },
+      { name: 'การบริหารเวลา (Time Management)' },
+      { name: 'การตรวจสอบมาตรฐานและการควบคุมคุณภาพ (Quality Control)' }
+    ]
   },
   int: { 
-    key: 'int', name: 'INT (Intelligence)', group: 'The Mastermind', desc: 'Tech, Systems & Automation', 
-    rubric: {
-      basic: 'ใช้งานระบบและเครื่องมือดิจิทัลไม่คล่อง การจัดระเบียบงานยังล่าช้า',
-      intermediate: 'ใช้ระบบ Taskflow, ERP และเครื่องมือดิจิทัลติดตามงานได้อย่างเป็นระบบ',
-      advanced: 'ออกแบบ Workflow ลดขั้นตอนซ้ำซ้อน นำเครื่องมือใหม่มาประยุกต์ใช้อย่างเชี่ยวชาญ',
-      mastery: 'วางแผนยกระดับกระบวนการทำงานด้วยเทคโนโลยีดิจิทัล ขับเคลื่อนนวัตกรรมระดับองค์กร'
-    }
+    key: 'int', 
+    label: 'INT',
+    name: 'INT (Intelligence)', 
+    thai: 'ระบบเทคโนโลยีและการจัดการ',
+    group: 'The Mastermind', 
+    desc: 'ระบบเทคโนโลยีและการจัดการ (Basic Tools, Workflow Optimization & Advanced Automation)', 
+    categories: [
+      { name: 'การใช้เครื่องมือและระบบพื้นฐาน (Basic Tool Proficiency)' },
+      { name: 'การออกแบบระบบและกระบวนการทำงาน (Workflow Optimization)' },
+      { name: 'การประยุกต์ใช้เทคโนโลยีขั้นสูง (Advanced Automation)' }
+    ]
   },
   con: { 
-    key: 'con', name: 'CON (Constitution)', group: 'The Heavy Lifters', desc: 'Resilience & Mental Toughness', 
-    rubric: {
-      basic: 'ประสิทธิภาพลดลงเมื่อเผชิญความกดดัน ขาดความต่อเนื่องในภารกิจระยะยาว',
-      intermediate: 'อดทนต่อสภาวะกดดันได้ดี รับผิดชอบงานอย่างต่อเนื่องจนสำเร็จตามเป้าหมาย',
-      advanced: 'นิ่งสงบในสถานการณ์ตึงเครียด มุ่งมั่นไม่ย่อท้อต่องานยากและซับซ้อน',
-      mastery: 'เป็นเสาหลักที่มั่นคงในภาวะวิกฤต นำพาทีมงานข้ามผ่านอุปสรรคใหญ่ได้อย่างมั่นคง'
-    }
+    key: 'con', 
+    label: 'CON',
+    name: 'CON (Constitution)', 
+    thai: 'ความทรหดและการควบคุมอารมณ์',
+    group: 'The Heavy Lifters', 
+    desc: 'ความทรหดและการควบคุมอารมณ์ (Stress Tolerance, Stamina & Grit)', 
+    categories: [
+      { name: 'ความอดทนต่อสภาวะกดดัน (Stress Tolerance)' },
+      { name: 'ความรับผิดชอบต่องานยืดเยื้อ (Stamina in Protracted Tasks)' },
+      { name: 'ความทรหดและไม่ยอมแพ้ต่องานยาก (Grit & Perseverance)' }
+    ]
   },
   sen: { 
-    key: 'sen', name: 'SEN (Sense)', group: 'The Empathizers', desc: 'Stakeholder Insight & Negotiation', 
-    rubric: {
-      basic: 'ควบคุมอารมณ์ได้ไม่ดี สื่อสารไม่ชัดเจน ขาดความเข้าใจความต้องการของผู้อื่น',
-      intermediate: 'สื่อสารสุภาพ มี Service Mind รับฟังและเข้าใจความต้องการของผู้รับบริการอย่างจริงใจ',
-      advanced: 'มีศิลปะในการสื่อสารและเจรจาต่อรอง ไกล่เกลี่ยข้อพิพาทและคลี่คลายสถานการณ์ตึงเครียดได้ดีเยี่ยม',
-      mastery: 'มีวุฒิภาวะผู้นำสูงสุด สร้างความเชื่อมั่นและความสัมพันธ์อันดีอย่างยั่งยืนระหว่างบริษัทและชุมชน'
-    }
+    key: 'sen', 
+    label: 'SEN',
+    name: 'SEN (Sense)', 
+    thai: 'การเจรจาและความเข้าใจผู้คน',
+    group: 'The Empathizers', 
+    desc: 'การเจรจาและความเข้าใจผู้คน (Emotional Control, Empathy & Communication)', 
+    categories: [
+      { name: 'การควบคุมอารมณ์และบุคลิกภาพ (Emotional Control)' },
+      { name: 'ความเข้าใจผู้คนและการบริการ (Empathy & Perspective Taking)' },
+      { name: 'ศิลปะการสื่อสารและเจรจา (Communication & Conflict Resolution)' }
+    ]
   }
 };
 
 export const getStatLevelText = (val) => {
-  const v = Number(val);
-  if (v === 10) return 'ระดับเชี่ยวชาญสูงสุด (Mastery)';
-  if (v === 9) return 'ระดับผู้นำ (Mastery)';
-  if (v === 8) return 'ระดับผู้เชี่ยวชาญพิเศษ (Expert)';
-  if (v === 7) return 'ระดับเชี่ยวชาญ (Advanced)';
-  if (v === 6) return 'ระดับดีเยี่ยม (Good)';
-  if (v === 5) return 'ระดับมาตรฐาน (Standard)';
-  if (v === 4) return 'ต่ำกว่าเกณฑ์ (Below Average)';
-  if (v === 3) return 'ต้องการการดูแล (Needs Help)';
-  if (v === 2) return 'ต้องปรับปรุง (Poor)';
-  return 'ขั้นวิกฤต (Crisis)';
+  const v = Math.min(Math.max(Math.round(Number(val) || 5), 1), 10);
+  const levels = {
+    10: 'ระดับตำนาน (Legendary)',
+    9: 'ระดับผู้นำ (Mastery)',
+    8: 'ผู้เชี่ยวชาญพิเศษ (Expert)',
+    7: 'ระดับเชี่ยวชาญ (Advanced)',
+    6: 'ระดับดีเยี่ยม (Good)',
+    5: 'ระดับมาตรฐาน (Standard)',
+    4: 'ต่ำกว่าเกณฑ์ (Below Average)',
+    3: 'ต้องการการดูแล (Needs Help)',
+    2: 'ต้องปรับปรุง (Poor)',
+    1: 'ขั้นวิกฤต (Crisis)'
+  };
+  return levels[v] || 'ระดับมาตรฐาน (Standard)';
 };
 
-export const getRubricText = (statOrKey, val) => {
-  const stat = (typeof statOrKey === 'string') ? STAT_DEFINITIONS[statOrKey.toLowerCase()] : statOrKey;
-  if (!stat || !stat.rubric) return '';
-  const v = Number(val);
-  if (v >= 9) return stat.rubric.mastery;
-  if (v >= 7) return stat.rubric.advanced;
-  if (v >= 4) return stat.rubric.intermediate;
-  return stat.rubric.basic;
+export const getRubricText = (statOrKey, val, catIndex = 0) => {
+  const k = (typeof statOrKey === 'string' ? statOrKey : statOrKey?.key || '').toLowerCase();
+  const v = String(Math.min(Math.max(Math.round(Number(val) || 5), 1), 10));
+  
+  // 1. Direct lookup in rubricsData (from rpg perform updated 20-9-69.xlsx)
+  if (rubricsData && rubricsData[k]) {
+    const list = rubricsData[k];
+    const cat = list[catIndex] || list[0];
+    if (cat && cat.levels && cat.levels[v]) {
+      return cat.levels[v];
+    }
+  }
+
+  // 2. Fallback to basic text if not matched
+  const stat = STAT_DEFINITIONS[k] || OUTER_DEFINITIONS[k];
+  if (stat && stat.rubric) {
+    if (stat.rubric[v]) return stat.rubric[v];
+    const num = Number(v);
+    if (num >= 9) return stat.rubric.mastery || '';
+    if (num >= 7) return stat.rubric.advanced || '';
+    if (num >= 4) return stat.rubric.intermediate || '';
+    return stat.rubric.basic || '';
+  }
+  return '';
 };
 
 export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetypesData) => {
@@ -378,12 +422,12 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
 
     const subStandardBehaviorDefs = {
-      str: 'อาจต้องเพิ่มความมั่นใจในการตัดสินใจลุยงานเฉพาะหน้า (STR)',
-      agi: 'ความคล่องตัวในการปรับตัวรับมือกับงานด่วนฉุกเฉินยังต้องเสริมเพิ่มเติม (AGI)',
-      dex: 'ควรมี Check-list ตรวจทานความประณีตของเอกสารและรายละเอียดซ้ำ (DEX)',
-      int: 'การประยุกต์ใช้เครื่องมือดิจิทัลหรือระบบงานซับซ้อนยังต้องได้รับการแนะนำ (INT)',
-      con: 'การยืนระยะในงานที่มีแรงกดดันสูงและยืดเยื้ออาจต้องได้รับการสนับสนุนจากทีม (CON)',
-      sen: 'การสื่อสารเจรจาในสถานการณ์ตึงเครียดควรปรึกษาหัวหน้างานหรือทีมก่อน (SEN)'
+      str: 'อาจต้องเพิ่มพลังขับเคลื่อนและความมั่นใจในการตัดสินใจลุยงาน (STR: พลังขับเคลื่อนและการตัดสินใจ)',
+      agi: 'ความรวดเร็วและการปรับตัวรับมือกับงานเร่งด่วนยังต้องเสริมเพิ่มเติม (AGI: ความรวดเร็วและการปรับตัว)',
+      dex: 'ควรเพิ่มความแม่นยำในการบันทึกข้อมูลและตรวจสอบมาตรฐานคุณภาพงาน (DEX: ความแม่นยำและมาตรฐานคุณภาพ)',
+      int: 'การใช้เครื่องมือระบบดิจิทัลและการจัดการกระบวนการทำงานยังต้องได้รับการแนะนำ (INT: ระบบเทคโนโลยีและการจัดการ)',
+      con: 'ความทรหดอดทนต่อสภาวะกดดันและงานยืดเยื้ออาจต้องได้รับการสนับสนุนจากทีม (CON: ความทรหดและการควบคุมอารมณ์)',
+      sen: 'การเจรจาสื่อสารและทำความเข้าใจลูกบ้านในสถานการณ์ตึงเครียดควรปรึกษาหัวหน้างานก่อน (SEN: การเจรจาและความเข้าใจผู้คน)'
     };
 
     if (lowestStatValue >= 7) {
@@ -570,7 +614,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Customer Exp.',
     fullName: 'Customer Experience & Empathy',
     thai: 'การรับมือลูกบ้านและศิลปะการประสานงาน',
-    desc: 'รับมือลูกบ้านอารมณ์ร้อน พูดคุยทั่วไป นัดหมาย และอธิบายขั้นตอนการทำงาน',
+    desc: 'รับมือกับอารมณ์ร้อนที่ได้รับ พูดคุยทั่วไป นัดหมาย และอธิบายขั้นตอนการทำงานอย่างมืออาชีพ',
     color: 'text-pink-500',
     bg: 'bg-pink-500',
     badgeBg: 'bg-pink-50 text-pink-700 border-pink-200',
@@ -582,7 +626,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Tech. Expertise',
     fullName: 'Technical Diagnosis & Facility Standards',
     thai: 'การวินิจฉัยเชิงช่างและมาตรฐานสาธารณูปโภค',
-    desc: 'ทักษะประปา สปริงเกอร์ ไฟฟ้า สโมสร สระว่ายน้ำ บ่อบำบัด และตรวจงานก่อนส่งงานให้ผู้บังคับบัญชา',
+    desc: 'ทักษะงานซ่อมสาธารณูปโภค และตรวจการงานก่อนส่งงานให้ผู้บังคับบัญชา',
     color: 'text-blue-500',
     bg: 'bg-blue-500',
     badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -594,7 +638,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Ops & SLA',
     fullName: 'Operational Discipline & SLA Speed',
     thai: 'วินัยเวลา ความรวดเร็ว และการปิดใบงาน',
-    desc: 'ตรงต่อเวลานัดหมาย เคลียร์เคสฉับไว ไม่ดองสถานะรอใบงาน',
+    desc: 'ตรงต่อเวลานัดหมาย เคลียร์เคสฉับไว ไม่ดองสถานะรอใบงาน บันทึกและปิดงานในระบบ Taskflow',
     color: 'text-emerald-500',
     bg: 'bg-emerald-500',
     badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -618,7 +662,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Resource Ctrl.',
     fullName: 'Cost, Contractor & Material Stewardship',
     thai: 'การบริหารงบประมาณ ผู้รับเหมา และอะไหล่',
-    desc: 'คุมงบซ่อมแซม ตรวจรับงานผู้รับเหมา ควบคุมคลังอะไหล่ส่วนกลาง',
+    desc: 'คุมงบซ่อมแซม ตรวจรับงานผู้รับเหมา ควบคุมคลังอะไหล่ส่วนกลาง ไม่ให้งบรั่วไหล',
     color: 'text-amber-500',
     bg: 'bg-amber-500',
     badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -627,10 +671,10 @@ export const OUTER_DEFINITIONS = {
   },
   innovation: {
     key: 'innovation',
-    name: 'Innovation',
-    fullName: 'Digital Systems & Preventive Maintenance',
-    thai: 'งานเชิงรุก ระบบติดตามงานดิจิทัล และการบำรุงรักษาเชิงป้องกัน',
-    desc: 'ใช้ Taskflow ติดตามงานแม่นยำ วางแผน PM เชิงรุก และลดปัญหาซ้ำซาก',
+    name: 'Innovation & PM',
+    fullName: 'Preventive Maintenance & Digital Systems',
+    thai: 'งานเชิงรุก บำรุงรักษาป้องกัน และระบบดิจิทัล',
+    desc: 'แผน PM ปั๊ม/บ่อบำบัด/ตู้ไฟ ใช้ Taskflow คล่องแคล่ว พัฒนาโฟลว์งาน ลดการซ่อมซ้ำซาก',
     color: 'text-purple-500',
     bg: 'bg-purple-500',
     badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',

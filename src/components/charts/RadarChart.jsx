@@ -22,12 +22,12 @@ export default function RadarChart({
   };
 
   const statDefs = [
-    { key: 'STR', label: 'STR', name: 'กำลังผลักดัน' },
-    { key: 'AGI', label: 'AGI', name: 'ความเร็วคล่องตัว' },
-    { key: 'DEX', label: 'DEX', name: 'ความแม่นยำ' },
-    { key: 'INT', label: 'INT', name: 'เทคโนโลยี/ระบบ' },
-    { key: 'CON', label: 'CON', name: 'ความทนทาน' },
-    { key: 'SEN', label: 'SEN', name: 'เจรจา/อารมณ์' }
+    { key: 'STR', label: 'STR', name: 'พลังขับเคลื่อนและการตัดสินใจ' },
+    { key: 'AGI', label: 'AGI', name: 'ความรวดเร็วและการปรับตัว' },
+    { key: 'DEX', label: 'DEX', name: 'ความแม่นยำและมาตรฐานคุณภาพ' },
+    { key: 'INT', label: 'INT', name: 'ระบบเทคโนโลยีและการจัดการ' },
+    { key: 'CON', label: 'CON', name: 'ความทรหดและการควบคุมอารมณ์' },
+    { key: 'SEN', label: 'SEN', name: 'การเจรจาและความเข้าใจผู้คน' }
   ];
 
   const levels = [2, 4, 6, 8, 10];

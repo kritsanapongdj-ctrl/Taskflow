@@ -303,12 +303,12 @@ export default function StaffAssessmentReportModal({
               {/* 6 Inner Stats Bars */}
               <div className="space-y-1">
                 {[
-                  { key: 'STR', val: statsObj.str, label: 'กำลังผลักดัน & ตัดสินใจ', color: 'bg-rose-500' },
-                  { key: 'AGI', val: statsObj.agi, label: 'ความเร็ว & การปรับตัว', color: 'bg-emerald-500' },
-                  { key: 'DEX', val: statsObj.dex, label: 'ความประณีต & ความปลอดภัย', color: 'bg-amber-500' },
-                  { key: 'INT', val: statsObj.int, label: 'ทักษะเชิงช่าง & ดิจิทัล', color: 'bg-blue-500' },
-                  { key: 'CON', val: statsObj.con, label: 'ความทนทาน & บริการด้วยใจ', color: 'bg-orange-500' },
-                  { key: 'SEN', val: statsObj.sen, label: 'จิตวิทยา & สื่อสารลูกบ้าน', color: 'bg-purple-500' }
+                  { key: 'STR', val: statsObj.str, label: 'พลังขับเคลื่อน & ตัดสินใจ', color: 'bg-rose-500' },
+                  { key: 'AGI', val: statsObj.agi, label: 'ความรวดเร็ว & การปรับตัว', color: 'bg-emerald-500' },
+                  { key: 'DEX', val: statsObj.dex, label: 'ความแม่นยำ & มาตรฐานคุณภาพ', color: 'bg-amber-500' },
+                  { key: 'INT', val: statsObj.int, label: 'ระบบเทคโนโลยี & การจัดการ', color: 'bg-blue-500' },
+                  { key: 'CON', val: statsObj.con, label: 'ความทรหด & การควบคุมอารมณ์', color: 'bg-orange-500' },
+                  { key: 'SEN', val: statsObj.sen, label: 'การเจรจา & ความเข้าใจผู้คน', color: 'bg-purple-500' }
                 ].map((s) => {
                   const kLower = s.key.toLowerCase();
                   const isCore = archAnalysis.roleProfile?.coreFocus?.includes(kLower);
@@ -403,12 +403,12 @@ export default function StaffAssessmentReportModal({
               {/* 6 Outer Axes Grid */}
               <div className="grid grid-cols-3 gap-1.5 text-[8.5px]">
                 {[
-                  { key: 'cx', name: 'CX & บริการ', val: outerSummary.actualValues.cx },
-                  { key: 'tech', name: 'วินิจฉัยเชิงช่าง', val: outerSummary.actualValues.tech },
-                  { key: 'sla', name: 'วินัยเวลา SLA', val: outerSummary.actualValues.sla },
-                  { key: 'crisis', name: 'กู้วิกฤตฉุกเฉิน', val: outerSummary.actualValues.crisis },
-                  { key: 'resource', name: 'คุมงบ & ผู้รับเหมา', val: outerSummary.actualValues.resource },
-                  { key: 'innovation', name: 'งาน PM & ดิจิทัล', val: outerSummary.actualValues.innovation }
+                  { key: 'cx', name: 'รับมือลูกบ้าน & เจรจา', val: outerSummary.actualValues.cx },
+                  { key: 'tech', name: 'วินิจฉัยเชิงช่าง & ระบบ', val: outerSummary.actualValues.tech },
+                  { key: 'sla', name: 'วินัยเวลา & ปิดงาน SLA', val: outerSummary.actualValues.sla },
+                  { key: 'crisis', name: 'ระงับเหตุฉุกเฉินโครงการ', val: outerSummary.actualValues.crisis },
+                  { key: 'resource', name: 'คุมงบ & ผู้รับเหมา/อะไหล่', val: outerSummary.actualValues.resource },
+                  { key: 'innovation', name: 'งานเชิงรุก PM & ดิจิทัล', val: outerSummary.actualValues.innovation }
                 ].map((m) => (
                   <div key={m.key} className="p-1.5 rounded-lg bg-white border border-slate-200 flex flex-col justify-between">
                     <div className="text-[8px] font-medium text-slate-500 truncate mb-0.5">
