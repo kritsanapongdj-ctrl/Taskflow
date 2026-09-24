@@ -129,7 +129,7 @@ export const STAT_DEFINITIONS = {
     group: 'The Precision Engine', 
     desc: 'ความแม่นยำและมาตรฐานคุณภาพ (Data Accuracy, Time Management & Quality Control)', 
     categories: [
-      { name: 'ความถูกต้องแม่นยำของข้อมูล (Data Accuracy)' },
+      { name: 'ความถูกต้องแม่นยำของข้อมูลและเอกสาร (Data Accuracy & Document)' },
       { name: 'การบริหารเวลา (Time Management)' },
       { name: 'การตรวจสอบมาตรฐานและการควบคุมคุณภาพ (Quality Control)' }
     ]
@@ -640,7 +640,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Ops & SLA',
     fullName: 'Operational Discipline & SLA Speed',
     thai: 'วินัยเวลา ความรวดเร็ว และการปิดใบงาน',
-    desc: 'ตรงต่อเวลานัดหมาย เคลียร์เคสฉับไว ไม่ดองสถานะรอใบงาน บันทึกและปิดงานในระบบ Taskflow',
+    desc: 'ตรงต่อเวลานัดหมาย ดำเนินการแต่ละกรณีอย่างรวดเร็ว ไม่ปล่อยสถานะรอใบงานค้าง บันทึกและปิดงานในระบบ Taskflow',
     color: 'text-emerald-500',
     bg: 'bg-emerald-500',
     badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -664,7 +664,7 @@ export const OUTER_DEFINITIONS = {
     name: 'Resource Ctrl.',
     fullName: 'Cost, Contractor & Material Stewardship',
     thai: 'การบริหารงบประมาณ ผู้รับเหมา และอะไหล่',
-    desc: 'คุมงบซ่อมแซม ตรวจรับงานผู้รับเหมา ควบคุมคลังอะไหล่ส่วนกลาง ไม่ให้งบรั่วไหล',
+    desc: 'ควบคุมงบซ่อมแซม ตรวจรับงานผู้รับเหมา ควบคุมคลังอะไหล่ส่วนกลาง ไม่ให้งบรั่วไหล',
     color: 'text-amber-500',
     bg: 'bg-amber-500',
     badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -712,12 +712,12 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
   };
 
   const outerMeta = [
-    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'การรับมือลูกบ้านและประสานงาน', rawVal: (con + sen) / 2, statSum: con + sen },
-    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างและตรวจงาน', rawVal: (int + dex) / 2, statSum: int + dex },
-    { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลาและความรวดเร็ว', rawVal: (agi + dex) / 2, statSum: agi + dex },
-    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การดำเนินการฉุกเฉินสาธารณูปโภค', rawVal: (str + con) / 2, statSum: str + con },
-    { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบและผู้รับเหมา', rawVal: (str + sen) / 2, statSum: str + sen },
-    { key: 'innovation', name: 'Innovation', fullName: 'Digital Systems & Preventive Maintenance', thai: 'งานเชิงรุกและระบบติดตามงาน', rawVal: (int + sen) / 2, statSum: int + sen }
+    { key: 'cx', name: 'Customer Exp.', fullName: 'Customer Experience & Empathy', thai: 'การรับมือลูกบ้านและศิลปะการประสานงาน', rawVal: (con + sen) / 2, statSum: con + sen },
+    { key: 'tech', name: 'Tech. Expertise', fullName: 'Technical Diagnosis & Facility Standards', thai: 'การวินิจฉัยเชิงช่างและมาตรฐานสาธารณูปโภค', rawVal: (int + dex) / 2, statSum: int + dex },
+    { key: 'sla', name: 'Ops & SLA', fullName: 'Operational Discipline & SLA Speed', thai: 'วินัยเวลา ความรวดเร็ว และการปิดใบงาน', rawVal: (agi + dex) / 2, statSum: agi + dex },
+    { key: 'crisis', name: 'Crisis Resolv.', fullName: 'Emergency Response & Crisis Mastery', thai: 'การดำเนินการฉุกเฉินในพื้นที่สาธารณูปโภคในโครงการ', rawVal: (str + con) / 2, statSum: str + con },
+    { key: 'resource', name: 'Resource Ctrl.', fullName: 'Cost, Contractor & Material Stewardship', thai: 'การบริหารงบประมาณ ผู้รับเหมา และอะไหล่', rawVal: (str + sen) / 2, statSum: str + sen },
+    { key: 'innovation', name: 'Innovation & PM', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุก บำรุงรักษาป้องกัน และระบบดิจิทัล', rawVal: (int + sen) / 2, statSum: int + sen }
   ];
 
   const avgInner = (str + agi + dex + int + con + sen) / 6;

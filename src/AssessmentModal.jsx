@@ -201,16 +201,16 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     const rubrics = rubricsData[statId][index].levels;
     const v = String(currentScore);
     const levelMap = {
-      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (CRISIS)", color: "text-red-700" },
-      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (POOR)", color: "text-red-500" },
-      "3": { text: rubrics["3"], level: "ต้องการการดูแล (NEEDS HELP)", color: "text-orange-600" },
-      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (BELOW AVERAGE)", color: "text-orange-500" },
-      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (STANDARD)", color: "text-emerald-600" },
-      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (GOOD)", color: "text-emerald-500" },
-      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (ADVANCED)", color: "text-blue-500" },
-      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (EXPERT)", color: "text-blue-600" },
-      "9": { text: rubrics["9"], level: "ระดับผู้นำ (MASTERY)", color: "text-purple-500" },
-      "10": { text: rubrics["10"], level: "ระดับตำนาน (LEGENDARY)", color: "text-purple-600" }
+      "1": { text: rubrics["1"], level: "ภาวะวิกฤต (CRISIS)", color: "text-rose-700" },
+      "2": { text: rubrics["2"], level: "ต่ำกว่าเกณฑ์อย่างมาก (CRITICAL GAP)", color: "text-rose-600" },
+      "3": { text: rubrics["3"], level: "ต้องได้รับการสนับสนุน (NEEDS SUPPORT)", color: "text-orange-600" },
+      "4": { text: rubrics["4"], level: "ใกล้เกณฑ์มาตรฐาน (DEVELOPING)", color: "text-amber-600" },
+      "5": { text: rubrics["5"], level: "ตามมาตรฐาน (STANDARD)", color: "text-emerald-600" },
+      "6": { text: rubrics["6"], level: "สูงกว่ามาตรฐาน (PROFICIENT)", color: "text-teal-600" },
+      "7": { text: rubrics["7"], level: "ระดับก้าวหน้า (ADVANCED)", color: "text-blue-600" },
+      "8": { text: rubrics["8"], level: "ระดับเชี่ยวชาญ (EXPERT)", color: "text-indigo-600" },
+      "9": { text: rubrics["9"], level: "ผู้นำเชิงระบบ (SYSTEM LEADER)", color: "text-purple-600" },
+      "10": { text: rubrics["10"], level: "ต้นแบบระดับองค์กร (ORGANIZATIONAL BENCHMARK)", color: "text-fuchsia-600" }
     };
     return levelMap[v] || levelMap["5"];
   };
@@ -220,16 +220,16 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     const rubrics = rubricsData[outerKey][0].levels;
     const v = String(currentScore);
     const levelMap = {
-      "1": { text: rubrics["1"], level: "ขั้นวิกฤต (CRISIS)", color: "text-red-700" },
-      "2": { text: rubrics["2"], level: "ต้องปรับปรุง (POOR)", color: "text-red-500" },
-      "3": { text: rubrics["3"], level: "ต้องการการดูแล (NEEDS HELP)", color: "text-orange-600" },
-      "4": { text: rubrics["4"], level: "ต่ำกว่าเกณฑ์ (BELOW AVERAGE)", color: "text-orange-500" },
-      "5": { text: rubrics["5"], level: "ระดับมาตรฐาน (STANDARD)", color: "text-emerald-600" },
-      "6": { text: rubrics["6"], level: "ระดับดีเยี่ยม (GOOD)", color: "text-emerald-500" },
-      "7": { text: rubrics["7"], level: "ระดับเชี่ยวชาญ (ADVANCED)", color: "text-blue-500" },
-      "8": { text: rubrics["8"], level: "ระดับผู้เชี่ยวชาญพิเศษ (EXPERT)", color: "text-blue-600" },
-      "9": { text: rubrics["9"], level: "ระดับผู้นำ (MASTERY)", color: "text-purple-500" },
-      "10": { text: rubrics["10"], level: "ระดับตำนาน (LEGENDARY)", color: "text-purple-600" }
+      "1": { text: rubrics["1"], level: "ภาวะวิกฤต (CRISIS)", color: "text-rose-700" },
+      "2": { text: rubrics["2"], level: "ต่ำกว่าเกณฑ์อย่างมาก (CRITICAL GAP)", color: "text-rose-600" },
+      "3": { text: rubrics["3"], level: "ต้องได้รับการสนับสนุน (NEEDS SUPPORT)", color: "text-orange-600" },
+      "4": { text: rubrics["4"], level: "ใกล้เกณฑ์มาตรฐาน (DEVELOPING)", color: "text-amber-600" },
+      "5": { text: rubrics["5"], level: "ตามมาตรฐาน (STANDARD)", color: "text-emerald-600" },
+      "6": { text: rubrics["6"], level: "สูงกว่ามาตรฐาน (PROFICIENT)", color: "text-teal-600" },
+      "7": { text: rubrics["7"], level: "ระดับก้าวหน้า (ADVANCED)", color: "text-blue-600" },
+      "8": { text: rubrics["8"], level: "ระดับเชี่ยวชาญ (EXPERT)", color: "text-indigo-600" },
+      "9": { text: rubrics["9"], level: "ผู้นำเชิงระบบ (SYSTEM LEADER)", color: "text-purple-600" },
+      "10": { text: rubrics["10"], level: "ต้นแบบระดับองค์กร (ORGANIZATIONAL BENCHMARK)", color: "text-fuchsia-600" }
     };
     return levelMap[v] || levelMap["5"];
   };
@@ -566,10 +566,10 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {[
-                      { tier: '1-3', label: 'ต้องเร่งปรับปรุง', sub: 'Needs Improvement', defVal: 3, color: 'border-rose-300 hover:bg-rose-50 text-rose-800 bg-rose-50/40', activeBg: 'bg-rose-500 text-white ring-2 ring-rose-400 shadow-md', match: activeOuterCurrentVal <= 3 },
-                      { tier: '4-6', label: 'ตามมาตรฐานงาน', sub: 'Standard Achiever', defVal: 5, color: 'border-amber-300 hover:bg-amber-50 text-amber-800 bg-amber-50/40', activeBg: 'bg-amber-500 text-white ring-2 ring-amber-400 shadow-md', match: activeOuterCurrentVal >= 4 && activeOuterCurrentVal <= 6 },
-                      { tier: '7-8', label: 'เชี่ยวชาญ/พึ่งพาได้', sub: 'Strong Performer', defVal: 8, color: 'border-blue-300 hover:bg-blue-50 text-blue-800 bg-blue-50/40', activeBg: 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md', match: activeOuterCurrentVal >= 7 && activeOuterCurrentVal <= 8 },
-                      { tier: '9-10', label: 'ต้นแบบระดับผู้นำ', sub: 'Mastery / Role Model', defVal: 10, color: 'border-purple-300 hover:bg-purple-50 text-purple-800 bg-purple-50/40', activeBg: 'bg-purple-600 text-white ring-2 ring-purple-400 shadow-md', match: activeOuterCurrentVal >= 9 }
+                      { tier: '1-3', label: 'วิกฤต / ต้องสนับสนุน', sub: 'Crisis - Needs Support', defVal: 3, color: 'border-rose-300 hover:bg-rose-50 text-rose-800 bg-rose-50/40', activeBg: 'bg-rose-500 text-white ring-2 ring-rose-400 shadow-md', match: activeOuterCurrentVal <= 3 },
+                      { tier: '4-6', label: 'มาตรฐาน / สูงกว่าเกณฑ์', sub: 'Developing - Proficient', defVal: 5, color: 'border-amber-300 hover:bg-amber-50 text-amber-800 bg-amber-50/40', activeBg: 'bg-amber-500 text-white ring-2 ring-amber-400 shadow-md', match: activeOuterCurrentVal >= 4 && activeOuterCurrentVal <= 6 },
+                      { tier: '7-8', label: 'ก้าวหน้า / เชี่ยวชาญ', sub: 'Advanced - Expert', defVal: 8, color: 'border-blue-300 hover:bg-blue-50 text-blue-800 bg-blue-50/40', activeBg: 'bg-blue-600 text-white ring-2 ring-blue-400 shadow-md', match: activeOuterCurrentVal >= 7 && activeOuterCurrentVal <= 8 },
+                      { tier: '9-10', label: 'ผู้นำระบบ / ต้นแบบองค์กร', sub: 'System Leader - Benchmark', defVal: 10, color: 'border-purple-300 hover:bg-purple-50 text-purple-800 bg-purple-50/40', activeBg: 'bg-purple-600 text-white ring-2 ring-purple-400 shadow-md', match: activeOuterCurrentVal >= 9 }
                     ].map(t => (
                       <button
                         key={t.tier}
