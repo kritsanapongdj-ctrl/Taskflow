@@ -129,7 +129,7 @@ export const STAT_DEFINITIONS = {
     group: 'The Precision Engine', 
     desc: 'ความแม่นยำและมาตรฐานคุณภาพ (Data Accuracy, Time Management & Quality Control)', 
     categories: [
-      { name: 'ความถูกต้องแม่นยำของข้อมูลและเอกสาร (Data Accuracy&Document)' },
+      { name: 'ความถูกต้องแม่นยำของข้อมูล (Data Accuracy)' },
       { name: 'การบริหารเวลา (Time Management)' },
       { name: 'การตรวจสอบมาตรฐานและการควบคุมคุณภาพ (Quality Control)' }
     ]
