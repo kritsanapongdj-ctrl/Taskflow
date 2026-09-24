@@ -399,6 +399,9 @@ async function handleBudgetOverview(targetGroup) {
     let totalLanding = 0;
     let totalBgt = 0;
 
+    const ytdLbl = data.ytdLabel || 'จ่ายจริง (YTD)';
+    const ytgLbl = data.ytgLabel || 'Forecast (YTG)';
+
     let msg = `📊 สรุปงบประมาณ & คาดการณ์ (Forecast)\n`;
     msg += `👥 ทีม: ${groupName} (หน่วย: พันบาท)\n`;
     msg += `─────────────────────────\n`;
@@ -412,8 +415,8 @@ async function handleBudgetOverview(targetGroup) {
       const diffSign = diff > 0 ? '+' : '';
 
       msg += `\n📌 [${p.code}] ${p.fullName}\n`;
-      msg += `   • จ่ายจริง 8 ด.: ${fNum(p.totalYtdActual)} พันบ.\n`;
-      msg += `   • Forecast 4 ด.: ${fNum(p.totalYtgForecast)} พันบ.\n`;
+      msg += `   • ${ytdLbl}: ${fNum(p.totalYtdActual)} พันบ.\n`;
+      msg += `   • ${ytgLbl}: ${fNum(p.totalYtgForecast)} พันบ.\n`;
       msg += `   • สิ้นปี (FY): ${fNum(p.totalFyLanding)} / งบ: ${fNum(p.totalBudget)}\n`;
       msg += `   • สถานะ: ${p.overallStatus} (${diffSign}${fNum(diff)} พันบ. / ${p.totalVariancePct})\n`;
     });
@@ -425,7 +428,7 @@ async function handleBudgetOverview(targetGroup) {
 
     msg += `─────────────────────────\n`;
     msg += `📈 รวมทั้งสิ้น (${groupName}):\n`;
-    msg += `• จ่ายจริง 8 เดือน: ${fNum(totalActual)} พันบ.\n`;
+    msg += `• ${ytdLbl}: ${fNum(totalActual)} พันบ.\n`;
     msg += `• คาดการณ์จบปี: ${fNum(totalLanding)} พันบ.\n`;
     msg += `• งบประมาณทั้งปี: ${fNum(totalBgt)} พันบ.\n`;
     msg += `• ผลต่างสุทธิ: ${netStatus} (${netSign}${fNum(netDiff)} พันบ. / ${netPct})\n`;
@@ -460,13 +463,16 @@ async function handleProjectBudget(projectQuery) {
     const pDiff = proj.totalVariance || 0;
     const pSign = pDiff > 0 ? '+' : '';
 
+    const ytdLbl = data.ytdLabel || 'จ่ายจริง (YTD)';
+    const ytgLbl = data.ytgLabel || 'Forecast (YTG)';
+
     let msg = `💰 รายละเอียดงบ & Forecast\n`;
     msg += `📌 [${proj.code}] ${proj.fullName}\n`;
     msg += `👥 กลุ่ม: กลุ่ม ${proj.group} (หน่วย: พันบาท)\n`;
     msg += `─────────────────────────\n`;
     msg += `📊 ภาพรวมโครงการ:\n`;
-    msg += `• จ่ายจริง 8 เดือน: ${fNum(proj.totalYtdActual)} พันบ.\n`;
-    msg += `• คาดการณ์ 4 เดือน: ${fNum(proj.totalYtgForecast)} พันบ.\n`;
+    msg += `• ${ytdLbl}: ${fNum(proj.totalYtdActual)} พันบ.\n`;
+    msg += `• ${ytgLbl}: ${fNum(proj.totalYtgForecast)} พันบ.\n`;
     msg += `• คาดการณ์จบปี (FY): ${fNum(proj.totalFyLanding)} พันบ.\n`;
     msg += `• งบประมาณทั้งปี: ${fNum(proj.totalBudget)} พันบ.\n`;
     msg += `• ผลต่างสุทธิ: ${proj.overallStatus} (${pSign}${fNum(pDiff)} พันบ. / ${proj.totalVariancePct})\n`;
