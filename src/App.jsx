@@ -196,7 +196,13 @@ export default function App() {
     setLoading(true);
     
     const unsubTasks = onSnapshot(getColRef('Tasks'), (snap) => {
-      const arr = []; snap.forEach(d => arr.push(d.data())); setTasks(arr);
+      const arr = []; 
+      snap.forEach(d => {
+        const data = d.data();
+        if (data && data.emailAlert) delete data.emailAlert;
+        arr.push(data);
+      }); 
+      setTasks(arr);
     }, console.error);
 
     const unsubInfs = onSnapshot(getColRef('InformJobs'), (snap) => {
@@ -264,24 +270,38 @@ export default function App() {
   const saveD = async (t, d) => {
     if (!user) return;
     try {
-      const cleanData = sanitizeForFirestore(d);
+      // แยก emailAlert ออกมาชั่วคราวเพื่อส่งแจ้งเตือนในรอบนี้เท่านั้น และไม่บันทึกค้างไว้ใน Database
+      const alertToSend = (d && d.emailAlert) ? { ...d.emailAlert } : null;
 
-      // อัปเดต state ในเครื่องทันที (Optimistic UI Update) เพื่อให้หน้าจอเปลี่ยนสถานะทันทีโดยไม่ต้องรอกราฟเน็ตเวิร์ก
+      // คัดลอกข้อมูลและลบ emailAlert ออกเพื่อป้องกันการบันทึกลง Firestore หรือค้างใน State
+      const dataToSave = { ...d };
+      delete dataToSave.emailAlert;
+
+      const cleanData = sanitizeForFirestore(dataToSave);
+
+      // อัปเดต state ในเครื่องทันที (Optimistic UI Update) โดยไม่มี emailAlert ค้าง
       if (t === 'task' && cleanData?.id) {
-        setTasks(prev => prev.map(item => String(item.id) === String(cleanData.id) ? { ...item, ...cleanData } : item));
+        setTasks(prev => prev.map(item => {
+          if (String(item.id) === String(cleanData.id)) {
+            const updated = { ...item, ...cleanData };
+            delete updated.emailAlert;
+            return updated;
+          }
+          return item;
+        }));
       }
 
       if (t === 'task') await setDoc(getDocRef('Tasks', cleanData.id), cleanData);
       else if (t === 'informJob') await setDoc(getDocRef('InformJobs', cleanData.id), cleanData);
       else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), cleanData);
       
-      // ส่งอีเมลแจ้งเตือนผ่าน Brevo Serverless API ทันทีหากมี emailAlert
-      if (cleanData && cleanData.emailAlert) {
+      // ส่งอีเมลแจ้งเตือนผ่าน Brevo Serverless API เฉพาะเมื่อมี action ส่งเข้ามาใหม่ในรอบนี้เท่านั้น (ไม่ดึงจากของเดิม)
+      if (alertToSend && alertToSend.emails && alertToSend.emails.length > 0) {
         fetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            alert: cleanData.emailAlert,
+            alert: alertToSend,
             task: {
               id: cleanData.id,
               project: cleanData.project,
@@ -307,10 +327,11 @@ export default function App() {
         });
       }
 
+      const gasPayload = alertToSend ? { ...cleanData, emailAlert: alertToSend } : cleanData;
       fetch(API_URL, { 
         method: "POST", mode: "no-cors", 
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-        body: JSON.stringify({ type: t, data: cleanData }) 
+        body: JSON.stringify({ type: t, data: gasPayload }) 
       }).catch(()=>{});
 
     } catch (e) {
@@ -366,6 +387,7 @@ export default function App() {
 
       if (needsUpdate) {
           let updatedTask = { ...t, overdueStatus: currentStatus };
+          delete updatedTask.emailAlert;
           if (currentStatus === 'ออกใบงานช้า') updatedTask.lateWorkOrder = true;
           updates.push(updatedTask);
       }
@@ -571,6 +593,7 @@ export default function App() {
     }
     
     tD.overdueStatus = (eTask && (eTask.overdueStatus === 'เกินกำหนด' || eTask.overdueStatus === 'ออกใบงานช้า')) ? eTask.overdueStatus : 'ปกติ'; 
+    delete tD.emailAlert;
     if(ePl) tD.emailAlert = ePl; saveD('task', tD); setTMod(false); setETask(null); setSReason(''); setShowStartReason(false);
   };
 
@@ -638,6 +661,7 @@ export default function App() {
     const t = tasks.find(x => String(x.id) === String(sMod.taskId));
     if (t) {
         let nT = { ...t };
+        delete nT.emailAlert;
         let timeline = Array.isArray(t.timeline) ? [...t.timeline] : [];
         const nowIso = new Date().toISOString();
         const ems = getTargetEms(t.project);
@@ -850,7 +874,7 @@ export default function App() {
       setITab('manage'); 
   };
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; n.openedDate = getTStr(); n.openedMonth = getTStr().slice(0, 7); }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
-  const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? getMStr() : '' }; saveD('task', nT); } }); };
+  const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? getMStr() : '' }; delete nT.emailAlert; saveD('task', nT); } }); };
   
   const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
 
