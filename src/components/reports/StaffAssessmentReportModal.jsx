@@ -42,12 +42,9 @@ export default function StaffAssessmentReportModal({
 
   // Archetype & Identity analysis
   const archAnalysis = analyzeArchetype(staff, sets, archetypesData) || {};
-  const archetypeKey = archAnalysis.archetypeKey || 'novice';
+  const archetypeKey = archAnalysis.archetypeKey || 'generalist';
   const enTitle = archAnalysis.mainStyle || 'Specialist';
-  const rawIdentity = staff.potentialIdentity || getArchetypeIdentity(statsObj, archetypesData);
-  const identityBadgeText = (rawIdentity && rawIdentity !== enTitle)
-    ? rawIdentity
-    : (archAnalysis.archObj?.identity || rawIdentity);
+  const identityBadgeText = archAnalysis.identityText || getArchetypeIdentity(statsObj, archetypesData);
   const styleDesc = archAnalysis.styleDesc || '';
   const weaknessText = archAnalysis.dynamicWeakness || '';
 

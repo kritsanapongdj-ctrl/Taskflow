@@ -36,6 +36,18 @@ const bdoClassMapping = {
   'con_dex_sen': 'class_32',   // Seraph (เซราฟ)
   'con_int_sen': 'class_17',   // Shai (ชายย์)
   'all_rounder': 'class_0',    // Warrior (นักรบสมดุลทุกด้าน)
+  'generalist': 'class_0',     // Generalist
+  'polarized_prodigy': 'class_0',
+  'uniform_1': 'class_0',
+  'uniform_2': 'class_0',
+  'uniform_3': 'class_0',
+  'uniform_4': 'class_0',
+  'uniform_5': 'class_0',
+  'uniform_6': 'class_0',
+  'uniform_7': 'class_0',
+  'uniform_8': 'class_0',
+  'uniform_9': 'class_0',
+  'uniform_10': 'class_0',
   'novice': 'class_0',         // Warrior
   'trainee': 'class_0',
   'uncalibrated': 'class_0'

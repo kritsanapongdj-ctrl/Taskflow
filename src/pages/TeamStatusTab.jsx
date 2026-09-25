@@ -6,6 +6,7 @@ import RadarChart from '../components/charts/RadarChart';
 import StaffAssessmentReportModal from '../components/reports/StaffAssessmentReportModal';
 import archetypesData from '../data/archetypes.json';
 import { 
+  calculateArchetypeKey,
   getArchetypeIdentity, 
   getStatLevelText, 
   getRubricText, 
@@ -97,18 +98,8 @@ export default function TeamStatusTab({
             const con = avg([row[23], row[24], row[25]]);
             const sen = avg([row[26], row[29], row[30]]);
             
-            const tieBreakers = { str: 0.06, agi: 0.05, dex: 0.04, int: 0.03, con: 0.02, sen: 0.01 };
             const stats = { str, agi, dex, int, con, sen };
-            const validStats = Object.keys(stats).filter(k => stats[k] >= 5).map(k => ({ key: k, val: stats[k], adj: stats[k] + tieBreakers[k] }));
-            
-            let archetypeKey = 'novice';
-            if (validStats.length >= 2) {
-               validStats.sort((a,b) => b.adj - a.adj); // Sort descending by adjusted score
-               const useTop3 = validStats.length >= 3 && validStats[2].val >= 6;
-               const topKeys = validStats.slice(0, useTop3 ? 3 : 2).map(s => s.key).sort();
-               archetypeKey = topKeys.join('_');
-            }
-
+            const archetypeKey = calculateArchetypeKey(stats, archetypesData);
             const potentialIdentity = getArchetypeIdentity(stats, archetypesData);
             
             const parseScore = (v, fb = 5) => (typeof v === 'number' && v >= 1 && v <= 10) ? Math.round(v) : fb;
@@ -151,175 +142,38 @@ export default function TeamStatusTab({
       const role = classMap[u.classId];
 
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
-      const sortedStats = Object.entries(statsObj).sort((a,b) => b[1] - a[1]);
-      
-      const archetypeMapTop2 = {};
-        const archetypeMapTop3 = {};
-        archetypesData.forEach(a => {
-           const keys = a.key.split('_');
-           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-        });
-        archetypesData.forEach(a => {
-           const keys = a.key.split('_');
-           if (keys.length === 2) archetypeMapTop2[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-           if (keys.length === 3) archetypeMapTop3[a.key] = a.name + (a.thai ? ' (' + a.thai + ')' : '');
-        });
-
-      const validStats = sortedStats.filter(s => s[1] >= 5);
-      const minStat = sortedStats[5][1];
-      const maxStat = sortedStats[0][1];
-      
-      let prefix = '';
-      if (maxStat >= 10) prefix = 'Master ';
-      else if (maxStat >= 9) prefix = 'Elite ';
-      else if (maxStat >= 8) prefix = 'Expert ';
-      else if (maxStat >= 7) prefix = 'Veteran ';
-      else if (maxStat >= 6) prefix = 'Adept ';
-
-      const getDesc = (k) => {
-         const defaults = { 
-            str: 'การขับเคลื่อนและลงมือทำอย่างเด็ดขาด', 
-            agi: 'ความรวดเร็วคล่องตัวในการแก้ปัญหา', 
-            dex: 'ความประณีตแม่นยำและมาตรฐานงาน', 
-            int: 'การพัฒนาระบบและประยุกต์ใช้เทคโนโลยี', 
-            con: 'ความอดทนหนักแน่นต่อแรงกดดัน', 
-            sen: 'การประสานงานและครองใจผู้คน' 
-         };
-         return defaults[k] || k;
-      };
-
-      let mainStyleRaw = ''; let styleDesc = ''; let useTop3 = false;
-      if (maxStat === minStat) {
-         const v = maxStat;
-         if (v === 1) { mainStyleRaw = 'Critical Crisis (ขั้นวิกฤต/ต้องจัดการเด็ดขาด)'; styleDesc = 'ผลงานและพฤติกรรมต่ำสุดในทุกมิติ ก่อให้เกิดความเสียหายร้ายแรง เป็นปัจจัยเสี่ยงระดับวิกฤตที่หัวหน้างานต้องมีมาตรการจัดการขั้นเด็ดขาด (Terminate หรือ Re-role ทันที)'; }
-         else if (v === 2) { mainStyleRaw = 'Severe Underperformer (ต่ำกว่าเกณฑ์รุนแรง)'; styleDesc = 'ผลการปฏิบัติงานต่ำกว่ามาตรฐานมาก เป็นจุดอ่อนของทีมที่ต้องเข้าสู่แผน PIP (Performance Improvement Plan) อย่างเร่งด่วนที่สุด'; }
-         else if (v === 3) { mainStyleRaw = 'Needs Intensive Care (ต้องดูแลใกล้ชิด)'; styleDesc = 'ยังไม่สามารถปล่อยให้ทำงานเองได้ ต้องมีพี่เลี้ยง (Mentor) คอยประกบแทบทุกขั้นตอนเพื่อป้องกันความผิดพลาด'; }
-         else if (v === 4) { mainStyleRaw = 'Inconsistent Performer (ขาดความสม่ำเสมอ)'; styleDesc = 'เกือบแตะมาตรฐาน แต่ยังมีจุดบกพร่องหรือหลุดบ่อย หัวหน้างานต้องคอยกระตุ้นและกำหนด Check-point ถี่ขึ้นเพื่อดึงศักยภาพ'; }
-         else if (v === 5) { mainStyleRaw = 'Standard Achiever (ผู้บรรลุมาตรฐาน)'; styleDesc = 'ปฏิบัติงานได้ตามมาตรฐานอย่างครบถ้วน เป็นฟันเฟืองที่พึ่งพาได้ ควรกล้ารับความท้าทายใหม่ๆ เพื่อยกระดับสู่ความเชี่ยวชาญ'; }
-         else if (v === 6) { mainStyleRaw = 'Solid Contributor (ผู้ขับเคลื่อนชั้นเยี่ยม)'; styleDesc = 'ทำงานได้ดีเยี่ยมและไว้ใจได้ในทุกด้าน เป็นแกนหลักที่ทีมฝากความหวังได้เสมอโดยไม่ต้องตรวจสอบซ้ำ'; }
-         else if (v === 7) { mainStyleRaw = 'Advanced Generalist (ผู้เชี่ยวชาญรอบด้าน)'; styleDesc = 'มีทักษะระดับสูงครบทุกมิติ สามารถแก้ปัญหาซับซ้อนได้อย่างอิสระและเป็นที่ปรึกษาให้ทีมได้'; }
-         else if (v === 8) { mainStyleRaw = 'Expert Leader (ผู้นำระดับผู้เชี่ยวชาญ)'; styleDesc = 'โดดเด่นรอบด้าน เป็นเสาหลักที่กำหนดมาตรฐานการทำงานของทีมและริเริ่มสิ่งใหม่ๆ ได้อย่างยอดเยี่ยม'; }
-         else if (v === 9) { mainStyleRaw = 'The Mastermind (ผู้คุมเกม)'; styleDesc = 'สุดยอดบุคลากรที่มีอิทธิพลต่อทิศทางของทีม เป็นตัวแปรสำคัญที่สามารถพลิกสถานการณ์และสร้างนวัตกรรมใหม่ๆ ได้อย่างไม่มีขีดจำกัด'; }
-         else if (v === 10) { mainStyleRaw = 'The Legend (ระดับตำนาน)'; styleDesc = 'บุคคลระดับตำนาน ไร้จุดอ่อนใดๆ เป็นรากฐานที่สร้างนิยามใหม่แห่งความสำเร็จและกำหนดทิศทางขององค์กร'; }
-      } else if (maxStat >= 8 && minStat <= 3) {
-         mainStyleRaw = 'Polarized Prodigy (สุดโต่งแต่อ่อนไหว)';
-         styleDesc = `มีพรสวรรค์สูงลิ่วในด้าน ${getDesc(sortedStats[0][0])} แต่มีจุดบอดวิกฤตในด้าน ${getDesc(sortedStats[5][0])} (คะแนน ${minStat}) ซึ่งอาจสร้างความเสียหายรุนแรงได้ หัวหน้างานต้องจัดสรรทีมงานมาอุดช่องโหว่นี้โดยด่วน ไม่ควรให้ลุยเดี่ยว`;
-      } else if (maxStat <= 5) {
-         if (minStat >= 4) {
-            mainStyleRaw = 'Generalist (ผู้เรียนรู้รอบด้าน)'; styleDesc = 'มีพื้นฐานที่สม่ำเสมอและปรับตัวได้ทุกบทบาท ควรผลักดันให้หา "ความถนัดเฉพาะทาง" 1-2 ด้าน เพื่อทะลุกำแพงสู่ระดับที่สูงขึ้น';
-         } else if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            mainStyleRaw = 'Trainee (อยู่ในช่วงพัฒนาทักษะ)'; styleDesc = 'ทักษะโดยรวมยังต่ำกว่าเกณฑ์ปฏิบัติงานขั้นต้น (มาตรฐาน = 5) จำเป็นต้องมีระบบพี่เลี้ยง (Mentoring) คอยประกบอย่างใกล้ชิดและไม่ควรให้รับผิดชอบงานหลักเพียงลำพัง';
-         } else {
-            mainStyleRaw = 'Uncalibrated (ศักยภาพที่รอการเจียระไน)'; styleDesc = 'ศักยภาพแฝงมีแต่ผลงานยังขาดความสม่ำเสมอ หัวหน้าควรช่วยจัดลำดับความสำคัญและแก้จุดอ่อนทีละจุดเพื่อให้ผลงานนิ่งขึ้น';
-         }
-      } else {
-         if (validStats.length >= 3 && (validStats.length === 3 || validStats[2][1] > validStats[3][1])) useTop3 = true;
-         if (useTop3) {
-            const topKeys = [validStats[0][0], validStats[1][0], validStats[2][0]];
-            mainStyleRaw = (archetypeMapTop3[topKeys.sort().join('_')] || 'Hybrid (สายผสมผสาน)');
-            styleDesc = `โดดเด่นอย่างมากด้าน ${getDesc(topKeys[0])}, ${getDesc(topKeys[1])} และ ${getDesc(topKeys[2])}`;
-         } else if (validStats.length >= 2) {
-            const topKeys = [validStats[0][0], validStats[1][0]];
-            mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
-            styleDesc = `ความเชี่ยวชาญพิเศษด้าน ${getDesc(topKeys[0])} ผสานกับ ${getDesc(topKeys[1])}`;
-         } else {
-            const topKeys = [sortedStats[0][0], sortedStats[1][0]];
-            mainStyleRaw = (archetypeMapTop2[topKeys.sort().join('_')] || 'Specialist (สายเฉพาะทาง)');
-            styleDesc = `มีความโดดเด่นด้าน ${getDesc(topKeys[0])} (${sortedStats[0][1]}/10) เป็นพิเศษ แต่ทักษะด้าน ${getDesc(topKeys[1])} และด้านอื่นๆ ยังต้องได้รับการพัฒนาเพิ่มเติมเพื่อรองรับงาน`;
-         }
-         if (minStat <= 4) {
-            const weakReasons = { str: 'งานที่ต้องลุยและใช้พลังขับเคลื่อนสูง', agi: 'งานด่วนที่ต้องการผลลัพธ์รวดเร็ว', dex: 'งานที่ต้องใช้ความละเอียดถูกต้องสูงและแข่งกับเวลา', int: 'งานที่ต้องประยุกต์ใช้เทคโนโลยีหรือจัดระบบขั้นตอนที่ซับซ้อน', con: 'งานที่เต็มไปด้วยความกดดันและยืดเยื้อ', sen: 'งานที่ต้องเจรจาต่อรองหรือรับมือกับอารมณ์ลูกค้า' };
-            const weakNames = sortedStats.filter(s => s[1] <= 4).map(s => weakReasons[s[0]]).filter(Boolean);
-            if (weakNames.length > 0) styleDesc += ` แต่ทั้งนี้ พนักงานยังไม่เหมาะที่จะมอบหมายให้ทำ${weakNames.join(' รวมถึง ')} เนื่องจากสเตตัสในด้านดังกล่าวยังอยู่ในระดับต่ำ`;
-         }
-      }
-
-      let archetypeKey = 'novice';
-      let identityText;
-      let bottomDescText;
-  
-      if (maxStat <= 5) {
-         if (sortedStats.filter(s => s[1] >= 4).length > 0 && sortedStats.filter(s => s[1] <= 3).length > 0) {
-            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-         }
-      } else {
-         if (validStats.length >= 2) {
-            if (validStats.length === 6 && validStats[0][1] === validStats[5][1]) {
-               archetypeKey = 'all_rounder';
-            } else {
-               archetypeKey = validStats.slice(0, useTop3 ? 3 : 2).map(s=>s[0]).sort().join('_');
-            }
-         } else {
-            archetypeKey = [sortedStats[0][0], sortedStats[1][0]].sort().join('_');
-         }
-      }
-      
-      const archObj = archetypesData.find(a => a.key === archetypeKey);
-      if (archObj && validStats.length >= 2) {
-          let dynamicWeakness;
-          let weaknessLabel;
-          let weaknessColor;
-            const lowestStatValue = sortedStats[5][1];
-            const lowestStats = sortedStats.filter(s => s[1] === lowestStatValue);
-            
-            const subStandardBehaviorDefs = { 
-                str: 'อาจต้องเพิ่มความมั่นใจในการตัดสินใจลุยงานเฉพาะหน้า (STR)', 
-                agi: 'ความคล่องตัวในการปรับตัวรับมือกับงานด่วนฉุกเฉินยังต้องเสริมเพิ่มเติม (AGI)', 
-                dex: 'ควรมี Check-list ตรวจทานความประณีตของเอกสารและรายละเอียดซ้ำ (DEX)', 
-                int: 'การประยุกต์ใช้เครื่องมือดิจิทัลหรือระบบงานซับซ้อนยังต้องได้รับการแนะนำ (INT)', 
-                con: 'การยืนระยะในงานที่มีแรงกดดันสูงและยืดเยื้ออาจต้องได้รับการสนับสนุนจากทีม (CON)', 
-                sen: 'การสื่อสารเจรจาในสถานการณ์ตึงเครียดควรปรึกษาหัวหน้างานหรือทีมก่อน (SEN)' 
-            };
-
-            if (lowestStatValue >= 7) {
-                weaknessLabel = "จุดเด่นรอบด้าน:";
-                weaknessColor = "text-emerald-400";
-                dynamicWeakness = "มีทักษะระดับสูงครบทุกมิติ ไร้จุดอ่อนในการปฏิบัติงาน สามารถเป็นเสาหลักและพี่เลี้ยงถ่ายทอดความรู้ให้ทีมได้อย่างดีเยี่ยม";
-            } else if (lowestStatValue >= 5) {
-                weaknessLabel = "ข้อเสนอแนะในการพัฒนา:";
-                weaknessColor = "text-sky-300";
-                const statNames = lowestStats.map(s => s[0].toUpperCase()).join(', ');
-                dynamicWeakness = `ทักษะทุกด้านผ่านเกณฑ์มาตรฐานขึ้นไป (ไม่มีจุดบกพร่องต่ำกว่าเกณฑ์) โดยด้าน ${statNames} (${lowestStatValue}/10) อยู่ในระดับมาตรฐานการทำงานทั่วไป ซึ่งสามารถพัฒนาต่อยอดเป็นทักษะเสริมเพื่อความรอบด้านยิ่งขึ้น`;
-            } else if (lowestStatValue >= 3) {
-                weaknessLabel = "จุดที่ควรเสริมทักษะ:";
-                weaknessColor = "text-amber-400";
-                const devBehaviors = lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ');
-                dynamicWeakness = `${devBehaviors} (คะแนน: ${lowestStatValue}/10) ควรได้รับการสนับสนุนหรือมีพี่เลี้ยงช่วยแนะนำในการปฏิบัติงานจริง`;
-            } else {
-                weaknessLabel = "จุดบอดวิกฤต:";
-                weaknessColor = "text-rose-400 font-bold";
-                const crisisBehaviors = lowestStats.map(s => subStandardBehaviorDefs[s[0]]).join(' รวมถึง ');
-                dynamicWeakness = `${crisisBehaviors} (สเตตัสต่ำกว่าเกณฑ์มาตรฐานมาก: ${lowestStatValue}/10) จำเป็นต้องมีระบบพี่เลี้ยงคอยดูแลอย่างใกล้ชิดและหลีกเลี่ยงการมอบหมายงานสำคัญเพียงลำพัง`;
-            }
-
-            bottomDescText = (
-                <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
-                    <span className="text-stone-300 italic">"{archObj.desc}"</span>
-                    <span className="mt-1 flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่น:</span> <span>{archObj.strengths}</span></span>
-                    <span className="flex items-start"><span className={`font-bold mr-1 shrink-0 ${weaknessColor}`}>{weaknessLabel}</span> <span>{dynamicWeakness}</span></span>
-                </span>
-            );
-        } else {
-            bottomDescText = <span className="text-gray-400 italic block mt-2">{styleDesc}</span>;
-        }
-
-      identityText = getArchetypeIdentity(statsObj, archetypesData);
-
-      const nameMatch = mainStyleRaw.match(/^(.+?)\s*\((.+?)\)$/);
-      const enTitle = nameMatch ? nameMatch[1].trim() : mainStyleRaw.trim();
-      const thTitle = nameMatch ? nameMatch[2].trim() : '';
-
+      const archAnalysis = analyzeArchetype(u, sets, archetypesData) || {};
+      const archetypeKey = archAnalysis.archetypeKey || 'generalist';
+      const archObj = archAnalysis.archObj || archetypesData.find(a => a.key === archetypeKey) || {};
+      const enTitle = archAnalysis.enTitle || archObj.name || 'Specialist';
+      const thTitle = archAnalysis.thTitle || archObj.thai || '';
+      const identityText = archAnalysis.identityText || archObj.identity || '-';
+      const styleDesc = archAnalysis.styleDesc || archObj.desc || '';
+      const prefixText = archAnalysis.prefixText || '';
       const flavorMap = {
         'Master': 'ระดับปรมาจารย์',
+        'Senior': 'ระดับอาวุโส',
         'Elite': 'ระดับผู้เชี่ยวชาญสูงสุด',
         'Expert': 'ระดับผู้เชี่ยวชาญ',
         'Veteran': 'ระดับชำนาญการ',
         'Adept': 'ระดับผู้มีความสามารถ',
         'Trainee': 'ระดับผู้ฝึกฝน'
       };
-      const prefixText = prefix.trim();
       const flavorText = flavorMap[prefixText] || '';
+
+      const bottomDescText = (
+        <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
+          {archObj.strengths && archObj.strengths !== '-' && (
+            <span className="flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่นของสายอาชีพ:</span> <span>{archObj.strengths}</span></span>
+          )}
+          {archObj.weaknesses && archObj.weaknesses !== '-' && (
+            <span className="flex items-start"><span className="text-rose-400 font-bold mr-1 shrink-0">จุดควรระวังประจำสาย:</span> <span>{archObj.weaknesses}</span></span>
+          )}
+          {archAnalysis.dynamicWeakness && (
+            <span className="flex items-start"><span className={`font-bold mr-1 shrink-0 ${archAnalysis.weaknessColor || 'text-amber-400'}`}>{archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:'}</span> <span>{archAnalysis.dynamicWeakness}</span></span>
+          )}
+        </span>
+      );
 
       const outers = [
         { k: 'cx', n: 'Customer Exp.', val: Math.round((statsObj.con + statsObj.sen)/2) },
@@ -1067,7 +921,7 @@ export default function TeamStatusTab({
                 <div className="truncate flex-1">
                   <div className="font-bold text-sm truncate">{s.name}</div>
                   <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
-                  <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{s.potentialIdentity || getArchetypeIdentity(s)}</div>
+                  <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{getArchetypeIdentity(s) || s.potentialIdentity}</div>
                 </div>
               </div>
             ))}
