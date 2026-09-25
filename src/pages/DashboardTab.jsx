@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SimplePieChart from '../components/charts/SimplePieChart';
+
+const REQUESTER_PALETTE = {
+  'SVC': '#0f2e4a',
+  'ICSC': '#bca374',
+  'จนท./ผจก.LH': '#10b981',
+  'ผู้ควบคุมงาน': '#3b82f6',
+  'CEM': '#8b5cf6',
+};
+const FALLBACK_COLORS = ['#f59e0b', '#ec4899', '#06b6d4', '#64748b', '#84cc16', '#14b8a6'];
 
 export default function DashboardTab({
   tasks = [],
@@ -18,7 +27,8 @@ export default function DashboardTab({
       t.status !== 'ยกเลิก' &&
       (gFilt.area === 'ทั้งหมด' || t.area === gFilt.area) &&
       (gFilt.project === 'ทั้งหมด' || getStdProj(t.project) === gFilt.project) &&
-      checkStaffMatch(t.project, gFilt.staffName)
+      checkStaffMatch(t.project, gFilt.staffName) &&
+      (!gFilt.requester || gFilt.requester === 'ทั้งหมด' || t.requester === gFilt.requester)
   );
 
   const dy = aT.filter(
@@ -86,6 +96,23 @@ export default function DashboardTab({
       color: THEME.danger
     }
   ];
+
+  const [chartTab, setChartTab] = useState('all');
+
+  const getRequesterChartData = (arr) => {
+    const counts = {};
+    arr.forEach((t) => {
+      const req = (t.requester || 'ไม่ระบุผู้แจ้ง').trim();
+      counts[req] = (counts[req] || 0) + 1;
+    });
+
+    const sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sortedEntries.map(([name, value], idx) => ({
+      name,
+      value,
+      color: REQUESTER_PALETTE[name] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length]
+    }));
+  };
 
   const cards = [
     {
@@ -167,15 +194,113 @@ export default function DashboardTab({
         ))}
       </div>
 
-      {/* Chart Section - Fluid Recharts Donut Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-          <SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้ (Today's Tasks)" />
+      {/* Chart Section Header with View Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-6 bg-[#0f2e4a] rounded-full" />
+          <h3 className="text-base font-bold text-[#0f2e4a]">
+            การวิเคราะห์กราฟข้อมูล (Data Analytics)
+          </h3>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-          <SimplePieChart data={getChartData(mt)} title="สถานะงานประจำเดือน (Monthly Status)" />
+        <div className="inline-flex bg-gray-100 p-1 rounded-xl text-xs font-bold text-gray-600 self-start sm:self-auto shadow-inner">
+          <button
+            type="button"
+            onClick={() => setChartTab('all')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              chartTab === 'all' ? 'bg-white text-[#0f2e4a] shadow-xs' : 'hover:text-[#0f2e4a]'
+            }`}
+          >
+            แสดงทั้งหมด
+          </button>
+          <button
+            type="button"
+            onClick={() => setChartTab('status')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              chartTab === 'status' ? 'bg-white text-[#0f2e4a] shadow-xs' : 'hover:text-[#0f2e4a]'
+            }`}
+          >
+            สถานะงาน
+          </button>
+          <button
+            type="button"
+            onClick={() => setChartTab('requester')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              chartTab === 'requester' ? 'bg-white text-[#0f2e4a] shadow-xs' : 'hover:text-[#0f2e4a]'
+            }`}
+          >
+            สัดส่วนผู้แจ้ง
+          </button>
         </div>
       </div>
+
+      {/* 1. Status Charts */}
+      {(chartTab === 'all' || chartTab === 'status') && (
+        <div className="space-y-3">
+          {chartTab === 'all' && (
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+              <span className="w-2 h-2 rounded-full bg-[#0f2e4a]"></span>
+              สถิติสถานะการปฏิบัติงาน (Task Status)
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+              <SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้ (Today's Tasks)" />
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+              <SimplePieChart data={getChartData(mt)} title="สถานะงานประจำเดือน (Monthly Status)" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Requester Charts (Requirement 1) */}
+      {(chartTab === 'all' || chartTab === 'requester') && (
+        <div className="space-y-3">
+          {chartTab === 'all' && (
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 pt-2">
+              <span className="w-2 h-2 rounded-full bg-[#bca374]"></span>
+              สถิติสัดส่วนผู้แจ้งงาน (Requester Breakdown)
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Today's Requester Distribution */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300 flex flex-col justify-between">
+              <SimplePieChart 
+                data={getRequesterChartData(dy)} 
+                title="สัดส่วนผู้แจ้งงานวันนี้ (Today's Requesters)" 
+              />
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                <span className="text-gray-400 font-semibold">ผู้แจ้งงานสูงสุดวันนี้:</span>
+                {getRequesterChartData(dy).length > 0 && dy.length > 0 ? (
+                  <span className="font-bold text-[#0f2e4a] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                    🥇 {getRequesterChartData(dy)[0].name} ({getRequesterChartData(dy)[0].value} งาน / {((getRequesterChartData(dy)[0].value / dy.length) * 100).toFixed(1)}%)
+                  </span>
+                ) : (
+                  <span className="text-gray-400">- ไม่มีข้อมูลงานวันนี้ -</span>
+                )}
+              </div>
+            </div>
+
+            {/* Monthly Requester Distribution */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300 flex flex-col justify-between">
+              <SimplePieChart 
+                data={getRequesterChartData(mt)} 
+                title={`สัดส่วนผู้แจ้งงานประจำเดือน (${gFilt.month})`} 
+              />
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                <span className="text-gray-400 font-semibold">ผู้แจ้งงานสูงสุดประจำเดือน:</span>
+                {getRequesterChartData(mt).length > 0 && mt.length > 0 ? (
+                  <span className="font-bold text-[#0f2e4a] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+                    🥇 {getRequesterChartData(mt)[0].name} ({getRequesterChartData(mt)[0].value} งาน / {((getRequesterChartData(mt)[0].value / mt.length) * 100).toFixed(1)}%)
+                  </span>
+                ) : (
+                  <span className="text-gray-400">- ไม่มีข้อมูลงานเดือนนี้ -</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

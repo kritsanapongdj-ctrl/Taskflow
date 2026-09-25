@@ -14,7 +14,8 @@ export default function KanbanBillingTab({
       t.status?.startsWith('จบงาน') &&
       (gFilt.area === 'ทั้งหมด' || t.area === gFilt.area) &&
       (gFilt.project === 'ทั้งหมด' || getStdProj(t.project) === gFilt.project) &&
-      checkStaffMatch(t.project, gFilt.staffName)
+      checkStaffMatch(t.project, gFilt.staffName) &&
+      (!gFilt.requester || gFilt.requester === 'ทั้งหมด' || t.requester === gFilt.requester)
   );
 
   const ubGrp = groupTasks(cT.filter((t) => t.billingStatus !== 'ส่งเบิกแล้ว'));

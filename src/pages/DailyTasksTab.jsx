@@ -21,6 +21,7 @@ export default function DailyTasksTab({
       (gFilt.area === 'ทั้งหมด' || t.area === gFilt.area) &&
       (gFilt.project === 'ทั้งหมด' || getStdProj(t.project) === gFilt.project) &&
       checkStaffMatch(t.project, gFilt.staffName) &&
+      (!gFilt.requester || gFilt.requester === 'ทั้งหมด' || t.requester === gFilt.requester) &&
       ((tD >= t.startDate && tD <= t.endDate) ||
         (!t.status?.startsWith('จบงาน') && chkOvdTimeAware(t, tD) && tD === getTStr()))
   );

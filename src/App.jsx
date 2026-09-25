@@ -119,7 +119,7 @@ export default function App() {
   const [informs, setInforms] = useState([]);
   const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24, staffClasses: [], staffStats: [] });
   
-  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด' });
+  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด', requester: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
   const [teamUnlk, setTeamUnlk] = useState(false);
   const [pwd, setPwd] = useState('');
@@ -837,6 +837,42 @@ export default function App() {
      });
   };
 
+  const addEmailMappingV2 = () => {
+    const em = (emForm.email || '').trim().toLowerCase();
+    if (!em || !em.includes('@')) return alert('กรุณากรอกอีเมลให้ถูกต้อง');
+    if (!emForm.selectedProjs || emForm.selectedProjs.length === 0) return alert('กรุณาเลือกโครงการอย่างน้อย 1 โครงการ (หรือเลือก "ทั้งหมด")');
+    
+    let nEms = [...(sets.emails || [])];
+    const idx = nEms.findIndex(x => x.toLowerCase().startsWith(em + '|'));
+    
+    let staffName = (emForm.name || '').trim();
+    if (!staffName && idx > -1) {
+        staffName = nEms[idx].split('|')[2] || '';
+    }
+    if (!staffName) staffName = em.split('@')[0];
+    
+    const projsStr = emForm.selectedProjs.join(',');
+    const fullStr = `${em}|${projsStr}|${staffName}`;
+
+    if (idx > -1) { nEms[idx] = fullStr; } 
+    else { nEms.push(fullStr); }
+    
+    const newSets = { ...sets, emails: nEms };
+    setSets(newSets); 
+    saveD('settings', newSets); 
+    setEmForm({ name: '', email: '', selectedProjs: [] });
+  };
+
+  const rmEmailProj = (emStr, pRm) => { 
+    const parts = emStr.split('|'), em = parts[0], name = parts[2] || ''; 
+    let projs = (parts[1] || '').split(',').filter(x => x !== pRm); 
+    let nEms = (sets.emails || []).filter(x => x !== emStr); 
+    if (projs.length > 0) nEms.push(`${em}|${projs.join(',')}${name ? '|' + name : ''}`); 
+    const newSets = { ...sets, emails: nEms };
+    setSets(newSets);
+    saveD('settings', newSets); 
+  };
+
   useEffect(() => {
     if (!sets || !sets.emails || sets.emails.length === 0) return;
     const mapping = {
@@ -985,16 +1021,117 @@ export default function App() {
                 {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
               </button>
             </header>
-            {tab !== 'settings' && (
-              <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-3 items-center text-sm shadow-sm z-10 sticky top-14">
-                <span className="font-bold text-gray-500 mr-2"><Icon name="filter" size={16} className="inline mr-1"/> ตัวกรอง:</span>
-                {tab !== 'daily' ? <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" /> : <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50" />}
-                <select value={gFilt.staffName} onChange={e=>setGilt({...gFilt, staffName: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>{Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}</select>
-                <select value={gFilt.area} onChange={e=>setGilt({...gFilt, area: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกพื้นที่</option>{(sets.areas||[]).map(a=><option key={a}>{a}</option>)}</select>
-                <select value={gFilt.project} onChange={e=>setGilt({...gFilt, project: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกโครงการ</option>{(sets.projects||[]).map(p=><option key={p}>{getProjName(p)}</option>)}</select>
-                {tab === 'inform' && iTab === 'manage' && <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded px-3 py-1.5 outline-none bg-gray-50"><option value="ทั้งหมด">ทุกสถานะ</option><option value="รอดำเนินการ">รอดำเนินการ</option><option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option></select>}
-              </div>
-            )}
+            {tab !== 'settings' && (() => {
+              // Cascading filter calculations for staff -> area -> project
+              const staffEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === gFilt.staffName);
+              const staffProjs = staffEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
+              const staffHasAll = staffProjs.includes('ทั้งหมด');
+
+              const staffFilteredProjects = (gFilt.staffName === 'ทั้งหมด' || staffHasAll)
+                ? (sets.projects || [])
+                : (sets.projects || []).filter(p => staffProjs.includes(getProjName(p)));
+
+              const availableAreas = (gFilt.staffName === 'ทั้งหมด' || staffHasAll)
+                ? (sets.areas || [])
+                : Array.from(new Set(staffFilteredProjects.map(p => getProjArea(p)).filter(Boolean)));
+
+              const availableProjects = staffFilteredProjects.filter(p => gFilt.area === 'ทั้งหมด' || getProjArea(p) === gFilt.area);
+
+              const allRequesters = Array.from(new Set([
+                ...REQ_TYPES,
+                ...tasks.map(t => t.requester).filter(Boolean),
+                ...informs.map(j => j.requesterName).filter(Boolean)
+              ]));
+
+              const handleStaffFilterChange = (newStaff) => {
+                let newArea = gFilt.area;
+                let newProject = gFilt.project;
+                if (newStaff !== 'ทั้งหมด') {
+                  const sEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === newStaff);
+                  const sProjs = sEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
+                  const sHasAll = sProjs.includes('ทั้งหมด');
+                  if (!sHasAll) {
+                    if (newProject !== 'ทั้งหมด' && !sProjs.includes(newProject)) {
+                      newProject = 'ทั้งหมด';
+                    }
+                    const allowedAreas = (sets.projects || []).filter(p => sProjs.includes(getProjName(p))).map(p => getProjArea(p));
+                    if (newArea !== 'ทั้งหมด' && !allowedAreas.includes(newArea)) {
+                      newArea = 'ทั้งหมด';
+                    }
+                  }
+                }
+                setGilt(prev => ({ ...prev, staffName: newStaff, area: newArea, project: newProject }));
+              };
+
+              const handleAreaFilterChange = (newArea) => {
+                let newProject = gFilt.project;
+                if (newArea !== 'ทั้งหมด' && newProject !== 'ทั้งหมด') {
+                  const projObj = (sets.projects || []).find(p => getProjName(p) === newProject);
+                  if (projObj && getProjArea(projObj) !== newArea) {
+                    newProject = 'ทั้งหมด';
+                  }
+                }
+                setGilt(prev => ({ ...prev, area: newArea, project: newProject }));
+              };
+
+              const handleProjectFilterChange = (newProject) => {
+                let newArea = gFilt.area;
+                if (newProject !== 'ทั้งหมด') {
+                  const projObj = (sets.projects || []).find(p => getProjName(p) === newProject);
+                  if (projObj) {
+                    const pArea = getProjArea(projObj);
+                    if (pArea) newArea = pArea;
+                  }
+                }
+                setGilt(prev => ({ ...prev, project: newProject, area: newArea }));
+              };
+
+              return (
+                <div className="bg-white border-b px-4 md:px-6 py-3 flex flex-wrap gap-2.5 items-center text-sm shadow-xs z-10 sticky top-14">
+                  <span className="font-bold text-gray-500 mr-1 flex items-center text-xs">
+                    <Icon name="filter" size={15} className="mr-1 text-[#bca374]"/> ตัวกรอง:
+                  </span>
+                  
+                  {tab !== 'daily' ? (
+                    <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold" title="เลือกเดือน" />
+                  ) : (
+                    <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold" title="เลือกวันที่" />
+                  )}
+
+                  {/* 1. เจ้าหน้าที่ */}
+                  <select value={gFilt.staffName} onChange={e=>handleStaffFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-[#0f2e4a]" title="กรองตามเจ้าหน้าที่">
+                    <option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>
+                    {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}
+                  </select>
+
+                  {/* 2. พื้นที่ (สัมพันธ์กับเจ้าหน้าที่) */}
+                  <select value={gFilt.area} onChange={e=>handleAreaFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700" title="กรองตามพื้นที่">
+                    <option value="ทั้งหมด">ทุกพื้นที่</option>
+                    {availableAreas.map(a=><option key={a}>{a}</option>)}
+                  </select>
+
+                  {/* 3. โครงการ (สัมพันธ์กับเจ้าหน้าที่และพื้นที่) */}
+                  <select value={gFilt.project} onChange={e=>handleProjectFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700 max-w-[180px] truncate" title="กรองตามโครงการ">
+                    <option value="ทั้งหมด">ทุกโครงการ</option>
+                    {availableProjects.map(p=><option key={p}>{getProjName(p)}</option>)}
+                  </select>
+
+                  {/* 4. ผู้แจ้ง (Requirement 1) */}
+                  <select value={gFilt.requester || 'ทั้งหมด'} onChange={e=>setGilt({...gFilt, requester: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-amber-50/70 border-amber-200 text-xs font-bold text-[#0f2e4a]" title="กรองตามผู้แจ้ง">
+                    <option value="ทั้งหมด">ทุกผู้แจ้ง</option>
+                    {allRequesters.map(r=><option key={r}>{r}</option>)}
+                  </select>
+
+                  {tab === 'inform' && iTab === 'manage' && (
+                    <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700">
+                      <option value="ทั้งหมด">ทุกสถานะ</option>
+                      <option value="รอดำเนินการ">รอดำเนินการ</option>
+                      <option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option>
+                    </select>
+                  )}
+                </div>
+              );
+            })()}
             <div className="flex-1 overflow-auto p-4 md:p-6 relative">
               <React.Suspense fallback={<TabLoadingSpinner />}>
                 {tab === 'dashboard' && (
@@ -1113,6 +1250,11 @@ export default function App() {
                     clearSList={clearSList}
                     getProjName={getProjName}
                     getProjArea={getProjArea}
+                    emForm={emForm}
+                    setEmForm={setEmForm}
+                    toggleEmailProj={toggleEmailProj}
+                    addEmailMappingV2={addEmailMappingV2}
+                    rmEmailProj={rmEmailProj}
                     testEmailSystem={testEmailSystem}
                     forceScanRealTasks={forceScanRealTasks}
                     installTrigger={installTrigger}

@@ -43,6 +43,7 @@ export default function MonthlyCalendarTab({
               (gFilt.area === 'ทั้งหมด' || t.area === gFilt.area) &&
               (gFilt.project === 'ทั้งหมด' || getStdProj(t.project) === gFilt.project) &&
               checkStaffMatch(t.project, gFilt.staffName) &&
+              (!gFilt.requester || gFilt.requester === 'ทั้งหมด' || t.requester === gFilt.requester) &&
               dS >= (t.startDate || '') &&
               dS <=
                 (t.status?.startsWith('จบงาน')

@@ -28,6 +28,7 @@ export default function InformJobTab({
       if (gFilt.project !== 'ทั้งหมด' && getStdProj(j.project) !== gFilt.project) return false;
       if (gFilt.status !== 'ทั้งหมด' && j.status !== gFilt.status) return false;
       if (!checkStaffMatch(j.project, gFilt.staffName)) return false;
+      if (gFilt.requester && gFilt.requester !== 'ทั้งหมด' && j.requesterName !== gFilt.requester) return false;
 
       // ตรรกะตรวจจับเดือน:
       // 1. รายการที่สร้างในเดือนที่เลือกตามปกติ

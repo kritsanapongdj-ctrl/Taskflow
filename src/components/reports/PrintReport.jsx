@@ -65,6 +65,14 @@ export default function PrintReport({
       else pStI[pName].pd++;
     });
 
+    const reqInformCounts = {};
+    rI.forEach((j) => {
+      const rName = (j.requesterName || 'ไม่ระบุผู้แจ้ง').trim();
+      if (!reqInformCounts[rName]) reqInformCounts[rName] = 0;
+      reqInformCounts[rName]++;
+    });
+    const sortedInformRequesters = Object.entries(reqInformCounts).sort((a, b) => b[1] - a[1]);
+
     return (
       <div id="print-area" className="hidden p-8 font-sans bg-white">
         <div className="text-center border-b-2 border-[#0f2e4a] pb-4 mb-6">
@@ -130,6 +138,36 @@ export default function PrintReport({
               <span className="w-3 h-3 bg-yellow-400 rounded-sm mr-1" />
               รอดำเนินการ
             </div>
+          </div>
+        </div>
+
+        {/* สัดส่วนแจ้งเปิดงานแยกตามผู้แจ้ง */}
+        <div className="mb-8 print-break">
+          <h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2 flex justify-between items-center">
+            <span>สัดส่วนแจ้งเปิดงานแยกตามผู้แจ้ง (Requester Breakdown)</span>
+            <span className="text-xs text-gray-500 font-normal">รวม {rI.length} รายการ</span>
+          </h3>
+          <div className="space-y-2.5">
+            {sortedInformRequesters.map(([reqName, count], idx) => {
+              const pct = rI.length > 0 ? ((count / rI.length) * 100).toFixed(1) : 0;
+              const barColors = ['bg-[#0f2e4a]', 'bg-[#bca374]', 'bg-emerald-600', 'bg-blue-600', 'bg-purple-600', 'bg-amber-600'];
+              return (
+                <div key={reqName} className="flex items-center text-xs">
+                  <div className="w-1/4 font-bold truncate pr-2 flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate">{reqName}</span>
+                  </div>
+                  <div className="w-2/4 bg-gray-100 h-5 rounded overflow-hidden flex p-0.5 border border-gray-200">
+                    <div style={{ width: `${pct}%` }} className={`${barColors[idx % barColors.length]} h-full rounded-sm`} />
+                  </div>
+                  <div className="w-1/4 pl-3 text-[11px] font-semibold text-gray-700">
+                    {count} รายการ <span className="text-gray-400 font-normal">({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -216,6 +254,14 @@ export default function PrintReport({
     else if (t.status?.startsWith('จบงาน')) pSt[pName].d++;
     else pSt[pName].o++;
   });
+
+  const reqBreakdown = {};
+  rT.forEach((t) => {
+    const req = (t.requester || 'ไม่ระบุผู้แจ้ง').trim();
+    if (!reqBreakdown[req]) reqBreakdown[req] = 0;
+    reqBreakdown[req]++;
+  });
+  const sortedRequesters = Object.entries(reqBreakdown).sort((a, b) => b[1] - a[1]);
 
   const allC = tasks.filter((t) => {
     if (!t.status?.startsWith('จบงาน')) return false;
@@ -378,6 +424,41 @@ export default function PrintReport({
           </div>
         </div>
       </div>
+
+      {/* สัดส่วนงานแยกตามผู้แจ้ง (Requirement 1) */}
+      <div className="mb-8 print-break">
+        <h3 className="font-bold text-[#0f2e4a] mb-4 text-sm border-b pb-2 flex justify-between items-center">
+          <span>สัดส่วนงานแยกตามผู้แจ้ง (Requester Breakdown)</span>
+          <span className="text-xs text-gray-500 font-normal">รวม {rT.length} งาน</span>
+        </h3>
+        {sortedRequesters.length === 0 ? (
+          <div className="text-center text-xs text-gray-400 py-3">ไม่มีข้อมูลผู้แจ้ง</div>
+        ) : (
+          <div className="space-y-2.5">
+            {sortedRequesters.map(([reqName, count], idx) => {
+              const pct = rT.length > 0 ? ((count / rT.length) * 100).toFixed(1) : 0;
+              const barColors = ['bg-[#0f2e4a]', 'bg-[#bca374]', 'bg-emerald-600', 'bg-blue-600', 'bg-purple-600', 'bg-amber-600'];
+              return (
+                <div key={reqName} className="flex items-center text-xs">
+                  <div className="w-1/4 font-bold truncate pr-2 flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate">{reqName}</span>
+                  </div>
+                  <div className="w-2/4 bg-gray-100 h-5 rounded overflow-hidden flex p-0.5 border border-gray-200">
+                    <div style={{ width: `${pct}%` }} className={`${barColors[idx % barColors.length]} h-full rounded-sm`} />
+                  </div>
+                  <div className="w-1/4 pl-3 text-[11px] font-semibold text-gray-700">
+                    {count} งาน <span className="text-gray-400 font-normal">({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="print-break">
         <h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">
           งานล่าช้า/เกินกำหนด (รวมงานที่จบช้ากว่ากำหนด)
