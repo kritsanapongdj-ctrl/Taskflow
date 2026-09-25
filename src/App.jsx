@@ -1037,11 +1037,7 @@ export default function App() {
 
               const availableProjects = staffFilteredProjects.filter(p => gFilt.area === 'ทั้งหมด' || getProjArea(p) === gFilt.area);
 
-              const allRequesters = Array.from(new Set([
-                ...REQ_TYPES,
-                ...tasks.map(t => t.requester).filter(Boolean),
-                ...informs.map(j => j.requesterName).filter(Boolean)
-              ]));
+              const allRequesters = REQ_TYPES;
 
               const handleStaffFilterChange = (newStaff) => {
                 let newArea = gFilt.area;
