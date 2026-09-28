@@ -44,7 +44,7 @@ async function replyToLine(replyToken, messages) {
   const LINE_TOKEN = process.env.LINE_TOKEN;
   if (!LINE_TOKEN || !replyToken) {
     console.error("Missing LINE_TOKEN or replyToken in Vercel Environment Variables");
-    return;
+    return false;
   }
   
   const payload = typeof messages === 'string'
@@ -65,19 +65,43 @@ async function replyToLine(replyToken, messages) {
         messages: payload
       })
     });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("LINE Reply Error:", err);
+    if (res.ok) return true;
+
+    const err = await res.text();
+    console.error("LINE Reply Error:", err);
+
+    // Fallback: หาก payload มี Flex message แล้วส่งไม่ผ่าน ให้แปลงเป็น Text ธรรมดาแล้วลองใหม่ทันที
+    if (payload.some(m => m.type !== 'text')) {
+      const fallbackTexts = payload
+        .map(m => m.type === 'text' ? m.text : (m.altText || ''))
+        .filter(Boolean);
+      if (fallbackTexts.length > 0) {
+        console.log("Attempting fallback text reply...");
+        const fbRes = await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${LINE_TOKEN}`
+          },
+          body: JSON.stringify({
+            replyToken: replyToken,
+            messages: [{ type: 'text', text: fallbackTexts.join('\n\n') }]
+          })
+        });
+        return fbRes.ok;
+      }
     }
+    return false;
   } catch(e) {
     console.error("LINE Reply Exception:", e);
+    return false;
   }
 }
 
 // ส่งข้อความแบบ Push ไปยัง Admin ในแชทส่วนตัว (1-on-1 Direct Chat Only)
 async function pushToLine(userId, messages) {
   const LINE_TOKEN = process.env.LINE_TOKEN;
-  if (!LINE_TOKEN || !userId) return;
+  if (!LINE_TOKEN || !userId) return false;
 
   const payload = typeof messages === 'string'
     ? [{ type: 'text', text: messages }]
@@ -97,12 +121,36 @@ async function pushToLine(userId, messages) {
         messages: payload
       })
     });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("LINE Push Error:", err);
+    if (res.ok) return true;
+
+    const err = await res.text();
+    console.error("LINE Push Error:", err);
+
+    // Fallback ด้วยข้อความธรรมดา
+    if (payload.some(m => m.type !== 'text')) {
+      const fallbackTexts = payload
+        .map(m => m.type === 'text' ? m.text : (m.altText || ''))
+        .filter(Boolean);
+      if (fallbackTexts.length > 0) {
+        console.log("Attempting fallback text push...");
+        const fbRes = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${LINE_TOKEN}`
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [{ type: 'text', text: fallbackTexts.join('\n\n') }]
+          })
+        });
+        return fbRes.ok;
+      }
     }
+    return false;
   } catch(e) {
     console.error("LINE Push Exception:", e);
+    return false;
   }
 }
 
@@ -775,10 +823,13 @@ async function analyzeFloodReportWithGemini({ project, weather, notes, photoCoun
     });
     const data = await res.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanJson);
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("No JSON object found in response");
   } catch (e) {
-    console.error("Gemini flood analysis error:", e);
+    console.error("Gemini flood analysis error:", e.message || e);
     return {
       status: 'NORMAL',
       waterLevel: '0 - 5 ซม. (สภาวะปกติ)',
@@ -816,8 +867,7 @@ function buildFloodFlexMessage({ reportId, project, weather, aiResult, photoCoun
             text: 'LAND & HOUSES PUBLIC CO., LTD.',
             color: '#C5A880',
             size: 'xxs',
-            weight: 'bold',
-            letterSpacing: '1px'
+            weight: 'bold'
           },
           {
             type: 'text',
@@ -1034,6 +1084,7 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     const reportRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId);
     await setDoc(reportRef, {
       reportId,
+      userId: userId || '',
       projectCode: project.code,
       projectName: project.name,
       projectArea: project.area,
@@ -1087,11 +1138,17 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       `📑 รหัสเอกสาร: ${reportId}\n` +
       `📸 ภาพถ่ายสำรวจ: ${photos.length} ภาพ\n` +
       `─────────────────────────\n` +
-      `🔗 แตะปุ่ม "เปิดดูและดาวน์โหลดเอกสาร PDF" ในการ์ดด้านบน เพื่อเปิดและบันทึกเป็น PDF บนโทรศัพท์มือถือได้ทันทีครับ`;
+      `🔗 แตะปุ่ม "เปิดดูและดาวน์โหลดเอกสาร PDF" ในการ์ดด้านบน เพื่อเปิดและบันทึกเป็น PDF บนโทรศัพท์มือถือได้ทันทีครับ\n` +
+      `🌐 หรือเปิดดูผ่านลิงก์ตรง:\n${pdfUrl}`;
 
+    let delivered = false;
     if (replyToken) {
-      await replyToLine(replyToken, [flexMsg, { type: 'text', text: completionText }]);
-    } else {
+      delivered = await replyToLine(replyToken, [flexMsg, { type: 'text', text: completionText }]);
+    }
+    
+    // หาก reply ไม่สำเร็จ หรือไม่มี replyToken ให้ push ไปยัง userId ในแชทส่วนตัวเสมอ
+    if (!delivered && userId) {
+      console.log(`Delivering via pushToLine to user ${userId}...`);
       await pushToLine(userId, [flexMsg, { type: 'text', text: completionText }]);
     }
 
@@ -1099,6 +1156,8 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     console.error("compileAndSendFloodReport Error:", err);
     if (replyToken) {
       await replyToLine(replyToken, "❌ เกิดข้อผิดพลาดในการรวมรายงาน PDF กรุณาลองใหม่อีกครั้งครับ");
+    } else if (userId) {
+      await pushToLine(userId, "❌ เกิดข้อผิดพลาดในการรวมรายงาน PDF กรุณาลองใหม่อีกครั้งครับ");
     }
   }
 }
@@ -1223,6 +1282,49 @@ export default async function handler(req, res) {
               await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างานเข้ามาก่อนครับ`);
               continue;
             }
+          } else {
+            // กรณีไม่มี Draft ค้างอยู่ ให้ตรวจสอบว่ามีรายงานล่าสุดที่เพิ่งสร้างสำเร็จหรือไม่
+            try {
+              const reportsSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports"));
+              let latestReport = null;
+              reportsSnap.forEach(d => {
+                const data = d.data();
+                if (!latestReport || (data.createdAt || 0) > (latestReport.createdAt || 0)) {
+                  latestReport = data;
+                }
+              });
+
+              if (latestReport && (Date.now() - (latestReport.createdAt || 0)) < 2 * 60 * 60 * 1000) {
+                const domain = host || 'lh-taskflow.vercel.app';
+                const protocol = proto || 'https';
+                const pdfUrl = `${protocol}://${domain}/api/flood-report?id=${latestReport.reportId}`;
+
+                const flexMsg = buildFloodFlexMessage({
+                  reportId: latestReport.reportId,
+                  project: { code: latestReport.projectCode, name: latestReport.projectName, area: latestReport.projectArea },
+                  weather: latestReport.weather,
+                  aiResult: { status: latestReport.status, summary: latestReport.executiveSummary },
+                  photoCount: latestReport.photoCount || 5,
+                  surveyDateThai: latestReport.surveyDateThai || '-',
+                  surveyTimeThai: latestReport.surveyTimeThai || '-',
+                  pdfUrl
+                });
+
+                const msg = `✅ รายงานสถานการณ์น้ำท่วมล่าสุดจัดทำเรียบร้อยแล้วครับ!\n` +
+                  `📌 โครงการ: [${latestReport.projectCode}] ${latestReport.projectName}\n` +
+                  `📑 รหัสเอกสาร: ${latestReport.reportId}\n` +
+                  `─────────────────────────\n` +
+                  `🔗 แตะปุ่ม "เปิดดูและดาวน์โหลดเอกสาร PDF" ในการ์ด หรือเปิดดูผ่านลิงก์:\n${pdfUrl}`;
+
+                await replyToLine(replyToken, [flexMsg, { type: 'text', text: msg }]);
+                continue;
+              }
+            } catch (err) {
+              console.error("Check recent report error:", err);
+            }
+
+            await replyToLine(replyToken, `🌊 ขณะนี้ยังไม่มีรอบการรายงานที่เปิดอยู่ครับ\nหากต้องการรายงานสถานการณ์น้ำท่วม กรุณาพิมพ์:\n👉 !น้ำท่วม [รหัสโครงการ] [รายละเอียด]\nเช่น !น้ำท่วม 410 ถนนเมนแห้งสนิท`);
+            continue;
           }
         }
 
@@ -1369,9 +1471,17 @@ export default async function handler(req, res) {
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
             const count = photosSnap.size;
 
-            if (count >= 5) {
-              // รอนิ่ง 1.5 วินาที เผื่อภาพที่ 6 กำลังอัปโหลดตามมา
+            if (count >= 6) {
+              // ครบ 6 รูปแล้ว รอ 1.5 วินาที แล้วรวมเล่มทันที
               await new Promise(r => setTimeout(r, 1500));
+              const latestDraftSnap = await getDoc(draftRef);
+              if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
+                await updateDoc(draftRef, { finalizing: true });
+                await compileAndSendFloodReport({ userId, replyToken, host, proto });
+              }
+            } else if (count >= 5) {
+              // มี 5 รูปแล้ว ให้รอ 3.5 วินาที เผื่อภาพที่ 6 กำลังอัปโหลดตามมา
+              await new Promise(r => setTimeout(r, 3500));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
                 await updateDoc(draftRef, { finalizing: true });
