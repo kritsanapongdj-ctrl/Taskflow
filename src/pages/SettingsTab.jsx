@@ -48,6 +48,31 @@ export default function SettingsTab({
   const [selectedReportForDelete, setSelectedReportForDelete] = useState(null);
   const [draftCount, setDraftCount] = useState(0);
 
+  // --- Executive Summary State & Handlers ---
+  const getTodayStr = () => {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const getDaysAgoStr = (daysAgo) => {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    d.setDate(d.getDate() - daysAgo);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const [execDateRange, setExecDateRange] = useState({
+    start: getDaysAgoStr(2),
+    end: getTodayStr()
+  });
+  const [execScope, setExecScope] = useState('focus'); // 'focus' | 'all' | 'critical'
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+
   const fetchReports = async () => {
     if (!getColRef) return;
     setLoadingReports(true);
@@ -123,6 +148,70 @@ export default function SettingsTab({
       alert('✅ ล้างเซสชันรายงานค้างเรียบร้อยแล้ว');
     } catch (e) {
       alert('❌ เกิดข้อผิดพลาด: ' + e.message);
+    }
+  };
+
+  const handleOpenExecutivePdf = () => {
+    const url = `/api/flood-report?mode=executive&start=${execDateRange.start}&end=${execDateRange.end}&scope=${execScope}`;
+    window.open(url, '_blank');
+  };
+
+  const handleExportExecutiveExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const XLSX = await import('xlsx');
+      const startTs = new Date(`${execDateRange.start}T00:00:00+07:00`).getTime();
+      const endTs = new Date(`${execDateRange.end}T23:59:59+07:00`).getTime();
+
+      const matchingReports = floodReports.filter((r) => {
+        const ts = r.createdAt || Date.now();
+        if (ts < startTs || ts > endTs) return false;
+        if (execScope === 'focus') {
+          return r.status === 'WATCH' || r.status === 'CRITICAL';
+        }
+        if (execScope === 'critical') {
+          return r.status === 'CRITICAL';
+        }
+        return true; // 'all'
+      });
+
+      if (matchingReports.length === 0) {
+        alert('⚠️ ไม่พบข้อมูลรายงานที่ตรงกับช่วงวันที่และขอบเขตสถานะที่เลือก');
+        return;
+      }
+
+      const rows = matchingReports.map((r, idx) => ({
+        'ลำดับ': idx + 1,
+        'รหัสเอกสาร': r.reportId || r.id,
+        'วันที่สำรวจ': r.surveyDateThai || '-',
+        'เวลา (น.)': r.surveyTimeThai || '-',
+        'รหัสโครงการ': r.projectCode || '-',
+        'ชื่อโครงการ': r.projectName || '-',
+        'พื้นที่/โซน': r.projectArea || '-',
+        'สถานะความเสี่ยง': r.status === 'CRITICAL' ? '🔴 วิกฤติ (CRITICAL)' : r.status === 'WATCH' ? '🟡 เฝ้าระวัง (WATCH)' : '🟢 ปกติ (NORMAL)',
+        'ระดับน้ำผิวถนน': r.waterLevel || '-',
+        'สภาพคลองและทางระบาย': r.drainageCondition || '-',
+        'สถานะเครื่องสูบน้ำ': r.pumpsRunning || '-',
+        'บทวิเคราะห์และการประเมิน': r.executiveSummary || r.notes || '-',
+        'สถานีตรวจวัดน้ำอ้างอิง': r.waterStation || '-',
+        'จำนวนภาพถ่าย': r.photoCount || 0
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Executive_Summary');
+
+      const colWidths = Object.keys(rows[0] || {}).map((k) => ({
+        wch: Math.max(k.length * 2, 16)
+      }));
+      worksheet['!cols'] = colWidths;
+
+      XLSX.writeFile(workbook, `LH_Flood_Executive_Summary_${execDateRange.start}_to_${execDateRange.end}.xlsx`);
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('❌ เกิดข้อผิดพลาดในการส่งออก Excel: ' + (err.message || err));
+    } finally {
+      setIsExportingExcel(false);
     }
   };
 
@@ -1248,6 +1337,89 @@ export default function SettingsTab({
                 </div>
                 <div className="text-xl font-black text-sky-800">
                   {totalReportPhotos} <span className="text-xs font-normal text-sky-600">ภาพ</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Executive Summary Card (สรุปภาพรวมผู้บริหาร) */}
+            <div className="bg-gradient-to-br from-[#0f2e4a] via-[#143c61] to-[#0a2034] text-white p-5 rounded-2xl border border-[#bca374]/30 shadow-lg mb-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#bca374] text-[#0f2e4a] text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">
+                      Executive Briefing
+                    </span>
+                    <h3 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+                      <Icon name="fileText" size={18} className="text-[#bca374]" />
+                      ระบบออกรายงานสรุปภาพรวมผู้บริหาร (Flood & Drainage Management)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    รวบรวมและวิเคราะห์สถานการณ์น้ำท่วมทุกโครงการตามช่วงวันที่และระดับความเสี่ยง เพื่อนำเสนอผู้บริหารระดับสูง
+                  </p>
+                </div>
+
+                {/* Scope selection */}
+                <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/10 text-xs">
+                  <span className="text-gray-300 pl-2 font-medium">ขอบเขต:</span>
+                  <select
+                    value={execScope}
+                    onChange={(e) => setExecScope(e.target.value)}
+                    className="bg-[#0f2e4a] border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold outline-none cursor-pointer"
+                  >
+                    <option value="focus">🟡 เฝ้าระวัง & 🔴 วิกฤต (แนะนำผู้บริหาร)</option>
+                    <option value="all">ทุกโครงการ (รวมสภาวะปกติ 🟢)</option>
+                    <option value="critical">🔴 เฉพาะวิกฤต (Critical Only)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Date pickers & Action Buttons */}
+              <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-300">
+                    <Icon name="calendar" size={14} className="text-[#bca374]" />
+                    <span>ตั้งแต่วันที่:</span>
+                    <input
+                      type="date"
+                      value={execDateRange.start}
+                      onChange={(e) => setExecDateRange({ ...execDateRange, start: e.target.value })}
+                      className="bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-gray-900 border border-white/20 rounded-lg px-2.5 py-1 text-xs outline-none transition font-medium cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-gray-300">
+                    <span>ถึงวันที่:</span>
+                    <input
+                      type="date"
+                      value={execDateRange.end}
+                      onChange={(e) => setExecDateRange({ ...execDateRange, end: e.target.value })}
+                      className="bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-gray-900 border border-white/20 rounded-lg px-2.5 py-1 text-xs outline-none transition font-medium cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Export Executive PDF Button */}
+                  <button
+                    type="button"
+                    onClick={handleOpenExecutivePdf}
+                    className="bg-[#bca374] hover:bg-[#a68f63] text-[#0f2e4a] px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer"
+                  >
+                    <Icon name="externalLink" size={15} />
+                    สร้างรายงานสรุปผู้บริหาร (Executive PDF)
+                  </button>
+
+                  {/* Export Excel Button */}
+                  <button
+                    type="button"
+                    onClick={handleExportExecutiveExcel}
+                    disabled={isExportingExcel}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Icon name="download" size={14} />
+                    {isExportingExcel ? 'กำลังส่งออก...' : 'ส่งออก Excel (.xlsx)'}
+                  </button>
                 </div>
               </div>
             </div>
