@@ -1320,6 +1320,17 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       });
     }
 
+    // ล้างรูปภาพทั้งหมดใน Draft Subcollection ออกให้หมดจด
+    try {
+      const draftPhotosCol = collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos");
+      const draftPhotosSnap = await getDocs(draftPhotosCol);
+      const delPromises = [];
+      draftPhotosSnap.forEach(p => delPromises.push(deleteDoc(p.ref)));
+      await Promise.all(delPromises);
+    } catch (cleanErr) {
+      console.error("Clean draft photos error:", cleanErr);
+    }
+
     // ล้าง Draft Session ออก
     await deleteDoc(draftRef);
 
@@ -1453,12 +1464,27 @@ export default async function handler(req, res) {
             finalizing: false
           });
 
-          // ตรวจดูว่าใน buffer มีรูปถ่ายที่ส่งมาก่อนหน้านี้แล้วหรือไม่
+          // ตรวจสอบรูปภาพใน buffer ลบรูปเก่าที่ค้างเกิน 3 นาทีทิ้ง และนับเฉพาะรูปที่เพิ่งส่งเข้ามาสดๆ
           const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-          if (photosSnap.size >= 5) {
-            await updateDoc(draftRef, { finalizing: true });
-            await replyToLine(replyToken, `🌊 ได้รับข้อมูลโครงการ [${project.code}] ${project.name} เรียบร้อยแล้วครับ!\nกำลังประมวลผลรูปภาพ ${photosSnap.size} ภาพ และจัดทำเอกสาร PDF สักครู่ครับ...`);
-            await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+          let recentPhotosCount = 0;
+          const now = Date.now();
+          for (const p of photosSnap.docs) {
+            const pData = p.data();
+            if (now - (pData.createdAt || 0) > 3 * 60 * 1000) {
+              // รูปเก่าเกิน 3 นาที ลบทิ้งทันทีเพื่อไม่ให้ปนกับรอบใหม่
+              await deleteDoc(p.ref);
+            } else {
+              recentPhotosCount++;
+            }
+          }
+
+          if (recentPhotosCount > 0) {
+            const guideWithPhotos = `🌊 ได้รับข้อมูลโครงการ [${project.code}] ${project.name} เรียบร้อยแล้วครับ!\n` +
+              `📝 รายละเอียด: ${notes || 'ตรวจเช็คสถานะการระบายน้ำประจำวัน'}\n` +
+              `─────────────────────────\n` +
+              `📸 สถานะรูปภาพ: มีรูปถ่ายหน้างานในระบบแล้ว ${recentPhotosCount} ภาพ\n` +
+              `👉 ท่านสามารถส่งรูปภาพเพิ่มเติมได้ (รวม 5–10 รูป) หรือพิมพ์ '!เสร็จ' เพื่อประมวลผลจัดทำ PDF ทันทีครับ`;
+            await replyToLine(replyToken, guideWithPhotos);
             continue;
           }
 
@@ -1474,6 +1500,22 @@ export default async function handler(req, res) {
             `5. จุดระบายน้ำออกภายนอกโครงการ\n\n` +
             `*(ส่งภาพพร้อมกันรวดเดียวได้เลยครับ หรือเมื่อส่งครบแล้วพิมพ์ '!เสร็จ' เพื่อรับ PDF ทันที)*`;
           await replyToLine(replyToken, guideMsg);
+          continue;
+        }
+
+        // 🗑️ คำสั่งยกเลิก/ล้างรอบรายงานค้าง (!ยกเลิก, !ล้าง, !reset)
+        if (upperClean === 'ยกเลิก' || upperClean === 'ล้าง' || upperClean === 'RESET' || upperClean === 'CLEAR') {
+          const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
+          const draftSnap = await getDoc(draftRef);
+          const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+          
+          for (const p of photosSnap.docs) {
+            await deleteDoc(p.ref);
+          }
+          if (draftSnap.exists()) {
+            await deleteDoc(draftRef);
+          }
+          await replyToLine(replyToken, `🗑️ ล้างรอบรายงานและรูปภาพใน buffer เรียบร้อยแล้วครับ\nสามารถเริ่มต้นรายงานใหม่ได้ด้วยคำสั่ง:\n👉 !น้ำท่วม [รหัสโครงการ]`);
           continue;
         }
 
