@@ -1292,7 +1292,12 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     photosSnap.forEach(d => {
       photos.push(d.data());
     });
-    photos.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    photos.sort((a, b) => {
+      if (a.imageSetIndex != null && b.imageSetIndex != null) {
+        return a.imageSetIndex - b.imageSetIndex;
+      }
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
 
     if (photos.length === 0) {
       if (replyToken) {
@@ -1302,6 +1307,8 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       }
       return;
     }
+
+    const finalPhotos = photos.slice(0, 10);
 
     const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
     const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -1372,22 +1379,21 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       executiveSummary: aiResult.summary || draft.notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ',
       notes: draft.notes || '',
       weather,
-      photoCount: photos.length,
+      photoCount: finalPhotos.length,
       surveyDateThai,
       surveyTimeThai,
       generatedAtThai,
       createdAt: Date.now()
     });
 
-    // บันทึกภาพลง Subcollection (เอาข้อความใต้ภาพออก มีเฉพาะรูปภาพและลำดับ)
-    for (let i = 0; i < photos.length; i++) {
-      const p = photos[i];
-      await setDoc(doc(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId, "photos", String(i)), {
+    // บันทึกภาพลง Subcollection แบบขนาน (จำกัดไม่เกิน 10 ภาพ ตามมาตรฐาน Land & Houses)
+    await Promise.all(finalPhotos.map((p, i) =>
+      setDoc(doc(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId, "photos", String(i)), {
         index: i,
         dataUrl: p.dataUrl,
         createdAt: Date.now()
-      });
-    }
+      })
+    ));
 
     // ล้างรูปภาพทั้งหมดใน Draft Subcollection ออกให้หมดจด
     try {
@@ -1767,6 +1773,7 @@ export default async function handler(req, res) {
       else if (event.type === 'message' && event.message.type === 'image') {
         const replyToken = event.replyToken;
         const messageId = event.message.id;
+        const imageSet = event.message.imageSet;
 
         if (isGroup) {
           // ถ้าส่งรูปในกลุ่มใหญ่ ไม่ตอบรับ เพื่อป้องกันการรบกวนกลุ่ม
@@ -1786,6 +1793,8 @@ export default async function handler(req, res) {
           await setDoc(photoRef, {
             messageId,
             dataUrl,
+            imageSetIndex: imageSet?.index ?? null,
+            imageSetTotal: imageSet?.total ?? null,
             createdAt: Date.now()
           });
 
@@ -1795,11 +1804,22 @@ export default async function handler(req, res) {
               continue;
             }
 
+            // คำนวณจำนวนรูปเป้าหมายของรอบนี้ (สูงสุดไม่เกิน 10 รูป ตามข้อกำหนด)
+            const targetCount = (imageSet && imageSet.total)
+              ? Math.min(10, imageSet.total)
+              : (draft.expectedCount || 10);
+
+            await updateDoc(draftRef, {
+              expectedCount: targetCount,
+              lastPhotoAt: Date.now()
+            });
+
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
             const count = photosSnap.size;
 
-            if (count >= 10) {
-              // ครบ 10 รูป (โควตาสูงสุด) รอ 1.5 วินาที แล้วรวมเล่มทันที
+            if (count >= targetCount || count >= 10) {
+              // ได้รับครบตามจำนวนเป้าหมายแล้ว (เช่น ครบ 10 รูป หรือครบตามอัลบั้มที่เลือก)
+              // รอ 1.5 วินาที เพื่อให้ write ในรอบเดียวกันเสร็จสมบูรณ์
               await new Promise(r => setTimeout(r, 1500));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
@@ -1807,20 +1827,25 @@ export default async function handler(req, res) {
                 await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               }
             } else if (count >= 5) {
-              // มีตั้งแต่ 5 ถึง 9 รูป ให้รอ 4.0 วินาที เผื่อภาพที่เหลือในอัลบั้มกำลังอัปโหลดตามมา
-              await new Promise(r => setTimeout(r, 4000));
+              // กรณีได้รับตั้งแต่ 5 รูปขึ้นไป แต่ยังไม่ถึง targetCount (เช่น เน็ตช้า หรือรูปบางรูปอัปโหลดหลุด)
+              // รอ 8 วินาทีเพื่อดูว่ามีรูปใหม่เข้ามาอีกหรือไม่
+              await new Promise(r => setTimeout(r, 8000));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
-                await updateDoc(draftRef, { finalizing: true });
-                await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+                const recheckSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+                // ถ้าจำนวนรูปไม่เพิ่มขึ้นแล้ว แสดงว่าส่งเสร็จสิ้นแล้ว ให้สรุปรายงานได้
+                if (recheckSnap.size === count) {
+                  await updateDoc(draftRef, { finalizing: true });
+                  await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+                }
               }
-            } else if (count === 1) {
-              await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (กรุณาส่งรูปให้ครบ 5–10 รูป หรือพิมพ์ '!เสร็จ' เพื่อสร้างรายงานทันทีครับ)`);
+            } else if (count === 1 && (!imageSet || imageSet.index === 1)) {
+              await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (ระบบรองรับสูงสุด 10 รูป หรือพิมพ์ '!เสร็จ' เพื่อสรุปรายงานได้ทันทีครับ)`);
             }
           } else {
             // ยังไม่มี Draft ให้ตอบรับและแนะนำวิธีพิมพ์คำสั่ง
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-            if (photosSnap.size === 1) {
+            if (photosSnap.size === 1 && (!imageSet || imageSet.index === 1)) {
               await replyToLine(replyToken, `📸 บอทได้รับรูปถ่ายหน้างานแล้วครับ!\nกรุณาพิมพ์รหัสโครงการเพื่อสร้างรายงาน เช่น:\n👉 !น้ำท่วม 410\n👉 !น้ำท่วม LH-379\n👉 !น้ำท่วม LA-025`);
             }
           }
