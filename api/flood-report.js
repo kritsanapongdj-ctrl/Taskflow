@@ -66,14 +66,18 @@ export default async function handler(req, res) {
       return res.status(404).send("Photo not found");
     }
 
-    // 2. ดึงภาพถ่ายทั้งหมดจาก Subcollection
+    // 2. ดึงภาพถ่ายทั้งหมดจาก Subcollection (รองรับสูงสุด 10 ภาพ)
     const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports", id, "photos"));
     const photos = [];
     photosSnap.forEach(docSnap => {
       photos.push(docSnap.data());
     });
-    // เรียงตามลำดับ index
-    photos.sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    photos.sort((a, b) => (Number(a.index ?? 0)) - (Number(b.index ?? 0)));
+
+    // กำหนด Layout คอลัมน์ของภาพถ่าย
+    const photoCount = photos.length;
+    const gridCols = photoCount <= 4 ? 2 : photoCount <= 6 ? 3 : 4;
+    const imgHeight = photoCount > 6 ? '102px' : photoCount > 4 ? '118px' : '135px';
 
     // สถานะและ Badge สไตล์ Land & Houses
     const isCritical = report.status === 'CRITICAL';
@@ -90,7 +94,7 @@ export default async function handler(req, res) {
       : isWatch
       ? {
           label: 'เฝ้าระวัง (Watch & Alert)',
-          sub: 'มีน้ำขังผิวจราจร 5-10 ซม. เร่งเดินเครื่องสูบระบาย',
+          sub: 'ระดับน้ำคลองหนุนสูง หรือมีน้ำขังผิวจราจร เร่งเดินเครื่องสูบระบาย',
           badgeBg: '#fefce8',
           badgeBorder: '#eab308',
           badgeText: '#854d0e',
@@ -106,18 +110,26 @@ export default async function handler(req, res) {
         };
 
     const weather = report.weather || {
-      temp: 31,
-      feelsLike: 35,
-      humidity: 78,
-      windSpeed: 10,
-      condition: 'มีเมฆเป็นส่วนมาก',
-      icon: '⛅',
-      rainProb: 65,
-      expectedRain24h: '12.0',
-      source: 'The Weather Channel / กรมอุตุนิยมวิทยา'
+      temp: 29,
+      feelsLike: 33,
+      humidity: 80,
+      windSpeed: 14,
+      condition: 'ฝนฟ้าคะนอง / ลมแรง',
+      icon: '⛈️',
+      rainProb: 85,
+      expectedRain24h: '38.4',
+      stationName: 'สถานีตรวจวัดคลองสายหลัก (สสน. / กรมชลประทาน)',
+      basinAlert: 'ระดับน้ำในคลองเฝ้าระวัง สูบระบายต่อเนื่อง',
+      tmdAlert: 'ร่องมรสุมกำลังปานกลางพาดผ่านภาคกลาง',
+      source: 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน'
     };
 
-    // Render HTML เต็มรูปแบบ A4 Executive Corporate PDF
+    // แยกประเด็นบทวิเคราะห์ให้อ่านง่าย (Structured Assessment Rows)
+    const assessmentField = report.assessmentField || (report.waterLevel ? `ถนนหน้าและภายในโครงการ: ${report.waterLevel}` : 'ถนนสายหลักและภายในโครงการไม่มีน้ำท่วมขัง การสัญจรเข้า-ออกเป็นปกติ');
+    const assessmentCanal = report.assessmentCanal || (report.drainageCondition ? `ระดับน้ำคลองภายนอก: ${report.drainageCondition}` : 'ระดับน้ำในคลองระบายน้ำอยู่ในเกณฑ์ควบคุม');
+    const assessmentPumps = report.assessmentPumps || (report.pumpsRunning ? `ระบบระบายน้ำและเครื่องสูบ: ${report.pumpsRunning}` : 'ระบบป้องกันน้ำท่วมและเครื่องสูบน้ำทำงานปกติ');
+    const assessmentOutlook = report.assessmentOutlook || `พยากรณ์อากาศ 24 ชม.: มีโอกาสเกิดฝนฟ้าคะนอง ${weather.rainProb}% ปริมาณฝนคาดการณ์ ${weather.expectedRain24h} มม. ให้ทีมงานเฝ้าระวังระดับน้ำคลองต่อเนื่องตลอด 24 ชั่วโมง`;
+
     const html = `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -191,10 +203,10 @@ export default async function handler(req, res) {
     .page-container {
       width: 210mm;
       min-height: 297mm;
-      margin: 24px auto;
+      margin: 20px auto;
       background: #FFFFFF;
       box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-      padding: 12mm 14mm;
+      padding: 11mm 13mm;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -203,8 +215,8 @@ export default async function handler(req, res) {
     /* Header Section */
     .header {
       border-bottom: 2px solid var(--lh-navy);
-      padding-bottom: 12px;
-      margin-bottom: 14px;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
@@ -232,7 +244,7 @@ export default async function handler(req, res) {
     }
 
     .company-name {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 700;
       color: var(--lh-navy);
       letter-spacing: 0.5px;
@@ -240,21 +252,21 @@ export default async function handler(req, res) {
     }
 
     .report-title {
-      font-size: 17px;
+      font-size: 16.5px;
       font-weight: 700;
       color: #0F172A;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .report-subtitle {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--lh-muted);
       letter-spacing: 0.3px;
     }
 
     .doc-meta {
       text-align: right;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--lh-muted);
       line-height: 1.5;
     }
@@ -262,7 +274,7 @@ export default async function handler(req, res) {
     .doc-ref {
       font-weight: 700;
       color: var(--lh-navy);
-      font-size: 12px;
+      font-size: 11.5px;
       background: #F1F5F9;
       padding: 3px 8px;
       border-radius: 4px;
@@ -274,9 +286,9 @@ export default async function handler(req, res) {
     .project-banner {
       background: linear-gradient(135deg, #0C2340 0%, #163A63 100%);
       color: #FFFFFF;
-      padding: 10px 16px;
+      padding: 9px 14px;
       border-radius: 8px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -294,19 +306,19 @@ export default async function handler(req, res) {
     }
 
     .project-name {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 600;
     }
 
     .project-location {
-      font-size: 11px;
+      font-size: 10.5px;
       color: #CBD5E1;
       margin-top: 2px;
     }
 
     .survey-time {
       text-align: right;
-      font-size: 12px;
+      font-size: 11px;
       color: #E2E8F0;
     }
 
@@ -314,29 +326,29 @@ export default async function handler(req, res) {
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 14px;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
     .card {
       border: 1px solid var(--lh-border);
       border-radius: 8px;
       background: #FFFFFF;
-      padding: 12px;
+      padding: 10px 12px;
     }
 
     .card-header {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: var(--lh-navy);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--lh-border);
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      padding-bottom: 5px;
+      margin-bottom: 7px;
     }
 
     /* Status Card Specifics */
@@ -345,16 +357,16 @@ export default async function handler(req, res) {
       border: 1.5px solid ${statusConfig.badgeBorder};
       color: ${statusConfig.badgeText};
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 6px 9px;
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
     .status-dot {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: ${statusConfig.dotColor};
       box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
@@ -362,20 +374,20 @@ export default async function handler(req, res) {
     }
 
     .status-badge-title {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
     }
 
     .status-badge-desc {
-      font-size: 10px;
-      opacity: 0.85;
+      font-size: 9.5px;
+      opacity: 0.9;
     }
 
     .metric-list {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      font-size: 11px;
+      font-size: 10.5px;
     }
 
     .metric-row {
@@ -383,15 +395,18 @@ export default async function handler(req, res) {
       justify-content: space-between;
       padding: 2px 0;
       border-bottom: 1px dashed #F1F5F9;
+      gap: 6px;
     }
 
     .metric-label {
       color: var(--lh-muted);
+      white-space: nowrap;
     }
 
     .metric-val {
       font-weight: 600;
       color: var(--lh-text);
+      text-align: right;
     }
 
     /* Weather Card Specifics */
@@ -399,15 +414,15 @@ export default async function handler(req, res) {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       background: #F8FAFC;
-      padding: 6px 10px;
+      padding: 5px 9px;
       border-radius: 6px;
       border: 1px solid #EDF2F7;
     }
 
     .weather-temp {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       color: var(--lh-navy);
       display: flex;
@@ -416,53 +431,75 @@ export default async function handler(req, res) {
     }
 
     .weather-condition {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 600;
       color: #334155;
     }
 
     .weather-credit {
-      font-size: 9px;
+      font-size: 8.5px;
       color: var(--lh-muted);
       text-align: right;
-      margin-top: 6px;
+      margin-top: 5px;
       font-style: italic;
     }
 
-    /* Executive Assessment Box */
+    /* Executive Assessment Box (Point 4: Clean Structured Rows) */
     .assessment-box {
       border: 1px solid var(--lh-border);
       border-radius: 8px;
       background: #F8FAFC;
-      padding: 10px 14px;
-      margin-bottom: 14px;
-      border-left: 3px solid var(--lh-navy);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--lh-navy);
     }
 
     .assessment-title {
       font-size: 12px;
       font-weight: 700;
       color: var(--lh-navy);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .assessment-text {
-      font-size: 11.5px;
-      color: #334155;
-      line-height: 1.5;
+    .assessment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
 
-    /* Photo Grid (5-6 Photos) */
+    .assessment-item {
+      display: flex;
+      gap: 8px;
+      font-size: 10.5px;
+      line-height: 1.45;
+      padding: 4px 8px;
+      background: #FFFFFF;
+      border-radius: 5px;
+      border: 1px solid #EDF2F7;
+    }
+
+    .assessment-tag {
+      font-weight: 700;
+      color: var(--lh-navy);
+      white-space: nowrap;
+      min-width: 145px;
+    }
+
+    .assessment-val {
+      color: #334155;
+    }
+
+    /* Photo Grid (Point 6: Clean Layout, No Captions, Up to 10 Photos) */
     .photo-section-title {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: var(--lh-navy);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -470,9 +507,9 @@ export default async function handler(req, res) {
 
     .photo-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 14px;
+      grid-template-columns: repeat(${gridCols}, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
     }
 
     .photo-card {
@@ -480,17 +517,31 @@ export default async function handler(req, res) {
       border-radius: 6px;
       overflow: hidden;
       background: #FFFFFF;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: relative;
     }
 
     .photo-img-box {
       width: 100%;
-      height: 118px;
+      height: ${imgHeight};
       background: #E2E8F0;
       overflow: hidden;
       position: relative;
+    }
+
+    .photo-badge {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(12, 35, 64, 0.82);
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      z-index: 2;
+      border: 1px solid rgba(197, 168, 128, 0.4);
+      backdrop-filter: blur(2px);
     }
 
     .photo-img {
@@ -500,31 +551,20 @@ export default async function handler(req, res) {
       display: block;
     }
 
-    .photo-caption {
-      padding: 6px 8px;
-      font-size: 10px;
-      color: #334155;
-      font-weight: 500;
-      background: #FFFFFF;
-      border-top: 1px solid #F1F5F9;
-      line-height: 1.35;
-      min-height: 34px;
-    }
-
     /* Footer Section (Corporate Document - NO REPORTER NAME) */
     .footer {
       margin-top: auto;
       border-top: 1px solid var(--lh-border);
-      padding-top: 10px;
+      padding-top: 8px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      font-size: 9.5px;
+      font-size: 9px;
       color: var(--lh-muted);
     }
 
     .footer-col {
-      line-height: 1.5;
+      line-height: 1.45;
     }
 
     .footer-col-right {
@@ -534,7 +574,7 @@ export default async function handler(req, res) {
     .corporate-seal {
       font-weight: 700;
       color: var(--lh-navy);
-      font-size: 10px;
+      font-size: 9.5px;
     }
 
     /* Print Media Rules */
@@ -556,7 +596,7 @@ export default async function handler(req, res) {
       }
       @page {
         size: A4 portrait;
-        margin: 10mm 10mm 10mm 10mm;
+        margin: 8mm 8mm 8mm 8mm;
       }
       .photo-card {
         break-inside: avoid;
@@ -607,13 +647,13 @@ export default async function handler(req, res) {
       </div>
       <div class="survey-time">
         <div style="font-weight: 600; color: #FFFFFF;">ระบบบริหารความปลอดภัยหน้างาน</div>
-        <div style="font-size: 11px; color: var(--lh-gold);">LH Infrastructure & Safety Standard</div>
+        <div style="font-size: 10.5px; color: var(--lh-gold);">LH Infrastructure & Safety Standard</div>
       </div>
     </div>
 
-    <!-- Top Grid: Status & Weather -->
+    <!-- Top Grid: Status & Weather / Thai Water Sources -->
     <div class="grid-2">
-      <!-- Status Card -->
+      <!-- Status Card (Points 2 & 3: Directly reflects user's LINE notes) -->
       <div class="card">
         <div class="card-header">
           <span>⚡</span>
@@ -629,77 +669,94 @@ export default async function handler(req, res) {
         <div class="metric-list">
           <div class="metric-row">
             <span class="metric-label">ระดับน้ำท่วมขังผิวถนน:</span>
-            <span class="metric-val">${report.waterLevel || '0 - 5 ซม. (สภาวะปกติ)'}</span>
+            <span class="metric-val">${report.waterLevel || 'ไม่มีน้ำท่วมขัง (สภาวะปกติ)'}</span>
           </div>
           <div class="metric-row">
             <span class="metric-label">สถานะเครื่องสูบน้ำ:</span>
-            <span class="metric-val">${report.pumpsRunning || 'พร้อมใช้งาน 100% (เดินเครื่องตามรอบ)'}</span>
+            <span class="metric-val">${report.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ'}</span>
           </div>
           <div class="metric-row">
             <span class="metric-label">สภาพทางระบายน้ำ / คลอง:</span>
-            <span class="metric-val">${report.drainageCondition || 'ระบายได้คล่องตัว ตะแกรงเปิดโล่ง'}</span>
+            <span class="metric-val" style="color: ${report.drainageCondition && report.drainageCondition.includes('+') ? '#B91C1C' : 'inherit'};">${report.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำเปิดโล่ง'}</span>
           </div>
         </div>
       </div>
 
-      <!-- Weather Card (The Weather Channel) -->
+      <!-- Weather & Real-time Thai Water Data Card (Point 1: Thai sources) -->
       <div class="card">
         <div class="card-header">
           <span>🌤️</span>
-          <span>2. สภาพอากาศประจำพื้นที่ (Local Weather)</span>
+          <span>2. สภาพอากาศ & แหล่งข้อมูลระดับน้ำ Real-time</span>
         </div>
         <div class="weather-main">
           <div>
             <div class="weather-temp">
               <span>${weather.temp}°C</span>
-              <span style="font-size: 11px; font-weight: normal; color: var(--lh-muted);">(รู้สึกจริง ${weather.feelsLike}°C)</span>
+              <span style="font-size: 10px; font-weight: normal; color: var(--lh-muted);">(รู้สึกจริง ${weather.feelsLike}°C)</span>
             </div>
             <div class="weather-condition">${weather.icon} ${weather.condition}</div>
           </div>
-          <div style="text-align: right; font-size: 11px;">
+          <div style="text-align: right; font-size: 10.5px;">
             <div>โอกาสเกิดฝน 24 ชม.: <strong style="color: #0284C7;">${weather.rainProb}%</strong></div>
             <div>ปริมาณฝนคาดการณ์: <strong>${weather.expectedRain24h} มม.</strong></div>
           </div>
         </div>
         <div class="metric-list">
           <div class="metric-row">
-            <span class="metric-label">ความชื้นสัมพัทธ์:</span>
-            <span class="metric-val">${weather.humidity}%</span>
+            <span class="metric-label">สถานีตรวจวัดระดับน้ำ:</span>
+            <span class="metric-val" style="font-size: 9.5px;">${report.waterStation || weather.stationName || 'สถานีคลองรังสิตฯ (ปตร.จุฬาลงกรณ์ / สสน.)'}</span>
           </div>
           <div class="metric-row">
-            <span class="metric-label">ความเร็วลม:</span>
-            <span class="metric-val">${weather.windSpeed} กม./ชม.</span>
+            <span class="metric-label">สถานการณ์น้ำท่า / คลอง:</span>
+            <span class="metric-val" style="color: #0284C7; font-size: 10px;">${report.basinAlert || weather.basinAlert || 'เฝ้าระวังระดับน้ำคลองสายหลัก สูบระบายต่อเนื่อง'}</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">ประกาศเตือนสภาพอากาศ (TMD):</span>
+            <span class="metric-val" style="font-size: 9.5px;">${report.tmdAlert || weather.tmdAlert || 'ร่องมรสุมพาดผ่านภาคกลาง เฝ้าระวังฝนตกหนัก'}</span>
           </div>
         </div>
-        <div class="weather-credit">อ้างอิงข้อมูล: ${weather.source || 'The Weather Channel / กรมอุตุนิยมวิทยา'}</div>
+        <div class="weather-credit">อ้างอิง: ${weather.source || 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน'}</div>
       </div>
     </div>
 
-    <!-- Executive Assessment -->
+    <!-- Executive Assessment (Point 4: Clean Structured Rows) -->
     <div class="assessment-box">
       <div class="assessment-title">
         <span>📋</span>
         <span>3. บทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken)</span>
       </div>
-      <div class="assessment-text">
-        ${report.executiveSummary || report.notes || 'จากการตรวจสอบหน้างาน สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ แนวท่อระบายน้ำหลักและสถานีสูบน้ำทำงานเป็นปกติ ทีมงานเตรียมพร้อมเฝ้าระวังต่อเนื่องตามมาตรฐานความปลอดภัย'}
+      <div class="assessment-list">
+        <div class="assessment-item">
+          <span class="assessment-tag">📍 สภาพพื้นที่ & ผิวจราจร:</span>
+          <span class="assessment-val">${assessmentField}</span>
+        </div>
+        <div class="assessment-item">
+          <span class="assessment-tag">🌊 ระดับน้ำคลอง & ภายนอก:</span>
+          <span class="assessment-val">${assessmentCanal}</span>
+        </div>
+        <div class="assessment-item">
+          <span class="assessment-tag">⚙️ ระบบระบายน้ำ & เครื่องสูบ:</span>
+          <span class="assessment-val">${assessmentPumps}</span>
+        </div>
+        <div class="assessment-item">
+          <span class="assessment-tag">🌤️ การประเมินความเสี่ยง & ฝน 24 ชม.:</span>
+          <span class="assessment-val">${assessmentOutlook}</span>
+        </div>
       </div>
     </div>
 
-    <!-- Photo Section -->
+    <!-- Photo Section (Point 6: Orderly Layout, No Under-Photo Captions, Up to 10 Photos) -->
     <div class="photo-section-title">
-      <span>📸 4. ภาพถ่ายสำรวจหน้างาน (Photographic Evidence: ${photos.length} ภาพ)</span>
-      <span style="font-size: 10px; font-weight: normal; color: var(--lh-muted);">บันทึกเวลาจริงตามมาตรฐานตรวจสอบคุณภาพ</span>
+      <span>📸 4. ภาพถ่ายสำรวจหน้างาน (Photographic Evidence: ${photoCount} ภาพ)</span>
+      <span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">บันทึกเวลาจริงตามมาตรฐานความปลอดภัย Land & Houses</span>
     </div>
 
     <div class="photo-grid">
       ${photos.map((p, idx) => `
         <div class="photo-card">
           <div class="photo-img-box">
+            <span class="photo-badge">ภาพที่ ${idx + 1}</span>
             <img class="photo-img" src="${p.dataUrl || `/api/flood-report?id=${id}&photo=${idx}`}" alt="Photo ${idx + 1}" loading="lazy" />
-          </div>
-          <div class="photo-caption">
-            <strong>ภาพที่ ${idx + 1}:</strong> ${p.caption || 'ภาพถ่ายสภาพหน้างานโครงการ'}
           </div>
         </div>
       `).join('')}

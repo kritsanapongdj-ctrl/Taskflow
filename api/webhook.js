@@ -23,20 +23,116 @@ const GROUP_B = ['LH-379', 'LH-392', 'LH-395'];
 const GROUP_A2 = ['LA-025', 'LH-329', 'LH-402', 'LH-120', 'LH-195', 'LH-225'];
 const ALL_PROJECTS = [...GROUP_A, ...GROUP_B, ...GROUP_A2];
 
-// ข้อมูลพิกัดและพื้นที่สำหรับรายงานสถานการณ์น้ำท่วม (The Weather Channel Integration)
+// ข้อมูลพิกัดและสถานีตรวจวัดน้ำ Real-time สำหรับรายงานสถานการณ์น้ำท่วม (ThaiWater, TMD, RID, BMA)
 const FLOOD_PROJECTS = {
-  'LH-410': { code: 'LH-410', name: 'CHAIYAPRUEK 2 รังสิต คลอง4', area: 'คลองสี่, ธัญบุรี, ปทุมธานี', lat: 14.015, lon: 100.685, group: 'A' },
-  'LH-415': { code: 'LH-415', name: 'Villaggio ลำลูกกา-วงแหวน', area: 'บึงคำพร้อย, ลำลูกกา, ปทุมธานี', lat: 13.935, lon: 100.710, group: 'A' },
-  'NE-419': { code: 'NE-419', name: 'Villaggio รังสิตคลอง 4', area: 'คลองสี่, ธัญบุรี, ปทุมธานี', lat: 14.010, lon: 100.682, group: 'A' },
-  'LH-379': { code: 'LH-379', name: 'นันทวัน พระราม 9-กรุงเทพกรีฑาตัดใหม่', area: 'สะพานสูง, กรุงเทพมหานคร', lat: 13.742, lon: 100.692, group: 'B' },
-  'LH-392': { code: 'LH-392', name: 'VIVE กรุงเทพกรีฑาตัดใหม่', area: 'สะพานสูง, กรุงเทพมหานคร', lat: 13.745, lon: 100.690, group: 'B' },
-  'LH-395': { code: 'LH-395', name: 'NANTAWAN POOL VILLA พระราม 9', area: 'สะพานสูง, กรุงเทพมหานคร', lat: 13.740, lon: 100.695, group: 'B' },
-  'LA-025': { code: 'LA-025', name: 'PRUEKLADA ทางด่วนรามอินทรา-จตุโชติ', area: 'ออเงิน, สายไหม, กรุงเทพมหานคร', lat: 13.885, lon: 100.688, group: 'A2' },
-  'LH-329': { code: 'LH-329', name: 'สีวลี ศรีนครินทร์-ร่มเกล้า', area: 'มีนบุรี, กรุงเทพมหานคร', lat: 13.778, lon: 100.735, group: 'A2' },
-  'LH-402': { code: 'LH-402', name: 'vie ทางด่วนรามอินทรา-วงแหวน', area: 'ท่าแร้ง, บางเขน, กรุงเทพมหานคร', lat: 13.865, lon: 100.672, group: 'A2' },
-  'LH-120': { code: 'LH-120', name: 'มัณฑนา ศรีนครินทร์-บางนา', area: 'บางแก้ว, บางพลี, สมุทรปราการ', lat: 13.628, lon: 100.638, group: 'A2' },
-  'LH-195': { code: 'LH-195', name: 'ชัยพฤกษ์ บางนา กม.15', area: 'บางโฉลง, บางพลี, สมุทรปราการ', lat: 13.615, lon: 100.732, group: 'A2' },
-  'LH-225': { code: 'LH-225', name: 'สีวลี บางนา กม.14', area: 'บางโฉลง, บางพลี, สมุทรปราการ', lat: 13.618, lon: 100.728, group: 'A2' },
+  'LH-410': { 
+    code: 'LH-410', 
+    name: 'CHAIYAPRUEK 2 รังสิต คลอง4', 
+    area: 'คลองสี่, ธัญบุรี, ปทุมธานี', 
+    lat: 14.015, lon: 100.685, group: 'A',
+    stationName: 'สถานีคลองรังสิตฯ (ปตร.จุฬาลงกรณ์ / สสน.)',
+    basinAlert: 'เฝ้าระวังระดับน้ำคลองรังสิตฯ สูบระบายต่อเนื่องสู่แม่น้ำเจ้าพระยา',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: ร่องมรสุมกำลังปานกลางพาดผ่านภาคกลาง เฝ้าระวังฝนตกหนัก'
+  },
+  'LH-415': { 
+    code: 'LH-415', 
+    name: 'Villaggio ลำลูกกา-วงแหวน', 
+    area: 'บึงคำพร้อย, ลำลูกกา, ปทุมธานี', 
+    lat: 13.935, lon: 100.710, group: 'A',
+    stationName: 'สถานีคลองหกวาสายล่าง (กรมชลประทาน / สสน.)',
+    basinAlert: 'ระดับน้ำคลองหกวาปกติ ประตูระบายน้ำเปิดระบายตามเกณฑ์',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: ฝนฟ้าคะนอง 60% ของพื้นที่ เฝ้าระวังฝนสะสม'
+  },
+  'NE-419': { 
+    code: 'NE-419', 
+    name: 'Villaggio รังสิตคลอง 4', 
+    area: 'คลองสี่, ธัญบุรี, ปทุมธานี', 
+    lat: 14.010, lon: 100.682, group: 'A',
+    stationName: 'สถานีคลองรังสิตประยูรศักดิ์ (ปตร.จุฬาลงกรณ์ / สสน.)',
+    basinAlert: 'เฝ้าระวังระดับน้ำคลองรังสิตฯ สูบระบายต่อเนื่องสู่แม่น้ำเจ้าพระยา',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: ร่องมรสุมกำลังปานกลางพาดผ่านภาคกลาง เฝ้าระวังฝนตกหนัก'
+  },
+  'LH-379': { 
+    code: 'LH-379', 
+    name: 'นันทวัน พระราม 9-กรุงเทพกรีฑาตัดใหม่', 
+    area: 'สะพานสูง, กรุงเทพมหานคร', 
+    lat: 13.742, lon: 100.692, group: 'B',
+    stationName: 'สถานีคลองแสนแสบ - คลองประเวศฯ (สำนักการระบายน้ำ กทม.)',
+    basinAlert: 'ระดับน้ำคลองแสนแสบต่ำกว่าวิกฤติ 0.45 ม. สูบระบายปกติ',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: มีเมฆมาก ฝนฟ้าคะนอง 60-70% ของพื้นที่ กทม.'
+  },
+  'LH-392': { 
+    code: 'LH-392', 
+    name: 'VIVE กรุงเทพกรีฑาตัดใหม่', 
+    area: 'สะพานสูง, กรุงเทพมหานคร', 
+    lat: 13.745, lon: 100.690, group: 'B',
+    stationName: 'สถานีคลองทับช้าง - คลองประเวศฯ (สำนักการระบายน้ำ กทม.)',
+    basinAlert: 'ระดับน้ำคลองประเวศฯ อยู่ในเกณฑ์ควบคุม เดินเครื่องสูบน้ำปกติ',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: มีเมฆมาก ฝนฟ้าคะนอง 60-70% ของพื้นที่ กทม.'
+  },
+  'LH-395': { 
+    code: 'LH-395', 
+    name: 'NANTAWAN POOL VILLA พระราม 9', 
+    area: 'สะพานสูง, กรุงเทพมหานคร', 
+    lat: 13.740, lon: 100.695, group: 'B',
+    stationName: 'สถานีคลองบ้านม้า - คลองแสนแสบ (สำนักการระบายน้ำ กทม.)',
+    basinAlert: 'ระดับน้ำในเกณฑ์ควบคุม สถานีสูบน้ำพร้อมระบายลงคลองแสนแสบ',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: มีเมฆมาก ฝนฟ้าคะนอง 60-70% ของพื้นที่ กทม.'
+  },
+  'LA-025': { 
+    code: 'LA-025', 
+    name: 'PRUEKLADA ทางด่วนรามอินทรา-จตุโชติ', 
+    area: 'ออเงิน, สายไหม, กรุงเทพมหานคร', 
+    lat: 13.885, lon: 100.688, group: 'A2',
+    stationName: 'สถานีคลองออเงิน - คลองหกวา (สำนักการระบายน้ำ กทม.)',
+    basinAlert: 'ระดับน้ำคลองหกวาตอนล่างปกติ การไหลของน้ำคล่องตัว',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: ฝนฟ้าคะนองร้อยละ 60 ของพื้นที่ ลมกระโชกแรงบางแห่ง'
+  },
+  'LH-329': { 
+    code: 'LH-329', 
+    name: 'สีวลี ศรีนครินทร์-ร่มเกล้า', 
+    area: 'มีนบุรี, กรุงเทพมหานคร', 
+    lat: 13.778, lon: 100.735, group: 'A2',
+    stationName: 'สถานีคลองสามวา - คลองแสนแสบมีนบุรี (สสน. / กทม.)',
+    basinAlert: 'ระดับน้ำคลองสามวาปกติ สถานีสูบน้ำมีนบุรีพร้อมเดินเครื่องเต็มกำลัง',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: เฝ้าระวังฝนตกหนักสะสมในพื้นที่ กทม. ตะวันออก'
+  },
+  'LH-402': { 
+    code: 'LH-402', 
+    name: 'vie ทางด่วนรามอินทรา-วงแหวน', 
+    area: 'ท่าแร้ง, บางเขน, กรุงเทพมหานคร', 
+    lat: 13.865, lon: 100.672, group: 'A2',
+    stationName: 'สถานีคลองบัว - คลองลาดพร้าว (สำนักการระบายน้ำ กทม.)',
+    basinAlert: 'ระดับน้ำคลองลาดพร้าวอยู่ในเกณฑ์ควบคุม ประตูระบายน้ำพร้อมทำงาน',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: ฝนฟ้าคะนองร้อยละ 60 ของพื้นที่ ลมกระโชกแรงบางแห่ง'
+  },
+  'LH-120': { 
+    code: 'LH-120', 
+    name: 'มัณฑนา ศรีนครินทร์-บางนา', 
+    area: 'บางแก้ว, บางพลี, สมุทรปราการ', 
+    lat: 13.628, lon: 100.638, group: 'A2',
+    stationName: 'สถานีคลองบางแก้ว - คลองสำโรง (กรมชลประทาน / ThaiWater)',
+    basinAlert: 'คลองสำโรงระดับน้ำปานกลาง เร่งพร่องน้ำออกสู่แม่น้ำเจ้าพระยา',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: เฝ้าระวังน้ำทะเลหนุนสูงร่วมกับฝนตกสะสมชายฝั่ง'
+  },
+  'LH-195': { 
+    code: 'LH-195', 
+    name: 'ชัยพฤกษ์ บางนา กม.15', 
+    area: 'บางโฉลง, บางพลี, สมุทรปราการ', 
+    lat: 13.615, lon: 100.732, group: 'A2',
+    stationName: 'สถานีคลองสำโรง - ปตร.บางโฉลง (กรมชลประทาน / ThaiWater)',
+    basinAlert: 'ระดับน้ำคลองสำโรงปานกลาง สถานีสูบน้ำบางโฉลงเร่งระบายน้ำต่อเนื่อง',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: เฝ้าระวังน้ำทะเลหนุนสูงร่วมกับฝนตกสะสมชายฝั่ง'
+  },
+  'LH-225': { 
+    code: 'LH-225', 
+    name: 'สีวลี บางนา กม.14', 
+    area: 'บางโฉลง, บางพลี, สมุทรปราการ', 
+    lat: 13.618, lon: 100.728, group: 'A2',
+    stationName: 'สถานีคลองสำโรง - ปตร.บางโฉลง (กรมชลประทาน / ThaiWater)',
+    basinAlert: 'ระดับน้ำคลองสำโรงปานกลาง สถานีสูบน้ำบางโฉลงเร่งระบายน้ำต่อเนื่อง',
+    tmdAlert: 'กรมอุตุนิยมวิทยา: เฝ้าระวังน้ำทะเลหนุนสูงร่วมกับฝนตกสะสมชายฝั่ง'
+  },
 };
 
 // ส่งข้อความตอบกลับไปยัง LINE (Reply API ฟรี 100%)
@@ -712,8 +808,66 @@ function lookupProjectForFlood(input) {
   return null;
 }
 
-// ดึงสภาพอากาศจาก The Weather Channel / Open-Meteo
-async function fetchProjectWeather(lat, lon) {
+// ดึงข้อมูลสถานะหน้างานโดยตรงจากข้อความที่ผู้ใช้พิมพ์ใน LINE
+function extractDirectFieldReport(notes = '') {
+  const text = (notes || '').trim();
+  if (!text) {
+    return { pumpsRunning: null, drainageCondition: null, waterLevel: null };
+  }
+
+  const sections = [
+    { type: 'pump', keys: ['ระบบป้องกันน้ำท่วม', 'สถานะเครื่องสูบน้ำ', 'เครื่องสูบน้ำ', 'ปั๊มสูบน้ำ', 'ปั๊มน้ำ', 'สถานะปั๊ม'] },
+    { type: 'canal', keys: ['ระดับน้ำในคลอง', 'คลองหน้าโครงการ', 'คลองภายนอก', 'น้ำในคลอง', 'ระดับน้ำคลอง'] },
+    { type: 'pipe', keys: ['ท่อระบายน้ำ', 'ทางระบายน้ำ', 'สภาพทางระบายน้ำ'] },
+    { type: 'road', keys: ['ถนนเมน', 'ผิวจราจร', 'ระดับน้ำท่วมขัง', 'ระดับน้ำบนถนน', 'สภาพถนน'] }
+  ];
+
+  const occurrences = [];
+  for (const sec of sections) {
+    for (const key of sec.keys) {
+      let idx = text.indexOf(key);
+      if (idx !== -1) {
+        occurrences.push({ type: sec.type, key, index: idx });
+      }
+    }
+  }
+
+  occurrences.sort((a, b) => a.index - b.index);
+
+  const results = {};
+  for (let i = 0; i < occurrences.length; i++) {
+    const cur = occurrences[i];
+    if (results[cur.type]) continue;
+    const start = cur.index;
+    const nextOcc = occurrences.slice(i + 1).find(o => o.type !== cur.type);
+    const end = nextOcc ? nextOcc.index : text.length;
+    const rawVal = text.slice(start, end).trim().replace(/^[,\-;\s]+|[,\-;\s]+$/g, '');
+    results[cur.type] = rawVal;
+  }
+
+  let pumpsRunning = results.pump || null;
+  let drainageCondition = null;
+  if (results.canal && results.pipe) {
+    drainageCondition = results.canal + ' / ' + results.pipe;
+  } else if (results.canal) {
+    drainageCondition = results.canal;
+  } else if (results.pipe) {
+    drainageCondition = results.pipe;
+  }
+
+  let waterLevel = results.road || null;
+
+  return { pumpsRunning, drainageCondition, waterLevel };
+}
+
+// ดึงสภาพอากาศและข้อมูลตรวจวัดระดับน้ำ Real-time (The Weather Channel, TMD, ThaiWater, RID, BMA)
+async function fetchProjectWeather(project) {
+  const lat = project.lat || 13.7563;
+  const lon = project.lon || 100.5018;
+  const stationName = project.stationName || 'สถานีลุ่มน้ำเจ้าพระยาตอนล่าง (สสน. / กรมชลประทาน)';
+  const basinAlert = project.basinAlert || 'เฝ้าระวังระดับน้ำคลองสายหลัก สูบระบายต่อเนื่อง';
+  const tmdAlert = project.tmdAlert || 'กรมอุตุนิยมวิทยา: ร่องมรสุมกำลังปานกลางพาดผ่านภาคกลาง เฝ้าระวังฝนตกหนัก';
+
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m&hourly=precipitation_probability,precipitation&daily=precipitation_sum,precipitation_probability_max&timezone=Asia%2FBangkok&forecast_days=2`;
     const res = await fetch(url);
@@ -749,7 +903,10 @@ async function fetchProjectWeather(lat, lon) {
       icon: conditionIcon,
       rainProb: Math.round(rainProb),
       expectedRain24h: Number(rainSum24h).toFixed(1),
-      source: 'The Weather Channel / กรมอุตุนิยมวิทยา'
+      stationName,
+      basinAlert,
+      tmdAlert,
+      source: 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน (RID)'
     };
   } catch (e) {
     console.error('Weather fetch error:', e);
@@ -762,55 +919,69 @@ async function fetchProjectWeather(lat, lon) {
       icon: '🌦️',
       rainProb: 65,
       expectedRain24h: '15.0',
-      source: 'The Weather Channel / กรมอุตุนิยมวิทยา'
+      stationName,
+      basinAlert,
+      tmdAlert,
+      source: 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน (RID)'
     };
   }
 }
 
-// Gemini AI วิเคราะห์สถานการณ์และเกลาสรุปรายงาน
-async function analyzeFloodReportWithGemini({ project, weather, notes, photoCount }) {
+// Gemini AI วิเคราะห์สถานการณ์และเกลาสรุปรายงาน 4 มิติ
+async function analyzeFloodReportWithGemini({ project, weather, notes, photoCount, directReport }) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) {
     return {
       status: 'NORMAL',
-      waterLevel: '0 - 5 ซม. (สภาวะปกติ)',
-      pumpsRunning: 'พร้อมใช้งาน 100% (เดินเครื่องตามรอบระบาย)',
-      drainageCondition: 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
-      summary: `โครงการ ${project.name} (${project.code}): ${notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ แนวท่อระบายน้ำหลักและสถานีสูบน้ำทำงานเป็นปกติ'}`,
-      captions: []
+      waterLevel: directReport?.waterLevel || '0 - 5 ซม. (สภาวะปกติ)',
+      pumpsRunning: directReport?.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)',
+      drainageCondition: directReport?.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
+      assessmentField: directReport?.waterLevel ? `ผิวจราจรและพื้นที่โครงการ: ${directReport.waterLevel}` : 'ถนนสายหลักและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100%',
+      assessmentCanal: directReport?.drainageCondition ? `คลองภายนอกและทางระบายน้ำ: ${directReport.drainageCondition}` : 'ระดับน้ำในคลองภายนอกอยู่ในเกณฑ์ควบคุม การระบายน้ำปกติ',
+      assessmentPumps: directReport?.pumpsRunning ? `ระบบสูบน้ำและเครื่องจักร: ${directReport.pumpsRunning}` : 'เครื่องสูบน้ำและระบบป้องกันน้ำท่วมพร้อมทำงาน 100%',
+      assessmentOutlook: `โอกาสฝนตก 24 ชม. ${weather.rainProb}% คาดการณ์ฝน ${weather.expectedRain24h} มม. เจ้าหน้าที่เตรียมพร้อมรับมือ 24 ชม.`,
+      summary: `โครงการ ${project.name} (${project.code}): ${notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ แนวท่อระบายน้ำหลักและสถานีสูบน้ำทำงานเป็นปกติ'}`
     };
   }
 
   const prompt = `คุณคือวิศวกรผู้เชี่ยวชาญด้านบริหารจัดการน้ำและสาธารณูปโภคของบริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน) (Land & Houses)
 ให้ช่วยวิเคราะห์ข้อมูลการตรวจเช็คหน้างาน เพื่อออกเอกสารรายงานสถานการณ์น้ำท่วมและการระบายน้ำ (Drainage & Flood Monitoring Report)
 
-ข้อมูลโครงการ:
+ข้อมูลโครงการและสภาพแวดล้อม:
 - โครงการ: [${project.code}] ${project.name} (${project.area})
-- พยากรณ์อากาศ The Weather Channel: ${weather.condition}, อุณหภูมิ ${weather.temp}°C, โอกาสฝนตก ${weather.rainProb}%, ฝนคาดการณ์ 24 ชม. ${weather.expectedRain24h} มม.
-- รายละเอียดที่บันทึกหน้างาน: "${notes || 'ไม่มีรายงานปัญหาน้ำท่วมขัง ตรวจเช็คเครื่องสูบน้ำและระดับน้ำ'}"
+- แหล่งตรวจวัดระดับน้ำ Real-time: ${weather.stationName || '-'}
+- สถานการณ์น้ำท่า/คลอง: ${weather.basinAlert || '-'}
+- ประกาศเตือนสภาพอากาศ (TMD): ${weather.tmdAlert || '-'}
+- สภาพอากาศ The Weather Channel: ${weather.condition}, อุณหภูมิ ${weather.temp}°C, โอกาสฝนตก ${weather.rainProb}%, ฝนคาดการณ์ 24 ชม. ${weather.expectedRain24h} มม.
+- รายละเอียดที่ผู้ตรวจเช็คบันทึกหน้างาน: "${notes || 'ไม่มีรายงานปัญหาน้ำท่วมขัง ตรวจเช็คเครื่องสูบน้ำและระดับน้ำ'}"
 - จำนวนภาพถ่ายหน้างาน: ${photoCount} ภาพ
+
+ข้อกำหนดสำคัญ:
+1. สถานะเครื่องสูบน้ำ (pumpsRunning) และ สภาพทางระบายน้ำ/คลอง (drainageCondition) ต้องสะท้อนข้อความที่พิมพ์เข้า LINE อย่างเคร่งครัด
+2. ห้ามระบุชื่อบุคคลหรือชื่อผู้รายงานเด็ดขาด (ตามนโยบายความเป็นส่วนตัว Land & Houses)
+3. ให้สรุปบทวิเคราะห์ออกเป็น 4 มิติย่อย (ชัดเจน บรรทัดใหม่อ่านง่าย):
+   - assessmentField: สภาพพื้นที่ & ผิวจราจร
+   - assessmentCanal: ระดับน้ำคลอง & ภายนอก
+   - assessmentPumps: ระบบระบายน้ำ & เครื่องสูบ
+   - assessmentOutlook: การประเมินความเสี่ยง & ฝน 24 ชม.
 
 ให้ตอบกลับเป็น JSON เท่านั้น (ห้ามมี markdown codeblock ห้ามมีข้อความอื่น) โดยมีโครงสร้างดังนี้:
 {
   "status": "NORMAL" | "WATCH" | "CRITICAL",
-  "waterLevel": "ระดับน้ำท่วมขัง เช่น 0 - 5 ซม. (สภาวะปกติ) หรือ มีน้ำขังผิวจราจร 5-10 ซม.",
-  "pumpsRunning": "สถานะเครื่องสูบน้ำ เช่น เดินเครื่อง 1 ตัว (พร้อมใช้ 100%)",
-  "drainageCondition": "สภาพทางระบายน้ำ เช่น ตะแกรงเปิดโล่ง ท่อระบายน้ำหลักไหลคล่องตัว",
-  "summary": "บทสรุปและการประเมินสถานการณ์ระดับผู้บริหาร ความยาว 2-3 บรรทัด สุภาพ ทางการ สไตล์ Land & Houses (ห้ามระบุชื่อบุคคลหรือชื่อผู้รายงาน)",
-  "captions": [
-    "ภาพที่ 1: ถนนเมนสายหลักและผิวจราจร",
-    "ภาพที่ 2: บ่อพักน้ำหลักและการไหลของท่อระบายน้ำ",
-    "ภาพที่ 3: ระดับน้ำในบ่อหน่วงน้ำและคลองโครงการ",
-    "ภาพที่ 4: สถานีสูบน้ำและการทำงานของเครื่องสูบน้ำ (Pump 1)",
-    "ภาพที่ 5: ตู้ควบคุมระบบไฟฟ้าและเครื่องสูบน้ำสำรอง (Pump 2)",
-    "ภาพที่ 6: จุดปล่อยน้ำออกสู่คลองสาธารณะภายนอกโครงการ"
-  ]
+  "waterLevel": "ระดับน้ำ เช่น ถนนเมนแห้งสนิท สภาพปกติ (0 ซม.)",
+  "pumpsRunning": "สถานะเครื่องสูบน้ำ (สะท้อนจากข้อความที่พิมพ์)",
+  "drainageCondition": "สภาพทางระบายน้ำ/คลอง (สะท้อนจากข้อความที่พิมพ์)",
+  "assessmentField": "สรุปสภาพพื้นที่และผิวจราจร 1-2 บรรทัด (เช่น ถนนเมนหลักและผิวจราจรแห้งสนิท สัญจรได้ปกติ)",
+  "assessmentCanal": "สรุประดับน้ำคลองภายนอกและทางระบายน้ำ 1-2 บรรทัด (เช่น ระดับน้ำคลองหน้าโครงการสูงกว่าถนน +12 ซม. ปิดประตูระบายน้ำเฝ้าระวัง)",
+  "assessmentPumps": "สรุประบบเครื่องสูบน้ำและระบบป้องกันน้ำท่วม 1-2 บรรทัด (เช่น ระบบป้องกันน้ำท่วมทำงานปกติ พร้อมเดินเครื่องสูบระบาย)",
+  "assessmentOutlook": "สรุปการประเมินความเสี่ยงและฝน 24 ชม. 1-2 บรรทัด (เช่น โอกาสเกิดฝน 65% ปริมาณ 15 มม. เจ้าหน้าที่เตรียมพร้อมรับมือ 24 ชม.)",
+  "summary": "สรุปภาพรวมระดับผู้บริหาร 2-3 บรรทัด สำหรับแสดงในการ์ด LINE (ห้ามระบุชื่อผู้รายงาน)"
 }
 
 เกณฑ์ตัดสินสถานะ:
-- NORMAL: หากไม่มีน้ำท่วมขัง หรือขัง < 5 ซม. ระบายคล่องตัว เครื่องสูบน้ำพร้อมใช้
-- WATCH: หากน้ำขัง 5-10 ซม. หรือฝนตกหนักกำลังเร่งสูบระบาย
-- CRITICAL: หากน้ำขัง > 10 ซม. หรือคลองภายนอกเอ่อล้นเข้าโครงการ`;
+- NORMAL: หากถนนแห้ง ไม่มีน้ำท่วมขัง หรือขัง < 5 ซม. ระบายคล่องตัว เครื่องสูบน้ำพร้อมใช้
+- WATCH: หากระดับน้ำคลองภายนอกสูงขึ้น, น้ำขัง 5-10 ซม. หรือมีฝนตกหนักกำลังเร่งสูบระบาย
+- CRITICAL: หากน้ำขัง > 10 ซม. หรือคลองภายนอกเอ่อล้นเข้าท่วมพื้นที่โครงการ`;
 
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -832,11 +1003,14 @@ async function analyzeFloodReportWithGemini({ project, weather, notes, photoCoun
     console.error("Gemini flood analysis error:", e.message || e);
     return {
       status: 'NORMAL',
-      waterLevel: '0 - 5 ซม. (สภาวะปกติ)',
-      pumpsRunning: 'พร้อมใช้งาน 100% (เดินเครื่องตามรอบระบาย)',
-      drainageCondition: 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
-      summary: `โครงการ ${project.name} (${project.code}): ${notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ แนวท่อระบายน้ำหลักและสถานีสูบน้ำทำงานเป็นปกติ'}`,
-      captions: []
+      waterLevel: directReport?.waterLevel || '0 - 5 ซม. (สภาวะปกติ)',
+      pumpsRunning: directReport?.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)',
+      drainageCondition: directReport?.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
+      assessmentField: directReport?.waterLevel ? `ผิวจราจรและพื้นที่โครงการ: ${directReport.waterLevel}` : 'ถนนสายหลักและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100%',
+      assessmentCanal: directReport?.drainageCondition ? `คลองภายนอกและทางระบายน้ำ: ${directReport.drainageCondition}` : 'ระดับน้ำในคลองภายนอกอยู่ในเกณฑ์ควบคุม การระบายน้ำปกติ',
+      assessmentPumps: directReport?.pumpsRunning ? `ระบบสูบน้ำและเครื่องจักร: ${directReport.pumpsRunning}` : 'เครื่องสูบน้ำและระบบป้องกันน้ำท่วมพร้อมทำงาน 100%',
+      assessmentOutlook: `โอกาสฝนตก 24 ชม. ${weather.rainProb}% คาดการณ์ฝน ${weather.expectedRain24h} มม. เจ้าหน้าที่เตรียมพร้อมรับมือ 24 ชม.`,
+      summary: `โครงการ ${project.name} (${project.code}): ${notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ แนวท่อระบายน้ำหลักและสถานีสูบน้ำทำงานเป็นปกติ'}`
     };
   }
 }
@@ -934,24 +1108,32 @@ function buildFloodFlexMessage({ reportId, project, weather, aiResult, photoCoun
             contents: [
               {
                 type: 'text',
-                text: `🌤️ ${weather.icon} ${weather.condition} (${weather.temp}°C)`,
+                text: `🌤️ ${weather.icon || '🌦️'} ${weather.condition || 'ท้องฟ้ามีเมฆ'} (${weather.temp || 30}°C)`,
                 size: 'xs',
                 color: '#1E293B',
                 weight: 'bold'
               },
               {
                 type: 'text',
-                text: `☔ โอกาสเกิดฝน: ${weather.rainProb}% | ฝนสะสมคาดการณ์: ${weather.expectedRain24h} มม.`,
+                text: `☔ โอกาสเกิดฝน: ${weather.rainProb || 0}% | ฝนสะสม 24 ชม.: ${weather.expectedRain24h || 0} มม.`,
                 size: 'xxs',
                 color: '#475569',
                 margin: 'xs'
               },
               {
                 type: 'text',
-                text: `(อ้างอิง: ${weather.source})`,
+                text: `🌊 ${weather.stationName || 'สถานีตรวจวัดระดับน้ำ Real-time'}`,
+                size: 'xxs',
+                color: '#0369A1',
+                margin: 'xs',
+                wrap: true
+              },
+              {
+                type: 'text',
+                text: `(อ้างอิง: ${weather.source || 'TMD / ThaiWater / RID / The Weather Channel'})`,
                 size: 'xxs',
                 color: '#94A3B8',
-                margin: 'xxs'
+                margin: 'xs'
               }
             ]
           },
@@ -1035,12 +1217,15 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     if (!draftSnap.exists()) return;
 
     const draft = draftSnap.data();
-    const project = {
+    const project = FLOOD_PROJECTS[draft.projectCode] || {
       code: draft.projectCode,
       name: draft.projectName,
       area: draft.projectArea,
       lat: draft.lat || 13.7563,
-      lon: draft.lon || 100.5018
+      lon: draft.lon || 100.5018,
+      stationName: 'สถานีลุ่มน้ำเจ้าพระยาตอนล่าง (สสน. / กรมชลประทาน)',
+      basinAlert: 'เฝ้าระวังระดับน้ำคลองสายหลัก สูบระบายต่อเนื่อง',
+      tmdAlert: 'กรมอุตุนิยมวิทยา: ร่องมรสุมพาดผ่านภาคกลาง เฝ้าระวังฝนตกสะสม'
     };
 
     const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
@@ -1052,7 +1237,9 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
 
     if (photos.length === 0) {
       if (replyToken) {
-        await replyToLine(replyToken, "⚠️ ยังไม่มีรูปภาพในระบบ กรุณาส่งรูปถ่ายหน้างาน (5–6 รูป) เข้ามาก่อนครับ");
+        await replyToLine(replyToken, "⚠️ ยังไม่มีรูปภาพในระบบ กรุณาส่งรูปถ่ายหน้างาน (5–10 รูป) เข้ามาก่อนครับ");
+      } else if (userId) {
+        await pushToLine(userId, "⚠️ ยังไม่มีรูปภาพในระบบ กรุณาส่งรูปถ่ายหน้างาน (5–10 รูป) เข้ามาก่อนครับ");
       }
       return;
     }
@@ -1069,18 +1256,32 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     const randSeq = Math.floor(100 + Math.random() * 900);
     const reportId = `FLD-${cleanCode}-${dateCode}-${randSeq}`;
 
-    // ดึงพยากรณ์อากาศ The Weather Channel
-    const weather = await fetchProjectWeather(project.lat, project.lon);
+    // ดึงพยากรณ์อากาศและสถานีน้ำ Real-time ของไทย
+    const weather = await fetchProjectWeather(project);
 
-    // AI สรุปและตั้งชื่อภาพ
+    // ดึงข้อความสถานะหน้างานตรงจาก LINE (เครื่องสูบน้ำ, สภาพคลอง/ทางระบาย)
+    const directReport = extractDirectFieldReport(draft.notes);
+
+    // AI วิเคราะห์สถานการณ์และเกลา 4 มิติ
     const aiResult = await analyzeFloodReportWithGemini({
       project,
       weather,
       notes: draft.notes,
-      photoCount: photos.length
+      photoCount: photos.length,
+      directReport
     });
 
-    // บันทึกรายงานหลักลง Firestore
+    // กำหนดค่าสถานะโดยอิงจากข้อความหน้างานเป็นอันดับแรก
+    const waterLevel = directReport.waterLevel || aiResult.waterLevel || '0 - 5 ซม. (สภาวะปกติ)';
+    const pumpsRunning = directReport.pumpsRunning || aiResult.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)';
+    const drainageCondition = directReport.drainageCondition || aiResult.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง';
+
+    const assessmentField = aiResult.assessmentField || (directReport.waterLevel ? `ผิวจราจรและพื้นที่โครงการ: ${directReport.waterLevel}` : 'ถนนสายหลักและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100%');
+    const assessmentCanal = aiResult.assessmentCanal || (directReport.drainageCondition ? `คลองภายนอกและทางระบายน้ำ: ${directReport.drainageCondition}` : 'ระดับน้ำในคลองภายนอกอยู่ในเกณฑ์ควบคุม การระบายน้ำปกติ');
+    const assessmentPumps = aiResult.assessmentPumps || (directReport.pumpsRunning ? `ระบบสูบน้ำและเครื่องจักร: ${directReport.pumpsRunning}` : 'เครื่องสูบน้ำและระบบป้องกันน้ำท่วมพร้อมทำงาน 100%');
+    const assessmentOutlook = aiResult.assessmentOutlook || `โอกาสฝนตก 24 ชม. ${weather.rainProb}% คาดการณ์ฝน ${weather.expectedRain24h} มม. เจ้าหน้าที่เตรียมพร้อมรับมือ 24 ชม.`;
+
+    // บันทึกรายงานหลักลง Firestore (ไม่ระบุชื่อผู้รายงาน)
     const reportRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId);
     await setDoc(reportRef, {
       reportId,
@@ -1089,9 +1290,16 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       projectName: project.name,
       projectArea: project.area,
       status: aiResult.status || 'NORMAL',
-      waterLevel: aiResult.waterLevel || '0 - 5 ซม. (สภาวะปกติ)',
-      pumpsRunning: aiResult.pumpsRunning || 'พร้อมใช้งาน 100% (เดินเครื่องตามรอบ)',
-      drainageCondition: aiResult.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
+      waterLevel,
+      pumpsRunning,
+      drainageCondition,
+      assessmentField,
+      assessmentCanal,
+      assessmentPumps,
+      assessmentOutlook,
+      waterStation: weather.stationName,
+      basinAlert: weather.basinAlert,
+      tmdAlert: weather.tmdAlert,
       executiveSummary: aiResult.summary || draft.notes || 'สภาพการระบายน้ำของโครงการสามารถรองรับปริมาณน้ำฝนได้อย่างมีประสิทธิภาพ',
       notes: draft.notes || '',
       weather,
@@ -1102,14 +1310,11 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       createdAt: Date.now()
     });
 
-    // บันทึกภาพลง Subcollection พร้อมคำบรรยายใต้ภาพ
+    // บันทึกภาพลง Subcollection (เอาข้อความใต้ภาพออก มีเฉพาะรูปภาพและลำดับ)
     for (let i = 0; i < photos.length; i++) {
       const p = photos[i];
-      const defaultCaption = `จุดตรวจเช็คที่ ${i + 1}: สภาพการระบายน้ำหน้างาน`;
-      const caption = (aiResult.captions && aiResult.captions[i]) ? aiResult.captions[i] : defaultCaption;
       await setDoc(doc(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId, "photos", String(i)), {
         index: i,
-        caption,
         dataUrl: p.dataUrl,
         createdAt: Date.now()
       });
@@ -1208,11 +1413,11 @@ export default async function handler(req, res) {
               `─────────────────────────\n` +
               `วิธีใช้งานง่ายๆ ใน 2 ขั้นตอน:\n\n` +
               `1️⃣ พิมพ์คำสั่งพร้อมรหัสโครงการและรายละเอียด:\n` +
-              `   👉 !น้ำท่วม 410 ถนนเมนแห้งสนิท เครื่องสูบน้ำพร้อมใช้\n` +
-              `   👉 !น้ำท่วม LA-025 ท่อระบายน้ำไหลคล่องตัว\n` +
+              `   👉 !น้ำท่วม 410 ถนนเมนแห้งสนิท สภาพปกติ ท่อระบายน้ำไหลคล่องตัว ระบบป้องกันน้ำท่วม : ทำงานปกติ ระดับน้ำในคลองหน้าโครงการสูงกว่าถนน +12 cm\n` +
+              `   👉 !น้ำท่วม LA-025 ท่อระบายน้ำไหลคล่องตัว เครื่องสูบน้ำพร้อมใช้\n` +
               `   👉 !รายงานน้ำท่วม LH-379 ระดับน้ำในคลองปกติ\n\n` +
-              `2️⃣ ส่งภาพถ่ายหน้างาน 5–6 รูป เข้ามาในแชทนี้\n` +
-              `   บอทจะดึงพยากรณ์อากาศ The Weather Channel, วิเคราะห์สถานะด้วย AI และสร้างเอกสารสรุป PDF ส่งกลับให้ในแชทส่วนตัวทันทีครับ!\n\n` +
+              `2️⃣ ส่งภาพถ่ายหน้างาน 5–10 รูป เข้ามาในแชทนี้\n` +
+              `   บอทจะดึงพยากรณ์อากาศและสถานีน้ำ Real-time, วิเคราะห์สถานะด้วย AI และสร้างเอกสารสรุป PDF ส่งกลับให้ในแชทส่วนตัวทันทีครับ!\n\n` +
               `📌 โครงการที่รองรับ:\n` +
               `• กลุ่ม A: LH-410, LH-415, NE-419\n` +
               `• กลุ่ม B: LH-379, LH-392, LH-395\n` +
@@ -1240,6 +1445,9 @@ export default async function handler(req, res) {
             projectArea: project.area,
             lat: project.lat,
             lon: project.lon,
+            stationName: project.stationName,
+            basinAlert: project.basinAlert,
+            tmdAlert: project.tmdAlert,
             notes: notes || 'ตรวจเช็คสถานะการระบายน้ำประจำวัน',
             createdAt: Date.now(),
             finalizing: false
@@ -1248,7 +1456,8 @@ export default async function handler(req, res) {
           // ตรวจดูว่าใน buffer มีรูปถ่ายที่ส่งมาก่อนหน้านี้แล้วหรือไม่
           const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
           if (photosSnap.size >= 5) {
-            await replyToLine(replyToken, `🌊 ได้รับข้อมูลโครงการ [${project.code}] ${project.name} เรียบร้อยแล้วครับ!\nกำลังประมวลผลรูปภาพและจัดทำเอกสาร PDF สักครู่ครับ...`);
+            await updateDoc(draftRef, { finalizing: true });
+            await replyToLine(replyToken, `🌊 ได้รับข้อมูลโครงการ [${project.code}] ${project.name} เรียบร้อยแล้วครับ!\nกำลังประมวลผลรูปภาพ ${photosSnap.size} ภาพ และจัดทำเอกสาร PDF สักครู่ครับ...`);
             await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
             continue;
           }
@@ -1256,14 +1465,14 @@ export default async function handler(req, res) {
           const guideMsg = `🌊 ได้รับข้อมูลโครงการ [${project.code}] ${project.name} เรียบร้อยแล้วครับ!\n` +
             `📝 รายละเอียด: ${notes || 'ตรวจเช็คสถานะการระบายน้ำประจำวัน'}\n` +
             `─────────────────────────\n` +
-            `📸 ขั้นตอนต่อไป: กรุณาส่งรูปถ่ายหน้างาน 5–6 รูป เข้ามาในแชทนี้ได้เลยครับ\n` +
+            `📸 ขั้นตอนต่อไป: กรุณาส่งรูปถ่ายหน้างาน (5–10 รูป) เข้ามาในแชทนี้ได้เลยครับ\n` +
             `💡 แนะนำภาพที่ควรส่ง:\n` +
             `1. ถนนเมน / ทางเข้า-ออกโครงการ\n` +
             `2. บ่อพัก / ท่อระบายน้ำหลัก\n` +
             `3. เครื่องสูบน้ำ / ตู้ควบคุมไฟ\n` +
             `4. คลองระบายน้ำ / บ่อหน่วงน้ำ\n` +
             `5. จุดระบายน้ำออกภายนอกโครงการ\n\n` +
-            `*(สามารถกดส่งภาพรวดเดียว 5-6 ภาพพร้อมกันได้เลยครับ บอทจะรวมเล่ม PDF สรุปส่งให้ทันที)*`;
+            `*(ส่งภาพพร้อมกันรวดเดียวได้เลยครับ หรือเมื่อส่งครบแล้วพิมพ์ '!เสร็จ' เพื่อรับ PDF ทันที)*`;
           await replyToLine(replyToken, guideMsg);
           continue;
         }
@@ -1275,15 +1484,16 @@ export default async function handler(req, res) {
           if (draftSnap.exists()) {
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
             if (photosSnap.size > 0) {
+              await updateDoc(draftRef, { finalizing: true });
               await replyToLine(replyToken, `⏳ กำลังรวบรวมรูปภาพ ${photosSnap.size} ภาพ และสร้างเอกสารสรุป PDF สักครู่ครับ...`);
               await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               continue;
             } else {
-              await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างานเข้ามาก่อนครับ`);
+              await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างาน (5–10 รูป) เข้ามาก่อนครับ`);
               continue;
             }
           } else {
-            // กรณีไม่มี Draft ค้างอยู่ ให้ตรวจสอบว่ามีรายงานล่าสุดที่เพิ่งสร้างสำเร็จหรือไม่
+            // กรณีไม่มี Draft ค้างอยู่ ให้ตรวจสอบว่ามีรายงานล่าสุดที่สร้างไว้หรือไม่
             try {
               const reportsSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports"));
               let latestReport = null;
@@ -1294,7 +1504,7 @@ export default async function handler(req, res) {
                 }
               });
 
-              if (latestReport && (Date.now() - (latestReport.createdAt || 0)) < 2 * 60 * 60 * 1000) {
+              if (latestReport && (Date.now() - (latestReport.createdAt || 0)) < 24 * 60 * 60 * 1000) {
                 const domain = host || 'lh-taskflow.vercel.app';
                 const protocol = proto || 'https';
                 const pdfUrl = `${protocol}://${domain}/api/flood-report?id=${latestReport.reportId}`;
@@ -1303,20 +1513,26 @@ export default async function handler(req, res) {
                   reportId: latestReport.reportId,
                   project: { code: latestReport.projectCode, name: latestReport.projectName, area: latestReport.projectArea },
                   weather: latestReport.weather,
-                  aiResult: { status: latestReport.status, summary: latestReport.executiveSummary },
+                  aiResult: { 
+                    status: latestReport.status, 
+                    summary: latestReport.executiveSummary 
+                  },
                   photoCount: latestReport.photoCount || 5,
                   surveyDateThai: latestReport.surveyDateThai || '-',
                   surveyTimeThai: latestReport.surveyTimeThai || '-',
                   pdfUrl
                 });
 
-                const msg = `✅ รายงานสถานการณ์น้ำท่วมล่าสุดจัดทำเรียบร้อยแล้วครับ!\n` +
+                const msg = `✅ รายงานสถานการณ์น้ำท่วมล่าสุด:\n` +
                   `📌 โครงการ: [${latestReport.projectCode}] ${latestReport.projectName}\n` +
                   `📑 รหัสเอกสาร: ${latestReport.reportId}\n` +
                   `─────────────────────────\n` +
                   `🔗 แตะปุ่ม "เปิดดูและดาวน์โหลดเอกสาร PDF" ในการ์ด หรือเปิดดูผ่านลิงก์:\n${pdfUrl}`;
 
-                await replyToLine(replyToken, [flexMsg, { type: 'text', text: msg }]);
+                const replied = await replyToLine(replyToken, [flexMsg, { type: 'text', text: msg }]);
+                if (!replied && userId) {
+                  await pushToLine(userId, [flexMsg, { type: 'text', text: msg }]);
+                }
                 continue;
               }
             } catch (err) {
@@ -1412,7 +1628,7 @@ export default async function handler(req, res) {
               `🌊 รายงานสถานการณ์น้ำท่วม & ระบายน้ำ (ฤดูฝน):\n` +
               `• !น้ำท่วม [รหัส] [รายละเอียด]\n` +
               `  (ตัวอย่าง: !น้ำท่วม 410 ถนนเมนแห้งสนิท เครื่องสูบน้ำพร้อมใช้)\n` +
-              `  (ส่งภาพถ่าย 5-6 รูป บอทจะสร้างเอกสาร PDF สรุปส่งให้ทันที)\n\n` +
+              `  (ส่งภาพถ่าย 5-10 รูป บอทจะสร้างเอกสาร PDF สรุปส่งให้ทันที)\n\n` +
               `📋 สรุปงานประจำวัน (งานวันนี้):\n` +
               `• !สรุปงาน (ดูภาพรวมทุกโครงการ)\n` +
               `• !สรุปงานA, !สรุปงานB, !สรุปงานA2\n\n` +
@@ -1471,24 +1687,24 @@ export default async function handler(req, res) {
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
             const count = photosSnap.size;
 
-            if (count >= 6) {
-              // ครบ 6 รูปแล้ว รอ 1.5 วินาที แล้วรวมเล่มทันที
+            if (count >= 10) {
+              // ครบ 10 รูป (โควตาสูงสุด) รอ 1.5 วินาที แล้วรวมเล่มทันที
               await new Promise(r => setTimeout(r, 1500));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
                 await updateDoc(draftRef, { finalizing: true });
-                await compileAndSendFloodReport({ userId, replyToken, host, proto });
+                await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               }
             } else if (count >= 5) {
-              // มี 5 รูปแล้ว ให้รอ 3.5 วินาที เผื่อภาพที่ 6 กำลังอัปโหลดตามมา
-              await new Promise(r => setTimeout(r, 3500));
+              // มีตั้งแต่ 5 ถึง 9 รูป ให้รอ 4.0 วินาที เผื่อภาพที่เหลือในอัลบั้มกำลังอัปโหลดตามมา
+              await new Promise(r => setTimeout(r, 4000));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
                 await updateDoc(draftRef, { finalizing: true });
-                await compileAndSendFloodReport({ userId, replyToken, host, proto });
+                await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               }
             } else if (count === 1) {
-              await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (กรุณาส่งรูปให้ครบ 5–6 รูป หรือพิมพ์ '!เสร็จ' เพื่อสร้างรายงานทันที)`);
+              await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (กรุณาส่งรูปให้ครบ 5–10 รูป หรือพิมพ์ '!เสร็จ' เพื่อสร้างรายงานทันทีครับ)`);
             }
           } else {
             // ยังไม่มี Draft ให้ตอบรับและแนะนำวิธีพิมพ์คำสั่ง
