@@ -439,10 +439,12 @@ export default function App() {
     return '';
   };
 
-  const allStaffNames = useMemo(() => Array.from(new Set([
-    ...(sets.staffStats || []).map(s => s.name),
-    ...(sets.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0])
-  ])).filter(Boolean), [sets.staffStats, sets.emails]);
+  const allStaffNames = useMemo(() => Array.from(new Set(
+    (sets.emails || []).map(e => {
+      const parts = e.split('|');
+      return (parts[2] || parts[0].split('@')[0] || '').trim();
+    })
+  )).filter(Boolean).sort((a, b) => a.localeCompare('th')), [sets.emails]);
 
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
