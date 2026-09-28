@@ -731,28 +731,27 @@ export default async function handler(req, res) {
       </div>
       <div class="assessment-list">
         <div class="assessment-item">
-          <span class="assessment-tag">📍 สภาพพื้นที่ & ผิวจราจร:</span>
+          <span class="assessment-tag">📍</span>
           <span class="assessment-val">${assessmentField}</span>
         </div>
         <div class="assessment-item">
-          <span class="assessment-tag">🌊 ระดับน้ำคลอง & ภายนอก:</span>
+          <span class="assessment-tag">🌊</span>
           <span class="assessment-val">${assessmentCanal}</span>
         </div>
         <div class="assessment-item">
-          <span class="assessment-tag">⚙️ ระบบระบายน้ำ & เครื่องสูบ:</span>
+          <span class="assessment-tag">⚙️</span>
           <span class="assessment-val">${assessmentPumps}</span>
         </div>
         <div class="assessment-item">
-          <span class="assessment-tag">🌤️ การประเมินความเสี่ยง & ฝน 24 ชม.:</span>
+          <span class="assessment-tag">🌤️</span>
           <span class="assessment-val">${assessmentOutlook}</span>
         </div>
       </div>
     </div>
 
-    <!-- Photo Section (Point 6: Orderly Layout, No Under-Photo Captions, Up to 10 Photos) -->
+    <!-- Photo Section (Up to 10 Photos) -->
     <div class="photo-section-title">
       <span>📸 4. ภาพถ่ายสำรวจหน้างาน (Photographic Evidence: ${photoCount} ภาพ)</span>
-      <span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">บันทึกเวลาจริงตามมาตรฐานความปลอดภัย Land & Houses</span>
     </div>
 
     <div class="photo-grid">
@@ -769,7 +768,7 @@ export default async function handler(req, res) {
     <!-- Footer (Corporate Signature - NO REPORTER NAME) -->
     <div class="footer">
       <div class="footer-col">
-        <div class="corporate-seal">ฝ่ายบริการหลังการส่งมอบและบำรุงรักษาสาธารณูปโภค</div>
+        <div class="corporate-seal">ส่วนงานสาธารณูปโภค ฝ่ายบริการและลูกค้าสัมพันธ์</div>
         <div>บริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน) | LAND AND HOUSES PUBLIC COMPANY LIMITED</div>
         <div>เอกสารรายงานผลการสำรวจภายในองค์กร ห้ามเผยแพร่ภายนอกโดยไม่ได้รับอนุญาต</div>
       </div>
@@ -1562,7 +1561,7 @@ async function handleExecutiveSummary(req, res) {
     <!-- Corporate Footer -->
     <div class="footer">
       <div class="footer-left">
-        <div><strong>ฝ่ายบริการหลังการส่งมอบและบำรุงรักษาสาธารณูปโภค</strong> | บริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน)</div>
+        <div><strong>ส่วนงานสาธารณูปโภค ฝ่ายบริการและลูกค้าสัมพันธ์</strong> | บริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน)</div>
         <div>LAND AND HOUSES PUBLIC COMPANY LIMITED | เอกสารสรุปผลภายในองค์กรเพื่อการบริหารจัดการ</div>
       </div>
       <div style="text-align: right;">

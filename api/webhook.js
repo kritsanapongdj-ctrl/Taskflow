@@ -927,6 +927,65 @@ async function fetchProjectWeather(project) {
   }
 }
 
+// ข้อ 2: Gemini Vision วิเคราะห์ภาพถ่ายถนน + Location + หน่วยงาน เพื่อประเมินระดับน้ำท่วมขังผิวถนน
+async function analyzeWaterLevelFromPhotos({ photos, project, weather, userText }) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY || !photos || photos.length === 0) return null;
+
+  // ดึงเฉพาะ base64 ของรูปภาพ (สูงสุด 4 รูปแรก เพื่อประหยัด token)
+  const imageParts = photos.slice(0, 4).map(p => {
+    const dataUrl = p.dataUrl || '';
+    const match = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!match) return null;
+    return { inlineData: { mimeType: match[1], data: match[2] } };
+  }).filter(Boolean);
+
+  if (imageParts.length === 0) return null;
+
+  const prompt = `คุณคือระบบวิเคราะห์ภาพถ่ายหน้างานสำหรับโครงการ ${project.name} (${project.code}) พื้นที่: ${project.area}
+
+ข้อมูลสภาพแวดล้อมปัจจุบัน (ณ เวลาที่บันทึกภาพ):
+- สภาพอากาศ: ${weather.condition} อุณหภูมิ ${weather.temp}°C
+- ปริมาณฝนตกสะสม 24 ชม.: ${weather.expectedRain24h} มม.
+- โอกาสฝนตก: ${weather.rainProb}%
+- สถานการณ์น้ำท่า: ${weather.basinAlert}
+- ประกาศ TMD: ${weather.tmdAlert}
+- ข้อความจากเจ้าหน้าที่หน้างาน: "${userText || '-'}"
+
+วิเคราะห์ภาพถ่ายที่แนบมา แล้วประเมิน "ระดับน้ำท่วมขังบนผิวถนน" ให้กระชับ 1 ประโยค เช่น:
+- "ถนนเมนแห้งสนิท ไม่มีน้ำท่วมขัง (0 ซม.)"
+- "มีน้ำขังผิวถนนเล็กน้อย ประมาณ 3–5 ซม."
+- "ถนนในโครงการมีน้ำขังสูงประมาณ 10–15 ซม. บริเวณทางเข้า"
+
+ห้ามระบุชื่อบุคคล ห้ามเดาเกินจากภาพ ถ้าภาพไม่เห็นถนนชัดเจนให้ระบุว่า "ไม่สามารถระบุระดับน้ำจากภาพได้"
+ตอบกลับเป็น JSON: { "waterLevel": "..." }`;
+
+  try {
+    const contents = [{
+      parts: [
+        { text: prompt },
+        ...imageParts
+      ]
+    }];
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents, generationConfig: { temperature: 0.1 } })
+    });
+    const data = await res.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.waterLevel || null;
+    }
+  } catch (e) {
+    console.error('Vision waterLevel error:', e.message);
+  }
+  return null;
+}
+
 // Gemini AI วิเคราะห์สถานการณ์และเกลาสรุปรายงาน 4 มิติ
 async function analyzeFloodReportWithGemini({ project, weather, notes, photoCount, directReport }) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -1262,19 +1321,29 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     // ดึงข้อความสถานะหน้างานตรงจาก LINE (เครื่องสูบน้ำ, สภาพคลอง/ทางระบาย)
     const directReport = extractDirectFieldReport(draft.notes);
 
-    // AI วิเคราะห์สถานการณ์และเกลา 4 มิติ
-    const aiResult = await analyzeFloodReportWithGemini({
-      project,
-      weather,
-      notes: draft.notes,
-      photoCount: photos.length,
-      directReport
-    });
+    // ข้อ 2: วิเคราะห์ภาพถ่ายด้วย Gemini Vision + Location + หน่วยงาน เพื่อประเมินระดับน้ำผิวถนน
+    // รัน parallel กับ text analysis เพื่อประหยัดเวลา
+    const [aiResult, visionWaterLevel] = await Promise.all([
+      analyzeFloodReportWithGemini({
+        project,
+        weather,
+        notes: draft.notes,
+        photoCount: photos.length,
+        directReport
+      }),
+      analyzeWaterLevelFromPhotos({
+        photos,
+        project,
+        weather,
+        userText: draft.notes
+      })
+    ]);
 
-    // กำหนดค่าสถานะโดยอิงจากข้อความหน้างานเป็นอันดับแรก
-    const waterLevel = directReport.waterLevel || aiResult.waterLevel || '0 - 5 ซม. (สภาวะปกติ)';
+    // Priority: (1) user typed text → (2) Vision ภาพ → (3) AI text inference
+    const waterLevel = directReport.waterLevel || visionWaterLevel || aiResult.waterLevel || '0 - 5 ซม. (สภาวะปกติ)';
     const pumpsRunning = directReport.pumpsRunning || aiResult.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)';
-    const drainageCondition = directReport.drainageCondition || aiResult.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง';
+    // ข้อ 3: drainageCondition ใช้เฉพาะ text ที่ผู้ใช้พิมพ์มาเท่านั้น ไม่ใช้ AI ตีความ
+    const drainageCondition = directReport.drainageCondition || (draft.notes ? draft.notes.trim() : 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง');
 
     const assessmentField = aiResult.assessmentField || (directReport.waterLevel ? `ผิวจราจรและพื้นที่โครงการ: ${directReport.waterLevel}` : 'ถนนสายหลักและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100%');
     const assessmentCanal = aiResult.assessmentCanal || (directReport.drainageCondition ? `คลองภายนอกและทางระบายน้ำ: ${directReport.drainageCondition}` : 'ระดับน้ำในคลองภายนอกอยู่ในเกณฑ์ควบคุม การระบายน้ำปกติ');
