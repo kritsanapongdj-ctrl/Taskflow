@@ -6,11 +6,16 @@ export default function StatusChangeModal({
   onConfirm,
   sMod,
   setSMod,
-  getTStr
+  getTStr,
+  staffList = [],
+  task = null
 }) {
   if (!isOpen) return null;
 
   const handleConfirmClick = () => {
+    if (!sMod.recordedBy?.trim()) {
+      return alert('กรุณาเลือกหรือระบุชื่อผู้บันทึก');
+    }
     if (sMod.type === 'cancel' && !sMod.reason?.trim()) {
       return alert('กรุณาระบุเหตุผลในการยกเลิกงาน');
     }
@@ -42,11 +47,14 @@ export default function StatusChangeModal({
     onConfirm();
   };
 
+  const isCustom = sMod.isCustomStaff || (!staffList.includes(sMod.recordedBy) && !!sMod.recordedBy);
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+      <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        {/* Header Title */}
         <h3
-          className={`font-bold text-lg mb-3 ${
+          className={`font-bold text-lg mb-2 flex items-center gap-1.5 ${
             sMod.type === 'cancel'
               ? 'text-red-500'
               : sMod.type === 'postpone_start'
@@ -55,31 +63,101 @@ export default function StatusChangeModal({
               ? 'text-amber-600'
               : sMod.type === 'issue'
               ? 'text-rose-600'
-              : 'text-green-500'
+              : sMod.type === 'progress'
+              ? 'text-indigo-600'
+              : sMod.type === 'pending'
+              ? 'text-slate-600'
+              : 'text-green-600'
           }`}
         >
           {sMod.type === 'cancel'
-            ? 'ยกเลิกงาน'
+            ? '❌ ยกเลิกงาน'
             : sMod.type === 'postpone_start'
             ? '📅 เลื่อนวันเริ่มงาน'
             : sMod.type === 'postpone'
             ? '📅 เลื่อนวันจบงาน'
             : sMod.type === 'issue'
             ? '⚠️ รออะไหล่ / ติดปัญหา'
-            : 'ยืนยันจบงาน'}
+            : sMod.type === 'progress'
+            ? (sMod.isHoldResume ? '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ' : '⚙️ เปลี่ยนสถานะเป็น: กำลังดำเนินการ')
+            : sMod.type === 'pending'
+            ? '⏳ เปลี่ยนสถานะเป็น: รอดำเนินการ'
+            : '✅ ยืนยันจบงาน'}
         </h3>
+
+        {/* Task Info Summary */}
+        {task && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-3 text-xs">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="font-bold text-[#0f2e4a] font-mono">{task.id}</span>
+              <span className="text-[11px] text-[#bca374] font-semibold truncate max-w-[200px]">
+                {task.project}
+              </span>
+            </div>
+            <div className="text-slate-700 line-clamp-2 font-medium">{task.details}</div>
+          </div>
+        )}
+
         <div className="space-y-3">
+          {/* ช่องเลือกชื่อผู้บันทึกข้อมูล (Recorded By) */}
+          <div className="bg-blue-50/60 border border-blue-200 rounded-lg p-3 space-y-2">
+            <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span>👤</span>
+                <span>ผู้บันทึก / เจ้าหน้าที่ดำเนินการ *</span>
+              </span>
+              <span className="text-[10px] text-blue-600 font-semibold bg-blue-100/60 px-1.5 py-0.5 rounded">
+                ลงประวัติไทม์ไลน์
+              </span>
+            </label>
+
+            <select
+              value={isCustom ? '__custom__' : (sMod.recordedBy || '')}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__custom__') {
+                  setSMod({ ...sMod, isCustomStaff: true, recordedBy: sMod.recordedBy || '' });
+                } else {
+                  setSMod({ ...sMod, recordedBy: val, isCustomStaff: false });
+                }
+              }}
+              className="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 bg-white focus:ring-1 focus:ring-[#0f2e4a] outline-none"
+            >
+              <option value="">-- กรุณาเลือกชื่อผู้บันทึก --</option>
+              {staffList.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              <option value="__custom__">✏️ ระบุชื่ออื่น / กรอกเอง...</option>
+            </select>
+
+            {isCustom && (
+              <input
+                type="text"
+                autoFocus={sMod.isCustomStaff}
+                placeholder="ระบุชื่อผู้บันทึก..."
+                value={sMod.recordedBy || ''}
+                onChange={(e) => setSMod({ ...sMod, recordedBy: e.target.value })}
+                className="w-full border border-blue-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+              />
+            )}
+          </div>
+
+          {/* Action-specific fields */}
           {sMod.type === 'cancel' && (
             <div>
               <label className="text-xs font-bold text-red-500">เหตุผลบังคับ *</label>
               <textarea
                 rows="2"
                 className="w-full border rounded p-2 text-sm resize-none bg-red-50"
+                placeholder="ระบุสาเหตุที่ยกเลิกงาน..."
                 value={sMod.reason}
                 onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
               />
             </div>
           )}
+
           {sMod.type === 'postpone_start' && (
             <div className="space-y-3">
               <div>
@@ -107,6 +185,7 @@ export default function StatusChangeModal({
               </div>
             </div>
           )}
+
           {sMod.type === 'issue' && (
             <div className="space-y-2.5">
               <div>
@@ -127,6 +206,7 @@ export default function StatusChangeModal({
               </div>
             </div>
           )}
+
           {sMod.type === 'postpone' && (
             <div className="space-y-3">
               <div>
@@ -154,6 +234,26 @@ export default function StatusChangeModal({
               </div>
             </div>
           )}
+
+          {(sMod.type === 'progress' || sMod.type === 'pending') && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700">
+                หมายเหตุเพิ่มเติม (ถ้ามี)
+              </label>
+              <textarea
+                rows="2"
+                className="w-full border rounded p-2 text-sm resize-none bg-gray-50 focus:bg-white outline-none"
+                placeholder={
+                  sMod.type === 'progress'
+                    ? (sMod.isHoldResume ? 'ระบุการแก้ไขปัญหา หรือการได้รับอะไหล่...' : 'ระบุหมายเหตุการดำเนินงาน...')
+                    : 'ระบุสาเหตุที่รอดำเนินการ...'
+                }
+                value={sMod.reason || ''}
+                onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
+              />
+            </div>
+          )}
+
           {sMod.type === 'complete' && (
             <div className="space-y-3">
               {sMod.isOverdue && (
@@ -221,6 +321,8 @@ export default function StatusChangeModal({
             </div>
           )}
         </div>
+
+        {/* Buttons */}
         <div className="flex gap-2 mt-5">
           <button
             type="button"
@@ -233,7 +335,9 @@ export default function StatusChangeModal({
                 forceWO: false,
                 isOverdue: false,
                 overdueReason: '',
-                postponeDate: getTStr ? getTStr() : ''
+                postponeDate: getTStr ? getTStr() : '',
+                recordedBy: '',
+                isCustomStaff: false
               });
             }}
             className="flex-1 bg-gray-100 hover:bg-gray-200 p-2 text-xs font-bold rounded transition cursor-pointer"

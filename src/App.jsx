@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
@@ -144,7 +144,7 @@ export default function App() {
   const [sList, setSList] = useState({ tasks: [], informs: [] });
   const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด', staffName: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
-  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr() });
+  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false });
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
   const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
@@ -426,6 +426,24 @@ export default function App() {
     return false;
   };
 
+  const getStaffForTask = (task) => {
+    if (!task) return '';
+    const stdProj = getStdProj(task.project);
+    const staffEntry = (sets.emails || []).find(e => {
+      const projs = (e.split('|')[1] || '').split(',').map(p => p.trim());
+      return projs.includes('ทั้งหมด') || projs.includes(stdProj);
+    });
+    if (staffEntry) {
+      return staffEntry.split('|')[2] || staffEntry.split('|')[0].split('@')[0];
+    }
+    return '';
+  };
+
+  const allStaffNames = useMemo(() => Array.from(new Set([
+    ...(sets.staffStats || []).map(s => s.name),
+    ...(sets.emails || []).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0])
+  ])).filter(Boolean), [sets.staffStats, sets.emails]);
+
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
     if (confirmCode !== 'MIGRATE') return;
@@ -600,54 +618,123 @@ export default function App() {
   const initSt = (id, val) => {
     const t = tasks.find(x => String(x.id) === String(id));
     if (!t) return;
+    if (val === t.status) return;
+
+    const defaultRecorder = (gFilt.staffName !== 'ทั้งหมด' ? gFilt.staffName : '') || getStaffForTask(t) || '';
+
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
       const defaultOverdueReason = t.overdueReason || (isOvd && t.issueReason ? `ล่าช้าเนื่องจากรออะไหล่/ติดปัญหา: ${t.issueReason}` : '');
-      setSMod({ isOpen: true, taskId: id, type: 'complete', reason: '', workOrderNo: t.workOrderNo || '', noWO: false, forceWO: t.status === 'จบงาน(รอใบงาน)', isOverdue: isOvd, overdueReason: defaultOverdueReason, postponeDate: t.endDate, postponeStartDate: t.startDate || getTStr() });
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'complete',
+        targetStatus: 'จบงาน',
+        reason: '',
+        workOrderNo: t.workOrderNo || '',
+        noWO: false,
+        forceWO: t.status === 'จบงาน(รอใบงาน)',
+        isOverdue: isOvd,
+        overdueReason: defaultOverdueReason,
+        postponeDate: t.endDate,
+        postponeStartDate: t.startDate || getTStr(),
+        recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
     } else if (val === 'เลื่อนวันเริ่ม') {
-      setSMod({ isOpen: true, taskId: id, type: 'postpone_start', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate, postponeStartDate: t.startDate || getTStr() });
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'postpone_start',
+        targetStatus: 'เลื่อนวันเริ่ม',
+        reason: '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate,
+        postponeStartDate: t.startDate || getTStr(),
+        recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
     } else if (val === 'เลื่อนวันจบ' || val === 'เลื่อนงาน') {
-      setSMod({ isOpen: true, taskId: id, type: 'postpone', reason: t.postponeReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr(), postponeStartDate: t.startDate });
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'postpone',
+        targetStatus: 'เลื่อนวันจบ',
+        reason: t.postponeReason || '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate || getTStr(),
+        postponeStartDate: t.startDate,
+        recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
     } else if (val === 'รออะไหล่/ติดปัญหา' || val === 'ติดปัญหา/รออะไหล่') {
-      setSMod({ isOpen: true, taskId: id, type: 'issue', reason: t.issueReason || '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate || getTStr(), postponeStartDate: t.startDate });
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'issue',
+        targetStatus: 'ติดปัญหา/รออะไหล่',
+        reason: t.issueReason || '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate || getTStr(),
+        postponeStartDate: t.startDate,
+        recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
     } else if (val === 'ยกเลิก') {
-      setSMod({ isOpen: true, taskId: id, type: 'cancel', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: t.endDate, postponeStartDate: t.startDate });
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'cancel',
+        targetStatus: 'ยกเลิก',
+        reason: '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate,
+        postponeStartDate: t.startDate,
+        recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
     } else {
-      // อัปเดตสถานะตรงสู่ Firestore สำหรับ: 'รอดำเนินการ', 'กำลังดำเนินการ'
-      let updatedTimeline = Array.isArray(t.timeline) ? [...t.timeline] : [];
-      let durationInHold = null;
-      let actionTitle = val === 'กำลังดำเนินการ' ? '⚙️ ดำเนินการต่อ' : '⏳ รอดำเนินการ';
-
-      if (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') {
-        actionTitle = '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ';
-        if (t.issueReportedAt) {
-          const diffMs = Date.now() - new Date(t.issueReportedAt).getTime();
-          const dDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-          const dHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          durationInHold = dDays > 0 ? `${dDays} วัน ${dHours} ชม.` : `${dHours} ชม.`;
-        }
-      }
-
-      const newTimelineItem = {
-        timestamp: new Date().toISOString(),
-        action: val === 'กำลังดำเนินการ' ? 'RESUMED' : 'STATUS_CHANGE',
-        title: actionTitle,
-        fromStatus: t.status,
-        toStatus: val,
-        note: val === 'กำลังดำเนินการ' && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') ? 'อะไหล่มาถึงแล้ว เข้าพื้นที่ดำเนินการต่อ' : `เปลี่ยนสถานะเป็น "${val}"`,
-        actor: 'ผู้ปฏิบัติงาน'
-      };
-      if (durationInHold) {
-        newTimelineItem.durationInHold = durationInHold;
-      }
-      updatedTimeline.push(newTimelineItem);
-
-      saveD('task', { ...t, status: val, timeline: updatedTimeline });
+      const isHold = t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา';
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: val === 'กำลังดำเนินการ' ? 'progress' : 'pending',
+        targetStatus: val,
+        reason: '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate,
+        postponeStartDate: t.startDate,
+        recordedBy: defaultRecorder,
+        isCustomStaff: false,
+        isHoldResume: val === 'กำลังดำเนินการ' && isHold
+      });
     }
   };
 
   const cfSt = () => {
     let cleanWo = '';
+    const recorder = sMod.recordedBy?.trim() || 'ผู้ปฏิบัติงาน';
+
     if (sMod.type === 'complete') {
       if (sMod.isOverdue && !sMod.overdueReason?.trim()) return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
       if (!sMod.noWO) {
@@ -678,7 +765,7 @@ export default function App() {
                 fromStatus: t.status,
                 toStatus: 'ยกเลิก',
                 reason: sMod.reason || '',
-                actor: 'ผู้ดูแล'
+                actor: recorder
             });
         }
         else if(sMod.type === 'postpone_start') {
@@ -701,7 +788,7 @@ export default function App() {
                 toStatus: 'เลื่อนวันเริ่ม',
                 reason: sMod.reason || '',
                 note: `วันที่เริ่มเดิม: ${fDate(t.startDate)} ➔ เริ่มใหม่: ${fDate(sMod.postponeStartDate)}`,
-                actor: 'ผู้ประสานงาน'
+                actor: recorder
             });
         }
         else if(sMod.type === 'issue') {
@@ -723,7 +810,7 @@ export default function App() {
                 fromStatus: t.status,
                 toStatus: 'ติดปัญหา/รออะไหล่',
                 reason: sMod.reason || '',
-                actor: 'ช่างเทคนิคหน้างาน'
+                actor: recorder
             });
         }
         else if(sMod.type === 'postpone') { 
@@ -748,7 +835,7 @@ export default function App() {
                 toStatus: 'เลื่อนวันจบ',
                 reason: sMod.reason || '',
                 note: `กำหนดจบเดิม: ${fDate(t.endDate)} ➔ วันที่ขอเลื่อนจบ: ${fDate(sMod.postponeDate)}`,
-                actor: 'ผู้ประสานงาน'
+                actor: recorder
             });
         }
         else if(sMod.type === 'complete') { 
@@ -770,7 +857,7 @@ export default function App() {
                     toStatus: 'จบงาน(รอใบงาน)',
                     reason: sMod.overdueReason || '',
                     note: sMod.isOverdue ? `ปิดงานเกินกำหนด (สาเหตุ: ${sMod.overdueReason})` : 'จบงานหน้างานเรียบร้อย รอออกเลขใบงาน',
-                    actor: 'ช่างเทคนิคหน้างาน'
+                    actor: recorder
                 });
             } else {
                 nT.status = 'จบงาน'; 
@@ -790,7 +877,7 @@ export default function App() {
                         fromStatus: t.status,
                         toStatus: 'จบงาน',
                         note: `บันทึกเลขที่ใบงาน: ${cleanWo}`,
-                        actor: 'แอดมิน'
+                        actor: recorder
                     });
                 } else {
                     nT.completedDate = getTStr();
@@ -810,15 +897,46 @@ export default function App() {
                         toStatus: 'จบงาน',
                         reason: sMod.overdueReason || '',
                         note: `ออกใบงาน ${cleanWo}${sMod.isOverdue ? ` (ปิดงานล่าช้า: ${sMod.overdueReason})` : ''}`,
-                        actor: 'ผู้ปฏิบัติงาน'
+                        actor: recorder
                     });
                 }
             }
         }
+        else if(sMod.type === 'progress' || sMod.type === 'pending') {
+            const targetVal = sMod.targetStatus || (sMod.type === 'progress' ? 'กำลังดำเนินการ' : 'รอดำเนินการ');
+            let durationInHold = null;
+            let actionTitle = targetVal === 'กำลังดำเนินการ' ? '⚙️ ดำเนินการต่อ' : '⏳ รอดำเนินการ';
+
+            if (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') {
+              actionTitle = '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ';
+              if (t.issueReportedAt) {
+                const diffMs = Date.now() - new Date(t.issueReportedAt).getTime();
+                const dDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const dHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                durationInHold = dDays > 0 ? `${dDays} วัน ${dHours} ชม.` : `${dHours} ชม.`;
+              }
+            }
+
+            const newTimelineItem = {
+              timestamp: nowIso,
+              action: targetVal === 'กำลังดำเนินการ' ? (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา' ? 'RESUMED' : 'STATUS_CHANGE') : 'STATUS_CHANGE',
+              title: actionTitle,
+              fromStatus: t.status,
+              toStatus: targetVal,
+              note: sMod.reason?.trim() || (targetVal === 'กำลังดำเนินการ' && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') ? 'อะไหล่มาถึงแล้ว เข้าพื้นที่ดำเนินการต่อ' : `เปลี่ยนสถานะเป็น "${targetVal}"`),
+              actor: recorder
+            };
+            if (durationInHold) {
+              newTimelineItem.durationInHold = durationInHold;
+            }
+            timeline.push(newTimelineItem);
+            nT.status = targetVal;
+        }
+
         nT.timeline = timeline;
         saveD('task', nT);
     }
-    setSMod({ isOpen: false, taskId: null, type: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' });
+    setSMod({ isOpen: false, taskId: null, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false });
   };
 
   const upS = (k, v, arr=true) => { setSets(prev => { let nS = {...prev}; if(arr) { const val = (v || '').trim(); if(!val || (nS[k]||[]).includes(val)) return prev; nS[k] = [...(nS[k]||[]), val]; setSInp(p => ({...p, [k]:'', projArea:'', slaDays:''})); } else { nS[k] = v; } saveD('settings', nS); return nS; }); };
@@ -1097,7 +1215,7 @@ export default function App() {
                   {/* 1. เจ้าหน้าที่ */}
                   <select value={gFilt.staffName} onChange={e=>handleStaffFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-[#0f2e4a]" title="กรองตามเจ้าหน้าที่">
                     <option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>
-                    {Array.from(new Set((sets.emails||[]).map(e => e.split('|')[2] || e.split('|')[0].split('@')[0]))).filter(Boolean).map(n=><option key={n}>{n}</option>)}
+                    {allStaffNames.map(n=><option key={n}>{n}</option>)}
                   </select>
 
                   {/* 2. พื้นที่ (สัมพันธ์กับเจ้าหน้าที่) */}
@@ -1340,11 +1458,13 @@ export default function App() {
 
             <StatusChangeModal
               isOpen={sMod.isOpen}
-              onClose={() => setSMod({ ...sMod, isOpen: false, reason: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '' })}
+              onClose={() => setSMod({ ...sMod, isOpen: false, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false })}
               onConfirm={cfSt}
               sMod={sMod}
               setSMod={setSMod}
               getTStr={getTStr}
+              staffList={allStaffNames}
+              task={tasks.find(x => String(x.id) === String(sMod.taskId))}
             />
 
             {infView && (
