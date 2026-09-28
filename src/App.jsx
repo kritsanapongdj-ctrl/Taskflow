@@ -1379,6 +1379,9 @@ export default function App() {
                     handleClearData={handleClearData}
                     getTStr={getTStr}
                     Icon={Icon}
+                    db={db}
+                    getColRef={getColRef}
+                    getDocRef={getDocRef}
                   />
                 )}
               </React.Suspense>

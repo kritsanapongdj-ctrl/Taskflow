@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, doc, getDocs, deleteDoc } from 'firebase/firestore';
 
 export default function SettingsTab({
   setUnlk,
@@ -31,10 +32,123 @@ export default function SettingsTab({
   downloadCSV,
   handleClearData,
   getTStr,
-  Icon
+  Icon,
+  db,
+  getColRef,
+  getDocRef
 }) {
   const [activeTab, setActiveTab] = useState('projects');
   const [projSearch, setProjSearch] = useState('');
+
+  // --- Bot Reports State & Handlers ---
+  const [floodReports, setFloodReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [reportFilter, setReportFilter] = useState({ project: 'ทั้งหมด', status: 'ทั้งหมด', search: '' });
+  const [isDeleting, setIsDeleting] = useState(null);
+  const [selectedReportForDelete, setSelectedReportForDelete] = useState(null);
+  const [draftCount, setDraftCount] = useState(0);
+
+  const fetchReports = async () => {
+    if (!getColRef) return;
+    setLoadingReports(true);
+    try {
+      const snap = await getDocs(getColRef('flood_reports'));
+      const list = [];
+      snap.forEach((d) => {
+        list.push({ ...d.data(), id: d.id });
+      });
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setFloodReports(list);
+
+      const draftSnap = await getDocs(getColRef('flood_drafts'));
+      setDraftCount(draftSnap.size);
+    } catch (err) {
+      console.error('Fetch flood reports error:', err);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  useEffect(() => {
+    if (setUnlk) {
+      fetchReports();
+    }
+  }, [setUnlk, activeTab]);
+
+  const confirmDeleteReport = async () => {
+    if (!selectedReportForDelete) return;
+    const rId = selectedReportForDelete.reportId || selectedReportForDelete.id;
+    setIsDeleting(rId);
+    try {
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      // 1. Delete all photos in subcollection
+      const photosCol = collection(db, 'artifacts', appId, 'public', 'data', 'flood_reports', rId, 'photos');
+      const photosSnap = await getDocs(photosCol);
+      const delPromises = [];
+      photosSnap.forEach((p) => {
+        delPromises.push(deleteDoc(p.ref));
+      });
+      await Promise.all(delPromises);
+
+      // 2. Delete main document
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'flood_reports', rId);
+      await deleteDoc(docRef);
+
+      // 3. Update state
+      setFloodReports((prev) => prev.filter((r) => (r.reportId || r.id) !== rId));
+      setSelectedReportForDelete(null);
+    } catch (err) {
+      console.error('Delete report error:', err);
+      alert('❌ เกิดข้อผิดพลาดในการลบเอกสาร: ' + (err.message || err));
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const handleClearDrafts = async () => {
+    if (!window.confirm('⚠️ ต้องการล้างรอบรายงานที่ค้างอยู่ (Draft Sessions) ทั้งหมดใช่หรือไม่?\n\nฟังก์ชันนี้ใช้สำหรับเคลียร์คิวกรณีแอดมินส่งรูปผิดหรือส่งไม่ครบ')) return;
+    try {
+      const draftsCol = getColRef('flood_drafts');
+      const draftsSnap = await getDocs(draftsCol);
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      for (const d of draftsSnap.docs) {
+        const dPhotosCol = collection(db, 'artifacts', appId, 'public', 'data', 'flood_drafts', d.id, 'photos');
+        const dPhotosSnap = await getDocs(dPhotosCol);
+        for (const dp of dPhotosSnap.docs) {
+          await deleteDoc(dp.ref);
+        }
+        await deleteDoc(d.ref);
+      }
+      setDraftCount(0);
+      alert('✅ ล้างเซสชันรายงานค้างเรียบร้อยแล้ว');
+    } catch (e) {
+      alert('❌ เกิดข้อผิดพลาด: ' + e.message);
+    }
+  };
+
+  const normalReportsCount = floodReports.filter((r) => r.status === 'NORMAL').length;
+  const watchReportsCount = floodReports.filter((r) => r.status === 'WATCH').length;
+  const criticalReportsCount = floodReports.filter((r) => r.status === 'CRITICAL').length;
+  const totalReportPhotos = floodReports.reduce((sum, r) => sum + (r.photoCount || 0), 0);
+
+  const filteredFloodReports = floodReports.filter((r) => {
+    if (reportFilter.project !== 'ทั้งหมด') {
+      const pCode = r.projectCode || '';
+      const pName = r.projectName || '';
+      if (!pCode.includes(reportFilter.project) && !pName.includes(reportFilter.project)) return false;
+    }
+    if (reportFilter.status !== 'ทั้งหมด') {
+      if (r.status !== reportFilter.status) return false;
+    }
+    if (reportFilter.search) {
+      const q = reportFilter.search.toLowerCase().trim();
+      const matchId = (r.reportId || '').toLowerCase().includes(q);
+      const matchProj = (r.projectName || '').toLowerCase().includes(q) || (r.projectCode || '').toLowerCase().includes(q);
+      const matchSum = (r.executiveSummary || r.notes || '').toLowerCase().includes(q);
+      if (!matchId && !matchProj && !matchSum) return false;
+    }
+    return true;
+  });
 
   if (!setUnlk) {
     return (
@@ -150,6 +264,13 @@ export default function SettingsTab({
       sub: 'Reports & Data Center',
       icon: 'database',
       badge: null
+    },
+    {
+      id: 'bot_reports',
+      label: 'คลังเอกสาร & จัดการบอท',
+      sub: 'Bot Reports & Data Management',
+      icon: 'fileText',
+      badge: floodReports.length > 0 ? floodReports.length : null
     }
   ];
 
@@ -182,7 +303,7 @@ export default function SettingsTab({
       </div>
 
       {/* Segmented Sub-Navigation (LH 3S Clean Tabs) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200/60 shadow-inner">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200/60 shadow-inner">
         {navTabs.map((tabItem) => {
           const isActive = activeTab === tabItem.id;
           return (
@@ -1040,6 +1161,289 @@ export default function SettingsTab({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: คลังเอกสาร & จัดการบอท (Bot Reports & Data Management) */}
+      {/* ========================================================================= */}
+      {activeTab === 'bot_reports' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm border-t-4 border-t-[#0f2e4a]">
+            {/* Header Title & Actions */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 mb-6">
+              <div>
+                <h3 className="font-bold text-lg text-[#0f2e4a] flex items-center gap-2">
+                  <Icon name="fileText" size={22} className="text-[#bca374]" />
+                  คลังเอกสารรายงาน & จัดการข้อมูลบอท (Bot Reports Archive)
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  ศูนย์รวมเอกสาร PDF และผลการวิเคราะห์หน้างานที่สร้างจาก LINE Bot ทุกโครงการ พร้อมฟังก์ชันดาวน์โหลด และลบเอกสารหลัง Export
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchReports}
+                  disabled={loadingReports}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Icon name="refreshCw" size={14} className={loadingReports ? 'animate-spin' : ''} />
+                  รีเฟรชข้อมูล
+                </button>
+                {draftCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearDrafts}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Icon name="trash" size={14} />
+                    ล้างรอบค้าง ({draftCount})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              <div className="bg-[#0f2e4a]/5 p-3.5 rounded-xl border border-[#0f2e4a]/10">
+                <div className="text-[11px] font-bold text-gray-500 mb-1 flex items-center gap-1">
+                  <Icon name="fileText" size={13} className="text-[#0f2e4a]" /> เอกสารทั้งหมด
+                </div>
+                <div className="text-xl font-black text-[#0f2e4a]">
+                  {floodReports.length} <span className="text-xs font-normal text-gray-500">ฉบับ</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-100">
+                <div className="text-[11px] font-bold text-emerald-700 mb-1 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> สภาวะปกติ
+                </div>
+                <div className="text-xl font-black text-emerald-800">
+                  {normalReportsCount} <span className="text-xs font-normal text-emerald-600">ฉบับ</span>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-100">
+                <div className="text-[11px] font-bold text-amber-700 mb-1 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> เฝ้าระวัง
+                </div>
+                <div className="text-xl font-black text-amber-800">
+                  {watchReportsCount} <span className="text-xs font-normal text-amber-600">ฉบับ</span>
+                </div>
+              </div>
+
+              <div className="bg-rose-50 p-3.5 rounded-xl border border-rose-100">
+                <div className="text-[11px] font-bold text-rose-700 mb-1 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> วิกฤติ / เร่งด่วน
+                </div>
+                <div className="text-xl font-black text-rose-800">
+                  {criticalReportsCount} <span className="text-xs font-normal text-rose-600">ฉบับ</span>
+                </div>
+              </div>
+
+              <div className="bg-sky-50 p-3.5 rounded-xl border border-sky-100 col-span-2 md:col-span-1">
+                <div className="text-[11px] font-bold text-sky-700 mb-1 flex items-center gap-1">
+                  <Icon name="image" size={13} className="text-sky-600" /> ภาพถ่ายสะสม
+                </div>
+                <div className="text-xl font-black text-sky-800">
+                  {totalReportPhotos} <span className="text-xs font-normal text-sky-600">ภาพ</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-gray-50/80 p-4 rounded-xl border border-gray-200/60 mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
+                  <Icon name="filter" size={14} className="text-[#bca374]" /> กรอง:
+                </div>
+                {/* Project Filter */}
+                <select
+                  value={reportFilter.project}
+                  onChange={(e) => setReportFilter({ ...reportFilter, project: e.target.value })}
+                  className="bg-white border border-gray-200 text-xs rounded-lg px-2.5 py-1.5 font-semibold text-gray-700 outline-none cursor-pointer"
+                >
+                  <option value="ทั้งหมด">ทุกโครงการ ({floodReports.length})</option>
+                  {Array.from(new Set(floodReports.map((r) => r.projectCode).filter(Boolean))).map((code) => (
+                    <option key={code} value={code}>
+                      [{code}] {floodReports.find((r) => r.projectCode === code)?.projectName || ''}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Status Filter */}
+                <select
+                  value={reportFilter.status}
+                  onChange={(e) => setReportFilter({ ...reportFilter, status: e.target.value })}
+                  className="bg-white border border-gray-200 text-xs rounded-lg px-2.5 py-1.5 font-semibold text-gray-700 outline-none cursor-pointer"
+                >
+                  <option value="ทั้งหมด">ทุกสถานะ</option>
+                  <option value="NORMAL">🟢 สภาวะปกติ (Normal)</option>
+                  <option value="WATCH">🟡 เฝ้าระวัง (Watch)</option>
+                  <option value="CRITICAL">🔴 วิกฤติ (Critical)</option>
+                </select>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full md:w-72">
+                <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="ค้นหารหัสเอกสาร, โครงการ, ข้อความ..."
+                  value={reportFilter.search}
+                  onChange={(e) => setReportFilter({ ...reportFilter, search: e.target.value })}
+                  className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-xs outline-none focus:border-[#bca374] transition"
+                />
+              </div>
+            </div>
+
+            {/* Reports List */}
+            {loadingReports ? (
+              <div className="py-16 text-center text-gray-400 flex flex-col items-center justify-center">
+                <Icon name="refreshCw" size={32} className="animate-spin text-[#bca374] mb-3" />
+                <p className="text-sm font-semibold text-gray-600">กำลังโหลดรายการเอกสารรายงาน...</p>
+              </div>
+            ) : filteredFloodReports.length === 0 ? (
+              <div className="py-16 text-center text-gray-400 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                <Icon name="fileText" size={40} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-sm font-bold text-gray-600">ไม่พบเอกสารรายงานในระบบ</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  เมื่อแอดมินส่งคำสั่งรายงานน้ำท่วม (!น้ำท่วม [รหัส]) และส่งรูปภาพใน LINE บอทจะสร้างเอกสารและนำมาแสดงที่นี่โดยอัตโนมัติ
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredFloodReports.map((report) => {
+                  const isCritical = report.status === 'CRITICAL';
+                  const isWatch = report.status === 'WATCH';
+                  const statusBadge = isCritical
+                    ? { bg: 'bg-rose-50 text-rose-700 border-rose-200', text: '🔴 วิกฤติ / เร่งด่วน' }
+                    : isWatch
+                    ? { bg: 'bg-amber-50 text-amber-700 border-amber-200', text: '🟡 เฝ้าระวัง' }
+                    : { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: '🟢 สภาวะปกติ' };
+
+                  const pdfUrl = `/api/flood-report?id=${report.reportId || report.id}`;
+
+                  return (
+                    <div
+                      key={report.reportId || report.id}
+                      className="bg-white border border-gray-200/80 rounded-2xl p-4 hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      {/* Left: Info */}
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-black text-[#0f2e4a] bg-[#0f2e4a]/10 px-2.5 py-0.5 rounded-lg border border-[#0f2e4a]/15">
+                            {report.reportId || report.id}
+                          </span>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusBadge.bg}`}>
+                            {statusBadge.text}
+                          </span>
+                          <span className="text-[11px] text-gray-400">
+                            🕒 {report.surveyDateThai || '-'} เวลา {report.surveyTimeThai || '-'} น.
+                          </span>
+                        </div>
+
+                        <div className="text-sm font-bold text-[#0f2e4a]">
+                          [{report.projectCode || '-'}] {report.projectName || 'ไม่ระบุชื่อโครงการ'}
+                          <span className="text-xs font-normal text-gray-500 ml-2">({report.projectArea || '-'})</span>
+                        </div>
+
+                        {/* Summary / Notes snippet */}
+                        <div className="text-xs text-gray-600 line-clamp-2 bg-gray-50/70 p-2.5 rounded-xl border border-gray-100">
+                          {report.executiveSummary || report.notes || 'ตรวจเช็คสถานะการระบายน้ำประจำวัน'}
+                        </div>
+
+                        {/* Quick tags */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500 pt-0.5">
+                          <span>📸 {report.photoCount || 0} ภาพ</span>
+                          {report.pumpsRunning && (
+                            <span className="text-gray-600 font-medium">⚙️ {report.pumpsRunning}</span>
+                          )}
+                          {report.drainageCondition && (
+                            <span className="text-gray-600 font-medium">🌊 {report.drainageCondition}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
+                        {/* Open / Print PDF button */}
+                        <a
+                          href={pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#0f2e4a] hover:bg-[#163a63] text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                        >
+                          <Icon name="externalLink" size={14} />
+                          เปิดดู PDF
+                        </a>
+
+                        {/* Red Trash Delete button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReportForDelete(report)}
+                          disabled={isDeleting === (report.reportId || report.id)}
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200/80 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                        >
+                          <Icon name="trash" size={14} />
+                          {isDeleting === (report.reportId || report.id) ? 'กำลังลบ...' : 'ลบเอกสาร'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Delete Confirmation Modal */}
+          {selectedReportForDelete && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-150">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                  <Icon name="trash" size={24} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 text-center mb-1">
+                  ยืนยันการลบเอกสารรายงานถาวร?
+                </h3>
+                <p className="text-xs text-gray-500 text-center mb-4">
+                  การกระทำนี้จะลบไฟล์และรูปภาพทั้งหมดออกจาก Cloud โดยไม่สามารถกู้คืนได้
+                </p>
+
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs space-y-1.5 mb-5 text-gray-700 font-medium">
+                  <div><strong>รหัสเอกสาร:</strong> <span className="font-mono">{selectedReportForDelete.reportId || selectedReportForDelete.id}</span></div>
+                  <div><strong>โครงการ:</strong> [{selectedReportForDelete.projectCode}] {selectedReportForDelete.projectName}</div>
+                  <div><strong>วันที่สำรวจ:</strong> {selectedReportForDelete.surveyDateThai} ({selectedReportForDelete.surveyTimeThai} น.)</div>
+                  <div><strong>จำนวนภาพถ่าย:</strong> {selectedReportForDelete.photoCount || 0} ภาพ (จะถูกลบทั้งหมด)</div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200/80 p-3 rounded-xl mb-5 text-[11px] text-amber-800">
+                  💡 <strong>คำแนะนำ:</strong> หากต้องการเก็บเอกสารไว้ กรุณากดปุ่ม <strong>"เปิดดู PDF"</strong> เพื่อดาวน์โหลดเก็บไว้ในเครื่องก่อนกดยืนยันลบครับ
+                </div>
+
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReportForDelete(null)}
+                    disabled={isDeleting !== null}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    ยกเลิก (Cancel)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteReport}
+                    disabled={isDeleting !== null}
+                    className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Icon name="trash" size={14} />
+                    {isDeleting ? 'กำลังลบข้อมูล...' : 'ยืนยันลบเอกสาร'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
