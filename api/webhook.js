@@ -1900,10 +1900,34 @@ export default async function handler(req, res) {
           const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
           const draftSnap = await getDoc(draftRef);
           if (draftSnap.exists()) {
-            const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-            if (photosSnap.size > 0) {
+            const draft = draftSnap.data();
+            if (draft.finalizing) {
+              await replyToLine(replyToken, `⏳ ระบบกำลังประมวลผลรูปภาพและสร้างเอกสารสรุป PDF ให้เรียบร้อยแล้วครับ กรุณารอสักครู่...`);
+              continue;
+            }
+
+            // Smart Wait Buffer: ดักรอรูปภาพที่กำลังเดินทาง (In-flight images) ป้องกันการที่ข้อความ '!เสร็จ' วิ่งแซงรูปภาพ
+            let photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+            let currentCount = photosSnap.size;
+            const expected = draft.expectedCount || 0;
+            const timeSinceLastPhoto = Date.now() - (draft.lastPhotoAt || 0);
+
+            // หากยังไม่ครบ expectedCount หรือเพิ่งมีรูปล่าสุดเข้ามาไม่ถึง 5 วินาที ให้รอ buffer ให้รูปที่เหลือโหลดเสร็จสมบูรณ์
+            if ((expected > 0 && currentCount < expected) || (timeSinceLastPhoto < 5000)) {
+              await new Promise(r => setTimeout(r, 2500));
+              photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+
+              // ถ้ารูปเพิ่มขึ้นและยังไม่ครบตามเป้าหมาย รอเพิ่มอีก 1.5 วินาที
+              if (photosSnap.size > currentCount && expected > 0 && photosSnap.size < expected) {
+                await new Promise(r => setTimeout(r, 1500));
+                photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+              }
+            }
+
+            const finalPhotoCount = photosSnap.size;
+            if (finalPhotoCount > 0) {
               await updateDoc(draftRef, { finalizing: true });
-              await replyToLine(replyToken, `⏳ กำลังรวบรวมรูปภาพ ${photosSnap.size} ภาพ และสร้างเอกสารสรุป PDF สักครู่ครับ...`);
+              await replyToLine(replyToken, `⏳ ได้รับรูปภาพครบ ${finalPhotoCount} ภาพเรียบร้อยแล้ว กำลังวิเคราะห์และสร้างเอกสารสรุป PDF สักครู่ครับ...`);
               await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               continue;
             } else {
@@ -2141,7 +2165,11 @@ export default async function handler(req, res) {
                 }
               }
             } else if (count === 1 && (!imageSet || imageSet.index === 1)) {
-              await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (ระบบรองรับสูงสุด 10 รูป หรือพิมพ์ '!เสร็จ' เพื่อสรุปรายงานได้ทันทีครับ)`);
+              if (imageSet && imageSet.total > 1) {
+                await replyToLine(replyToken, `📸 กำลังรับชุดภาพถ่ายหน้างาน (${imageSet.total} ภาพ)... ระบบจะรวบรวมและสร้างเอกสารสรุปให้อัตโนมัติเมื่อครบครับ (หรือพิมพ์ '!เสร็จ' เพื่อสรุปรายงานได้ทันที)`);
+              } else {
+                await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (ส่งต่อได้สูงสุด 10 รูป หรือพิมพ์ '!เสร็จ' เมื่อส่งครบครับ)`);
+              }
             }
           } else {
             // ยังไม่มี Draft ให้ตอบรับและแนะนำวิธีพิมพ์คำสั่ง
