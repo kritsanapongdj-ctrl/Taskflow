@@ -854,7 +854,7 @@ function getRealTimeSurveillanceSynthesis(reportArea, areaLabel, generatedAtThai
   // 2. Google Flood Hub (ระบบ AI คาดการณ์น้ำท่วมล่วงหน้า)
   const floodHub = {
     title: 'Google Flood Hub (AI Flood Forecasting)',
-    url: 'https://floodhub.google.com',
+    url: 'https://sites.research.google/floods/',
     badge: 'AI Hydrological Model',
     lead: 'ระบบปัญญาประดิษฐ์พยากรณ์น้ำหลากล่วงหน้าในแม่น้ำสายหลัก',
     bullets: [
@@ -1702,11 +1702,11 @@ async function handleExecutiveSummary(req, res) {
             <span class="pill-dot"></span>
             <span>🌀 Windy.com</span>
           </a>
-          <a href="https://www.accuweather.com" target="_blank" rel="noopener" class="source-pill-link">
+          <a href="https://accuweather.com" target="_blank" rel="noopener" class="source-pill-link">
             <span class="pill-dot"></span>
             <span>⛅ AccuWeather</span>
           </a>
-          <a href="https://floodhub.google.com" target="_blank" rel="noopener" class="source-pill-link">
+          <a href="https://sites.research.google/floods/" target="_blank" rel="noopener" class="source-pill-link">
             <span class="pill-dot"></span>
             <span>🌐 Google Flood Hub</span>
           </a>
@@ -1722,10 +1722,10 @@ async function handleExecutiveSummary(req, res) {
         <!-- Card 1: GISTDA Satellite Monitoring -->
         <div class="src-card">
           <div class="src-card-head">
-            <div class="src-card-title">
+            <a href="https://disaster.gistda.or.th/" target="_blank" rel="noopener" class="src-card-title" style="text-decoration: none; color: inherit;">
               <span>🛰️</span>
-              <span>GISTDA Disaster Monitoring</span>
-            </div>
+              <span>GISTDA Disaster Monitoring ↗</span>
+            </a>
             <span class="src-badge">${surveillance.gistda.badge}</span>
           </div>
           <div class="src-card-body">
@@ -1739,10 +1739,10 @@ async function handleExecutiveSummary(req, res) {
         <!-- Card 2: Google Flood Hub AI -->
         <div class="src-card">
           <div class="src-card-head">
-            <div class="src-card-title">
+            <a href="https://sites.research.google/floods/" target="_blank" rel="noopener" class="src-card-title" style="text-decoration: none; color: inherit;">
               <span>🌐</span>
-              <span>Google Flood Hub AI</span>
-            </div>
+              <span>Google Flood Hub AI ↗</span>
+            </a>
             <span class="src-badge">${surveillance.floodHub.badge}</span>
           </div>
           <div class="src-card-body">
@@ -1756,10 +1756,10 @@ async function handleExecutiveSummary(req, res) {
         <!-- Card 3: Windy.com -->
         <div class="src-card">
           <div class="src-card-head">
-            <div class="src-card-title">
+            <a href="https://www.windy.com" target="_blank" rel="noopener" class="src-card-title" style="text-decoration: none; color: inherit;">
               <span>🌀</span>
-              <span>Windy.com Radar & Wind Vector</span>
-            </div>
+              <span>Windy.com Radar & Wind Vector ↗</span>
+            </a>
             <span class="src-badge">${surveillance.windy.badge}</span>
           </div>
           <div class="src-card-body">
@@ -1773,10 +1773,10 @@ async function handleExecutiveSummary(req, res) {
         <!-- Card 4: AccuWeather -->
         <div class="src-card">
           <div class="src-card-head">
-            <div class="src-card-title">
+            <a href="https://accuweather.com" target="_blank" rel="noopener" class="src-card-title" style="text-decoration: none; color: inherit;">
               <span>⛅</span>
-              <span>AccuWeather Hyperlocal Index</span>
-            </div>
+              <span>AccuWeather Hyperlocal Index ↗</span>
+            </a>
             <span class="src-badge">${surveillance.accuWeather.badge}</span>
           </div>
           <div class="src-card-body">
