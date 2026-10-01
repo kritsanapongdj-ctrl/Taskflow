@@ -185,7 +185,7 @@ export default function SettingsTab({
   };
 
   const handleOpenExecutivePdf = () => {
-    const url = `/api/flood-report?mode=executive&start=${execDateRange.start}&end=${execDateRange.end}&scope=${execScope}&area=${execArea}`;
+    const url = `/api/flood-report?mode=executive&start=${execDateRange.start}&end=${execDateRange.end}&scope=${execScope}&area=${execArea}&_t=${Date.now()}`;
     window.open(url, '_blank');
   };
 

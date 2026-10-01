@@ -1965,7 +1965,7 @@ async function handleExecutiveSummary(req, res) {
 </html>`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=120');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.status(200).send(html);
 
   } catch (err) {
