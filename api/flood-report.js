@@ -794,10 +794,42 @@ export default async function handler(req, res) {
 }
 
 // ==========================================
+// ตรวจสอบว่าโครงการอยู่ในพื้นที่/จังหวัดที่เลือกหรือไม่
+function isProjectInArea(p, areaCode) {
+  if (!areaCode || areaCode === 'all') return true;
+  const code = (p.projectCode || p.code || '').toUpperCase();
+  const areaStr = (p.projectArea || p.area || '').toLowerCase();
+  const nameStr = (p.projectName || p.name || '').toLowerCase();
+  const lat = Number(p.lat || 0);
+
+  if (areaCode === 'province-ayutthaya') {
+    return areaStr.includes('อยุธยา') || /LH-341|LH-328|NE-411/i.test(code) || (lat > 14.2);
+  }
+  if (areaCode === 'province-pathumthani') {
+    return areaStr.includes('ปทุมธานี') || areaStr.includes('ธัญบุรี') || areaStr.includes('ลำลูกกา') || areaStr.includes('รังสิต') || areaStr.includes('บางคูวัด') || /LH-410|LH-415|NE-419|LH-419/i.test(code);
+  }
+  if (areaCode === 'province-nonthaburi') {
+    return areaStr.includes('นนทบุรี') || areaStr.includes('บางบัวทอง') || areaStr.includes('บางใหญ่') || areaStr.includes('ปากเกร็ด') || /LH-323|LH-337|LH-354|LH-383|LH-406|LH-372|LH-420|LA-029/i.test(code);
+  }
+  if (areaCode === 'province-bkk') {
+    return areaStr.includes('กรุงเทพ') || areaStr.includes('กทม') || /LH-379|LH-392|LH-395|LA-025|LH-120|LH-195|LH-225|LH-402|LH-329|LH-414|LH-421|LH-221|LH-205|LH-355|LH-288/i.test(code);
+  }
+  if (areaCode === 'zone-bkk-north') {
+    return /LA-025|LH-402|LH-195|LH-120|LH-225/i.test(code) || /สายไหม|คลองสามวา|บางเขน|ออเงิน|จตุโชติ|หนองระแหง|หทัยราษฎร์|ท่าแร้ง/i.test(areaStr + ' ' + nameStr);
+  }
+  if (areaCode === 'zone-bkk-east') {
+    return /LH-379|LH-392|LH-395|LH-329/i.test(code) || /สะพานสูง|มีนบุรี|กรุงเทพกรีฑา|ร่มเกล้า/i.test(areaStr + ' ' + nameStr);
+  }
+  if (areaCode === 'zone-bkk-west') {
+    return /LH-414|LH-421|LH-221|LH-205|LH-355|LH-288/i.test(code) || /ทวีวัฒนา|ตลิ่งชัน|หนองแขม|บางขุนเทียน|พระราม 2|พรานนก|ปิ่นเกล้า|เพชรเกษม|แสมดำ/i.test(areaStr + ' ' + nameStr);
+  }
+  return true;
+}
+
 // 📑 รายงานสรุปภาพรวมผู้บริหาร (EXECUTIVE SUMMARY)
 // ==========================================
 async function handleExecutiveSummary(req, res) {
-  const { start, end, scope } = req.query;
+  const { start, end, scope, area } = req.query;
 
   try {
     await signInAnonymously(auth);
@@ -823,6 +855,19 @@ async function handleExecutiveSummary(req, res) {
     const startTs = new Date(`${startDateStr}T00:00:00+07:00`).getTime();
     const endTs = new Date(`${endDateStr}T23:59:59+07:00`).getTime();
     const reportScope = scope || 'focus'; // 'focus' | 'all' | 'critical'
+    const reportArea = area || 'all';
+
+    const AREA_LABELS = {
+      'all': 'ทุกพื้นที่ (All Areas)',
+      'province-ayutthaya': 'จังหวัดพระนครศรีอยุธยา',
+      'province-pathumthani': 'จังหวัดปทุมธานี',
+      'province-nonthaburi': 'จังหวัดนนทบุรี',
+      'province-bkk': 'กรุงเทพมหานคร (ทุกเขต)',
+      'zone-bkk-north': 'กทม. เหนือ (สายไหม / คลองสามวา / บางเขน)',
+      'zone-bkk-east': 'กทม. ตะวันออก (สะพานสูง / มีนบุรี)',
+      'zone-bkk-west': 'กทม. ฝั่งธนบุรี & ใต้ (ทวีวัฒนา / ตลิ่งชัน / หนองแขม / พระราม 2)'
+    };
+    const areaLabel = AREA_LABELS[reportArea] || 'ทุกพื้นที่ (All Areas)';
 
     const formatThaiDate = (ymd) => {
       if (!ymd) return '-';
@@ -837,7 +882,8 @@ async function handleExecutiveSummary(req, res) {
     const endThai = formatThaiDate(endDateStr);
     const dateRangeLabel = startDateStr === endDateStr ? startThai : `${startThai} – ${endThai}`;
     const dateCode = `${startDateStr.replace(/-/g, '').slice(2)}-${endDateStr.replace(/-/g, '').slice(2)}`;
-    const execReportId = `EX-FLD-${dateCode}`;
+    const areaCodeSuffix = reportArea !== 'all' ? `-${reportArea.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}` : '';
+    const execReportId = `EX-FLD-${dateCode}${areaCodeSuffix}`;
 
     const genDay = nowBangkok.getDate();
     const genMonth = thaiMonths[nowBangkok.getMonth()];
@@ -868,21 +914,27 @@ async function handleExecutiveSummary(req, res) {
     });
     const distinctProjects = Array.from(projectMap.values());
 
-    const totalMonitored = distinctProjects.length;
-    const normalCount = distinctProjects.filter((p) => p.status === 'NORMAL').length;
-    const watchCount = distinctProjects.filter((p) => p.status === 'WATCH').length;
-    const criticalCount = distinctProjects.filter((p) => p.status === 'CRITICAL').length;
-
-    // 3. กรองตามขอบเขต (Scope)
-    let displayProjects = distinctProjects;
-    if (reportScope === 'focus') {
-      displayProjects = distinctProjects.filter((p) => p.status === 'WATCH' || p.status === 'CRITICAL');
-    } else if (reportScope === 'critical') {
-      displayProjects = distinctProjects.filter((p) => p.status === 'CRITICAL');
+    // 3. กรองตามพื้นที่ (Area Filter)
+    let areaFilteredProjects = distinctProjects;
+    if (reportArea !== 'all') {
+      areaFilteredProjects = distinctProjects.filter((p) => isProjectInArea(p, reportArea));
     }
 
-    // 4. ดึงภาพถ่ายไฮไลท์ 2 ภาพ สำหรับโครงการที่มีสถานะเฝ้าระวังหรือวิกฤต (Focus Areas)
-    const focusProjects = distinctProjects.filter((p) => p.status === 'WATCH' || p.status === 'CRITICAL');
+    const totalMonitored = areaFilteredProjects.length;
+    const normalCount = areaFilteredProjects.filter((p) => p.status === 'NORMAL').length;
+    const watchCount = areaFilteredProjects.filter((p) => p.status === 'WATCH').length;
+    const criticalCount = areaFilteredProjects.filter((p) => p.status === 'CRITICAL').length;
+
+    // 4. กรองตามขอบเขตความเสี่ยง (Scope)
+    let displayProjects = areaFilteredProjects;
+    if (reportScope === 'focus') {
+      displayProjects = areaFilteredProjects.filter((p) => p.status === 'WATCH' || p.status === 'CRITICAL');
+    } else if (reportScope === 'critical') {
+      displayProjects = areaFilteredProjects.filter((p) => p.status === 'CRITICAL');
+    }
+
+    // 5. ดึงภาพถ่ายไฮไลท์ 2 ภาพ สำหรับโครงการที่มีสถานะเฝ้าระวังหรือวิกฤต (Focus Areas)
+    const focusProjects = areaFilteredProjects.filter((p) => p.status === 'WATCH' || p.status === 'CRITICAL');
     for (const p of focusProjects) {
       try {
         const pCol = collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports", p.reportId || p.id, "photos");
@@ -897,15 +949,15 @@ async function handleExecutiveSummary(req, res) {
     }
 
     // สรุปข้อมูลลุ่มน้ำและสภาพอากาศ
-    const uniqueBasinAlerts = Array.from(new Set(distinctProjects.map((p) => p.basinAlert).filter(Boolean)));
+    const uniqueBasinAlerts = Array.from(new Set(areaFilteredProjects.map((p) => p.basinAlert).filter(Boolean)));
     const basinBrief = uniqueBasinAlerts.length > 0
       ? uniqueBasinAlerts.slice(0, 3).join(' • ')
-      : 'ระดับน้ำคลองสายหลัก (คลองรังสิตฯ, คลองหกวา, คลองแสนแสบ, คลองประเวศฯ, คลองสำโรง) ควบคุมการระบายต่อเนื่อง ประตูระบายน้ำและสถานีสูบน้ำหลักเปิดเดินเครื่องระบายสู่แม่น้ำเจ้าพระยาและอ่าวไทย';
+      : 'ระดับน้ำคลองสายหลักควบคุมการระบายต่อเนื่อง ประตูระบายน้ำและสถานีสูบน้ำหลักเปิดเดินเครื่องระบายสู่แม่น้ำเจ้าพระยาและอ่าวไทยตามรอบน้ำลง';
 
-    const uniqueTmdAlerts = Array.from(new Set(distinctProjects.map((p) => p.tmdAlert).filter(Boolean)));
+    const uniqueTmdAlerts = Array.from(new Set(areaFilteredProjects.map((p) => p.tmdAlert).filter(Boolean)));
     const tmdBrief = uniqueTmdAlerts.length > 0
       ? uniqueTmdAlerts.slice(0, 2).join(' • ')
-      : 'ร่องมรสุมกำลังปานกลางพาดผ่านพื้นที่กรุงเทพฯ และปริมณฑล โอกาสฝนตก 60–70% เฝ้าระวังฝนตกสะสมช่วงบ่ายถึงค่ำ';
+      : 'ร่องมรสุมกำลังปานกลางพาดผ่านภาคกลาง โอกาสฝนตก 60–70% เฝ้าระวังฝนตกสะสมช่วงบ่ายถึงค่ำ';
 
     const html = `<!DOCTYPE html>
 <html lang="th">
@@ -1351,7 +1403,7 @@ async function handleExecutiveSummary(req, res) {
   <div class="action-bar">
     <div class="action-bar-title">
       <span>📑 สรุปภาพรวมผู้บริหาร Land & Houses</span>
-      <span style="opacity: 0.7; font-weight: normal;">(${dateRangeLabel})</span>
+      <span style="opacity: 0.7; font-weight: normal;">(${dateRangeLabel}) • ${areaLabel}</span>
     </div>
     <div style="display: flex; gap: 8px;">
       <button type="button" class="btn-print" onclick="window.print()">
@@ -1379,8 +1431,13 @@ async function handleExecutiveSummary(req, res) {
         <h1>รายงานสรุปภาพรวมสถานการณ์น้ำท่วมและการระบายน้ำ (EXECUTIVE SUMMARY)</h1>
         <p>สรุปผลการสำรวจและประเมินประสิทธิภาพการระบายน้ำโครงการ Land & Houses ตามเกณฑ์การบริหารจัดการความเสี่ยง</p>
       </div>
-      <div class="banner-period">
-        ช่วงวันที่สำรวจ: ${dateRangeLabel}
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+        <div class="banner-period">
+          ช่วงวันที่สำรวจ: ${dateRangeLabel}
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.3); padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; color: #ffffff;">
+          📍 พื้นที่: ${areaLabel}
+        </div>
       </div>
     </div>
 
@@ -1419,7 +1476,7 @@ async function handleExecutiveSummary(req, res) {
     <!-- 2. Status Matrix Table -->
     <div class="section-head">
       <div class="section-title">📋 2. ตารางสรุปสถานะทุกโครงการในหน้าเดียว (Status Matrix)</div>
-      <div class="section-sub">ข้อมูลล่าสุดตามช่วงวันที่สำรวจ ${dateRangeLabel} (${displayProjects.length} โครงการ)</div>
+      <div class="section-sub">ข้อมูลล่าสุดตามช่วงวันที่สำรวจ ${dateRangeLabel} • ${areaLabel} (${displayProjects.length} โครงการ)</div>
     </div>
 
     <div class="matrix-wrap">
@@ -1441,7 +1498,7 @@ async function handleExecutiveSummary(req, res) {
           ${displayProjects.length === 0 ? `
             <tr>
               <td colspan="9" style="text-align: center; padding: 24px; color: var(--lh-muted);">
-                ไม่พบโครงการที่ตรงกับเงื่อนไขในขอบเขตที่เลือก
+                ไม่พบข้อมูลโครงการที่ตรงกับเงื่อนไขในขอบเขตและพื้นที่ที่เลือก (${areaLabel})
               </td>
             </tr>
           ` : displayProjects.map((p, idx) => {
@@ -1473,12 +1530,12 @@ async function handleExecutiveSummary(req, res) {
     <!-- 3. Focus Areas: Deep Dive for Yellow & Red -->
     <div class="section-head">
       <div class="section-title">🚨 3. เจาะลึกเฉพาะโครงการที่ต้องจับตา (Focus Areas: สถานะเหลือง & แดง)</div>
-      <div class="section-sub">แนวทางปฏิบัติการเชิงรุกตามมาตรฐาน ปภ. และสากล (FEMA Standards)</div>
+      <div class="section-sub">แนวทางปฏิบัติการเชิงรุกตามมาตรฐาน ปภ. และสากล (FEMA Standards) • ${areaLabel}</div>
     </div>
 
     ${focusProjects.length === 0 ? `
       <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 20px; text-align: center; color: #166534; font-size: 12.5px; font-weight: 700; margin-bottom: 24px;">
-        ✅ ทุกโครงการอยู่ในสภาวะปกติ (100% Normal Condition) ระบบระบายน้ำและสถานีสูบน้ำทำงานปกติ ไม่มีจุดเฝ้าระวังพิเศษ
+        ✅ ทุกโครงการในพื้นที่ (${areaLabel}) อยู่ในสภาวะปกติ (100% Normal Condition) ระบบระบายน้ำและสถานีสูบน้ำทำงานปกติ ไม่มีจุดเฝ้าระวังพิเศษ
       </div>
     ` : focusProjects.map((p) => {
       const isCrit = p.status === 'CRITICAL';

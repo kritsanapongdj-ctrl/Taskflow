@@ -43,7 +43,7 @@ export default function SettingsTab({
   // --- Bot Reports State & Handlers ---
   const [floodReports, setFloodReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
-  const [reportFilter, setReportFilter] = useState({ project: 'ทั้งหมด', status: 'ทั้งหมด', search: '' });
+  const [reportFilter, setReportFilter] = useState({ project: 'ทั้งหมด', status: 'ทั้งหมด', area: 'ทั้งหมด', search: '' });
   const [isDeleting, setIsDeleting] = useState(null);
   const [selectedReportForDelete, setSelectedReportForDelete] = useState(null);
   const [draftCount, setDraftCount] = useState(0);
@@ -71,7 +71,40 @@ export default function SettingsTab({
     end: getTodayStr()
   });
   const [execScope, setExecScope] = useState('focus'); // 'focus' | 'all' | 'critical'
+  const [execArea, setExecArea] = useState('all'); // 'all' | 'province-ayutthaya' | 'province-pathumthani' | 'province-nonthaburi' | 'province-bkk' | 'zone-bkk-north' | 'zone-bkk-east' | 'zone-bkk-west'
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+  // ตรวจสอบว่ารายงานหรือโครงการอยู่ในพื้นที่/จังหวัดที่เลือกหรือไม่
+  const isProjectInArea = (p, areaCode) => {
+    if (!areaCode || areaCode === 'all' || areaCode === 'ทั้งหมด') return true;
+    const code = (p.projectCode || p.code || '').toUpperCase();
+    const areaStr = (p.projectArea || p.area || '').toLowerCase();
+    const nameStr = (p.projectName || p.name || '').toLowerCase();
+    const lat = Number(p.lat || 0);
+
+    if (areaCode === 'province-ayutthaya') {
+      return areaStr.includes('อยุธยา') || /LH-341|LH-328|NE-411/i.test(code) || (lat > 14.2);
+    }
+    if (areaCode === 'province-pathumthani') {
+      return areaStr.includes('ปทุมธานี') || areaStr.includes('ธัญบุรี') || areaStr.includes('ลำลูกกา') || areaStr.includes('รังสิต') || areaStr.includes('บางคูวัด') || /LH-410|LH-415|NE-419|LH-419/i.test(code);
+    }
+    if (areaCode === 'province-nonthaburi') {
+      return areaStr.includes('นนทบุรี') || areaStr.includes('บางบัวทอง') || areaStr.includes('บางใหญ่') || areaStr.includes('ปากเกร็ด') || /LH-323|LH-337|LH-354|LH-383|LH-406|LH-372|LH-420|LA-029/i.test(code);
+    }
+    if (areaCode === 'province-bkk') {
+      return areaStr.includes('กรุงเทพ') || areaStr.includes('กทม') || /LH-379|LH-392|LH-395|LA-025|LH-120|LH-195|LH-225|LH-402|LH-329|LH-414|LH-421|LH-221|LH-205|LH-355|LH-288/i.test(code);
+    }
+    if (areaCode === 'zone-bkk-north') {
+      return /LA-025|LH-402|LH-195|LH-120|LH-225/i.test(code) || /สายไหม|คลองสามวา|บางเขน|ออเงิน|จตุโชติ|หนองระแหง|หทัยราษฎร์|ท่าแร้ง/i.test(areaStr + ' ' + nameStr);
+    }
+    if (areaCode === 'zone-bkk-east') {
+      return /LH-379|LH-392|LH-395|LH-329/i.test(code) || /สะพานสูง|มีนบุรี|กรุงเทพกรีฑา|ร่มเกล้า/i.test(areaStr + ' ' + nameStr);
+    }
+    if (areaCode === 'zone-bkk-west') {
+      return /LH-414|LH-421|LH-221|LH-205|LH-355|LH-288/i.test(code) || /ทวีวัฒนา|ตลิ่งชัน|หนองแขม|บางขุนเทียน|พระราม 2|พรานนก|ปิ่นเกล้า|เพชรเกษม|แสมดำ/i.test(areaStr + ' ' + nameStr);
+    }
+    return true;
+  };
 
   const fetchReports = async () => {
     if (!getColRef) return;
@@ -152,7 +185,7 @@ export default function SettingsTab({
   };
 
   const handleOpenExecutivePdf = () => {
-    const url = `/api/flood-report?mode=executive&start=${execDateRange.start}&end=${execDateRange.end}&scope=${execScope}`;
+    const url = `/api/flood-report?mode=executive&start=${execDateRange.start}&end=${execDateRange.end}&scope=${execScope}&area=${execArea}`;
     window.open(url, '_blank');
   };
 
@@ -166,6 +199,7 @@ export default function SettingsTab({
       const matchingReports = floodReports.filter((r) => {
         const ts = r.createdAt || Date.now();
         if (ts < startTs || ts > endTs) return false;
+        if (!isProjectInArea(r, execArea)) return false;
         if (execScope === 'focus') {
           return r.status === 'WATCH' || r.status === 'CRITICAL';
         }
@@ -176,7 +210,7 @@ export default function SettingsTab({
       });
 
       if (matchingReports.length === 0) {
-        alert('⚠️ ไม่พบข้อมูลรายงานที่ตรงกับช่วงวันที่และขอบเขตสถานะที่เลือก');
+        alert('⚠️ ไม่พบข้อมูลรายงานที่ตรงกับช่วงวันที่ ขอบเขตสถานะ หรือพื้นที่ที่เลือก');
         return;
       }
 
@@ -206,7 +240,8 @@ export default function SettingsTab({
       }));
       worksheet['!cols'] = colWidths;
 
-      XLSX.writeFile(workbook, `LH_Flood_Executive_Summary_${execDateRange.start}_to_${execDateRange.end}.xlsx`);
+      const areaSuffix = execArea !== 'all' ? `_${execArea}` : '';
+      XLSX.writeFile(workbook, `LH_Flood_Executive_Summary_${execDateRange.start}_to_${execDateRange.end}${areaSuffix}.xlsx`);
     } catch (err) {
       console.error('Export Excel error:', err);
       alert('❌ เกิดข้อผิดพลาดในการส่งออก Excel: ' + (err.message || err));
@@ -221,6 +256,9 @@ export default function SettingsTab({
   const totalReportPhotos = floodReports.reduce((sum, r) => sum + (r.photoCount || 0), 0);
 
   const filteredFloodReports = floodReports.filter((r) => {
+    if (reportFilter.area && reportFilter.area !== 'ทั้งหมด') {
+      if (!isProjectInArea(r, reportFilter.area)) return false;
+    }
     if (reportFilter.project !== 'ทั้งหมด') {
       const pCode = r.projectCode || '';
       const pName = r.projectName || '';
@@ -1359,18 +1397,38 @@ export default function SettingsTab({
                   </p>
                 </div>
 
-                {/* Scope selection */}
-                <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/10 text-xs">
-                  <span className="text-gray-300 pl-2 font-medium">ขอบเขต:</span>
-                  <select
-                    value={execScope}
-                    onChange={(e) => setExecScope(e.target.value)}
-                    className="bg-[#0f2e4a] border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold outline-none cursor-pointer"
-                  >
-                    <option value="focus">🟡 เฝ้าระวัง & 🔴 วิกฤต (แนะนำผู้บริหาร)</option>
-                    <option value="all">ทุกโครงการ (รวมสภาวะปกติ 🟢)</option>
-                    <option value="critical">🔴 เฉพาะวิกฤต (Critical Only)</option>
-                  </select>
+                {/* Scope & Area selection */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/10 text-xs">
+                    <span className="text-gray-300 pl-2 font-medium">📍 พื้นที่/โซน:</span>
+                    <select
+                      value={execArea}
+                      onChange={(e) => setExecArea(e.target.value)}
+                      className="bg-[#0f2e4a] border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold outline-none cursor-pointer"
+                    >
+                      <option value="all">🌐 ทุกพื้นที่ (ทุกจังหวัด - 30 โครงการ)</option>
+                      <option value="province-ayutthaya">🏛️ พระนครศรีอยุธยา (3 โครงการ)</option>
+                      <option value="province-pathumthani">🌾 ปทุมธานี (4 โครงการ)</option>
+                      <option value="province-nonthaburi">🌳 นนทบุรี (8 โครงการ)</option>
+                      <option value="province-bkk">🏙️ กรุงเทพมหานคร (ทุกเขต - 15 โครงการ)</option>
+                      <option value="zone-bkk-north">📍 กทม. เหนือ (สายไหม/คลองสามวา/บางเขน - 5 โครงการ)</option>
+                      <option value="zone-bkk-east">📍 กทม. ตะวันออก (สะพานสูง/มีนบุรี - 4 โครงการ)</option>
+                      <option value="zone-bkk-west">📍 กทม. ฝั่งธนบุรี & ใต้ (ทวีวัฒนา/ตลิ่งชัน/พระราม 2 - 6 โครงการ)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/10 text-xs">
+                    <span className="text-gray-300 pl-2 font-medium">ขอบเขต:</span>
+                    <select
+                      value={execScope}
+                      onChange={(e) => setExecScope(e.target.value)}
+                      className="bg-[#0f2e4a] border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold outline-none cursor-pointer"
+                    >
+                      <option value="focus">🟡 เฝ้าระวัง & 🔴 วิกฤต (แนะนำผู้บริหาร)</option>
+                      <option value="all">ทุกระดับ (รวมสภาวะปกติ 🟢)</option>
+                      <option value="critical">🔴 เฉพาะวิกฤต (Critical Only)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -1430,6 +1488,22 @@ export default function SettingsTab({
                 <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
                   <Icon name="filter" size={14} className="text-[#bca374]" /> กรอง:
                 </div>
+                {/* Area Filter */}
+                <select
+                  value={reportFilter.area || 'ทั้งหมด'}
+                  onChange={(e) => setReportFilter({ ...reportFilter, area: e.target.value })}
+                  className="bg-white border border-gray-200 text-xs rounded-lg px-2.5 py-1.5 font-semibold text-gray-700 outline-none cursor-pointer"
+                >
+                  <option value="ทั้งหมด">🌐 ทุกพื้นที่</option>
+                  <option value="province-ayutthaya">🏛️ พระนครศรีอยุธยา</option>
+                  <option value="province-pathumthani">🌾 ปทุมธานี</option>
+                  <option value="province-nonthaburi">🌳 นนทบุรี</option>
+                  <option value="province-bkk">🏙️ กรุงเทพมหานคร (ทุกเขต)</option>
+                  <option value="zone-bkk-north">📍 กทม. เหนือ</option>
+                  <option value="zone-bkk-east">📍 กทม. ตะวันออก</option>
+                  <option value="zone-bkk-west">📍 กทม. ฝั่งธนบุรี & ใต้</option>
+                </select>
+
                 {/* Project Filter */}
                 <select
                   value={reportFilter.project}
