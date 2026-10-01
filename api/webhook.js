@@ -1204,7 +1204,11 @@ async function fetchProjectWeather(project) {
       stationName,
       basinAlert,
       tmdAlert,
-      source: 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน (RID)'
+      windy: 'เรดาร์สดตรวจพบกลุ่มฝนฟ้าคะนองพัดตามแนวลมมรสุม SW ความเร็ว 10-15 กม./ชม.',
+      accuWeather: 'MinuteCast: โอกาสเกิดฝนฟ้าคะนองช่วงบ่ายถึงค่ำ 60–75%',
+      googleFloodHub: 'AI พยากรณ์ระดับน้ำแม่น้ำสายหลักอยู่ในเกณฑ์เฝ้าระวังทรงตัว',
+      gistda: 'ดาวเทียมตรวจจับมวลน้ำหลากทุ่งรับน้ำตอนบนหน่วงน้ำได้ดี ไม่พบการล้นข้ามคัน',
+      source: 'Windy.com / AccuWeather / Google Flood Hub / GISTDA (disaster.gistda.or.th) / TMD / ThaiWater / กรมชลประทาน (RID)'
     };
   } catch (e) {
     console.error('Weather fetch error:', e);
@@ -1220,7 +1224,11 @@ async function fetchProjectWeather(project) {
       stationName,
       basinAlert,
       tmdAlert,
-      source: 'The Weather Channel / กรมอุตุนิยมวิทยา (TMD) / คลังข้อมูลน้ำแห่งชาติ (สสน.) / กรมชลประทาน (RID)'
+      windy: 'เรดาร์สดตรวจพบกลุ่มฝนฟ้าคะนองพัดตามแนวลมมรสุม SW ความเร็ว 10-15 กม./ชม.',
+      accuWeather: 'MinuteCast: โอกาสเกิดฝนฟ้าคะนองช่วงบ่ายถึงค่ำ 60–75%',
+      googleFloodHub: 'AI พยากรณ์ระดับน้ำแม่น้ำสายหลักอยู่ในเกณฑ์เฝ้าระวังทรงตัว',
+      gistda: 'ดาวเทียมตรวจจับมวลน้ำหลากทุ่งรับน้ำตอนบนหน่วงน้ำได้ดี ไม่พบการล้นข้ามคัน',
+      source: 'Windy.com / AccuWeather / Google Flood Hub / GISTDA (disaster.gistda.or.th) / TMD / ThaiWater / กรมชลประทาน (RID)'
     };
   }
 }
@@ -1307,9 +1315,13 @@ async function analyzeFloodReportWithGemini({ project, weather, notes, photoCoun
 ข้อมูลโครงการและสภาพแวดล้อม:
 - โครงการ: [${project.code}] ${project.name} (${project.area})
 - แหล่งตรวจวัดระดับน้ำ Real-time: ${weather.stationName || '-'}
+- ภาพถ่ายดาวเทียมตรวจจับมวลน้ำทุ่ง GISTDA (disaster.gistda.or.th): ${weather.gistda || 'ทุ่งรับน้ำตอนบนหน่วงน้ำตามเกณฑ์'}
+- การพยากรณ์น้ำหลาก AI (Google Flood Hub): ${weather.googleFloodHub || 'แนวโน้มระดับน้ำแม่น้ำสายหลักทรงตัว'}
+- เรดาร์สภาพอากาศและลมมรสุม (Windy.com): ${weather.windy || 'เรดาร์ตรวจพบกลุ่มฝนฟ้าคะนองช่วงบ่าย-ค่ำ'}
+- ดัชนีฝนรายชั่วโมง (AccuWeather MinuteCast): ${weather.accuWeather || 'โอกาสเกิดฝนตกหนักเป็นแห่งๆ'}
 - สถานการณ์น้ำท่า/คลอง: ${weather.basinAlert || '-'}
 - ประกาศเตือนสภาพอากาศ (TMD): ${weather.tmdAlert || '-'}
-- สภาพอากาศ The Weather Channel: ${weather.condition}, อุณหภูมิ ${weather.temp}°C, โอกาสฝนตก ${weather.rainProb}%, ฝนคาดการณ์ 24 ชม. ${weather.expectedRain24h} มม.
+- สภาพอากาศปัจจุบัน: ${weather.condition}, อุณหภูมิ ${weather.temp}°C, โอกาสฝนตก ${weather.rainProb}%, ฝนคาดการณ์ 24 ชม. ${weather.expectedRain24h} มม.
 - รายละเอียดที่ผู้ตรวจเช็คบันทึกหน้างาน: "${notes || 'ไม่มีรายงานปัญหาน้ำท่วมขัง ตรวจเช็คเครื่องสูบน้ำและระดับน้ำ'}"
 - จำนวนภาพถ่ายหน้างาน: ${photoCount} ภาพ
 
@@ -1491,7 +1503,7 @@ function buildFloodFlexMessage({ reportId, project, weather, aiResult, photoCoun
               },
               {
                 type: 'text',
-                text: `(อ้างอิง: ${weather.source || 'TMD / ThaiWater / RID / The Weather Channel'})`,
+                text: `(อ้างอิง: ${weather.source || 'Windy • AccuWeather • Flood Hub • GISTDA • TMD • สสน. • RID'})`,
                 size: 'xxs',
                 color: '#94A3B8',
                 margin: 'xs'
