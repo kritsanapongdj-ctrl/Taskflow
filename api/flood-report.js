@@ -278,10 +278,11 @@ export default async function handler(req, res) {
     });
     photos.sort((a, b) => (Number(a.index ?? 0)) - (Number(b.index ?? 0)));
 
-    // กำหนด Layout คอลัมน์ของภาพถ่าย
+    // กำหนด Layout คอลัมน์ของภาพถ่าย (รองรับสูงสุด 10 ภาพ ในหน้าเดียว A4 สวยงาม สมบูรณ์แบบ)
     const photoCount = photos.length;
-    const gridCols = photoCount <= 4 ? 2 : photoCount <= 6 ? 3 : 4;
-    const imgHeight = photoCount > 6 ? '102px' : photoCount > 4 ? '118px' : '135px';
+    const gridCols = photoCount <= 4 ? 2 : photoCount <= 6 ? 3 : (photoCount <= 8 ? 4 : 5);
+    const imgHeight = photoCount > 8 ? '86px' : photoCount > 6 ? '100px' : photoCount > 4 ? '118px' : '135px';
+    const photoGap = photoCount > 8 ? '6px' : '8px';
 
     // สถานะและ Badge สไตล์ Land & Houses
     const isCritical = report.status === 'CRITICAL';
@@ -774,8 +775,8 @@ export default async function handler(req, res) {
     .photo-grid {
       display: grid;
       grid-template-columns: repeat(${gridCols}, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: ${photoGap};
+      margin-bottom: 10px;
     }
 
     .photo-card {

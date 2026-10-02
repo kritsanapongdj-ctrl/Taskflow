@@ -1745,10 +1745,14 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
       photos.push(d.data());
     });
     photos.sort((a, b) => {
+      const timeDiff = (a.createdAt || 0) - (b.createdAt || 0);
+      if (Math.abs(timeDiff) > 2500) {
+        return timeDiff;
+      }
       if (a.imageSetIndex != null && b.imageSetIndex != null) {
         return a.imageSetIndex - b.imageSetIndex;
       }
-      return (a.createdAt || 0) - (b.createdAt || 0);
+      return timeDiff;
     });
 
     if (photos.length === 0) {
@@ -1888,7 +1892,7 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
         status: finalStatus,
         summary: executiveSummary
       },
-      photoCount: photos.length,
+      photoCount: finalPhotos.length,
       surveyDateThai,
       surveyTimeThai,
       pdfUrl
@@ -1897,7 +1901,7 @@ async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
     const completionText = `✅ จัดทำเอกสารรายงานสถานการณ์น้ำท่วมเรียบร้อยครับ!\n` +
       `📌 โครงการ: [${project.code}] ${project.name}\n` +
       `📑 รหัสเอกสาร: ${reportId}\n` +
-      `📸 ภาพถ่ายสำรวจ: ${photos.length} ภาพ\n` +
+      `📸 ภาพถ่ายสำรวจ: ${finalPhotos.length} ภาพ\n` +
       `─────────────────────────\n` +
       `🔗 แตะปุ่ม "เปิดดูและดาวน์โหลดเอกสาร PDF" ในการ์ดด้านบน เพื่อเปิดและบันทึกเป็น PDF บนโทรศัพท์มือถือได้ทันทีครับ\n` +
       `🌐 หรือเปิดดูผ่านลิงก์ตรง:\n${pdfUrl}`;
@@ -2009,14 +2013,14 @@ export default async function handler(req, res) {
             finalizing: false
           });
 
-          // ตรวจสอบรูปภาพใน buffer ลบรูปเก่าที่ค้างเกิน 3 นาทีทิ้ง และนับเฉพาะรูปที่เพิ่งส่งเข้ามาสดๆ
+          // ตรวจสอบรูปภาพใน buffer ลบรูปเก่าที่ค้างเกิน 15 นาทีทิ้ง และนับเฉพาะรูปที่เพิ่งส่งเข้ามาสดๆ
           const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
           let recentPhotosCount = 0;
           const now = Date.now();
           for (const p of photosSnap.docs) {
             const pData = p.data();
-            if (now - (pData.createdAt || 0) > 3 * 60 * 1000) {
-              // รูปเก่าเกิน 3 นาที ลบทิ้งทันทีเพื่อไม่ให้ปนกับรอบใหม่
+            if (now - (pData.createdAt || 0) > 15 * 60 * 1000) {
+              // รูปเก่าเกิน 15 นาที ลบทิ้งทันทีเพื่อไม่ให้ปนกับรอบใหม่
               await deleteDoc(p.ref);
             } else {
               recentPhotosCount++;
@@ -2262,35 +2266,44 @@ export default async function handler(req, res) {
           }
         }
       }
+    }
 
-      // 2. กรณีผู้ใช้ส่งรูปภาพ (Image Message)
-      else if (event.type === 'message' && event.message.type === 'image') {
-        const replyToken = event.replyToken;
-        const messageId = event.message.id;
-        const imageSet = event.message.imageSet;
+    // 2. กรณีผู้ใช้ส่งรูปภาพ (Image Messages) - ประมวลผลแบบ Batch และคู่ขนาน (Parallel) รองรับสูงสุด 10 ภาพ
+    const imageEvents = events.filter(e => e.type === 'message' && e.message?.type === 'image');
+    if (imageEvents.length > 0) {
+      const userImageMap = new Map();
+      for (const evt of imageEvents) {
+        const uId = evt.source?.userId;
+        const isGrp = evt.source?.type === 'group' || evt.source?.type === 'room';
+        if (!uId || isGrp) continue;
+        if (!userImageMap.has(uId)) userImageMap.set(uId, []);
+        userImageMap.get(uId).push(evt);
+      }
 
-        if (isGroup) {
-          // ถ้าส่งรูปในกลุ่มใหญ่ ไม่ตอบรับ เพื่อป้องกันการรบกวนกลุ่ม
-          continue;
-        }
-
+      for (const [userId, userEvents] of userImageMap.entries()) {
         try {
           const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
           const draftSnap = await getDoc(draftRef);
 
-          // ดาวน์โหลดภาพจาก LINE Content API
-          const imgBuffer = await fetchLineImageBuffer(messageId);
-          const dataUrl = `data:image/jpeg;base64,${imgBuffer.toString('base64')}`;
-
-          // จัดเก็บลง Subcollection ของ Draft Session
-          const photoRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos", messageId);
-          await setDoc(photoRef, {
-            messageId,
-            dataUrl,
-            imageSetIndex: imageSet?.index ?? null,
-            imageSetTotal: imageSet?.total ?? null,
-            createdAt: Date.now()
-          });
+          // ดาวน์โหลดภาพถ่ายจาก LINE Content API และบันทึกลง Firestore แบบขนาน (Parallel) เพื่อความรวดเร็วและไม่ตกหล่น
+          await Promise.all(userEvents.map(async (evt) => {
+            const messageId = evt.message.id;
+            const imageSet = evt.message.imageSet;
+            try {
+              const imgBuffer = await fetchLineImageBuffer(messageId);
+              const dataUrl = `data:image/jpeg;base64,${imgBuffer.toString('base64')}`;
+              const photoRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos", messageId);
+              await setDoc(photoRef, {
+                messageId,
+                dataUrl,
+                imageSetIndex: imageSet?.index ?? null,
+                imageSetTotal: imageSet?.total ?? null,
+                createdAt: Date.now()
+              });
+            } catch (pErr) {
+              console.error(`Error saving image ${messageId}:`, pErr);
+            }
+          }));
 
           if (draftSnap.exists()) {
             const draft = draftSnap.data();
@@ -2298,22 +2311,15 @@ export default async function handler(req, res) {
               continue;
             }
 
-            // คำนวณจำนวนรูปเป้าหมายของรอบนี้ (สูงสุดไม่เกิน 10 รูป ตามข้อกำหนด)
-            const targetCount = (imageSet && imageSet.total)
-              ? Math.min(10, imageSet.total)
-              : (draft.expectedCount || 10);
-
             await updateDoc(draftRef, {
-              expectedCount: targetCount,
               lastPhotoAt: Date.now()
             });
 
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
             const count = photosSnap.size;
 
-            if (count >= targetCount || count >= 10) {
-              // ได้รับครบตามจำนวนเป้าหมายแล้ว (เช่น ครบ 10 รูป หรือครบตามอัลบั้มที่เลือก)
-              // รอ 1.5 วินาที เพื่อให้ write ในรอบเดียวกันเสร็จสมบูรณ์
+            if (count >= 10) {
+              // ได้รับครบเต็มโควต้า 10 ภาพแล้ว ให้รอ 1.5 วินาทีเพื่อให้ write ในรอบเดียวกันเสร็จสมบูรณ์ แล้วออกรายงาน PDF ทันที
               await new Promise(r => setTimeout(r, 1500));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
@@ -2321,34 +2327,35 @@ export default async function handler(req, res) {
                 await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
               }
             } else if (count >= 5) {
-              // กรณีได้รับตั้งแต่ 5 รูปขึ้นไป แต่ยังไม่ถึง targetCount (เช่น เน็ตช้า หรือรูปบางรูปอัปโหลดหลุด)
-              // รอ 8 วินาทีเพื่อดูว่ามีรูปใหม่เข้ามาอีกหรือไม่
-              await new Promise(r => setTimeout(r, 8000));
+              // ได้รับ 5-9 ภาพ: รอ 12 วินาที (Debounce window) เผื่อมีรูปชุดที่ 2 เข้ามา (เช่น ส่ง 5+5 รูป) หรือเน็ตกำลังอัปโหลด
+              await new Promise(r => setTimeout(r, 12000));
               const latestDraftSnap = await getDoc(draftRef);
               if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
-                const recheckSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-                // ถ้าจำนวนรูปไม่เพิ่มขึ้นแล้ว แสดงว่าส่งเสร็จสิ้นแล้ว ให้สรุปรายงานได้
-                if (recheckSnap.size === count) {
+                const timeSinceLast = Date.now() - (latestDraftSnap.data().lastPhotoAt || 0);
+                // หากไม่มีรูปใหม่เข้ามาเพิ่มเป็นเวลาอย่างน้อย 11 วินาที ให้จัดทำรายงานได้ทันที
+                if (timeSinceLast >= 11000) {
                   await updateDoc(draftRef, { finalizing: true });
                   await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
                 }
               }
-            } else if (count === 1 && (!imageSet || imageSet.index === 1)) {
-              if (imageSet && imageSet.total > 1) {
-                await replyToLine(replyToken, `📸 กำลังรับชุดภาพถ่ายหน้างาน (${imageSet.total} ภาพ)... ระบบจะรวบรวมและสร้างเอกสารสรุปให้อัตโนมัติเมื่อครบครับ (หรือพิมพ์ '!เสร็จ' เพื่อสรุปรายงานได้ทันที)`);
-              } else {
-                await replyToLine(replyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (ส่งต่อได้สูงสุด 10 รูป หรือพิมพ์ '!เสร็จ' เมื่อส่งครบครับ)`);
+            } else if (count === 1) {
+              const firstReplyToken = userEvents[0]?.replyToken;
+              if (firstReplyToken) {
+                await replyToLine(firstReplyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (สามารถส่งต่อได้จนครบ 10 รูป หรือพิมพ์ '!เสร็จ' เมื่อส่งครบครับ)`);
               }
             }
           } else {
-            // ยังไม่มี Draft ให้ตอบรับและแนะนำวิธีพิมพ์คำสั่ง
+            // ยังไม่มี Draft เปิดอยู่ แนะนำวิธีพิมพ์คำสั่งพร้อมบอกจำนวนรูปที่ระบบจำไว้
             const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-            if (photosSnap.size === 1 && (!imageSet || imageSet.index === 1)) {
-              await replyToLine(replyToken, `📸 บอทได้รับรูปถ่ายหน้างานแล้วครับ!\nกรุณาพิมพ์รหัสโครงการเพื่อสร้างรายงาน เช่น:\n👉 !น้ำท่วม 410\n👉 !น้ำท่วม LH-379\n👉 !น้ำท่วม LA-025`);
+            if (photosSnap.size === userEvents.length) {
+              const firstReplyToken = userEvents[0]?.replyToken;
+              if (firstReplyToken) {
+                await replyToLine(firstReplyToken, `📸 บอทได้รับรูปถ่ายหน้างานแล้วครับ (${photosSnap.size} ภาพ)!\nกรุณาพิมพ์รหัสโครงการเพื่อสร้างรายงาน เช่น:\n👉 !น้ำท่วม 410\n👉 !น้ำท่วม LH-379\n👉 !น้ำท่วม LA-029`);
+              }
             }
           }
         } catch (imgErr) {
-          console.error("Handle image error:", imgErr);
+          console.error("Handle image batch error:", imgErr);
         }
       }
     }
