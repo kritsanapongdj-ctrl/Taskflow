@@ -222,8 +222,11 @@ export const FloodAgent = {
 
   canHandleText(cleanText, upperClean) {
     if (cleanText.startsWith('น้ำท่วม') || cleanText.startsWith('รายงานน้ำท่วม')) return true;
-    if (upperClean === 'ยกเลิก' || upperClean === 'ล้าง' || upperClean === 'RESET' || upperClean === 'CLEAR') return true;
-    if (upperClean === 'เสร็จ' || upperClean === 'จบ' || upperClean === 'ออกรายงาน' || upperClean === 'สร้างPDF' || upperClean === 'PDF') return true;
+    if (upperClean === 'ยกเลิก' || upperClean === 'ล้าง' || upperClean === 'RESET' || upperClean === 'CLEAR' || upperClean === 'CANCEL') return true;
+    if (/^(?:เสร็จ(?:แล้ว|ครับ|ค่ะ|คับ|คะ)?|จบ(?:งาน|แล้ว)?|เรียบร้อย(?:แล้ว|ครับ|ค่ะ)?|ออกรายงาน|สร้างPDF|PDF)$/i.test(cleanText) ||
+        upperClean === 'เสร็จ' || upperClean === 'จบ' || upperClean === 'ออกรายงาน' || upperClean === 'สร้างPDF' || upperClean === 'PDF') {
+      return true;
+    }
     return false;
   },
 
@@ -300,7 +303,7 @@ export const FloodAgent = {
           `📝 รายละเอียด: ${notes || 'ตรวจเช็คสถานะการระบายน้ำประจำวัน'}\n` +
           `─────────────────────────\n` +
           `📸 สถานะรูปภาพ: มีรูปถ่ายหน้างานในระบบแล้ว ${recentPhotosCount} ภาพ\n` +
-          `👉 ท่านสามารถส่งรูปภาพเพิ่มเติมได้ (รวม 5–10 รูป) หรือพิมพ์ '!เสร็จ' เพื่อประมวลผลจัดทำ PDF ทันทีครับ`;
+          `👉 ท่านสามารถส่งรูปภาพเพิ่มเติมได้ (รวม 5–10 รูป) หรือพิมพ์ !เสร็จ เพื่อประมวลผลจัดทำ PDF ทันทีครับ`;
         await replyToLine(replyToken, guideWithPhotos);
         return true;
       }
@@ -315,13 +318,13 @@ export const FloodAgent = {
         `3. เครื่องสูบน้ำ / ตู้ควบคุมไฟ\n` +
         `4. คลองระบายน้ำ / บ่อหน่วงน้ำ\n` +
         `5. จุดระบายน้ำออกภายนอกโครงการ\n\n` +
-        `*(ส่งภาพพร้อมกันรวดเดียวได้เลยครับ หรือเมื่อส่งครบแล้วพิมพ์ '!เสร็จ' เพื่อรับ PDF ทันที)*`;
+        `*(ส่งภาพพร้อมกันรวดเดียวได้เลยครับ หรือเมื่อส่งครบแล้วพิมพ์ !เสร็จ เพื่อรับ PDF ทันที)*`;
       await replyToLine(replyToken, guideMsg);
       return true;
     }
 
     // 🗑️ คำสั่งยกเลิก/ล้างรอบรายงานค้าง (!ยกเลิก, !ล้าง, !reset)
-    if (upperClean === 'ยกเลิก' || upperClean === 'ล้าง' || upperClean === 'RESET' || upperClean === 'CLEAR') {
+    if (upperClean === 'ยกเลิก' || upperClean === 'ล้าง' || upperClean === 'RESET' || upperClean === 'CLEAR' || upperClean === 'CANCEL') {
       const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
       const draftSnap = await getDoc(draftRef);
       const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
@@ -336,13 +339,20 @@ export const FloodAgent = {
       return true;
     }
 
-    // 🏁 คำสั่งจบการส่งรูปภาพ (!เสร็จ, !จบ, ออกรายงาน, สร้างPDF)
-    if (upperClean === 'เสร็จ' || upperClean === 'จบ' || upperClean === 'ออกรายงาน' || upperClean === 'สร้างPDF' || upperClean === 'PDF') {
+    // 🏁 คำสั่งจบการส่งรูปภาพ (!เสร็จ, !จบ, ออกรายงาน, สร้างPDF, เสร็จแล้ว, เรียบร้อย)
+    const isFinishCommand = /^(?:เสร็จ(?:แล้ว|ครับ|ค่ะ|คับ|คะ)?|จบ(?:งาน|แล้ว)?|เรียบร้อย(?:แล้ว|ครับ|ค่ะ)?|ออกรายงาน|สร้างPDF|PDF)$/i.test(cleanText) ||
+      upperClean === 'เสร็จ' || upperClean === 'จบ' || upperClean === 'ออกรายงาน' || upperClean === 'สร้างPDF' || upperClean === 'PDF';
+
+    if (isFinishCommand) {
       const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
       const draftSnap = await getDoc(draftRef);
       if (draftSnap.exists()) {
         const draft = draftSnap.data();
-        if (draft.finalizing) {
+        const nowMs = Date.now();
+        const lockDuration = nowMs - (draft.finalizingAt || draft.lastPhotoAt || draft.createdAt || 0);
+
+        // หากกำลังประมวลผลอยู่และยังไม่เกิน 60 วินาที ให้แจ้งเตือนว่ากำลังดำเนินการอยู่เพื่อป้องกันการกดซ้ำ
+        if (draft.finalizing && lockDuration < 60000) {
           await replyToLine(replyToken, `⏳ ระบบกำลังประมวลผลรูปภาพและสร้างเอกสารสรุป PDF ให้เรียบร้อยแล้วครับ กรุณารอสักครู่...`);
           return true;
         }
@@ -353,23 +363,17 @@ export const FloodAgent = {
         const expected = draft.expectedCount || 0;
         const timeSinceLastPhoto = Date.now() - (draft.lastPhotoAt || 0);
 
-        // หากยังไม่ครบ expectedCount หรือเพิ่งมีรูปล่าสุดเข้ามาไม่ถึง 5 วินาที ให้รอ buffer ให้รูปที่เหลือโหลดเสร็จสมบูรณ์
-        if ((expected > 0 && currentCount < expected) || (timeSinceLastPhoto < 5000)) {
-          await new Promise(r => setTimeout(r, 2500));
+        // หากยังไม่ครบ expectedCount หรือเพิ่งมีรูปล่าสุดเข้ามาไม่ถึง 3 วินาที ให้รอ buffer ให้รูปที่เหลือโหลดเสร็จสมบูรณ์
+        if ((expected > 0 && currentCount < expected) || (timeSinceLastPhoto < 3000)) {
+          await new Promise(r => setTimeout(r, 2000));
           photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-
-          // ถ้ารูปเพิ่มขึ้นและยังไม่ครบตามเป้าหมาย รอเพิ่มอีก 1.5 วินาที
-          if (photosSnap.size > currentCount && expected > 0 && photosSnap.size < expected) {
-            await new Promise(r => setTimeout(r, 1500));
-            photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
-          }
         }
 
         const finalPhotoCount = photosSnap.size;
         if (finalPhotoCount > 0) {
-          await updateDoc(draftRef, { finalizing: true });
-          await replyToLine(replyToken, `⏳ ได้รับรูปภาพครบ ${finalPhotoCount} ภาพเรียบร้อยแล้ว กำลังวิเคราะห์และสร้างเอกสารสรุป PDF สักครู่ครับ...`);
-          await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+          await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
+          // ส่ง replyToken ตรงเข้า compileAndSendFloodReport เพื่อให้ส่ง PDF กลับหาผู้ใช้ทันทีโดยไม่เสียโควต้า Push
+          await compileAndSendFloodReport({ userId, replyToken, host, proto });
           return true;
         } else {
           await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างาน (5–10 รูป) เข้ามาก่อนครับ`);
@@ -472,26 +476,33 @@ export const FloodAgent = {
           // ได้รับครบเต็มโควต้า 10 ภาพแล้ว ให้รอ 1.5 วินาทีเพื่อให้ write ในรอบเดียวกันเสร็จสมบูรณ์ แล้วออกรายงาน PDF ทันที
           await new Promise(r => setTimeout(r, 1500));
           const latestDraftSnap = await getDoc(draftRef);
-          if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
-            await updateDoc(draftRef, { finalizing: true });
-            await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+          if (latestDraftSnap.exists()) {
+            const data = latestDraftSnap.data();
+            const isLocked = data.finalizing && (Date.now() - (data.finalizingAt || 0) < 60000);
+            if (!isLocked) {
+              await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
+              await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+            }
           }
         } else if (count >= 5) {
           // ได้รับ 5-9 ภาพ: รอ 12 วินาที (Debounce window) เผื่อมีรูปชุดที่ 2 เข้ามา (เช่น ส่ง 5+5 รูป) หรือเน็ตกำลังอัปโหลด
           await new Promise(r => setTimeout(r, 12000));
           const latestDraftSnap = await getDoc(draftRef);
-          if (latestDraftSnap.exists() && !latestDraftSnap.data().finalizing) {
-            const timeSinceLast = Date.now() - (latestDraftSnap.data().lastPhotoAt || 0);
+          if (latestDraftSnap.exists()) {
+            const data = latestDraftSnap.data();
+            const timeSinceLast = Date.now() - (data.lastPhotoAt || 0);
+            const isLocked = data.finalizing && (Date.now() - (data.finalizingAt || 0) < 60000);
             // หากไม่มีรูปใหม่เข้ามาเพิ่มเป็นเวลาอย่างน้อย 11 วินาที ให้จัดทำรายงานได้ทันที
-            if (timeSinceLast >= 11000) {
-              await updateDoc(draftRef, { finalizing: true });
+            if (!isLocked && timeSinceLast >= 11000) {
+              await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
               await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
             }
           }
-        } else if (count === 1) {
+        } else if (count >= 1 && count < 5) {
+          // ตอบกลับแจ้งเตือนจำนวนภาพที่ได้รับ (1-4 ภาพ) เพื่อให้ผู้ใช้งานทราบสถานะว่าระบบบันทึกรูปไว้แล้ว
           const firstReplyToken = userEvents[0]?.replyToken;
           if (firstReplyToken) {
-            await replyToLine(firstReplyToken, `📸 ได้รับรูปภาพที่ 1 แล้วครับ (สามารถส่งต่อได้จนครบ 10 รูป หรือพิมพ์ '!เสร็จ' เมื่อส่งครบครับ)`);
+            await replyToLine(firstReplyToken, `📸 บอทได้รับรูปถ่ายหน้างานแล้ว ${count} ภาพครับ (สามารถส่งต่อได้จนครบ 10 รูป หรือพิมพ์ !เสร็จ เพื่อรับ PDF ได้ทันทีครับ)`);
           }
         }
       } else {

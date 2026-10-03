@@ -30,8 +30,12 @@ export const MasterOrchestrator = {
         const userId = event.source?.userId;
         const isGroup = event.source?.type === 'group' || event.source?.type === 'room';
 
-        // ถอด prefix ! หรือ / ออก
-        const cleanText = rawText.replace(/^[!\/]/, '').trim();
+        // ทำความสะอาดข้อความ: ถอดเครื่องหมายคำพูดรอบนอก (' " ‘ ’ “ ” `) และ prefix (! หรือ /)
+        const cleanText = (rawText || '')
+          .replace(/^[\s'"`‘’“”]+|[\s'"`‘’“”]+$/g, '')
+          .replace(/^[!\/]+/, '')
+          .replace(/^[\s'"`‘’“”]+|[\s'"`‘’“”]+$/g, '')
+          .trim();
         const upperClean = cleanText.toUpperCase();
 
         const context = {
