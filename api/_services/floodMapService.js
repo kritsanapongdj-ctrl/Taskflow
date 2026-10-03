@@ -91,6 +91,9 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -118,6 +121,30 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
   <style>
     body { font-family: 'Prompt', sans-serif; background-color: #0f172a; margin: 0; padding: 0; overflow: hidden; }
     #map { height: 100vh; width: 100vw; z-index: 1; }
+
+    /* Custom MarkerCluster Styling */
+    .custom-cluster-icon {
+      background: transparent !important;
+      border: none !important;
+    }
+    .cluster-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      border: 2.5px solid #ffffff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .cluster-badge:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+    }
 
     /* Custom Leaflet Marker Styling */
     .custom-marker {
@@ -293,11 +320,30 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       <!-- Secondary Filters: Status & Radar -->
       <div class="pt-1.5 border-t border-slate-700/60 flex items-center justify-between gap-1">
         <button onclick="toggleRiskOnly()" id="risk-only-btn" class="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors">
-          <span>⚠️ จุดเฝ้าระวังเท่านั้น</span>
+          <span>⚠️ จุดเฝ้าระวัง</span>
         </button>
         <button onclick="toggleRadarLayer()" id="radar-toggle-btn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-blue-900/40 text-blue-300 hover:text-blue-100 border border-blue-700/50 transition-colors" title="เปิด/ปิด แผ่นเรดาร์ฝน RainViewer">
-          <span>🌧️ เรดาร์ฝน</span>
+          <span>🌧️ เรดาร์สด</span>
         </button>
+      </div>
+
+      <!-- Basemap Switcher (Free, No API Key, No Watermark) -->
+      <div class="pt-1.5 border-t border-slate-700/60 flex flex-col gap-1">
+        <div class="flex items-center justify-between px-0.5">
+          <span class="text-[10px] font-semibold text-slate-400">รูปแบบแผนที่ (Basemap)</span>
+          <span class="text-[9px] text-emerald-400 font-mono">100% Free / ชัดเจน</span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/80">
+          <button onclick="switchBaseMap('osm')" id="btn-bm-osm" class="flex-1 py-1 px-1 rounded text-[10px] font-bold bg-lh-gold text-slate-950 transition-all text-center">🗺️ ถนน (OSM)</button>
+          <button onclick="switchBaseMap('street')" id="btn-bm-street" class="flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center">🏙️ ภูมิประเทศ</button>
+          <button onclick="switchBaseMap('satellite')" id="btn-bm-satellite" class="flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center">🛰️ ดาวเทียม</button>
+        </div>
+      </div>
+
+      <!-- Clustering Toggle -->
+      <div class="pt-1 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400 px-0.5">
+        <span>รวมกลุ่มหมุด (Clustering)</span>
+        <button onclick="toggleClustering()" id="btn-cluster-toggle" class="px-2 py-0.5 rounded-md font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">เปิด (กลุ่ม)</button>
       </div>
     </div>
 
@@ -554,6 +600,8 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <!-- Client Script for Map Logic, Cross-Section Rendering & Open-Meteo -->
   <script>
@@ -564,10 +612,105 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     let isRadarActive = false;
     let currentFilterZone = 'all';
     let filterRiskOnly = false;
+    let useClustering = true;
+    let clusterGroup = null;
+    let currentBasemap = 'osm';
+
+    // 100% Free Basemaps without API Keys or Watermarks
+    const tileLayers = {
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Land & Houses',
+        maxZoom: 19
+      }),
+      street: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, TomTom | Land & Houses',
+        maxZoom: 19
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics | Land & Houses',
+        maxZoom: 19
+      })
+    };
+
+    function switchBaseMap(type) {
+      if (!tileLayers[type] || currentBasemap === type) return;
+      map.removeLayer(tileLayers[currentBasemap]);
+      tileLayers[type].addTo(map);
+      currentBasemap = type;
+
+      const btns = {
+        osm: document.getElementById('btn-bm-osm'),
+        street: document.getElementById('btn-bm-street'),
+        satellite: document.getElementById('btn-bm-satellite')
+      };
+      for (const key in btns) {
+        const btn = btns[key];
+        if (!btn) continue;
+        if (key === type) {
+          btn.className = 'flex-1 py-1 px-1 rounded text-[10px] font-bold bg-lh-gold text-slate-950 transition-all text-center shadow-xs';
+        } else {
+          btn.className = 'flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center';
+        }
+      }
+    }
+
+    function initClusterGroup() {
+      if (clusterGroup) {
+        map.removeLayer(clusterGroup);
+      }
+      clusterGroup = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 36,
+        spiderfyOnMaxZoom: true,
+        disableClusteringAtZoom: 14,
+        iconCreateFunction: function(cluster) {
+          const childMarkers = cluster.getAllChildMarkers();
+          let hasCritical = false;
+          let hasWatch = false;
+
+          childMarkers.forEach(function(m) {
+            const st = m.projectStatus;
+            if (st === 'CRITICAL') hasCritical = true;
+            if (st === 'WATCH') hasWatch = true;
+          });
+
+          let bg = '#10b981'; // Green (NORMAL)
+          let border = '#059669';
+          if (hasCritical) {
+            bg = '#ef4444'; // Red (CRITICAL)
+            border = '#991b1b';
+          } else if (hasWatch) {
+            bg = '#f59e0b'; // Amber (WATCH)
+            border = '#b45309';
+          }
+
+          return L.divIcon({
+            html: '<div class="cluster-badge" style="background:' + bg + '; border-color:' + border + ';">' + cluster.getChildCount() + '</div>',
+            className: 'custom-cluster-icon',
+            iconSize: [38, 38],
+            iconAnchor: [19, 19]
+          });
+        }
+      });
+    }
+
+    function toggleClustering() {
+      useClustering = !useClustering;
+      const btn = document.getElementById('btn-cluster-toggle');
+      if (btn) {
+        if (useClustering) {
+          btn.className = 'px-2 py-0.5 rounded-md font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all';
+          btn.innerText = 'เปิด (กลุ่ม)';
+        } else {
+          btn.className = 'px-2 py-0.5 rounded-md font-semibold bg-slate-700/60 text-slate-400 border border-slate-600/50 transition-all';
+          btn.innerText = 'ปิด (แยกหมุด)';
+        }
+      }
+      renderMarkers();
+    }
 
     // Initialize Map
     function initMap() {
-      // Bangkok & Vicinity default center
       map = L.map('map', {
         center: [13.88, 100.58],
         zoom: 11,
@@ -576,36 +719,41 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // CartoDB Positron Dark Tiles (High-contrast corporate look)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> &copy; <a href=\"https://carto.com/\">CARTO</a> | Land & Houses',
-        subdomains: 'abcd',
-        maxZoom: 19
-      }).addTo(map);
+      // Default Clean Basemap: OpenStreetMap (No watermark, full Thai waterways & sois)
+      tileLayers.osm.addTo(map);
 
       renderMarkers();
+
+      // Fit map bounds to show all 30 projects nicely
+      if (PROJECTS.length > 0) {
+        const allBounds = L.latLngBounds(PROJECTS.map(function(p) { return [p.lat, p.lon]; }));
+        map.fitBounds(allBounds, { padding: [60, 60], maxZoom: 12 });
+      }
 
       // Check URL parameters (e.g. ?focus=NE-419)
       const urlParams = new URLSearchParams(window.location.search);
       const focusCode = urlParams.get('focus') || urlParams.get('project');
       if (focusCode) {
-        const target = PROJECTS.find(p => p.code.toLowerCase() === focusCode.toLowerCase());
+        const target = PROJECTS.find(function(p) { return p.code.toLowerCase() === focusCode.toLowerCase(); });
         if (target) {
-          setTimeout(() => {
+          setTimeout(function() {
             selectProject(target.code);
-            map.flyTo([target.lat, target.lon], 14, { duration: 1.2 });
-          }, 400);
+            map.flyTo([target.lat, target.lon], 15, { duration: 1.2 });
+          }, 500);
         }
       }
     }
 
     // Render Markers on Map
     function renderMarkers() {
-      // Clear existing
-      markers.forEach(m => map.removeLayer(m));
+      if (clusterGroup) {
+        clusterGroup.clearLayers();
+        map.removeLayer(clusterGroup);
+      }
+      markers.forEach(function(m) { map.removeLayer(m); });
       markers = [];
 
-      const filtered = PROJECTS.filter(p => {
+      const filtered = PROJECTS.filter(function(p) {
         if (currentFilterZone !== 'all') {
           const matchZone = (p.area || '').includes(currentFilterZone) || (p.name || '').includes(currentFilterZone);
           if (!matchZone) return false;
@@ -618,7 +766,13 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       document.getElementById('filter-count').innerText = 'แสดง ' + filtered.length + '/' + PROJECTS.length;
 
-      filtered.forEach(p => {
+      if (useClustering) {
+        initClusterGroup();
+      }
+
+      const boundsList = [];
+
+      filtered.forEach(function(p) {
         const status = p.status || 'NORMAL';
         let pinColor = '#10b981'; // Green (NORMAL)
         let ringColor = 'rgba(16, 185, 129, 0.4)';
@@ -627,22 +781,20 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         if (status === 'WATCH') {
           pinColor = '#f59e0b'; // Orange
           ringColor = 'rgba(245, 158, 11, 0.5)';
-          pulseClass = '<div class=\"pulse-ring\" style=\"background:' + ringColor + '\"></div>';
+          pulseClass = '<div class="pulse-ring" style="background:' + ringColor + '"></div>';
         } else if (status === 'CRITICAL') {
           pinColor = '#ef4444'; // Red
           ringColor = 'rgba(239, 68, 68, 0.6)';
-          pulseClass = '<div class=\"pulse-ring\" style=\"background:' + ringColor + '; animation-duration: 1s;\"></div>';
+          pulseClass = '<div class="pulse-ring" style="background:' + ringColor + '; animation-duration: 1s;"></div>';
         }
 
-        const iconHtml = \`
-          <div class=\"custom-marker\">
-            \${pulseClass}
-            <div class=\"marker-pin\" style=\"background: \${pinColor};\">
-              <span class=\"marker-icon\">💧</span>
-            </div>
-            <div class=\"marker-label\">\${p.code}</div>
-          </div>
-        \`;
+        const iconHtml = '<div class="custom-marker">' +
+          pulseClass +
+          '<div class="marker-pin" style="background: ' + pinColor + ';">' +
+            '<span class="marker-icon">💧</span>' +
+          '</div>' +
+          '<div class="marker-label">' + p.code + '</div>' +
+        '</div>';
 
         const customIcon = L.divIcon({
           html: iconHtml,
@@ -653,28 +805,35 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         });
 
         const marker = L.marker([p.lat, p.lon], { icon: customIcon });
+        marker.projectStatus = status;
 
-        // Tooltip on Hover
-        marker.bindTooltip(\`<strong>\${p.code}</strong>: \${p.name}<br><span style=\"color:\${pinColor}\">\${status === 'NORMAL' ? '🟢 ปกติ' : (status === 'WATCH' ? '🟠 เฝ้าระวัง' : '🔴 วิกฤติ')}</span>\`, {
+        marker.bindTooltip('<strong>' + p.code + '</strong>: ' + p.name + '<br><span style="color:' + pinColor + '">' + (status === 'NORMAL' ? '🟢 ปกติ' : (status === 'WATCH' ? '🟠 เฝ้าระวัง' : '🔴 วิกฤติ')) + '</span>', {
           direction: 'top',
           offset: [0, -28],
           opacity: 0.95
         });
 
-        // Click to Open Drawer
-        marker.on('click', () => {
+        marker.on('click', function() {
           selectProject(p.code);
           map.panTo([p.lat, p.lon]);
         });
 
-        marker.addTo(map);
+        if (useClustering) {
+          clusterGroup.addLayer(marker);
+        } else {
+          marker.addTo(map);
+        }
         markers.push(marker);
+        boundsList.push([p.lat, p.lon]);
       });
 
-      // Adjust bounds if filtered
-      if (filtered.length > 0 && currentFilterZone !== 'all') {
-        const bounds = L.latLngBounds(filtered.map(p => [p.lat, p.lon]));
-        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 13 });
+      if (useClustering) {
+        map.addLayer(clusterGroup);
+      }
+
+      if (boundsList.length > 0 && currentFilterZone !== 'all') {
+        const bounds = L.latLngBounds(boundsList);
+        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
       }
     }
 
@@ -880,7 +1039,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     // Zone Filter Function
     function setZoneFilter(zone) {
       currentFilterZone = zone;
-      document.querySelectorAll('.zone-btn').forEach(b => {
+      document.querySelectorAll('.zone-btn').forEach(function(b) {
         if (b.dataset.zone === zone) {
           b.className = 'zone-btn active px-2.5 py-1 rounded-lg text-xs font-semibold bg-lh-gold text-slate-950 transition-all shadow-xs';
         } else {
@@ -888,6 +1047,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         }
       });
       renderMarkers();
+      if (zone === 'all' && PROJECTS.length > 0) {
+        const allBounds = L.latLngBounds(PROJECTS.map(function(p) { return [p.lat, p.lon]; }));
+        map.fitBounds(allBounds, { padding: [60, 60], maxZoom: 12 });
+      }
     }
 
     // Toggle Risk Only Filter
