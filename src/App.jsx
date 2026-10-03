@@ -1117,6 +1117,18 @@ export default function App() {
               {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'simulation',l:'กิลด์ (Simulation)', icon:'swords'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
                 <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-colors ${tab===x.i?'bg-[#bca374]':'hover:bg-white/10'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
               ))}
+              <div className="pt-3 mt-3 border-t border-white/10">
+                <a
+                  href="/api/flood-report?mode=map"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full text-left flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-sky-300 hover:bg-sky-500/20 border border-sky-400/30 transition-colors"
+                  title="เปิดแผนที่สถานการณ์น้ำท่วมและระบายน้ำ 30 โครงการ Real-time"
+                >
+                  <Icon name="map" size={16} className="mr-2 text-sky-400"/>
+                  แผนที่น้ำ Real-time
+                </a>
+              </div>
             </nav>
           </aside>
           <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
@@ -1131,6 +1143,15 @@ export default function App() {
                 >
                   <Icon name="sparkles" size={13} /> {CURRENT_VERSION}
                 </button>
+                <a
+                  href="/api/flood-report?mode=map"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 active:scale-95 px-2.5 py-0.5 rounded-full hidden sm:flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                  title="เปิดแผนที่ติดตามสถานการณ์น้ำและระบายน้ำ 30 โครงการ Real-time"
+                >
+                  <Icon name="map" size={12} className="text-sky-600" /> แผนที่น้ำ Real-time
+                </a>
               </div>
               <button
                 type="button"
