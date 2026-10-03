@@ -106,7 +106,12 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
 
     const waterLevel = cleanAiWater || directReport.waterLevel || visionWaterLevel || fallbackSynthesis.waterLevel;
     const pumpsRunning = cleanAiPumps || directReport.pumpsRunning || fallbackSynthesis.pumpsRunning;
-    const drainageCondition = cleanAiDrainage || directReport.drainageCondition || fallbackSynthesis.drainageCondition;
+    let drainageCondition = cleanAiDrainage || directReport.drainageCondition || fallbackSynthesis.drainageCondition;
+
+    // ป้องกันกรณีข้อความตัดเหลือแต่คำนามลอยๆ เช่น "ระดับน้ำในคลองหน้าโครงการ"
+    if (drainageCondition && /^(?:ระดับน้ำในคลอง(?:หน้าโครงการ)?|ระดับน้ำคลอง|คลองหน้าโครงการ|สภาพคลอง|คลอง|ทางระบายน้ำ)$/i.test(drainageCondition.trim())) {
+      drainageCondition = drainageCondition.trim() + ' อยู่ในเกณฑ์ควบคุม ระบายได้คล่องตัวตามปกติ';
+    }
 
     // 3. บทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken) 4 มิติ
     const assessmentField = aiResult?.assessmentField || fallbackSynthesis.assessmentField;

@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getAuth, signInAnonymously } from 'firebase/auth';
+import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './_services/geminiService.js';
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
@@ -17,206 +18,6 @@ try {
 
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-// ดึงข้อมูลสถานะหน้างานโดยตรงจากข้อความที่ผู้ใช้พิมพ์ใน LINE อย่างแม่นยำ
-function extractDirectFieldReport(notes = '') {
-  const text = (notes || '').trim();
-  if (!text) {
-    return { pumpsRunning: null, drainageCondition: null, waterLevel: null };
-  }
-
-  const pumpRegex = /(?:ปั๊ม|ปั้ม|เครื่องสูบ|สูบน้ำ|submersible|pump|ระบบป้องกันน้ำท่วม|ระบบสูบน้ำ)/i;
-  const canalRegex = /(?:คลอง|คันกั้นน้ำ|ทุ่งรับน้ำ|ระดับน้ำภายนอก|ระดับน้ำในคลอง|น้ำในคลอง|น้ำคลอง|แม่น้ำ|ประตูระบาย|ปตร\.|ขอบตลิ่ง|ทางระบาย|ท่อระบาย)/i;
-  const roadRegex = /(?:ถนน|ผิวจราจร|ผิวทาง|น้ำท่วมขัง|น้ำขัง|แห้งสนิท|แห้งปกติ|สัญจร|ซอย|ทางเข้า)/i;
-
-  const rawSegments = text
-    .split(/\r?\n|(?<=\S)\s*[-*•]\s+/)
-    .map(line => line.trim())
-    .filter(Boolean);
-
-  const pumpParts = [];
-  const canalParts = [];
-  const roadParts = [];
-  const unclassifiedParts = [];
-  const expandedSegments = [];
-
-  for (const seg of rawSegments) {
-    let currentSeg = seg.replace(/^[-*•\d\.\)\s]+/, '').trim();
-    if (!currentSeg) continue;
-
-    const parenMatches = currentSeg.match(/\(([^)]+)\)/g);
-    if (parenMatches) {
-      for (const pMatch of parenMatches) {
-        const inside = pMatch.replace(/[()]/g, '').trim();
-        const inPump = pumpRegex.test(inside);
-        const inCanal = canalRegex.test(inside);
-        const inRoad = roadRegex.test(inside);
-
-        if (inRoad && !inPump && !inCanal) {
-          roadParts.push(inside);
-          currentSeg = currentSeg.replace(pMatch, '').trim();
-        } else if (inPump && !inCanal && !inRoad) {
-          pumpParts.push(inside);
-          currentSeg = currentSeg.replace(pMatch, '').trim();
-        } else if (inCanal && !inPump && !inRoad) {
-          canalParts.push(inside);
-          currentSeg = currentSeg.replace(pMatch, '').trim();
-        }
-      }
-    }
-
-    currentSeg = currentSeg.replace(/^[-*•\s;,]+|[-*•\s;,]+$/g, '').trim();
-    if (!currentSeg) continue;
-
-    const hits = (currentSeg.match(pumpRegex) ? 1 : 0) + (currentSeg.match(canalRegex) ? 1 : 0) + (currentSeg.match(roadRegex) ? 1 : 0);
-    if (hits > 1) {
-      const splitKeywords = [
-        { type: 'pump', regex: /(?:สถานะเครื่องสูบน้ำ|สถานะปั๊ม|ระบบป้องกันน้ำท่วม|ระบบสูบน้ำ|เครื่องสูบน้ำ|เครื่องสูบ|ปั๊มสูบน้ำ|ปั้มสูบน้ำ|ปั๊มป้องกันน้ำท่วม|ปั้มป้องกันน้ำท่วม|ปั๊มน้ำ|ปั้มน้ำ|ปั๊ม|ปั้ม)/g },
-        { type: 'canal', regex: /(?:ระดับน้ำในคลอง|ระดับน้ำคลอง|น้ำในคลอง|น้ำคลอง|คลองหน้าโครงการ|คลองภายนอก|สภาพคลอง|คลอง|ทางระบายน้ำ|ท่อระบายน้ำ)/g },
-        { type: 'road', regex: /(?:ระดับน้ำท่วมขัง|ระดับน้ำบนถนน|น้ำท่วมขังผิวถนน|ผิวจราจร|ถนนในโครงการ|ถนนเมน|สภาพถนน|ถนน)/g }
-      ];
-
-      const matches = [];
-      for (const sk of splitKeywords) {
-        let m;
-        while ((m = sk.regex.exec(currentSeg)) !== null) {
-          matches.push({ type: sk.type, index: m.index, length: m[0].length });
-        }
-      }
-      matches.sort((a, b) => a.index - b.index);
-
-      const filteredMatches = [];
-      let lastEnd = -1;
-      for (const m of matches) {
-        if (m.index >= lastEnd) {
-          filteredMatches.push(m);
-          lastEnd = m.index + m.length;
-        }
-      }
-
-      if (filteredMatches.length > 1) {
-        for (let i = 0; i < filteredMatches.length; i++) {
-          const cur = filteredMatches[i];
-          const next = filteredMatches[i + 1];
-          const sub = currentSeg.substring(cur.index, next ? next.index : currentSeg.length).trim();
-          if (sub) expandedSegments.push(sub);
-        }
-      } else {
-        expandedSegments.push(currentSeg);
-      }
-    } else {
-      expandedSegments.push(currentSeg);
-    }
-  }
-
-  for (const line of expandedSegments) {
-    let cleaned = line.replace(/^[-*•\d\.\)\s]+/, '').trim();
-    cleaned = cleaned.replace(/^[-*•\s;,]+|[-*•\s;,]+$/g, '').trim();
-    if (!cleaned) continue;
-
-    const hasPump = pumpRegex.test(cleaned);
-    const hasCanal = canalRegex.test(cleaned);
-    const hasRoad = roadRegex.test(cleaned);
-
-    if (hasPump && !hasCanal && !hasRoad) {
-      pumpParts.push(cleaned);
-    } else if (hasCanal && !hasPump && !hasRoad) {
-      canalParts.push(cleaned);
-    } else if (hasRoad && !hasPump && !hasCanal) {
-      roadParts.push(cleaned);
-    } else if (hasPump) {
-      pumpParts.push(cleaned);
-    } else if (hasCanal) {
-      canalParts.push(cleaned);
-    } else if (hasRoad) {
-      roadParts.push(cleaned);
-    } else {
-      unclassifiedParts.push(cleaned);
-    }
-  }
-
-  const uniq = (arr) => Array.from(new Set(arr.map(s => s.trim()))).filter(Boolean);
-
-  let pumpsRunning = uniq(pumpParts).join(' / ');
-  let drainageCondition = uniq(canalParts).join(' / ');
-  let waterLevel = uniq(roadParts).join(' / ');
-
-  if (!waterLevel && unclassifiedParts.length > 0) {
-    const roadCandidate = unclassifiedParts.find(p => /ปกติ|เรียบร้อย|แห้ง/i.test(p));
-    if (roadCandidate) waterLevel = roadCandidate;
-  }
-
-  const cleanVal = (val) => {
-    if (!val) return null;
-    return val
-      .replace(/^[\s\-\*\•\:\;\,\)]+|[\s\-\*\•\:\;\,\(]+$/g, '')
-      .replace(/\s+/g, ' ')
-      .trim() || null;
-  };
-
-  return {
-    pumpsRunning: cleanVal(pumpsRunning),
-    drainageCondition: cleanVal(drainageCondition),
-    waterLevel: cleanVal(waterLevel)
-  };
-}
-
-// สร้างบทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken) เชิงวิศวกรรม
-function generateFallbackEngineeringSynthesis({ project, weather = {}, directReport = {}, notes = '' }) {
-  const wl = directReport.waterLevel || '';
-  const dc = directReport.drainageCondition || '';
-  const pr = directReport.pumpsRunning || '';
-  const rainProb = weather.rainProb || 60;
-  const rain24h = weather.expectedRain24h || '25.0';
-
-  // 1. assessmentField (สภาพพื้นที่และผิวจราจร)
-  let assessmentField = '';
-  if (wl && /น้ำท่วม|น้ำขัง|รอการระบาย|\d+\s*ซม/i.test(wl) && !/ไม่พบน้ำท่วมขัง|แห้ง/i.test(wl)) {
-    assessmentField = `ตรวจพบน้ำท่วมขังผิวจราจรบางจุด (${wl}) ทีมช่างเข้ากวาดเร่งระบายน้ำและเปิดตะแกรงระบายน้ำ พร้อมจัดแนวกระสอบทรายป้องกันน้ำเข้าแปลงที่พักอาศัย`;
-  } else if (wl && /แห้ง|ปกติ|เรียบร้อย|ไม่พบ/i.test(wl)) {
-    assessmentField = `ผิวจราจรถนนเมนและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100% (${wl}) จัดเตรียมแนวกระสอบทรายจุดเสี่ยงและพร่องน้ำในบ่อพักรอรับฝนสะสม ${rain24h} มม.`;
-  } else {
-    assessmentField = `ผิวจราจรหลักและทางเข้า-ออกโครงการแห้งสนิท สัญจรได้ปกติ จัดเตรียมความพร้อมรองรับปริมาณฝนสะสม 24 ชม. (${rain24h} มม.)`;
-  }
-
-  // 2. assessmentCanal (ระดับน้ำคลองภายนอกและมวลน้ำหลาก)
-  let assessmentCanal = '';
-  const isCanalHigh = /หนุน|ล้น|สูง|ริมฟุตบาท|ตลิ่ง|\+|เอ่อ/i.test(dc);
-  if (isCanalHigh) {
-    assessmentCanal = `ระดับน้ำคลองหน้าโครงการมีสภาวะหนุนสูง (${dc}) สอดคล้องกับรายงานสถานการณ์น้ำทุ่งตอนบนของ GISTDA ทีมงานได้ปิดบานพับ Flap Valve ป้องกันน้ำหนุนย้อนเข้าท่อโครงการ และจัดชุดตรวจวัดระดับน้ำคลองทุก 1 ชม.`;
-  } else if (dc) {
-    assessmentCanal = `ระดับน้ำในคลองภายนอกและทางระบายน้ำอยู่ในเกณฑ์ควบคุม (${dc}) สอดคล้องกับแนวโน้มคาดการณ์ AI ของ Google Flood Hub ได้ประสานงานเปิดทางระบายน้ำปลายทางต่อเนื่อง`;
-  } else {
-    assessmentCanal = `ระดับน้ำในคลองสายหลักและทางระบายน้ำภายนอกอยู่ในเกณฑ์ปกติ ตรวจสอบบานเปิด-ปิดน้ำและแนวคันกั้นน้ำโครงการพร้อมป้องกันน้ำหนุน`;
-  }
-
-  // 3. assessmentPumps (ระบบสูบน้ำและเครื่องจักร)
-  let assessmentPumps = '';
-  if (pr) {
-    assessmentPumps = `ระบบเครื่องสูบน้ำ (${pr}) ผ่านการทดสอบเดินระบบสมบูรณ์ 100% พร้อมเดินเครื่องอัตโนมัติเมื่อระดับน้ำแตะเกณฑ์ มีช่างเทคนิค Standby ตลอด 24 ชม. และสำรองน้ำมันเชื้อเพลิงเต็มพิกัด`;
-  } else {
-    assessmentPumps = `เครื่องสูบน้ำประจำสถานีระบายน้ำของโครงการผ่านการทดสอบเดินเครื่อง 100% พร้อมระบบไฟสำรองฉุกเฉินและเซนเซอร์ลูกลอยอัตโนมัติ`;
-  }
-
-  // 4. assessmentOutlook (การประเมินความเสี่ยงและมาตรการเชิงรุก)
-  const isHighRisk = isCanalHigh || rainProb >= 70 || /วิกฤติ|น้ำท่วม/i.test(wl);
-  const status = isHighRisk ? 'WATCH' : 'NORMAL';
-  const assessmentOutlook = `เรดาร์สภาพอากาศ Windy และ AccuWeather ตรวจพบโอกาสเกิดฝน ${rainProb}% (คาดการณ์ฝน ${rain24h} มม.) ${isCanalHigh ? 'ยกระดับเฝ้าระวังมวลน้ำคลองภายนอกเป็นพิเศษ และ Standby ทีมช่างพร้อมรับมือ 24 ชม.' : 'สภาพอากาศอยู่ในเกณฑ์เฝ้าระวังปกติ เจ้าหน้าที่เตรียมพร้อมรับมือตลอด 24 ชม.'}`;
-
-  const summary = `โครงการ ${project?.name || ''} (${project?.code || ''}): สภาพพื้นที่สัญจรได้ปกติ ${isCanalHigh ? 'เฝ้าระวังระดับน้ำคลองหน้าโครงการหนุนสูง ปิด Flap Valve ป้องกันน้ำย้อนและเดินระบบสูบน้ำพร้อมใช้งาน' : 'ระบบระบายน้ำและสถานีสูบน้ำพร้อมใช้งาน 100% ติดตามกลุ่มฝนเรดาร์ตลอด 24 ชม.'}`;
-
-  return {
-    status,
-    waterLevel: wl || 'ถนนเมนแห้งสนิท สภาพปกติ (0 ซม.)',
-    pumpsRunning: pr || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)',
-    drainageCondition: dc || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง',
-    assessmentField,
-    assessmentCanal,
-    assessmentPumps,
-    assessmentOutlook,
-    summary
-  };
-}
 
 export default async function handler(req, res) {
   const { id, photo, mode } = req.query;
@@ -334,13 +135,17 @@ export default async function handler(req, res) {
     let pumpsRunning = report.pumpsRunning || '';
     let drainageCondition = report.drainageCondition || '';
 
-    // ตรวจจับกรณีข้อมูลเดิมมีข้อความรั่วข้ามหมวด เช่น มีคำว่า 'ปั้ม' ใน waterLevel หรือขึ้นต้นด้วย ')'
+    // ตรวจจับกรณีข้อมูลเดิมมีข้อความรั่วข้ามหมวด เช่น มีคำว่า 'ปั้ม' ใน waterLevel หรือขึ้นต้นด้วย ')' หรือข้อความคลองขาด
     const isLeaked = /ปั๊ม|ปั้ม/i.test(waterLevel) || /^\s*\)/.test(waterLevel);
-    if ((isLeaked || !waterLevel || !pumpsRunning) && report.notes) {
+    const isBareCanal = !drainageCondition || /^(?:ระดับน้ำในคลอง(?:หน้าโครงการ)?|ระดับน้ำคลอง|คลองหน้าโครงการ|สภาพคลอง|คลอง|ทางระบายน้ำ)$/i.test(drainageCondition.trim());
+    if ((isLeaked || !waterLevel || !pumpsRunning || isBareCanal) && report.notes) {
       const fixed = extractDirectFieldReport(report.notes);
       if (fixed.waterLevel && (isLeaked || !waterLevel)) waterLevel = fixed.waterLevel;
       if (fixed.pumpsRunning) pumpsRunning = fixed.pumpsRunning;
       if (fixed.drainageCondition) drainageCondition = fixed.drainageCondition;
+    }
+    if (drainageCondition && /^(?:ระดับน้ำในคลอง(?:หน้าโครงการ)?|ระดับน้ำคลอง|คลองหน้าโครงการ|สภาพคลอง|คลอง|ทางระบายน้ำ)$/i.test(drainageCondition.trim())) {
+      drainageCondition = drainageCondition.trim() + ' อยู่ในเกณฑ์ควบคุม ระบายได้คล่องตัวตามปกติ';
     }
 
     // สังเคราะห์บทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken)
@@ -351,7 +156,7 @@ export default async function handler(req, res) {
       notes: report.notes
     });
 
-    const isLegacyAssessment = (txt) => !txt || /^(?:ผิวจราจรและพื้นที่โครงการ|สภาพพื้นที่ & ผิวจราจร|สภาพพื้นที่และผิวจราจร|ถนนหน้าและภายในโครงการ|ระดับน้ำคลอง & ภายนอก|คลองภายนอกและทางระบายน้ำ|ระบบสูบน้ำและเครื่องจักร|ระบบระบายน้ำ & เครื่องสูบ)\s*:\s*/i.test(txt) || /^\s*\)/.test(txt) || /ปั๊ม|ปั้ม/i.test(txt);
+    const isLegacyAssessment = (txt) => !txt || /^(?:ผิวจราจรและพื้นที่โครงการ|สภาพพื้นที่ & ผิวจราจร|สภาพพื้นที่และผิวจราจร|ถนนหน้าและภายในโครงการ|ระดับน้ำคลอง & ภายนอก|คลองภายนอกและทางระบายน้ำ|ระบบสูบน้ำและเครื่องจักร|ระบบระบายน้ำ & เครื่องสูบ)\s*:\s*/i.test(txt) || /^\s*\)/.test(txt) || /ปั๊ม|ปั้ม/i.test(txt) || /\(ระดับน้ำในคลองหน้าโครงการ\)/.test(txt);
 
     let assessmentField = report.assessmentField;
     if (isLegacyAssessment(assessmentField)) {
@@ -1275,11 +1080,15 @@ async function handleExecutiveSummary(req, res) {
         let pr = r.pumpsRunning || '';
         let dc = r.drainageCondition || '';
         const isLeaked = /ปั๊ม|ปั้ม/i.test(wl) || /^\s*\)/.test(wl);
-        if ((isLeaked || !wl || !pr) && r.notes) {
+        const isBareCanal = !dc || /^(?:ระดับน้ำในคลอง(?:หน้าโครงการ)?|ระดับน้ำคลอง|คลองหน้าโครงการ|สภาพคลอง|คลอง|ทางระบายน้ำ)$/i.test(dc.trim());
+        if ((isLeaked || !wl || !pr || isBareCanal) && r.notes) {
           const fixed = extractDirectFieldReport(r.notes);
           if (fixed.waterLevel && (isLeaked || !wl)) wl = fixed.waterLevel;
           if (fixed.pumpsRunning) pr = fixed.pumpsRunning;
           if (fixed.drainageCondition) dc = fixed.drainageCondition;
+        }
+        if (dc && /^(?:ระดับน้ำในคลอง(?:หน้าโครงการ)?|ระดับน้ำคลอง|คลองหน้าโครงการ|สภาพคลอง|คลอง|ทางระบายน้ำ)$/i.test(dc.trim())) {
+          dc = dc.trim() + ' อยู่ในเกณฑ์ควบคุม ระบายได้คล่องตัวตามปกติ';
         }
         projectMap.set(r.projectCode, {
           ...r,
