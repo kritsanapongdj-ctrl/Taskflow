@@ -56,6 +56,7 @@ export default async function handler(req, res) {
     }
 
     const report = reportSnap.data();
+    const projectConfig = FLOOD_PROJECTS[report.projectCode] || {};
 
     // 1. ถ้าเป็นการขอไฟล์รูปภาพดิบสำหรับ LINE Hero Image
     if (photo !== undefined) {
@@ -760,6 +761,12 @@ export default async function handler(req, res) {
             <span class="metric-label">สภาพทางระบายน้ำ / คลอง:</span>
             <span class="metric-val" style="color: ${drainageCondition && /หนุน|ล้น|สูง|วิกฤต|\+/i.test(drainageCondition) ? '#B91C1C' : 'inherit'};">${drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำเปิดโล่ง'}</span>
           </div>
+          <div class="metric-row">
+            <span class="metric-label">ระดับยกพื้นโครงการ (As-Built):</span>
+            <span class="metric-val" style="color: #0369a1; font-weight: 700;">
+              +${(projectConfig.asBuiltElevationDiff ?? 0.80).toFixed(2)} ม. ${projectConfig.asBuiltBenchmarkMSL ? `<span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">(${projectConfig.asBuiltBenchmarkMSL})</span>` : '<span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">(เทียบถนนนอก)</span>'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1082,8 +1089,8 @@ async function handleFloodMap(req, res) {
         }
       }
 
-      // คำนวณระดับน้ำ 3 ชั้น
-      const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' });
+      // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ pInfo เพื่ออ้างอิง As-Built Drawing)
+      const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, pInfo);
 
       projectsData.push({
         code,
@@ -1094,6 +1101,9 @@ async function handleFloodMap(req, res) {
         stationName: pInfo.stationName,
         basinAlert: pInfo.basinAlert,
         tmdAlert: pInfo.tmdAlert,
+        asBuiltElevationDiff: pInfo.asBuiltElevationDiff ?? 0.80,
+        asBuiltBenchmarkMSL: pInfo.asBuiltBenchmarkMSL ?? null,
+        asBuiltNotes: pInfo.asBuiltNotes ?? null,
         status,
         reportId,
         waterLevel,

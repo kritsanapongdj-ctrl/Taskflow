@@ -2,7 +2,7 @@ import { FLOOD_PROJECTS } from './projectsConfig.js';
 import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './geminiService.js';
 
 // คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก vs ถนนในโครงการ)
-export function calculateHydrologicalLevels(report = {}) {
+export function calculateHydrologicalLevels(report = {}, project = {}) {
   const notes = (report.notes || '') + ' ' + (report.drainageCondition || '') + ' ' + (report.waterLevel || '');
   const status = report.status || 'NORMAL';
   
@@ -10,7 +10,7 @@ export function calculateHydrologicalLevels(report = {}) {
   let canalBelowInner = 120; // ซม. (ผิวน้ำคลองต่ำกว่าถนนในโครงการ)
   let roadWaterDepth = 0; // ซม. (ความลึกน้ำท่วมขังบนผิวถนน)
   
-  // 1. ตรวจจับระยะผิวน้ำคลอง
+  // 1. ตรวจจับระยะผิวน้ำคลองเทียบถนนนอก
   const outerMatch = notes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากถนน)/i) || 
                      notes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
   if (outerMatch) {
@@ -20,14 +20,32 @@ export function calculateHydrologicalLevels(report = {}) {
     canalBelowOuter = 10;
   }
   
+  // 2. คำนวณระดับยกพื้น/ระดับถนนในโครงการ (innerElevation) ตามลำดับความสำคัญ (3-Tier Precedence)
+  // ลำดับที่ 1: ตรวจวัดจริงหน้างาน (Field Measured จาก LINE Notes)
+  // ลำดับที่ 2: ค่าตามแบบก่อสร้างจริง As-Built Drawing (Project Config)
+  // ลำดับที่ 3: ค่ามาตรฐานวิศวกรรม LH (+80 ซม.)
+  let innerElevation = 80;
+  let innerSource = 'ENGINEERING_STANDARD'; // 'FIELD_MEASURED' | 'AS_BUILT' | 'ENGINEERING_STANDARD'
+
   const innerMatch = notes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากพื้นโครงการ|จากถนนในโครงการ|จากในโครงการ)/i);
   if (innerMatch) {
     canalBelowInner = parseFloat(innerMatch[1]);
+    if (innerMatch[0].includes('ม')) canalBelowInner *= 100;
+    if (canalBelowInner > canalBelowOuter) {
+      innerElevation = canalBelowInner - canalBelowOuter;
+      innerSource = 'FIELD_MEASURED';
+    }
+  } else if (typeof project?.asBuiltElevationDiff === 'number' && !isNaN(project.asBuiltElevationDiff)) {
+    innerElevation = Math.round(project.asBuiltElevationDiff * 100);
+    canalBelowInner = canalBelowOuter + innerElevation;
+    innerSource = 'AS_BUILT';
   } else {
-    canalBelowInner = canalBelowOuter + 80; // มาตรฐานถมดิน LH สูงกว่าถนนนอก ~80 ซม.
+    innerElevation = 80;
+    canalBelowInner = canalBelowOuter + innerElevation;
+    innerSource = 'ENGINEERING_STANDARD';
   }
   
-  // 2. ตรวจจับระดับน้ำท่วมขังบนผิวถนน
+  // 3. ตรวจจับระดับน้ำท่วมขังบนผิวถนน
   const roadMatch = notes.match(/(?:น้ำท่วม|น้ำขัง|รอการระบาย)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
   if (roadMatch) {
     roadWaterDepth = parseFloat(roadMatch[1]);
@@ -43,7 +61,11 @@ export function calculateHydrologicalLevels(report = {}) {
     canalBelowOuter: Math.round(canalBelowOuter),
     canalBelowInner: Math.round(canalBelowInner),
     roadWaterDepth: Math.round(roadWaterDepth),
-    innerElevation: 80, // ระดับถมดินภายในโครงการ (+80 ซม.)
+    innerElevation: Math.round(innerElevation),
+    innerSource,
+    asBuiltElevationDiff: typeof project?.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
+    asBuiltBenchmarkMSL: project?.asBuiltBenchmarkMSL || null,
+    asBuiltNotes: project?.asBuiltNotes || null,
     outerElevation: 0,  // เกณฑ์อ้างอิงถนนภายนอก (0 ซม.)
     canalElevation: -Math.round(canalBelowOuter),
     flapValve,
@@ -326,7 +348,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <svg class="w-4 h-4 text-lh-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             <span>แบบจำลองอุทกวิทยาระดับน้ำ 3 มิติ (LH Cross-Section)</span>
           </h3>
-          <span class="text-[10px] text-slate-400 font-mono" id="cs-baseline">อ้างอิงระดับถนน 0.00 ม.</span>
+          <div class="flex items-center gap-1.5">
+            <span id="cs-asbuilt-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">📐 As-Built: +0.80 ม.</span>
+            <span class="text-[10px] text-slate-400 font-mono hidden sm:inline" id="cs-baseline">อ้างอิงถนน 0.00 ม.</span>
+          </div>
         </div>
 
         <!-- Dynamic SVG Diagram -->
@@ -335,15 +360,15 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <!-- Sky Gradient Background -->
             <rect width="460" height="170" fill="url(#sky-grad)"/>
 
-            <!-- Ground: Internal Road (Left) elevated +80cm -->
-            <path d="M 0,80 L 160,80 L 170,110 L 170,170 L 0,170 Z" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+            <!-- Ground: Internal Road (Left) elevated -->
+            <path id="svg-inner-road" d="M 0,80 L 160,80 L 170,110 L 170,170 L 0,170 Z" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
             <!-- Road Surface: Outer Road (Middle) 0cm -->
             <path d="M 170,110 L 320,110 L 330,135 L 330,170 L 170,170 Z" fill="#334155" stroke="#475569" stroke-width="1.5"/>
             <!-- Canal Bed (Right) -140cm -->
             <path d="M 330,135 L 460,135 L 460,170 L 330,170 Z" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
 
             <!-- House / Villa Icon on Inner Road -->
-            <g transform="translate(45, 42)">
+            <g id="svg-house-group" transform="translate(45, 42)">
               <polygon points="20,0 40,18 0,18" fill="#bca374" opacity="0.9"/>
               <rect x="5" y="18" width="30" height="20" fill="#cbd5e1"/>
               <rect x="15" y="24" width="10" height="14" fill="#0f2e4a"/>
@@ -393,9 +418,12 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <span class="text-[9px] text-slate-500 block">เกณฑ์ควบคุมปกติ</span>
           </div>
           <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800">
-            <span class="text-slate-400 block text-[10px]">ระดับน้ำคลองเทียบถนนใน</span>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 block text-[10px]">ระดับน้ำคลองเทียบถนนใน</span>
+              <span id="cs-source-tag" class="text-[9px] text-sky-400 font-semibold">📐 As-Built</span>
+            </div>
             <span id="cs-canal-inner" class="font-bold text-emerald-400 text-sm">ต่ำกว่า 120 ซม.</span>
-            <span class="text-[9px] text-slate-500 block">ปลอดภัยสูง (ถมดินยก)</span>
+            <span id="cs-canal-inner-sub" class="text-[9px] text-slate-400 block">ปลอดภัยสูง (ถมดินยก +0.80 ม.)</span>
           </div>
           <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800">
             <span class="text-slate-400 block text-[10px]">บานพับ Flap Valve</span>
@@ -674,15 +702,76 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       }
 
       // Populate Hydrological Cross-Section Diagram & Metrics
-      const hydro = p.hydro || { canalBelowOuter: 40, canalBelowInner: 120, roadWaterDepth: 0, flapValve: 'OPEN', pumpStatus: 'READY' };
+      const hydro = p.hydro || { 
+        canalBelowOuter: 40, 
+        canalBelowInner: 120, 
+        roadWaterDepth: 0, 
+        innerElevation: 80, 
+        innerSource: 'ENGINEERING_STANDARD', 
+        asBuiltElevationDiff: 0.80, 
+        flapValve: 'OPEN', 
+        pumpStatus: 'READY' 
+      };
+
+      const elevMeters = (hydro.innerElevation / 100).toFixed(2);
+      const elevSign = hydro.innerElevation >= 0 ? '+' : '';
+
+      // Update As-Built Badge in Cross-Section Header
+      const asbuiltBadge = document.getElementById('cs-asbuilt-badge');
+      if (asbuiltBadge) {
+        if (hydro.innerSource === 'AS_BUILT') {
+          asbuiltBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30';
+          asbuiltBadge.innerText = '📐 As-Built: ' + elevSign + elevMeters + ' ม.' + (p.asBuiltBenchmarkMSL ? ' (' + p.asBuiltBenchmarkMSL + ')' : '');
+        } else if (hydro.innerSource === 'FIELD_MEASURED') {
+          asbuiltBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          asbuiltBadge.innerText = '📏 ตรวจวัดจริง: ' + elevSign + elevMeters + ' ม.';
+        } else {
+          asbuiltBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-700/50 text-slate-300 border border-slate-600/40';
+          asbuiltBadge.innerText = '⚙️ มาตรฐาน LH: +0.80 ม.';
+        }
+      }
+
+      const baselineElem = document.getElementById('cs-baseline');
+      if (baselineElem) {
+        baselineElem.innerText = p.asBuiltBenchmarkMSL ? ('อ้างอิง: ' + p.asBuiltBenchmarkMSL) : 'อ้างอิงถนน 0.00 ม.';
+      }
+
+      const sourceTag = document.getElementById('cs-source-tag');
+      if (sourceTag) {
+        sourceTag.innerText = hydro.innerSource === 'AS_BUILT' ? '📐 As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? '📏 วัดจริง' : '⚙️ มาตรฐาน');
+        sourceTag.className = hydro.innerSource === 'AS_BUILT' ? 'text-[9px] text-sky-400 font-semibold' : (hydro.innerSource === 'FIELD_MEASURED' ? 'text-[9px] text-emerald-400 font-semibold' : 'text-[9px] text-slate-400');
+      }
 
       document.getElementById('cs-canal-outer').innerText = 'ต่ำกว่า ' + hydro.canalBelowOuter + ' ซม.';
       document.getElementById('cs-canal-inner').innerText = 'ต่ำกว่า ' + hydro.canalBelowInner + ' ซม.';
+      
+      const innerSub = document.getElementById('cs-canal-inner-sub');
+      if (innerSub) {
+        if (hydro.innerSource === 'AS_BUILT') {
+          innerSub.innerText = '📐 ตามแบบ As-Built (' + elevSign + elevMeters + ' ม.)' + (p.asBuiltBenchmarkMSL ? ' • ' + p.asBuiltBenchmarkMSL : '');
+        } else if (hydro.innerSource === 'FIELD_MEASURED') {
+          innerSub.innerText = '📏 ตรวจวัดจริงหน้างาน (' + elevSign + elevMeters + ' ม.)';
+        } else {
+          innerSub.innerText = '⚙️ มาตรฐานวิศวกรรม LH (+0.80 ม.)';
+        }
+      }
+
       document.getElementById('cs-flap-valve').innerText = hydro.flapValve === 'OPEN' ? 'เปิดระบายธรรมชาติ' : 'ปิดป้องกันน้ำย้อน';
       document.getElementById('cs-flap-valve').className = hydro.flapValve === 'OPEN' ? 'font-bold text-emerald-400' : 'font-bold text-amber-400';
       document.getElementById('cs-pump-status').innerText = hydro.pumpStatus === 'READY' ? 'พร้อมใช้งาน 100%' : (hydro.pumpStatus === 'ACTIVE' ? 'กำลังเดินเครื่องเร่งระบาย' : 'Standby เตรียมสูบ');
 
       // Update SVG Dynamic Visuals
+      // Road baseline Y = 110. Inner road Y depends on innerElevation (scale: 30px per 80cm => ~0.375 px/cm)
+      const innerY = Math.max(50, Math.min(100, 110 - Math.round(hydro.innerElevation * 0.375)));
+      const innerRoad = document.getElementById('svg-inner-road');
+      if (innerRoad) {
+        innerRoad.setAttribute('d', 'M 0,' + innerY + ' L 160,' + innerY + ' L 170,110 L 170,170 L 0,170 Z');
+      }
+      const houseGroup = document.getElementById('svg-house-group');
+      if (houseGroup) {
+        houseGroup.setAttribute('transform', 'translate(45, ' + (innerY - 38) + ')');
+      }
+
       // Canal water y-coordinate: baseline road is 110, so canal water is 110 + canalBelowOuter (scaled)
       const waterY = Math.min(160, Math.max(105, 110 + (hydro.canalBelowOuter * 0.4)));
       const canalRect = document.getElementById('svg-canal-water');
@@ -690,7 +779,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       if (canalRect && waterLine) {
         canalRect.setAttribute('y', waterY);
         canalRect.setAttribute('height', 170 - waterY);
-        waterLine.setAttribute('d', \`M 330,\${waterY} Q 360,\${waterY - 2} 395,\${waterY} T 460,\${waterY}\`);
+        waterLine.setAttribute('d', 'M 330,' + waterY + ' Q 360,' + (waterY - 2) + ' 395,' + waterY + ' T 460,' + waterY);
       }
 
       // Flap valve rotation
@@ -708,9 +797,17 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       }
 
       // Text annotations on SVG
-      document.getElementById('svg-outer-txt').innerText = hydro.roadWaterDepth > 0 ? \`น้ำขัง \${hydro.roadWaterDepth} ซม.\` : '0.00 ม. (ปกติ)';
+      const innerSrcBadge = hydro.innerSource === 'AS_BUILT' ? 'As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? 'ตรวจวัด' : 'มาตรฐาน');
+      const innerStatusTxt = hydro.roadWaterDepth > 0 ? ('น้ำขัง ' + hydro.roadWaterDepth + ' ซม.') : ('แห้ง 100% (' + innerSrcBadge + ')');
+      const svgInnerTxt = document.getElementById('svg-inner-txt');
+      if (svgInnerTxt) {
+        svgInnerTxt.innerText = elevSign + elevMeters + ' ม. ' + innerStatusTxt;
+        svgInnerTxt.setAttribute('fill', hydro.roadWaterDepth > 0 ? '#ef4444' : '#10b981');
+      }
+
+      document.getElementById('svg-outer-txt').innerText = hydro.roadWaterDepth > 0 ? ('น้ำขัง ' + hydro.roadWaterDepth + ' ซม.') : '0.00 ม. (ปกติ)';
       document.getElementById('svg-outer-txt').setAttribute('fill', hydro.roadWaterDepth > 0 ? '#ef4444' : '#f8fafc');
-      document.getElementById('svg-canal-txt').innerText = \`-\${(hydro.canalBelowOuter / 100).toFixed(2)} ม. (\${hydro.canalBelowOuter <= 15 ? 'หนุนสูง' : 'ในเกณฑ์'})\`;
+      document.getElementById('svg-canal-txt').innerText = '-' + (hydro.canalBelowOuter / 100).toFixed(2) + ' ม. (' + (hydro.canalBelowOuter <= 15 ? 'หนุนสูง' : 'ในเกณฑ์') + ')';
       document.getElementById('svg-canal-txt').setAttribute('fill', hydro.canalBelowOuter <= 15 ? '#f59e0b' : '#38bdf8');
 
       // Weather Section
