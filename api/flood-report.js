@@ -1009,10 +1009,25 @@ function getRealTimeSurveillanceSynthesis(reportArea, areaLabel, generatedAtThai
   return { gistda, floodHub, windy, accuWeather, areaSynthesisText, basinAuthorityText };
 }
 
+// Cache object to persist across warm serverless requests
+let floodMapCache = {
+  html: null,
+  expiresAt: 0
+};
+
 // 🗺️ แผนที่ติดตามสถานการณ์น้ำและระบบระบายน้ำ Real-time (LH FLOOD MAP DASHBOARD)
 // ==========================================
 async function handleFloodMap(req, res) {
   try {
+    const now = Date.now();
+    // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 45 วินาที (Zero Latency)
+    if (floodMapCache.html && now < floodMapCache.expiresAt && !req.query.nocache) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=45, stale-while-revalidate=60');
+      res.setHeader('X-Cache-Status', 'HIT');
+      return res.status(200).send(floodMapCache.html);
+    }
+
     await signInAnonymously(auth);
 
     const reportsSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports"));
@@ -1050,6 +1065,29 @@ async function handleFloodMap(req, res) {
       }
     });
 
+    // ดึงรูปภาพแบบขนาน (Parallel Fetching) เพื่อให้ตอบสนองรวดเร็วที่สุด ไม่บล็อกลูป
+    const uniqueReportIds = [...new Set(
+      Array.from(projectMap.values())
+        .map(r => r.reportId || r.id)
+        .filter(Boolean)
+    )];
+
+    const photoMap = new Map();
+    await Promise.all(
+      uniqueReportIds.map(async (repId) => {
+        try {
+          const pCol = collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports", repId, "photos");
+          const pSnap = await getDocs(pCol);
+          const list = [];
+          pSnap.forEach((docSnap) => list.push({ index: docSnap.data().index }));
+          list.sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
+          photoMap.set(repId, list);
+        } catch (e) {
+          photoMap.set(repId, []);
+        }
+      })
+    );
+
     const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
     // ประกอบข้อมูล 30 โครงการใน FLOOD_PROJECTS
@@ -1076,18 +1114,8 @@ async function handleFloodMap(req, res) {
         reportDateThai = `${bkk.getUTCDate()} ${thaiMonths[bkk.getUTCMonth()]} ${bkk.getUTCFullYear() + 543} เวลา ${String(bkk.getUTCHours()).padStart(2, '0')}:${String(bkk.getUTCMinutes()).padStart(2, '0')} น.`;
       }
 
-      // ดึงรูปภาพจาก photos subcollection ถ้ามี
-      const photos = [];
-      if (reportId) {
-        try {
-          const pCol = collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports", reportId, "photos");
-          const pSnap = await getDocs(pCol);
-          pSnap.forEach((docSnap) => photos.push({ index: docSnap.data().index }));
-          photos.sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
-        } catch (e) {
-          // ignore
-        }
-      }
+      // ดึงรูปภาพจาก photoMap ที่ดึงมาพร้อมกันเรียบร้อยแล้ว
+      const photos = reportId ? (photoMap.get(reportId) || []) : [];
 
       // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ pInfo เพื่ออ้างอิง As-Built Drawing)
       const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, pInfo);
@@ -1098,6 +1126,7 @@ async function handleFloodMap(req, res) {
         area: pInfo.area,
         lat: pInfo.lat,
         lon: pInfo.lon,
+        googleMapsUrl: pInfo.googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${pInfo.lat},${pInfo.lon}`,
         stationName: pInfo.stationName,
         basinAlert: pInfo.basinAlert,
         tmdAlert: pInfo.tmdAlert,
@@ -1124,8 +1153,16 @@ async function handleFloodMap(req, res) {
     };
 
     const html = generateFloodMapHtml({ projectsData, summaryStats });
+    
+    // บันทึกลงแคชในหน่วยความจำ (TTL 45 วินาที)
+    floodMapCache = {
+      html,
+      expiresAt: Date.now() + 45 * 1000
+    };
+
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=45, stale-while-revalidate=60');
+    res.setHeader('X-Cache-Status', 'MISS');
     return res.status(200).send(html);
   } catch (error) {
     console.error("Map Dashboard Error:", error);

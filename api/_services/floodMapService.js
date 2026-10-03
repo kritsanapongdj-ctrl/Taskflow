@@ -84,16 +84,17 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LH Flood Monitoring Map | แผนที่ติดตามสถานการณ์น้ำและระบบระบายน้ำ Real-time</title>
   
-  <!-- Fonts -->
+  <!-- High Performance CDN Connections -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <!-- Leaflet MarkerCluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <!-- Leaflet CSS & MarkerCluster CSS (Cloudflare CDN Edge in Bangkok) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css"/>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -334,8 +335,8 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           <span class="text-[9px] text-emerald-400 font-mono">100% Free / ชัดเจน</span>
         </div>
         <div class="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/80">
-          <button onclick="switchBaseMap('osm')" id="btn-bm-osm" class="flex-1 py-1 px-1 rounded text-[10px] font-bold bg-lh-gold text-slate-950 transition-all text-center">🗺️ ถนน (OSM)</button>
-          <button onclick="switchBaseMap('street')" id="btn-bm-street" class="flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center">🏙️ ภูมิประเทศ</button>
+          <button onclick="switchBaseMap('street')" id="btn-bm-street" class="flex-1 py-1 px-1 rounded text-[10px] font-bold bg-lh-gold text-slate-950 transition-all text-center shadow-xs">🏙️ แผนที่เร็วสูง (Esri)</button>
+          <button onclick="switchBaseMap('osm')" id="btn-bm-osm" class="flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center">🗺️ ถนน (OSM)</button>
           <button onclick="switchBaseMap('satellite')" id="btn-bm-satellite" class="flex-1 py-1 px-1 rounded text-[10px] font-medium text-slate-300 hover:text-white transition-all text-center">🛰️ ดาวเทียม</button>
         </div>
       </div>
@@ -598,10 +599,9 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/20" src="" alt="ภาพขยาย">
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- Leaflet MarkerCluster JS -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- Leaflet JS & MarkerCluster JS (High Speed Cloudflare Bangkok Edge) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 
   <!-- Client Script for Map Logic, Cross-Section Rendering & Open-Meteo -->
   <script>
@@ -614,21 +614,30 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     let filterRiskOnly = false;
     let useClustering = true;
     let clusterGroup = null;
-    let currentBasemap = 'osm';
+    let currentBasemap = 'street';
 
-    // 100% Free Basemaps without API Keys or Watermarks
+    // High-performance Basemaps with Thai edge CDN caching
     const tileLayers = {
-      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Land & Houses',
-        maxZoom: 19
-      }),
       street: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, TomTom | Land & Houses',
-        maxZoom: 19
+        attribution: 'Tiles &copy; Esri | Land & Houses GIS Dashboard',
+        maxZoom: 19,
+        keepBuffer: 8,
+        updateWhenIdle: false,
+        updateWhenZooming: true,
+        updateInterval: 100
+      }),
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap | Land & Houses',
+        maxZoom: 19,
+        keepBuffer: 4,
+        updateWhenIdle: true
       }),
       satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics | Land & Houses',
-        maxZoom: 19
+        attribution: 'Tiles &copy; Esri, Maxar | Land & Houses',
+        maxZoom: 19,
+        keepBuffer: 6,
+        updateWhenIdle: false,
+        updateWhenZooming: true
       })
     };
 
@@ -719,8 +728,8 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Default Clean Basemap: OpenStreetMap (No watermark, full Thai waterways & sois)
-      tileLayers.osm.addTo(map);
+      // Default High-Performance Basemap: Esri World Street (Instant Bangkok CDN cache)
+      tileLayers.street.addTo(map);
 
       renderMarkers();
 
@@ -1011,7 +1020,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         btnReport.style.display = 'none';
       }
 
-      document.getElementById('btn-gmaps').href = \`https://www.google.com/maps/dir/?api=1&destination=\${p.lat},\${p.lon}\`;
+      document.getElementById('btn-gmaps').href = p.googleMapsUrl || \`https://www.google.com/maps/dir/?api=1&destination=\${p.lat},\${p.lon}\`;
 
       // Open Drawer
       document.getElementById('project-drawer').classList.remove('translate-x-full');

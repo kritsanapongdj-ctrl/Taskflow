@@ -18,7 +18,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-410', 
     name: 'CHAIYAPRUEK 2 รังสิต คลอง4', 
     area: 'คลองสี่, ธัญบุรี, ปทุมธานี', 
-    lat: 14.015, lon: 100.685, group: 'A',
+    lat: 14.000159, lon: 100.689687,
+    googleMapsUrl: 'https://maps.app.goo.gl/qFg1NiJ5kpeRpcko6', group: 'A',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -30,7 +31,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-415', 
     name: 'Villaggio ลำลูกกา-วงแหวน', 
     area: 'บึงคำพร้อย, ลำลูกกา, ปทุมธานี', 
-    lat: 13.935, lon: 100.710, group: 'A',
+    lat: 13.972404, lon: 100.726135,
+    googleMapsUrl: 'https://maps.app.goo.gl/VgHUpMqbaYmNNz4D9', group: 'A',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -42,7 +44,8 @@ export const FLOOD_PROJECTS = {
     code: 'NE-419', 
     name: 'Villaggio รังสิตคลอง 4', 
     area: 'คลองสี่, ธัญบุรี, ปทุมธานี', 
-    lat: 14.010, lon: 100.682, group: 'A',
+    lat: 14.028957, lon: 100.687628,
+    googleMapsUrl: 'https://goo.gl/maps/pz6CKddLQuSBwZxW9', group: 'A',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -54,7 +57,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-419', 
     name: 'vie ราชพฤกษ์ตัดใหม่', 
     area: 'บางคูวัด, เมือง, ปทุมธานี', 
-    lat: 13.972, lon: 100.478,
+    lat: 13.970316, lon: 100.476072,
+    googleMapsUrl: 'https://maps.app.goo.gl/YEeV85EqnEYPycAv5',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -68,7 +72,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-341', 
     name: 'Villaggio 2-อยุธยา', 
     area: 'บ้านกรด, บางปะอิน, พระนครศรีอยุธยา', 
-    lat: 14.318, lon: 100.608,
+    lat: 14.303085, lon: 100.605886,
+    googleMapsUrl: 'https://goo.gl/maps/mAHJepncPXx35vVP7',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -80,7 +85,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-328', 
     name: 'Villaggio เกาะเรียน', 
     area: 'เกาะเรียน, พระนครศรีอยุธยา, พระนครศรีอยุธยา', 
-    lat: 14.312, lon: 100.572,
+    lat: 14.31963, lon: 100.574582,
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=14.319630,100.574582',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -92,7 +98,8 @@ export const FLOOD_PROJECTS = {
     code: 'NE-411', 
     name: 'CHAIYAPRUEK อยุธยา', 
     area: 'คลองสวนพลู, พระนครศรีอยุธยา, พระนครศรีอยุธยา', 
-    lat: 14.335, lon: 100.612,
+    lat: 14.325927, lon: 100.599931,
+    googleMapsUrl: 'https://maps.app.goo.gl/G8HWGUiHW3ttyTgz8',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -106,7 +113,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-323', 
     name: 'Indy WESTGATE', 
     area: 'บางรักพัฒนา, บางบัวทอง, นนทบุรี', 
-    lat: 13.888, lon: 100.395,
+    lat: 13.903056, lon: 100.388341,
+    googleMapsUrl: 'https://maps.app.goo.gl/bEm8wtd9XXrksbX77',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -118,7 +126,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-337', 
     name: 'anya WESTGATE', 
     area: 'บางรักพัฒนา, บางบัวทอง, นนทบุรี', 
-    lat: 13.905, lon: 100.378,
+    lat: 13.908121, lon: 100.376285,
+    googleMapsUrl: 'https://goo.gl/maps/s93DpYEMYDQpF9M37',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -130,7 +139,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-354', 
     name: 'Villaggio บางใหญ่', 
     area: 'บางแม่นาง, บางใหญ่, นนทบุรี', 
-    lat: 13.876, lon: 100.370,
+    lat: 13.872135, lon: 100.33977,
+    googleMapsUrl: 'https://maps.app.goo.gl/8HxWxVGS5gsGzvkT7',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -142,7 +152,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-383', 
     name: 'พฤกษ์ลดา ราชพฤกษ์-345', 
     area: 'ละหาร, บางบัวทอง, นนทบุรี', 
-    lat: 13.955, lon: 100.460,
+    lat: 13.941273, lon: 100.422836,
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.941273,100.422836',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -154,7 +165,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-406', 
     name: 'CHAIYAPRUEK แจ้งวัฒนะ', 
     area: 'คลองข่อย, ปากเกร็ด, นนทบุรี', 
-    lat: 13.935, lon: 100.475,
+    lat: 13.942196, lon: 100.474924,
+    googleMapsUrl: 'https://maps.app.goo.gl/1mBUs7QanLtNKoWu8',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -166,7 +178,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-372', 
     name: 'มัณฑนา ราชพฤกษ์-นครอินทร์', 
     area: 'บางเลน, บางใหญ่, นนทบุรี', 
-    lat: 13.842, lon: 100.435,
+    lat: 13.859719, lon: 100.435377,
+    googleMapsUrl: 'https://maps.app.goo.gl/5TjeFSMKyfcyRQXP8',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -178,7 +191,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-420', 
     name: 'MANTANA ณ ราชพฤกษ์', 
     area: 'บางพลับ, ปากเกร็ด, นนทบุรี', 
-    lat: 13.918, lon: 100.450,
+    lat: 13.935171, lon: 100.455767,
+    googleMapsUrl: 'https://maps.app.goo.gl/dFt2THrCwjmMzZcC6',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -190,7 +204,8 @@ export const FLOOD_PROJECTS = {
     code: 'LA-029', 
     name: 'anya ราชพฤกษ์-นครอินทร์', 
     area: 'บางเลน, บางใหญ่, นนทบุรี', 
-    lat: 13.848, lon: 100.438,
+    lat: 13.859814, lon: 100.435509,
+    googleMapsUrl: 'https://maps.app.goo.gl/LsEMGgT2vfb9Ftm7A',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -204,7 +219,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-379', 
     name: 'นันทวัน พระราม 9-กรุงเทพกรีฑาตัดใหม่', 
     area: 'สะพานสูง, กรุงเทพมหานคร', 
-    lat: 13.742, lon: 100.692, group: 'B',
+    lat: 13.755783, lon: 100.692431,
+    googleMapsUrl: 'https://maps.app.goo.gl/aNYr3R8qbGsHRwhy7', group: 'B',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -216,7 +232,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-392', 
     name: 'VIVE กรุงเทพกรีฑาตัดใหม่', 
     area: 'สะพานสูง, กรุงเทพมหานคร', 
-    lat: 13.745, lon: 100.690, group: 'B',
+    lat: 13.761578, lon: 100.695588,
+    googleMapsUrl: 'https://maps.app.goo.gl/ijStFXHMUcQx8NXCA', group: 'B',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -228,7 +245,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-395', 
     name: 'NANTAWAN POOL VILLA พระราม 9', 
     area: 'สะพานสูง, กรุงเทพมหานคร', 
-    lat: 13.740, lon: 100.695, group: 'B',
+    lat: 13.761031, lon: 100.692389,
+    googleMapsUrl: 'https://maps.app.goo.gl/HUASLDrk8z8nYGDL6', group: 'B',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -242,7 +260,8 @@ export const FLOOD_PROJECTS = {
     code: 'LA-025', 
     name: 'PRUEKLADA ทางด่วนรามอินทรา-จตุโชติ', 
     area: 'สามวาตะวันตก, คลองสามวา, กรุงเทพมหานคร', 
-    lat: 13.9072, lon: 100.7010,
+    lat: 13.907208, lon: 100.700991,
+    googleMapsUrl: 'https://maps.app.goo.gl/oN5Nens5Mdcojxt78',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -254,7 +273,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-120', 
     name: 'นันทวัน รามอินทรา-พหลโยธิน 50', 
     area: 'ท่าแร้ง, บางเขน, กรุงเทพมหานคร', 
-    lat: 13.882, lon: 100.625,
+    lat: 13.875759, lon: 100.659511,
+    googleMapsUrl: 'https://maps.app.goo.gl/L5BjWkn4EvuE87Ja9',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -266,7 +286,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-195', 
     name: 'มัณฑนา-Lake Watcharapol', 
     area: 'ออเงิน, สายไหม, กรุงเทพมหานคร', 
-    lat: 13.902, lon: 100.675,
+    lat: 13.91222, lon: 100.65813,
+    googleMapsUrl: 'https://maps.google.com/?q=13.912220,100.658130',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -278,7 +299,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-225', 
     name: 'พฤกษ์ลดา วงแหวน-หทัยราษฎร์', 
     area: 'สามวาตะวันตก, คลองสามวา, กรุงเทพมหานคร', 
-    lat: 13.895, lon: 100.718,
+    lat: 13.91071, lon: 100.721455,
+    googleMapsUrl: 'https://maps.app.goo.gl/FDPfMzUVxRtWYebbA',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -290,7 +312,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-402', 
     name: 'vie ทางด่วนรามอินทรา-วงแหวน', 
     area: 'สามวาตะวันตก, คลองสามวา, กรุงเทพมหานคร', 
-    lat: 13.9108, lon: 100.7048,
+    lat: 13.910849, lon: 100.704846,
+    googleMapsUrl: 'https://maps.app.goo.gl/va1a7ae463YuhWdb9',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -302,7 +325,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-329', 
     name: 'สีวลี ศรีนครินทร์-ร่มเกล้า', 
     area: 'มีนบุรี, กรุงเทพมหานคร', 
-    lat: 13.778, lon: 100.735, group: 'A2',
+    lat: 13.776185, lon: 100.734111,
+    googleMapsUrl: 'https://maps.app.goo.gl/7mMek9ZWGjx7hBLE6', group: 'A2',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -316,7 +340,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-414', 
     name: 'CHAIYAPRUEK พรานนก-สาย2', 
     area: 'ทวีวัฒนา, ทวีวัฒนา, กรุงเทพมหานคร', 
-    lat: 13.762, lon: 100.392,
+    lat: 13.758759, lon: 100.38601,
+    googleMapsUrl: 'https://maps.app.goo.gl/MuH6ntjXUk5QrNqQ8',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -328,7 +353,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-421', 
     name: 'MANTANA ปิ่นเกล้า - สาย3', 
     area: 'ศาลาธรรมสพน์, ทวีวัฒนา, กรุงเทพมหานคร', 
-    lat: 13.778, lon: 100.365,
+    lat: 13.76316, lon: 100.373909,
+    googleMapsUrl: 'https://maps.app.goo.gl/ykyJgpXuxYHGmRNA9',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -340,7 +366,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-221', 
     name: 'นันทวัน ปิ่นเกล้า-ราชพฤกษ์', 
     area: 'บางระมาด, ตลิ่งชัน, กรุงเทพมหานคร', 
-    lat: 13.785, lon: 100.430,
+    lat: 13.779487, lon: 100.43717,
+    googleMapsUrl: 'https://maps.app.goo.gl/YhLUrUDodEdwXfLx6',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -352,7 +379,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-205', 
     name: 'ลดาวัลย์-ราชพฤกษ์ ปิ่นเกล้า', 
     area: 'บางระมาด, ตลิ่งชัน, กรุงเทพมหานคร', 
-    lat: 13.775, lon: 100.448,
+    lat: 13.759914, lon: 100.443814,
+    googleMapsUrl: 'https://maps.app.goo.gl/XUez7kBoPW1uf3dH6',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -364,7 +392,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-355', 
     name: 'CHAIYAPRUEK เพชรเกษม69', 
     area: 'หนองแขม, หนองแขม, กรุงเทพมหานคร', 
-    lat: 13.685, lon: 100.360,
+    lat: 13.680846, lon: 100.35539,
+    googleMapsUrl: 'https://maps.app.goo.gl/3e4hWpBSHyGBzv9o9',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
@@ -376,7 +405,8 @@ export const FLOOD_PROJECTS = {
     code: 'LH-288', 
     name: 'ลดาวัลย์ พระราม 2', 
     area: 'แสมดำ, บางขุนเทียน, กรุงเทพมหานคร', 
-    lat: 13.642, lon: 100.420,
+    lat: 13.646169, lon: 100.414414,
+    googleMapsUrl: 'https://maps.google.com/?q=13.646169,100.414414',
     asBuiltElevationDiff: 0.80, // ระดับความสูงถนนในโครงการเทียบถนนภายนอก (เมตร) ตามแบบก่อสร้างจริง As-Built
     asBuiltBenchmarkMSL: null,  // ระดับอ้างอิงน้ำทะเลปานกลาง เช่น '+1.90 ม.รทก.' (ถ้ามี)
     asBuiltNotes: 'ระดับมาตรฐานวิศวกรรม LH (+0.80 ม. รออัปเดต As-Built วันจันทร์)',
