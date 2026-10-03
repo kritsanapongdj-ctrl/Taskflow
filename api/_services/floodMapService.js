@@ -646,6 +646,9 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       map.removeLayer(tileLayers[currentBasemap]);
       tileLayers[type].addTo(map);
       currentBasemap = type;
+      if (radarLayer && map.hasLayer(radarLayer)) {
+        radarLayer.bringToFront();
+      }
 
       const btns = {
         osm: document.getElementById('btn-bm-osm'),
@@ -1078,34 +1081,51 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     async function toggleRadarLayer() {
       const btn = document.getElementById('radar-toggle-btn');
       if (isRadarActive) {
-        if (radarLayer) map.removeLayer(radarLayer);
+        if (radarLayer) {
+          map.removeLayer(radarLayer);
+          radarLayer = null;
+        }
         isRadarActive = false;
         btn.className = 'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-blue-900/40 text-blue-300 hover:text-blue-100 border border-blue-700/50 transition-colors';
+        btn.innerHTML = '<span>🌧️ เรดาร์สด</span>';
         return;
       }
 
       try {
-        btn.innerText = '⏳ โหลดเรดาร์...';
+        btn.innerHTML = '<span>⏳ โหลดเรดาร์...</span>';
         const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
         const data = await res.json();
-        const latestTime = data.radar?.past?.[data.radar.past.length - 1]?.time || data.radar?.nowcast?.[0]?.time;
+        const host = data.host || 'https://tilecache.rainviewer.com';
+        const past = data.radar && data.radar.past;
+        const latestFrame = (past && past.length > 0) ? past[past.length - 1] : (data.radar && data.radar.nowcast && data.radar.nowcast[0]);
         
-        if (latestTime) {
-          radarLayer = L.tileLayer(\`https://tilecache.rainviewer.com/v2/radar/\${latestTime}/256/{z}/{x}/{y}/2/1_1.png\`, {
+        if (latestFrame && latestFrame.path) {
+          // Note: RainViewer API provides radar raster tiles up to zoom level 7.
+          // maxNativeZoom: 7 instructs Leaflet to request zoom 7 tiles and scale them smoothly up to zoom 19,
+          // completely preventing "Zoom Level Not Supported" placeholder tiles when zoomed in.
+          const tileUrl = host + latestFrame.path + '/256/{z}/{x}/{y}/2/1_1.png';
+          radarLayer = L.tileLayer(tileUrl, {
+            tileSize: 256,
             opacity: 0.65,
-            zIndex: 10
+            zIndex: 10,
+            minZoom: 3,
+            maxNativeZoom: 7,
+            maxZoom: 19,
+            keepBuffer: 6,
+            attribution: '&copy; <a href="https://www.rainviewer.com/" target="_blank" class="underline text-blue-300">RainViewer</a>'
           }).addTo(map);
 
           isRadarActive = true;
           btn.className = 'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-500 text-white border border-blue-400 shadow-md transition-colors';
-          btn.innerText = '🌧️ ปิดเรดาร์สด';
+          const timeStr = latestFrame.time ? new Date(latestFrame.time * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '';
+          btn.innerHTML = '🌧️ ปิดเรดาร์ ' + (timeStr ? '<span class="text-[9px] bg-blue-950/70 text-blue-200 px-1 py-0.5 rounded font-normal">' + timeStr + ' น.</span>' : '');
         } else {
           alert('ไม่สามารถดึงข้อมูลเรดาร์ฝนขณะนี้ได้');
-          btn.innerText = '🌧️ เรดาร์ฝน';
+          btn.innerHTML = '<span>🌧️ เรดาร์สด</span>';
         }
       } catch (err) {
         console.error('Radar error:', err);
-        btn.innerText = '🌧️ เรดาร์ฝน';
+        btn.innerHTML = '<span>🌧️ เรดาร์สด</span>';
         alert('เชื่อมต่อเรดาร์ฝน RainViewer ไม่สำเร็จ');
       }
     }
