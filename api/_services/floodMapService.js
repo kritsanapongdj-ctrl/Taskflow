@@ -546,6 +546,47 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             </div>
           </div>
         </div>
+
+        <!-- 🌊 Live Telemetry Water Station (ThaiWater / สสน. / ชป.) -->
+        <div class="p-2.5 rounded-xl bg-blue-950/30 border border-blue-800/40 space-y-1.5 text-[11px]">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sky-300 flex items-center gap-1">
+              <span>🌊 โทรมาตรสด (คลังข้อมูลน้ำแห่งชาติ สสน./ชป.)</span>
+            </span>
+            <span id="livewater-sit-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ปกติ</span>
+          </div>
+          <div class="text-slate-300 flex items-start gap-1">
+            <span class="text-sky-400 shrink-0">📡</span>
+            <div><span id="livewater-name" class="font-semibold text-white">-</span> <span id="livewater-dist" class="text-[10px] text-slate-400"></span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 pt-1 text-[10px]">
+            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">ระดับน้ำเซ็นเซอร์</span>
+              <span id="livewater-msl" class="font-bold text-white text-xs">-</span>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">ระยะเทียบตลิ่ง</span>
+              <span id="livewater-diff" class="font-bold text-sky-400 text-xs">-</span>
+            </div>
+          </div>
+          <div class="text-[9px] text-slate-400 flex items-center justify-between pt-0.5">
+            <span>ตรวจวัด: <span id="livewater-time" class="font-mono text-slate-300">-</span></span>
+            <a href="https://www.thaiwater.net/" target="_blank" class="text-sky-400 hover:underline">thaiwater.net ↗</a>
+          </div>
+        </div>
+
+        <!-- 🌐 External Live Surveillance Links (Windy, GISTDA, Flood Hub) -->
+        <div class="pt-1 border-t border-slate-800/80 flex items-center gap-1.5 text-[10px]">
+          <a id="link-windy" href="https://www.windy.com" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors" title="เปิดแผนที่ลมและเรดาร์สด Windy">
+            <span>🌪️ Windy สด</span>
+          </a>
+          <a id="link-gistda" href="https://disaster.gistda.or.th/" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors" title="เปิดแผนที่ดาวเทียมน้ำท่วม GISTDA">
+            <span>🛰️ GISTDA</span>
+          </a>
+          <a id="link-floodhub" href="https://sites.research.google/floods/" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors" title="เปิด Google Flood Hub">
+            <span>🌐 Flood Hub</span>
+          </a>
+        </div>
       </div>
 
       <!-- 📋 3. สภาพหน้างานจริงและภาพถ่ายล่าสุด (Field Reality & Inspection Photos) -->
@@ -989,6 +1030,47 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       document.getElementById('weather-rain-24h').innerText = (w.expectedRain24h || '25.0') + ' มม.';
       document.getElementById('weather-station').innerText = p.stationName || w.stationName || 'สถานีลุ่มน้ำเจ้าพระยา (สสน./RID)';
       document.getElementById('weather-basin').innerText = p.basinAlert || w.basinAlert || 'ระดับน้ำคลองสายหลักอยู่ในเกณฑ์ควบคุม ประตูระบายน้ำพร้อมทำงาน';
+
+      // Live Telemetry Water Station (ThaiWater / สสน. / ชป.)
+      const lw = p.liveWater;
+      const sitBadge = document.getElementById('livewater-sit-badge');
+      const lwName = document.getElementById('livewater-name');
+      const lwDist = document.getElementById('livewater-dist');
+      const lwMsl = document.getElementById('livewater-msl');
+      const lwDiff = document.getElementById('livewater-diff');
+      const lwTime = document.getElementById('livewater-time');
+
+      if (lw && lw.stationName) {
+        if (sitBadge) {
+          sitBadge.innerText = lw.situationText || 'ปกติ';
+          if (lw.isOverflow || lw.situationLevel >= 4) {
+            sitBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+          } else if (lw.situationLevel >= 2) {
+            sitBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          } else {
+            sitBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+          }
+        }
+        if (lwName) lwName.innerText = lw.stationName + ' [' + lw.agencyShort + ']';
+        if (lwDist) lwDist.innerText = '(ห่าง ' + lw.distanceKm + ' กม. • ' + lw.province + ')';
+        if (lwMsl) lwMsl.innerText = lw.waterLevelMSL != null ? (lw.waterLevelMSL + ' ม.รทก.') : 'ปกติ';
+        if (lwDiff) {
+          lwDiff.innerText = lw.bankStatusText + ' ' + (lw.bankDiff != null ? lw.bankDiff + ' ม.' : '');
+          lwDiff.className = 'font-bold text-xs ' + (lw.isOverflow ? 'text-rose-400' : 'text-sky-400');
+        }
+        if (lwTime) lwTime.innerText = lw.datetime || 'ล่าสุด';
+      } else {
+        if (sitBadge) { sitBadge.innerText = 'ลุ่มน้ำหลัก'; sitBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700'; }
+        if (lwName) lwName.innerText = p.stationName || 'สถานีลุ่มน้ำเจ้าพระยา (สสน./ชป.)';
+        if (lwDist) lwDist.innerText = '';
+        if (lwMsl) lwMsl.innerText = '-';
+        if (lwDiff) { lwDiff.innerText = p.basinAlert || 'เฝ้าระวังปกติ'; lwDiff.className = 'font-bold text-xs text-sky-400'; }
+        if (lwTime) lwTime.innerText = 'ตามรอบประกาศ';
+      }
+
+      // External Live Links
+      const linkWindy = document.getElementById('link-windy');
+      if (linkWindy) linkWindy.href = 'https://www.windy.com/?' + p.lat + ',' + p.lon + ',11';
 
       // Field Section
       document.getElementById('field-updated-at').innerText = p.reportDateThai || 'รอบตรวจล่าสุด';

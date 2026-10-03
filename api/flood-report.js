@@ -4,6 +4,7 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './_services/geminiService.js';
 import { FLOOD_PROJECTS } from './_services/projectsConfig.js';
 import { calculateHydrologicalLevels, generateFloodMapHtml } from './_services/floodMapService.js';
+import { fetchLiveWaterStations, getNearestWaterStation } from './_services/thaiWaterService.js';
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
@@ -1090,6 +1091,9 @@ async function handleFloodMap(req, res) {
 
     const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
+    // โหลดข้อมูลโทรมาตรระดับน้ำสดจากคลังข้อมูลน้ำแห่งชาติ ThaiWater (สสน. / กรมชลประทาน)
+    await fetchLiveWaterStations().catch(() => []);
+
     // ประกอบข้อมูล 30 โครงการใน FLOOD_PROJECTS
     const projectsData = [];
     for (const [code, pInfo] of Object.entries(FLOOD_PROJECTS)) {
@@ -1106,6 +1110,9 @@ async function handleFloodMap(req, res) {
         expectedRain24h: '25.0'
       };
 
+      // ค้นหาสถานีโทรมาตรน้ำสดที่ใกล้โครงการที่สุด (ThaiWater / สสน. / กรมชลประทาน)
+      const liveWater = await getNearestWaterStation(pInfo.lat, pInfo.lon);
+
       // วันที่และเวลาตรวจสอบ
       let reportDateThai = 'พร้อมรับข้อมูลตรวจรอบบ่าย';
       if (report?.createdAt) {
@@ -1120,6 +1127,9 @@ async function handleFloodMap(req, res) {
       // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ pInfo เพื่ออ้างอิง As-Built Drawing)
       const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, pInfo);
 
+      const resolvedStationName = liveWater ? `${liveWater.stationName} [${liveWater.agencyShort}] (ห่าง ${liveWater.distanceKm} กม.)` : pInfo.stationName;
+      const resolvedBasinAlert = liveWater ? `ระดับน้ำโทรมาตร ${liveWater.waterLevelMSL ?? '-'} ม.รทก. (${liveWater.bankStatusText} ${liveWater.bankDiff ?? '-'} ม.) สถานะ: ${liveWater.situationText} [อัปเดต ${liveWater.datetime} น.]` : pInfo.basinAlert;
+
       projectsData.push({
         code,
         name: pInfo.name,
@@ -1127,9 +1137,13 @@ async function handleFloodMap(req, res) {
         lat: pInfo.lat,
         lon: pInfo.lon,
         googleMapsUrl: pInfo.googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${pInfo.lat},${pInfo.lon}`,
-        stationName: pInfo.stationName,
-        basinAlert: pInfo.basinAlert,
+        stationName: resolvedStationName,
+        basinAlert: resolvedBasinAlert,
         tmdAlert: pInfo.tmdAlert,
+        liveWater,
+        windyUrl: `https://www.windy.com/?${pInfo.lat},${pInfo.lon},11`,
+        thaiWaterUrl: 'https://www.thaiwater.net/',
+        gistdaUrl: 'https://disaster.gistda.or.th/',
         asBuiltElevationDiff: pInfo.asBuiltElevationDiff ?? 0.80,
         asBuiltBenchmarkMSL: pInfo.asBuiltBenchmarkMSL ?? null,
         asBuiltNotes: pInfo.asBuiltNotes ?? null,
