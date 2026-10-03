@@ -1125,6 +1125,7 @@ async function handleFloodMap(req, res) {
 
     const html = generateFloodMapHtml({ projectsData, summaryStats });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.status(200).send(html);
   } catch (error) {
     console.error("Map Dashboard Error:", error);
