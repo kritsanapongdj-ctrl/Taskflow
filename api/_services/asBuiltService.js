@@ -4,6 +4,14 @@ import { FLOOD_PROJECTS } from './projectsConfig.js';
 const SETTINGS_DOC_PATH = ['artifacts', 'default-app-id', 'public', 'data', 'flood_settings', 'as_built_elevations'];
 
 /**
+ * ตรวจสอบความถูกต้องของ Admin PIN
+ */
+export function validateAdminPin(pin) {
+  const serverPin = (process.env.ADMIN_PIN || 'lh2026').trim();
+  return typeof pin === 'string' && pin.trim().toLowerCase() === serverPin.toLowerCase();
+}
+
+/**
  * ดึงค่า As-Built Overrides ทั้งหมดจาก Firestore
  */
 export async function getAsBuiltOverrides() {
@@ -22,15 +30,19 @@ export async function getAsBuiltOverrides() {
 }
 
 /**
- * บันทึกค่า As-Built Overrides ลงใน Firestore
+ * บันทึกค่า As-Built Overrides ลงใน Firestore โดยต้องผ่านการตรวจสอบ Admin PIN
  */
-export async function saveAsBuiltOverrides(updates) {
+export async function saveAsBuiltOverrides(updates, adminPin) {
+  if (!validateAdminPin(adminPin)) {
+    const err = new Error('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง (Invalid Admin PIN)');
+    err.status = 401;
+    throw err;
+  }
+
   try {
     await ensureAuth();
     const ref = doc(db, ...SETTINGS_DOC_PATH);
     
-    // updates can be single project { projectCode, asBuiltElevationDiff, asBuiltBenchmarkMSL, asBuiltNotes }
-    // or batch { [code]: { ... } }
     const nowIso = new Date().toISOString();
     const payload = {};
 
@@ -45,7 +57,7 @@ export async function saveAsBuiltOverrides(updates) {
       };
     } else if (typeof updates === 'object') {
       for (const [code, val] of Object.entries(updates)) {
-        if (typeof val === 'object' && val !== null) {
+        if (typeof val === 'object' && val !== null && code !== 'action' && code !== 'adminPin') {
           const diff = parseFloat(val.asBuiltElevationDiff);
           payload[code] = {
             asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
@@ -57,7 +69,9 @@ export async function saveAsBuiltOverrides(updates) {
       }
     }
 
-    await setDoc(ref, payload, { merge: true });
+    if (Object.keys(payload).length > 0) {
+      await setDoc(ref, payload, { merge: true });
+    }
     return { success: true, count: Object.keys(payload).length, updatedAt: nowIso };
   } catch (err) {
     console.error('Error saving as_built_elevations to Firestore:', err);
@@ -66,7 +80,7 @@ export async function saveAsBuiltOverrides(updates) {
 }
 
 /**
- * สร้างหน้าเว็บ UI จัดการระดับความสูงตามแบบก่อสร้างจริง As-Built Elevation Manager
+ * สร้างหน้าเว็บ UI จัดการระดับความสูงตามแบบก่อสร้างจริง As-Built Elevation Manager พร้อมระบบล็อกรหัสผ่าน Admin
  */
 export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }) {
   const projectsJson = JSON.stringify(projectsData);
@@ -129,12 +143,18 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           <div class="flex items-center gap-2">
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">As-Built Elevation Manager</h1>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">วิศวกรรมสุขาภิบาล</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+              <span>🔒</span><span>Admin Secured</span>
+            </span>
           </div>
           <p class="text-[11px] text-slate-400">ระบบจัดการระดับความสูงถนนโครงการเทียบถนนภายนอกตามแบบก่อสร้างจริง (30 โครงการ)</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
+        <button onclick="lockManager()" id="btn-lock-auth" class="hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 transition-colors shadow-sm" title="ล็อกระบบและออกจากสิทธิ์ Admin">
+          <span>🔒 ล็อกระบบ</span>
+        </button>
         <a href="/api/flood-report?mode=map" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors shadow-sm" title="กลับไปหน้าแผนที่สถานการณ์น้ำ">
           <span>🗺️ แผนที่น้ำท่วม</span>
         </a>
@@ -218,6 +238,33 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
 
   </main>
 
+  <!-- 🔒 Admin PIN Gate Modal -->
+  <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full p-6 sm:p-8 rounded-3xl border border-slate-700/80 shadow-2xl space-y-4 text-center">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl shadow-inner">
+        🔒
+      </div>
+      <div class="space-y-1.5">
+        <h2 class="text-base font-bold text-white tracking-tight">ยืนยันสิทธิ์ผู้ดูแลระบบ (Admin)</h2>
+        <p class="text-xs text-slate-400 leading-relaxed">กรุณากรอกรหัสผ่าน Admin PIN เพื่อเข้าสู่ระบบจัดการและแก้ไขระดับความสูงตามแบบก่อสร้างจริง</p>
+      </div>
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-3 pt-2">
+        <div class="relative">
+          <input type="password" id="admin-pin-input" placeholder="กรอกรหัส Admin PIN" autocomplete="current-password" autofocus class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-center text-sm font-mono text-white placeholder-slate-500 tracking-widest focus:outline-none focus:border-lh-gold shadow-inner">
+        </div>
+        <div id="auth-error-msg" class="text-[11px] text-rose-400 hidden font-medium"></div>
+        <button type="submit" id="btn-auth-submit" class="w-full py-2.5 px-4 rounded-xl bg-lh-gold hover:bg-lh-goldHover text-slate-950 font-bold text-xs shadow-lg transition-all">
+          <span>ปลดล็อกเข้าสู่ระบบ</span>
+        </button>
+      </form>
+      <div class="pt-3 border-t border-slate-800/80">
+        <a href="/api/flood-report?mode=map" class="text-xs text-slate-400 hover:text-white transition-colors">
+          ← กลับไปหน้าแผนที่น้ำท่วม (Flood Map)
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 px-4 py-3 rounded-2xl glass-card text-xs font-semibold shadow-2xl border border-emerald-500/40 text-emerald-300">
     <span class="text-base">✅</span>
@@ -237,6 +284,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+
       // Merge initial overrides
       currentProjects.forEach(p => {
         if (customOverrides[p.code]) {
@@ -249,6 +298,83 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       updateStats();
       renderProjects();
     });
+
+    function checkAuth() {
+      const storedPin = sessionStorage.getItem('lh_admin_pin');
+      const authModal = document.getElementById('auth-modal');
+      const btnLock = document.getElementById('btn-lock-auth');
+
+      if (storedPin) {
+        authModal.classList.add('hidden');
+        btnLock.classList.remove('hidden');
+      } else {
+        authModal.classList.remove('hidden');
+        btnLock.classList.add('hidden');
+        setTimeout(() => {
+          document.getElementById('admin-pin-input')?.focus();
+        }, 100);
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const pinInput = document.getElementById('admin-pin-input');
+      const errorDiv = document.getElementById('auth-error-msg');
+      const btn = document.getElementById('btn-auth-submit');
+      const pin = (pinInput.value || '').trim();
+
+      if (!pin) {
+        errorDiv.innerText = 'กรุณากรอกรหัสผ่าน Admin PIN';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      btn.innerText = '⏳ กำลังตรวจสอบ...';
+      btn.disabled = true;
+      errorDiv.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/flood-report?mode=asbuilt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
+          body: JSON.stringify({ action: 'verify_pin', adminPin: pin })
+        });
+
+        if (res.ok) {
+          sessionStorage.setItem('lh_admin_pin', pin);
+          document.getElementById('auth-modal').classList.add('hidden');
+          document.getElementById('btn-lock-auth').classList.remove('hidden');
+          showToast('ยืนยันสิทธิ์ผู้ดูแลระบบเรียบร้อย');
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errorDiv.innerText = data.error || 'รหัสผ่าน Admin PIN ไม่ถูกต้อง';
+          errorDiv.classList.remove('hidden');
+          pinInput.select();
+        }
+      } catch (err) {
+        errorDiv.innerText = 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ';
+        errorDiv.classList.remove('hidden');
+      } finally {
+        btn.innerText = 'ปลดล็อกเข้าสู่ระบบ';
+        btn.disabled = false;
+      }
+    }
+
+    function lockManager() {
+      sessionStorage.removeItem('lh_admin_pin');
+      const pinInput = document.getElementById('admin-pin-input');
+      if (pinInput) pinInput.value = '';
+      document.getElementById('auth-modal').classList.remove('hidden');
+      document.getElementById('btn-lock-auth').classList.add('hidden');
+      showToast('ล็อกระบบเรียบร้อยแล้ว');
+    }
+
+    function getAdminPin() {
+      return sessionStorage.getItem('lh_admin_pin') || '';
+    }
 
     function updateStats() {
       const total = currentProjects.length;
@@ -448,6 +574,12 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
     }
 
     async function saveProjectRow(code) {
+      const pin = getAdminPin();
+      if (!pin) {
+        checkAuth();
+        return;
+      }
+
       const p = currentProjects.find(item => item.code === code);
       if (!p) return;
 
@@ -462,14 +594,24 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           projectCode: code,
           asBuiltElevationDiff: p.asBuiltElevationDiff,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
-          asBuiltNotes: p.asBuiltNotes
+          asBuiltNotes: p.asBuiltNotes,
+          adminPin: pin
         };
 
         const res = await fetch('/api/flood-report?mode=asbuilt', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
           body: JSON.stringify(payload)
         });
+
+        if (res.status === 401) {
+          lockManager();
+          alert('สิทธิ์การเป็น Admin หมดอายุ หรือรหัสผ่านไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่');
+          return;
+        }
 
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
@@ -514,6 +656,12 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
     }
 
     async function saveAllChanges() {
+      const pin = getAdminPin();
+      if (!pin) {
+        checkAuth();
+        return;
+      }
+
       if (dirtyProjects.size === 0) {
         showToast('ไม่มีข้อมูลที่มีการเปลี่ยนแปลง');
         return;
@@ -538,9 +686,18 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
 
         const res = await fetch('/api/flood-report?mode=asbuilt', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(batchUpdates)
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
+          body: JSON.stringify({ ...batchUpdates, adminPin: pin })
         });
+
+        if (res.status === 401) {
+          lockManager();
+          alert('สิทธิ์การเป็น Admin หมดอายุ หรือรหัสผ่านไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่');
+          return;
+        }
 
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();

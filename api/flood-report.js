@@ -5,7 +5,7 @@ import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from '
 import { FLOOD_PROJECTS } from './_services/projectsConfig.js';
 import { calculateHydrologicalLevels, generateFloodMapHtml } from './_services/floodMapService.js';
 import { fetchLiveWaterStations, getNearestWaterStation } from './_services/thaiWaterService.js';
-import { getAsBuiltOverrides, saveAsBuiltOverrides, generateAsBuiltManagerHtml } from './_services/asBuiltService.js';
+import { getAsBuiltOverrides, saveAsBuiltOverrides, generateAsBuiltManagerHtml, validateAdminPin } from './_services/asBuiltService.js';
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
@@ -26,8 +26,8 @@ const auth = getAuth(app);
 export default async function handler(req, res) {
   const { id, photo, mode } = req.query;
 
-  // Handle As-Built Elevation Manager POST (Save updates)
-  if (req.method === 'POST' && (mode === 'asbuilt' || req.body?.action === 'save_asbuilt')) {
+  // Handle As-Built Elevation Manager POST (Save updates or Verify PIN)
+  if (req.method === 'POST' && (mode === 'asbuilt' || req.body?.action === 'save_asbuilt' || req.body?.action === 'verify_pin')) {
     return handleSaveAsBuilt(req, res);
   }
 
@@ -1068,13 +1068,26 @@ async function handleSaveAsBuilt(req, res) {
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (e) {}
     }
-    const result = await saveAsBuiltOverrides(body);
+
+    const adminPin = req.headers['x-admin-pin'] || body?.adminPin;
+
+    // ตรวจสอบ PIN สำหรับการ Login / Unlock Modal
+    if (body?.action === 'verify_pin') {
+      const isValid = validateAdminPin(adminPin);
+      if (!isValid) {
+        return res.status(401).json({ error: 'รหัสผ่าน Admin PIN ไม่ถูกต้อง' });
+      }
+      return res.status(200).json({ success: true, message: 'ยืนยันสิทธิ์ผู้ดูแลระบบสำเร็จ' });
+    }
+
+    const result = await saveAsBuiltOverrides(body, adminPin);
     // เคลียร์แคชหน้าแผนที่ เพื่อให้แผนที่แสดงผลค่าระดับน้ำและ As-Built ใหม่ทันที
     floodMapCache = { html: null, expiresAt: 0 };
     return res.status(200).json(result);
   } catch (err) {
     console.error('Error in handleSaveAsBuilt:', err);
-    return res.status(500).json({ error: err.message });
+    const statusCode = err.status || (err.message?.includes('Admin PIN') ? 401 : 500);
+    return res.status(statusCode).json({ error: err.message });
   }
 }
 
