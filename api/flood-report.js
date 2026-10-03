@@ -5,6 +5,7 @@ import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from '
 import { FLOOD_PROJECTS } from './_services/projectsConfig.js';
 import { calculateHydrologicalLevels, generateFloodMapHtml } from './_services/floodMapService.js';
 import { fetchLiveWaterStations, getNearestWaterStation } from './_services/thaiWaterService.js';
+import { getAsBuiltOverrides, saveAsBuiltOverrides, generateAsBuiltManagerHtml } from './_services/asBuiltService.js';
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
@@ -24,6 +25,16 @@ const auth = getAuth(app);
 
 export default async function handler(req, res) {
   const { id, photo, mode } = req.query;
+
+  // Handle As-Built Elevation Manager POST (Save updates)
+  if (req.method === 'POST' && (mode === 'asbuilt' || req.body?.action === 'save_asbuilt')) {
+    return handleSaveAsBuilt(req, res);
+  }
+
+  // Handle As-Built Elevation Manager GET (Web UI)
+  if (mode === 'asbuilt') {
+    return handleAsBuiltManager(req, res);
+  }
 
   if (mode === 'map') {
     return handleFloodMap(req, res);
@@ -57,7 +68,14 @@ export default async function handler(req, res) {
     }
 
     const report = reportSnap.data();
-    const projectConfig = FLOOD_PROJECTS[report.projectCode] || {};
+    const projectConfig = { ...(FLOOD_PROJECTS[report.projectCode] || {}) };
+    const asBuiltOverrides = await getAsBuiltOverrides().catch(() => ({}));
+    const customAsBuilt = asBuiltOverrides[report.projectCode];
+    if (customAsBuilt) {
+      if (customAsBuilt.asBuiltElevationDiff != null) projectConfig.asBuiltElevationDiff = customAsBuilt.asBuiltElevationDiff;
+      if (customAsBuilt.asBuiltBenchmarkMSL != null) projectConfig.asBuiltBenchmarkMSL = customAsBuilt.asBuiltBenchmarkMSL;
+      if (customAsBuilt.asBuiltNotes != null) projectConfig.asBuiltNotes = customAsBuilt.asBuiltNotes;
+    }
 
     // 1. ถ้าเป็นการขอไฟล์รูปภาพดิบสำหรับ LINE Hero Image
     if (photo !== undefined) {
@@ -1016,6 +1034,50 @@ let floodMapCache = {
   expiresAt: 0
 };
 
+// ==========================================
+// 📐 ระบบจัดการระดับความสูงแบบก่อสร้างจริง (AS-BUILT ELEVATION MANAGER)
+// ==========================================
+async function handleAsBuiltManager(req, res) {
+  try {
+    const overrides = await getAsBuiltOverrides().catch(() => ({}));
+    const projectsData = Object.values(FLOOD_PROJECTS).map(p => ({
+      code: p.code,
+      name: p.name,
+      area: p.area,
+      lat: p.lat,
+      lon: p.lon,
+      googleMapsUrl: p.googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`,
+      asBuiltElevationDiff: overrides[p.code]?.asBuiltElevationDiff ?? p.asBuiltElevationDiff ?? 0.80,
+      asBuiltBenchmarkMSL: overrides[p.code]?.asBuiltBenchmarkMSL ?? p.asBuiltBenchmarkMSL ?? null,
+      asBuiltNotes: overrides[p.code]?.asBuiltNotes ?? p.asBuiltNotes ?? null
+    }));
+
+    const html = generateAsBuiltManagerHtml({ projectsData, overrides });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.status(200).send(html);
+  } catch (err) {
+    console.error('Error in handleAsBuiltManager:', err);
+    return res.status(500).send(`<h3>Error loading As-Built Manager: ${err.message}</h3>`);
+  }
+}
+
+async function handleSaveAsBuilt(req, res) {
+  try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) {}
+    }
+    const result = await saveAsBuiltOverrides(body);
+    // เคลียร์แคชหน้าแผนที่ เพื่อให้แผนที่แสดงผลค่าระดับน้ำและ As-Built ใหม่ทันที
+    floodMapCache = { html: null, expiresAt: 0 };
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('Error in handleSaveAsBuilt:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 // 🗺️ แผนที่ติดตามสถานการณ์น้ำและระบบระบายน้ำ Real-time (LH FLOOD MAP DASHBOARD)
 // ==========================================
 async function handleFloodMap(req, res) {
@@ -1031,7 +1093,10 @@ async function handleFloodMap(req, res) {
 
     await signInAnonymously(auth);
 
-    const reportsSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports"));
+    const [reportsSnap, asBuiltOverrides] = await Promise.all([
+      getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports")),
+      getAsBuiltOverrides().catch(() => ({}))
+    ]);
     const allReports = [];
     reportsSnap.forEach((d) => {
       const data = d.data();
@@ -1124,8 +1189,21 @@ async function handleFloodMap(req, res) {
       // ดึงรูปภาพจาก photoMap ที่ดึงมาพร้อมกันเรียบร้อยแล้ว
       const photos = reportId ? (photoMap.get(reportId) || []) : [];
 
-      // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ pInfo เพื่ออ้างอิง As-Built Drawing)
-      const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, pInfo);
+      // ดึงค่าระดับ As-Built จาก Overrides ใน Firestore (ถ้ามีการบันทึกไว้)
+      const customAsBuilt = asBuiltOverrides[code];
+      const asBuiltElevationDiff = customAsBuilt?.asBuiltElevationDiff ?? pInfo.asBuiltElevationDiff ?? 0.80;
+      const asBuiltBenchmarkMSL = customAsBuilt?.asBuiltBenchmarkMSL ?? pInfo.asBuiltBenchmarkMSL ?? null;
+      const asBuiltNotes = customAsBuilt?.asBuiltNotes ?? pInfo.asBuiltNotes ?? null;
+
+      const mergedPInfo = {
+        ...pInfo,
+        asBuiltElevationDiff,
+        asBuiltBenchmarkMSL,
+        asBuiltNotes
+      };
+
+      // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ mergedPInfo เพื่ออ้างอิง As-Built Drawing)
+      const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, mergedPInfo);
 
       const resolvedStationName = liveWater ? `${liveWater.stationName} [${liveWater.agencyShort}] (ห่าง ${liveWater.distanceKm} กม.)` : pInfo.stationName;
       const resolvedBasinAlert = liveWater ? `ระดับน้ำโทรมาตร ${liveWater.waterLevelMSL ?? '-'} ม.รทก. (${liveWater.bankStatusText} ${liveWater.bankDiff ?? '-'} ม.) สถานะ: ${liveWater.situationText} [อัปเดต ${liveWater.datetime} น.]` : pInfo.basinAlert;
@@ -1144,9 +1222,9 @@ async function handleFloodMap(req, res) {
         windyUrl: `https://www.windy.com/?${pInfo.lat},${pInfo.lon},11`,
         thaiWaterUrl: 'https://www.thaiwater.net/',
         gistdaUrl: 'https://disaster.gistda.or.th/',
-        asBuiltElevationDiff: pInfo.asBuiltElevationDiff ?? 0.80,
-        asBuiltBenchmarkMSL: pInfo.asBuiltBenchmarkMSL ?? null,
-        asBuiltNotes: pInfo.asBuiltNotes ?? null,
+        asBuiltElevationDiff,
+        asBuiltBenchmarkMSL,
+        asBuiltNotes,
         status,
         reportId,
         waterLevel,

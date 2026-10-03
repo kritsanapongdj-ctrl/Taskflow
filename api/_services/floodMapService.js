@@ -286,10 +286,16 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center gap-2">
-        <a href="/api/flood-report?mode=executive" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-lh-gold/20 hover:bg-lh-gold/30 text-lh-gold border border-lh-gold/40 transition-colors shadow-sm" title="เปิดหน้ารายงานสรุปผู้บริหาร">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <a href="/api/flood-report?mode=asbuilt" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 transition-colors shadow-sm" title="จัดการระดับความสูงตามแบบก่อสร้างจริง As-Built">
+          <span>📐</span>
+          <span class="hidden sm:inline">จัดการ As-Built</span>
+          <span class="sm:hidden">As-Built</span>
+        </a>
+
+        <a href="/api/flood-report?mode=executive" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-lh-gold/20 hover:bg-lh-gold/30 text-lh-gold border border-lh-gold/40 transition-colors shadow-sm" title="เปิดหน้ารายงานสรุปผู้บริหาร">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span class="hidden sm:inline">รายงานสรุปผู้บริหาร</span>
+          <span class="hidden sm:inline">รายงานผู้บริหาร</span>
           <span class="sm:hidden">รายงาน</span>
         </a>
 
