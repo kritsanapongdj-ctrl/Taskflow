@@ -650,15 +650,21 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <circle cx="325" cy="130" r="7" fill="#0f172a" stroke="#cbd5e1" stroke-width="2"/>
             <line id="svg-flap-valve" x1="325" y1="130" x2="331" y2="124" stroke="#eab308" stroke-width="3" stroke-linecap="round"/>
 
-            <!-- Annotations / Labels on SVG -->
-            <text x="15" y="20" fill="#94a3b8" font-size="9" font-weight="600">ถนนในโครงการ</text>
-            <text id="svg-inner-txt" x="15" y="32" fill="#10b981" font-size="10" font-weight="700">+0.80 ม. (แห้ง 100%)</text>
+            <!-- 3-Zone Engineering HUD Badges (Top Area - Never Collides with Water or Ground) -->
+            <!-- Zone 1: ถนนในโครงการ (Left) -->
+            <rect x="8" y="6" width="144" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+            <text x="14" y="17" fill="#94a3b8" font-size="8" font-weight="600">🏠 ถนนในโครงการ (LH)</text>
+            <text id="svg-inner-txt" x="14" y="30" fill="#10b981" font-size="9" font-weight="700">+0.80 ม. (แห้ง 100%)</text>
 
-            <text x="180" y="95" fill="#94a3b8" font-size="9" font-weight="600">ถนนหน้าโครงการ</text>
-            <text id="svg-outer-txt" x="180" y="107" fill="#f8fafc" font-size="10" font-weight="700">0.00 ม. (ปกติ)</text>
+            <!-- Zone 2: ถนนหน้าโครงการ (Middle) -->
+            <rect x="158" y="6" width="148" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+            <text x="164" y="17" fill="#94a3b8" font-size="8" font-weight="600">🛣️ ถนนหน้าโครงการ (0.00 ม.)</text>
+            <text id="svg-outer-txt" x="164" y="30" fill="#f8fafc" font-size="9" font-weight="700">0.00 ม. (รอตรวจ)</text>
 
-            <text x="345" y="85" fill="#94a3b8" font-size="9" font-weight="600">คลองหน้าโครงการ</text>
-            <text id="svg-canal-txt" x="345" y="97" fill="#38bdf8" font-size="10" font-weight="700">-0.40 ม. (ในเกณฑ์)</text>
+            <!-- Zone 3: คลองข้างโครงการ (Right) -->
+            <rect x="312" y="6" width="140" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+            <text x="318" y="17" fill="#94a3b8" font-size="8" font-weight="600">🌊 คลองระบายน้ำข้างเคียง</text>
+            <text id="svg-canal-txt" x="318" y="30" fill="#38bdf8" font-size="9" font-weight="700">กำลังเชื่อมต่อ...</text>
 
             <!-- Definitions for Gradients -->
             <defs>
@@ -1555,29 +1561,37 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       }
 
       // SVG Text Annotations
+      // Helper to reliably update SVG text across all browser DOM engines
+      function setSvgText(el, text, fill) {
+        if (!el) return;
+        el.textContent = text;
+        if ('innerText' in el) {
+          try { el.innerText = text; } catch (e) {}
+        }
+        if (fill) el.setAttribute('fill', fill);
+      }
+
+      // SVG Text Annotations (Top HUD Badges)
       const svgCanalTxt = document.getElementById('svg-canal-txt');
       if (svgCanalTxt) {
         if (canalElevationM > 0) {
-          svgCanalTxt.innerText = '+' + canalElevationM.toFixed(2) + ' ม. (ล้นตลิ่ง ⚠️)';
-          svgCanalTxt.setAttribute('fill', '#ef4444');
+          const valTxt = '+' + canalElevationM.toFixed(2) + ' ม. (ล้นตลิ่ง ⚠️)';
+          setSvgText(svgCanalTxt, valTxt, '#ef4444');
         } else {
           const subLabel = canalElevationM >= -0.15 ? 'หนุนสูง' : 'ในเกณฑ์';
-          svgCanalTxt.innerText = canalElevationM.toFixed(2) + ' ม. (' + subLabel + ')';
-          svgCanalTxt.setAttribute('fill', canalElevationM >= -0.15 ? '#f59e0b' : '#38bdf8');
+          const valTxt = canalElevationM.toFixed(2) + ' ม. (' + subLabel + ')';
+          setSvgText(svgCanalTxt, valTxt, canalElevationM >= -0.15 ? '#f59e0b' : '#38bdf8');
         }
       }
 
       const svgOuterTxt = document.getElementById('svg-outer-txt');
       if (svgOuterTxt) {
         if (effectiveOuterDepth > 0) {
-          svgOuterTxt.innerText = 'น้ำขัง ' + effectiveOuterDepth + ' ซม.';
-          svgOuterTxt.setAttribute('fill', '#f59e0b');
+          setSvgText(svgOuterTxt, 'น้ำขัง ' + effectiveOuterDepth + ' ซม.', '#f59e0b');
         } else if (hasReport) {
-          svgOuterTxt.innerText = '0.00 ม. (แห้งปกติ)';
-          svgOuterTxt.setAttribute('fill', '#f8fafc');
+          setSvgText(svgOuterTxt, '0.00 ม. (แห้งปกติ)', '#f8fafc');
         } else {
-          svgOuterTxt.innerText = '0.00 ม. (รอตรวจ)';
-          svgOuterTxt.setAttribute('fill', '#94a3b8');
+          setSvgText(svgOuterTxt, '0.00 ม. (รอตรวจ)', '#94a3b8');
         }
       }
 
@@ -1585,8 +1599,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const innerStatusTxt = innerDepth > 0 ? ('น้ำขัง ' + innerDepth + ' ซม.') : ('แห้ง 100% (' + innerSrcBadge + ')');
       const svgInnerTxt = document.getElementById('svg-inner-txt');
       if (svgInnerTxt) {
-        svgInnerTxt.innerText = elevSign + elevMeters + ' ม. ' + innerStatusTxt;
-        svgInnerTxt.setAttribute('fill', innerDepth > 0 ? '#ef4444' : '#10b981');
+        setSvgText(svgInnerTxt, elevSign + elevMeters + ' ม. ' + innerStatusTxt, innerDepth > 0 ? '#ef4444' : '#10b981');
       }
 
       // Metrics Summary Table
