@@ -38,7 +38,7 @@ export async function fetchLiveWaterStations() {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 วินาที timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5 วินาที timeout ป้องกันเว็บหน่วง
 
     const res = await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load', {
       headers: {

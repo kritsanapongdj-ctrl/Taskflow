@@ -1096,10 +1096,10 @@ async function handleSaveAsBuilt(req, res) {
 async function handleFloodMap(req, res) {
   try {
     const now = Date.now();
-    // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 45 วินาที (Zero Latency)
+    // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 120 วินาที (Zero Latency)
     if (floodMapCache.html && now < floodMapCache.expiresAt && !req.query.nocache) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=45, stale-while-revalidate=60');
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
       res.setHeader('X-Cache-Status', 'HIT');
       return res.status(200).send(floodMapCache.html);
     }
@@ -1144,28 +1144,18 @@ async function handleFloodMap(req, res) {
       }
     });
 
-    // ดึงรูปภาพแบบขนาน (Parallel Fetching) เพื่อให้ตอบสนองรวดเร็วที่สุด ไม่บล็อกลูป
-    const uniqueReportIds = [...new Set(
-      Array.from(projectMap.values())
-        .map(r => r.reportId || r.id)
-        .filter(Boolean)
-    )];
-
+    // ดึงรูปภาพจาก photoCount ในเอกสารหลักโดยตรง (Zero Latency ไม่ต้อง Query Subcollection 30 ครั้ง)
     const photoMap = new Map();
-    await Promise.all(
-      uniqueReportIds.map(async (repId) => {
-        try {
-          const pCol = collection(db, "artifacts", "default-app-id", "public", "data", "flood_reports", repId, "photos");
-          const pSnap = await getDocs(pCol);
-          const list = [];
-          pSnap.forEach((docSnap) => list.push({ index: docSnap.data().index }));
-          list.sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
-          photoMap.set(repId, list);
-        } catch (e) {
-          photoMap.set(repId, []);
-        }
-      })
-    );
+    projectMap.forEach((r) => {
+      const repId = r.reportId || r.id;
+      if (!repId) return;
+      const count = typeof r.photoCount === 'number' ? r.photoCount : (Array.isArray(r.photos) ? r.photos.length : 0);
+      const list = [];
+      for (let i = 0; i < count; i++) {
+        list.push({ index: i });
+      }
+      photoMap.set(repId, list);
+    });
 
     const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -1259,14 +1249,14 @@ async function handleFloodMap(req, res) {
 
     const html = generateFloodMapHtml({ projectsData, summaryStats });
     
-    // บันทึกลงแคชในหน่วยความจำ (TTL 45 วินาที)
+    // บันทึกลงแคชในหน่วยความจำ (TTL 120 วินาที)
     floodMapCache = {
       html,
-      expiresAt: Date.now() + 45 * 1000
+      expiresAt: Date.now() + 120 * 1000
     };
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=45, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
     res.setHeader('X-Cache-Status', 'MISS');
     return res.status(200).send(html);
   } catch (error) {

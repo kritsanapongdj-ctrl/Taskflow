@@ -312,16 +312,18 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     <div class="glass-panel p-2 rounded-2xl shadow-xl flex flex-col gap-1.5">
       <div class="flex items-center justify-between px-1">
         <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">เลือกพื้นที่โครงการ</span>
-        <span class="text-[10px] text-lh-gold" id="filter-count">แสดง 30/30</span>
+        <span class="text-[10px] text-lh-gold" id="filter-count">แสดง ${projectsData.length}/${projectsData.length}</span>
       </div>
       <div class="flex flex-wrap gap-1" id="zone-filter-container">
-        <button onclick="setZoneFilter('all')" class="zone-btn active px-2.5 py-1 rounded-lg text-xs font-semibold bg-lh-gold text-slate-950 transition-all shadow-xs" data-zone="all">ทั้งหมด</button>
-        <button onclick="setZoneFilter('ปทุมธานี')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="ปทุมธานี">รังสิต-ปทุมฯ</button>
-        <button onclick="setZoneFilter('พระนครศรีอยุธยา')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="พระนครศรีอยุธยา">อยุธยา</button>
-        <button onclick="setZoneFilter('นนทบุรี')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="นนทบุรี">นนทบุรี-บางใหญ่</button>
-        <button onclick="setZoneFilter('สะพานสูง')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="สะพานสูง">กรุงเทพกรีฑา</button>
-        <button onclick="setZoneFilter('คลองสามวา')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="คลองสามวา">รามอินทรา-สายไหม</button>
-        <button onclick="setZoneFilter('ทวีวัฒนา')" class="zone-btn px-2 py-1 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="ทวีวัฒนา">ฝั่งธนบุรี</button>
+        <button onclick="setZoneFilter('all')" class="zone-btn active px-2 py-1 rounded-lg text-[11px] font-semibold bg-lh-gold text-slate-950 transition-all shadow-xs" data-zone="all">ทั้งหมด</button>
+        <button onclick="setZoneFilter('rangsit')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="rangsit">รังสิต-ปทุมฯ</button>
+        <button onclick="setZoneFilter('ayutthaya')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="ayutthaya">อยุธยา</button>
+        <button onclick="setZoneFilter('nonthaburi')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="nonthaburi">นนทบุรี-บางใหญ่</button>
+        <button onclick="setZoneFilter('krungthep_kreetha')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="krungthep_kreetha">กรุงเทพกรีฑา</button>
+        <button onclick="setZoneFilter('ramindra')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="ramindra">รามอินทรา-สายไหม</button>
+        <button onclick="setZoneFilter('romklao')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="romklao">ร่มเกล้า-ลาดกระบัง</button>
+        <button onclick="setZoneFilter('thonburi')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="thonburi">ฝั่งธนบุรี</button>
+        <button onclick="setZoneFilter('south_bangna')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="south_bangna">พระราม 2-บางนา</button>
       </div>
 
       <!-- Secondary Filters: Status & Radar -->
@@ -814,7 +816,18 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       const filtered = PROJECTS.filter(function(p) {
         if (currentFilterZone !== 'all') {
-          const matchZone = (p.area || '').includes(currentFilterZone) || (p.name || '').includes(currentFilterZone);
+          const area = (p.area || '');
+          const name = (p.name || '');
+          let matchZone = false;
+          if (currentFilterZone === 'rangsit') matchZone = area.includes('ปทุม') || name.includes('รังสิต') || name.includes('ลำลูกกา');
+          else if (currentFilterZone === 'ayutthaya') matchZone = area.includes('อยุธยา');
+          else if (currentFilterZone === 'nonthaburi') matchZone = area.includes('นนทบุรี') || area.includes('บางใหญ่') || name.includes('ราชพฤกษ์') || name.includes('แจ้งวัฒนะ');
+          else if (currentFilterZone === 'krungthep_kreetha') matchZone = area.includes('สะพานสูง') || name.includes('กรุงเทพกรีฑา');
+          else if (currentFilterZone === 'ramindra') matchZone = area.includes('คลองสามวา') || area.includes('สายไหม') || area.includes('บางเขน') || name.includes('รามอินทรา') || name.includes('หทัยราษฎร์');
+          else if (currentFilterZone === 'romklao') matchZone = area.includes('ลาดกระบัง') || area.includes('มีนบุรี') || name.includes('ร่มเกล้า') || name.includes('ศรีนครินทร์');
+          else if (currentFilterZone === 'thonburi') matchZone = area.includes('ทวีวัฒนา') || area.includes('ตลิ่งชัน') || area.includes('หนองแขม') || name.includes('ปิ่นเกล้า') || name.includes('พรานนก') || name.includes('เพชรเกษม');
+          else if (currentFilterZone === 'south_bangna') matchZone = area.includes('บางขุนเทียน') || area.includes('สมุทรปราการ') || area.includes('พระสมุทรเจดีย์') || area.includes('บางพลี') || name.includes('พระราม 2') || name.includes('บางนา') || name.includes('สุขสวัสดิ์') || name.includes('ประชาอุทิศ');
+          else matchZone = area.includes(currentFilterZone) || name.includes(currentFilterZone);
           if (!matchZone) return false;
         }
         if (filterRiskOnly) {
