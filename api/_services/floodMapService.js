@@ -1,33 +1,39 @@
 import { FLOOD_PROJECTS } from './projectsConfig.js';
 import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './geminiService.js';
 
-// คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก vs ถนนในโครงการ)
-export function calculateHydrologicalLevels(report = {}, project = {}) {
-  const notes = (report.notes || '') + ' ' + (report.drainageCondition || '') + ' ' + (report.waterLevel || '');
-  const status = report.status || 'NORMAL';
-  
+// คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก/ซอยหน้าโครงการ vs ถนนในโครงการ As-Built)
+export function calculateHydrologicalLevels(report = {}, project = {}, liveWater = null) {
+  const hasFieldReport = Boolean(report && (report.reportId || report.id || report.createdAt));
+  const rawNotes = ((report.notes || '') + ' ' + (report.drainageCondition || '') + ' ' + (report.waterLevel || '')).trim();
+  const status = hasFieldReport ? (report.status || 'NORMAL') : 'NO_REPORT';
+
   let canalBelowOuter = 40; // ซม. (ผิวน้ำคลองต่ำกว่าถนนภายนอก)
   let canalBelowInner = 120; // ซม. (ผิวน้ำคลองต่ำกว่าถนนในโครงการ)
-  let roadWaterDepth = 0; // ซม. (ความลึกน้ำท่วมขังบนผิวถนน)
-  
+  let outerRoadWaterDepth = 0; // ซม. (ระดับน้ำท่วมขังบนถนนหน้าโครงการ/ซอยภายนอก)
+  let innerRoadWaterDepth = 0; // ซม. (ระดับน้ำท่วมขังบนถนนภายในโครงการ)
+  let outerRoadConditionText = '';
+
   // 1. ตรวจจับระยะผิวน้ำคลองเทียบถนนนอก
-  const outerMatch = notes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากถนน)/i) || 
-                     notes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
+  const outerMatch = rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากถนน)/i) || 
+                     rawNotes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
   if (outerMatch) {
     canalBelowOuter = parseFloat(outerMatch[1]);
     if (outerMatch[0].includes('ม')) canalBelowOuter *= 100;
   } else if (/หนุน|ล้น|สูง|ริมฟุตบาท/i.test(report.drainageCondition || '')) {
     canalBelowOuter = 10;
+  } else if (liveWater && liveWater.bankDiff != null) {
+    if (liveWater.bankDiff < 0) {
+      canalBelowOuter = -Math.round(Math.abs(liveWater.bankDiff) * 100);
+    } else {
+      canalBelowOuter = Math.round(liveWater.bankDiff * 100);
+    }
   }
-  
+
   // 2. คำนวณระดับยกพื้น/ระดับถนนในโครงการ (innerElevation) ตามลำดับความสำคัญ (3-Tier Precedence)
-  // ลำดับที่ 1: ตรวจวัดจริงหน้างาน (Field Measured จาก LINE Notes)
-  // ลำดับที่ 2: ค่าตามแบบก่อสร้างจริง As-Built Drawing (Project Config)
-  // ลำดับที่ 3: ค่ามาตรฐานวิศวกรรม LH (+80 ซม.)
   let innerElevation = 80;
   let innerSource = 'ENGINEERING_STANDARD'; // 'FIELD_MEASURED' | 'AS_BUILT' | 'ENGINEERING_STANDARD'
 
-  const innerMatch = notes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากพื้นโครงการ|จากถนนในโครงการ|จากในโครงการ)/i);
+  const innerMatch = rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากพื้นโครงการ|จากถนนในโครงการ|จากในโครงการ)/i);
   if (innerMatch) {
     canalBelowInner = parseFloat(innerMatch[1]);
     if (innerMatch[0].includes('ม')) canalBelowInner *= 100;
@@ -44,24 +50,64 @@ export function calculateHydrologicalLevels(report = {}, project = {}) {
     canalBelowInner = canalBelowOuter + innerElevation;
     innerSource = 'ENGINEERING_STANDARD';
   }
-  
-  // 3. ตรวจจับระดับน้ำท่วมขังบนผิวถนน
-  const roadMatch = notes.match(/(?:น้ำท่วม|น้ำขัง|รอการระบาย)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
-  if (roadMatch) {
-    roadWaterDepth = parseFloat(roadMatch[1]);
-  } else if (/แห้ง|ปกติ|เรียบร้อย/i.test(report.waterLevel || '')) {
-    roadWaterDepth = 0;
+
+  // 3. วิเคราะห์ระดับน้ำบนถนนหน้าโครงการ / ซอยภายนอก (Outer Road Water) จาก 2 แหล่ง
+  // แหล่งที่ 1: รายงานตรวจเช็คจริงหน้างาน (Field Inspection)
+  const outerFloodDepthMatch = rawNotes.match(/(?:ซอย|ถนนนอก|หน้าโครงการ|ถนนภายนอก|ผิวจราจรนอก)[^0-9]*(?:ท่วม|ขัง|สูง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i) ||
+                              rawNotes.match(/(?:น้ำท่วม|น้ำขัง|รอการระบาย)[^0-9]*(?:ซอย|ถนนนอก|หน้าโครงการ)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+  if (outerFloodDepthMatch) {
+    outerRoadWaterDepth = parseFloat(outerFloodDepthMatch[1]);
+  } else if (/ระดับเข่า|เสมอเข่า/i.test(rawNotes)) {
+    outerRoadWaterDepth = 35; // ระดับเข่า ~35 ซม.
+  } else if (/ระดับแข้ง|ครึ่งแข้ง/i.test(rawNotes)) {
+    outerRoadWaterDepth = 20; // ระดับแข้ง ~20 ซม.
+  } else if (/ระดับตาตุ่ม/i.test(rawNotes)) {
+    outerRoadWaterDepth = 10; // ระดับตาตุ่ม ~10 ซม.
+  } else if (/แห้ง|ปกติ|เรียบร้อย/i.test(report.waterLevel || '') && !/ท่วม|ขัง/i.test(rawNotes)) {
+    outerRoadWaterDepth = 0;
   }
-  
-  const isCanalHigh = status === 'WATCH' || status === 'CRITICAL' || /หนุน|ล้น|สูง|ริมฟุตบาท/i.test(report.drainageCondition || '');
+
+  // แหล่งที่ 2: โทรมาตรสดคลองภายนอก (ThaiWater / สสน.)
+  if (outerRoadWaterDepth === 0 && liveWater && (liveWater.isOverflow || (liveWater.bankDiff != null && liveWater.bankDiff < 0))) {
+    const overflowCm = Math.round(Math.abs(liveWater.bankDiff) * 100);
+    outerRoadConditionText = `คลองภายนอกล้นตลิ่ง ${overflowCm} ซม. เสี่ยงน้ำเอ่อเข้าถนนภายนอก`;
+  } else if (outerRoadWaterDepth > 0) {
+    outerRoadConditionText = `มีน้ำท่วมขัง ${outerRoadWaterDepth} ซม. (${outerRoadWaterDepth >= 30 ? 'ระดับเข่า รถเล็กผ่านลำบาก' : 'รอการระบาย'})`;
+  } else if (hasFieldReport) {
+    outerRoadConditionText = 'แห้งสนิท สัญจรได้คล่องตัว (0 ซม.)';
+  } else {
+    outerRoadConditionText = 'รอข้อมูลตรวจเช็คสภาพถนนหน้าโครงการ';
+  }
+
+  // 4. วิเคราะห์ระดับน้ำบนถนนในโครงการ (Inner Road Water)
+  if (outerRoadWaterDepth > innerElevation) {
+    innerRoadWaterDepth = outerRoadWaterDepth - innerElevation;
+  } else {
+    const innerFloodMatch = rawNotes.match(/(?:ในโครงการ|ถนนใน|ถนนเมนโครงการ)[^0-9]*(?:ท่วม|ขัง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+    if (innerFloodMatch) {
+      innerRoadWaterDepth = parseFloat(innerFloodMatch[1]);
+    } else {
+      innerRoadWaterDepth = 0; // ในโครงการแห้งสนิท เพราะยกพื้นสูง
+    }
+  }
+
+  // ระยะความปลอดภัย (Safety Freeboard Margin)
+  const safetyMargin = innerElevation - outerRoadWaterDepth;
+
+  const isCanalHigh = status === 'WATCH' || status === 'CRITICAL' || canalBelowOuter <= 10 || /หนุน|ล้น|สูง|ริมฟุตบาท/i.test(report.drainageCondition || '');
   const flapValve = isCanalHigh ? 'CLOSED' : 'OPEN';
   const pumpStatus = status === 'CRITICAL' ? 'ACTIVE' : (isCanalHigh ? 'STANDBY' : 'READY');
 
   return {
+    hasFieldReport,
     canalBelowOuter: Math.round(canalBelowOuter),
     canalBelowInner: Math.round(canalBelowInner),
-    roadWaterDepth: Math.round(roadWaterDepth),
+    outerRoadWaterDepth: Math.round(outerRoadWaterDepth),
+    innerRoadWaterDepth: Math.round(innerRoadWaterDepth),
+    roadWaterDepth: Math.round(innerRoadWaterDepth), // ความลึกน้ำในโครงการ
     innerElevation: Math.round(innerElevation),
+    safetyMargin: Math.round(safetyMargin),
+    outerRoadConditionText,
     innerSource,
     asBuiltElevationDiff: typeof project?.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
     asBuiltBenchmarkMSL: project?.asBuiltBenchmarkMSL || null,
@@ -283,6 +329,11 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           <span class="w-2 h-2 rounded-full bg-rose-500"></span>
           <span class="font-bold" id="stat-critical">${summaryStats.critical || 0}</span>
         </div>
+        <div class="h-3 w-px bg-slate-700"></div>
+        <div class="flex items-center gap-1 px-1.5 text-slate-400" title="ยังไม่มีรายงานตรวจรอบนี้">
+          <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span class="font-bold" id="stat-pending">${summaryStats.pending || 0}</span>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -370,6 +421,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
         <span class="text-slate-300 font-medium">วิกฤติ:</span> น้ำขังผิวถนน / เดินเครื่องสูบน้ำ
       </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0"></span>
+        <span class="text-slate-300 font-medium">รอตรวจ:</span> ยังไม่มีการส่งรายงานรอบนี้
+      </div>
     </div>
   </aside>
 
@@ -396,7 +451,55 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     <!-- Drawer Content (Scrollable) -->
     <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
 
-      <!-- 🌊 1. ไดอะแกรมจำลองระดับน้ำ 3 ชั้น (Hydrological 3-Tier Cross-Section) -->
+      <!-- ⚖️ 1. สรุปวิเคราะห์ระดับน้ำ 2 โซน: ถนนหน้าโครงการ VS ถนนในโครงการ (Two-Zone Water Assessment) -->
+      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
+            <span class="text-amber-400">⚖️</span>
+            <span>เปรียบเทียบระดับน้ำ: ถนนหน้าโครงการ VS ในโครงการ</span>
+          </h3>
+          <span id="dz-status-tag" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">Two-Zone Analysis</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <!-- Zone 1: ถนนหน้าโครงการ / ซอยทางเข้า -->
+          <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="flex items-center gap-1 text-slate-400 text-[10px] font-semibold">
+              <span>🚗 ถนนหน้าโครงการ / ซอย</span>
+            </div>
+            <div id="dz-outer-depth" class="text-sm font-bold text-slate-200">แห้งสนิท (0 ซม.)</div>
+            <div class="text-[9px] text-slate-400 leading-tight">
+              <span class="text-slate-500 block">แหล่งข้อมูลอ้างอิง:</span>
+              <span id="dz-outer-source" class="text-sky-300">-</span>
+            </div>
+          </div>
+
+          <!-- Zone 2: ภายในโครงการ (As-Built) -->
+          <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="flex items-center justify-between text-[10px] font-semibold">
+              <span class="text-slate-400">🏡 ภายในโครงการ</span>
+              <span id="dz-inner-elev-tag" class="text-[9px] text-sky-400 font-mono">ยก +0.80 ม.</span>
+            </div>
+            <div id="dz-inner-depth" class="text-sm font-bold text-emerald-400">แห้ง 100% (น้ำไม่ท่วม)</div>
+            <div class="text-[9px] text-slate-400 leading-tight">
+              <span class="text-slate-500 block">ระยะเผื่อปลอดภัย (Freeboard):</span>
+              <span id="dz-safety-margin" class="font-bold text-emerald-400">+80 ซม. เหนือน้ำนอก</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- วิศวกรรมสังเคราะห์ (Engineering Synthesis Box) -->
+        <div id="dz-synthesis-box" class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-1 text-[11px]">
+          <div class="flex items-center gap-1 font-bold text-[10px] text-lh-gold">
+            <span>💡 บทสรุปวิศวกรรม (Engineering Synthesis):</span>
+          </div>
+          <p id="dz-synthesis-text" class="text-slate-300 text-[11px] leading-relaxed">
+            -
+          </p>
+        </div>
+      </div>
+
+      <!-- 🌊 2. ไดอะแกรมจำลองระดับน้ำ 3 ชั้น (Hydrological 3-Tier Cross-Section) -->
       <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
           <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
@@ -493,7 +596,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </div>
       </div>
 
-      <!-- ⛅ 2. ข้อมูลพยากรณ์อากาศและเรดาร์ Real-time (Open-Meteo & TMD) -->
+      <!-- ⛅ 3. ข้อมูลพยากรณ์อากาศและเรดาร์ Real-time (Open-Meteo & TMD) -->
       <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2 shadow-md">
         <div class="flex items-center justify-between">
           <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
@@ -597,7 +700,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </div>
       </div>
 
-      <!-- 📋 3. สภาพหน้างานจริงและภาพถ่ายล่าสุด (Field Reality & Inspection Photos) -->
+      <!-- 📋 4. สภาพหน้างานจริงและภาพถ่ายล่าสุด (Field Reality & Inspection Photos) -->
       <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
           <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
@@ -607,7 +710,18 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           <span id="field-updated-at" class="text-[10px] text-slate-400 font-mono">-</span>
         </div>
 
-        <div class="space-y-1.5 text-[11px] bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+        <!-- Case 1: ยังไม่มีการส่งรายงานจากหน้างานรอบนี้ -->
+        <div id="field-empty-box" class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1.5 hidden">
+          <div class="text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5">
+            <span>⚪ ยังไม่มีการส่งรายงานตรวจเช็คหน้างานในรอบนี้</span>
+          </div>
+          <p class="text-[10px] text-slate-500 leading-relaxed">
+            ยังไม่มีเจ้าหน้าที่โครงการส่งผลการสำรวจจริง ข้อมูลที่แสดงประเมินจากโทรมาตรสถานีน้ำใกล้เคียงและแบบก่อสร้างจริง (As-Built)
+          </p>
+        </div>
+
+        <!-- Case 2: มีข้อมูลตรวจเช็คจริงจากหน้างาน -->
+        <div id="field-data-box" class="space-y-1.5 text-[11px] bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
           <div><strong class="text-slate-400">สภาพผิวจราจร:</strong> <span id="field-water" class="text-white">-</span></div>
           <div><strong class="text-slate-400">สภาพคลอง/ทางน้ำ:</strong> <span id="field-canal" class="text-white">-</span></div>
           <div><strong class="text-slate-400">สถานะเครื่องสูบน้ำ:</strong> <span id="field-pumps" class="text-white">-</span></div>
@@ -845,12 +959,18 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const boundsList = [];
 
       filtered.forEach(function(p) {
-        const status = p.status || 'NORMAL';
+        const hasReport = Boolean(p.hasReport);
+        const status = hasReport ? (p.status || 'NORMAL') : 'NO_REPORT';
         let pinColor = '#10b981'; // Green (NORMAL)
         let ringColor = 'rgba(16, 185, 129, 0.4)';
         let pulseClass = '';
+        let markerIcon = '💧';
 
-        if (status === 'WATCH') {
+        if (!hasReport || status === 'NO_REPORT') {
+          pinColor = '#64748b'; // Slate / Grey
+          ringColor = 'rgba(100, 116, 139, 0.3)';
+          markerIcon = '⏱️';
+        } else if (status === 'WATCH') {
           pinColor = '#f59e0b'; // Orange
           ringColor = 'rgba(245, 158, 11, 0.5)';
           pulseClass = '<div class="pulse-ring" style="background:' + ringColor + '"></div>';
@@ -863,7 +983,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         const iconHtml = '<div class="custom-marker">' +
           pulseClass +
           '<div class="marker-pin" style="background: ' + pinColor + ';">' +
-            '<span class="marker-icon">💧</span>' +
+            '<span class="marker-icon">' + markerIcon + '</span>' +
           '</div>' +
           '<div class="marker-label">' + p.code + '</div>' +
         '</div>';
@@ -879,7 +999,11 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         const marker = L.marker([p.lat, p.lon], { icon: customIcon });
         marker.projectStatus = status;
 
-        marker.bindTooltip('<strong>' + p.code + '</strong>: ' + p.name + '<br><span style="color:' + pinColor + '">' + (status === 'NORMAL' ? '🟢 ปกติ' : (status === 'WATCH' ? '🟠 เฝ้าระวัง' : '🔴 วิกฤติ')) + '</span>', {
+        const statusLabel = (!hasReport || status === 'NO_REPORT')
+          ? '⚪ รอตรวจหน้างาน (ยังไม่มีรายงาน)'
+          : (status === 'NORMAL' ? '🟢 ปกติ' : (status === 'WATCH' ? '🟠 เฝ้าระวัง' : '🔴 วิกฤติ'));
+
+        marker.bindTooltip('<strong>' + p.code + '</strong>: ' + p.name + '<br><span style="color:' + pinColor + '">' + statusLabel + '</span>', {
           direction: 'top',
           offset: [0, -28],
           opacity: 0.95
@@ -919,9 +1043,13 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       document.getElementById('drawer-name').innerText = p.name;
       document.getElementById('drawer-area').innerText = p.area || '-';
 
-      const status = p.status || 'NORMAL';
+      const hasReport = Boolean(p.hasReport);
+      const status = hasReport ? (p.status || 'NORMAL') : 'NO_REPORT';
       const badge = document.getElementById('drawer-status-badge');
-      if (status === 'NORMAL') {
+      if (!hasReport || status === 'NO_REPORT') {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700/50 text-slate-300 border border-slate-600/50';
+        badge.innerText = '⚪ ยังไม่มีข้อมูลตรวจหน้างาน (รอตรวจ)';
+      } else if (status === 'NORMAL') {
         badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
         badge.innerText = '🟢 ปกติ (NORMAL)';
       } else if (status === 'WATCH') {
@@ -936,8 +1064,11 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const hydro = p.hydro || { 
         canalBelowOuter: 40, 
         canalBelowInner: 120, 
+        outerRoadWaterDepth: 0,
+        innerRoadWaterDepth: 0,
         roadWaterDepth: 0, 
         innerElevation: 80, 
+        safetyMargin: 80,
         innerSource: 'ENGINEERING_STANDARD', 
         asBuiltElevationDiff: 0.80, 
         flapValve: 'OPEN', 
@@ -946,6 +1077,85 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       const elevMeters = (hydro.innerElevation / 100).toFixed(2);
       const elevSign = hydro.innerElevation >= 0 ? '+' : '';
+      const outerDepth = hydro.outerRoadWaterDepth || 0;
+      const innerDepth = hydro.innerRoadWaterDepth || 0;
+      const innerElev = hydro.innerElevation || 80;
+      const safetyMargin = hydro.safetyMargin != null ? hydro.safetyMargin : (innerElev - outerDepth);
+
+      // Populate Dual-Zone Water Assessment Card
+      const dzOuterDepthElem = document.getElementById('dz-outer-depth');
+      const dzOuterSourceElem = document.getElementById('dz-outer-source');
+      const dzInnerElevTag = document.getElementById('dz-inner-elev-tag');
+      const dzInnerDepthElem = document.getElementById('dz-inner-depth');
+      const dzSafetyMarginElem = document.getElementById('dz-safety-margin');
+      const dzSynthesisText = document.getElementById('dz-synthesis-text');
+      const dzStatusTag = document.getElementById('dz-status-tag');
+
+      if (dzInnerElevTag) {
+        dzInnerElevTag.innerText = 'ยก ' + elevSign + elevMeters + ' ม.';
+      }
+
+      // Zone 1: ถนนหน้าโครงการ / ซอยทางเข้า
+      if (outerDepth > 0) {
+        dzOuterDepthElem.innerText = 'น้ำท่วมขัง ' + outerDepth + ' ซม.' + (outerDepth >= 30 ? ' (ระดับเข่า)' : (outerDepth >= 15 ? ' (ระดับแข้ง)' : ' (รอระบาย)'));
+        dzOuterDepthElem.className = 'text-sm font-bold text-amber-400';
+        dzOuterSourceElem.innerText = hasReport ? 'รายงานตรวจเช็คจริงหน้างาน' : 'โทรมาตรสดคลอง (ThaiWater)';
+      } else if (hasReport) {
+        dzOuterDepthElem.innerText = 'แห้งสนิท สัญจรปกติ (0 ซม.)';
+        dzOuterDepthElem.className = 'text-sm font-bold text-slate-200';
+        dzOuterSourceElem.innerText = 'รายงานตรวจเช็คจริงหน้างาน';
+      } else {
+        dzOuterDepthElem.innerText = 'รอข้อมูลตรวจเช็คถนนนอก';
+        dzOuterDepthElem.className = 'text-sm font-bold text-slate-400';
+        dzOuterSourceElem.innerText = p.liveWater ? ('โทรมาตร: ' + (p.liveWater.stationName || 'สสน.')) : 'ยังไม่มีรายงานส่งมา';
+      }
+
+      // Zone 2: ภายในโครงการ
+      if (innerDepth > 0) {
+        dzInnerDepthElem.innerText = 'มีน้ำล้นเข้าโครงการ ' + innerDepth + ' ซม.';
+        dzInnerDepthElem.className = 'text-sm font-bold text-rose-400 animate-pulse';
+        dzSafetyMarginElem.innerText = '-' + innerDepth + ' ซม. (ระดับน้ำเกินคันกั้น)';
+        dzSafetyMarginElem.className = 'font-bold text-rose-400';
+      } else {
+        dzInnerDepthElem.innerText = 'แห้งสนิท 100% (น้ำไม่ท่วม)';
+        dzInnerDepthElem.className = 'text-sm font-bold text-emerald-400';
+        if (safetyMargin > 0) {
+          dzSafetyMarginElem.innerText = '+' + safetyMargin + ' ซม. เหนือน้ำนอก';
+          dzSafetyMarginElem.className = 'font-bold text-emerald-400';
+        } else {
+          dzSafetyMarginElem.innerText = 'เสี่ยงปริ่มน้ำ';
+          dzSafetyMarginElem.className = 'font-bold text-amber-400';
+        }
+      }
+
+      // Engineering Synthesis Box
+      if (dzSynthesisText) {
+        if (outerDepth > 0 && innerDepth === 0) {
+          dzSynthesisText.innerHTML = '<span class="text-amber-300 font-semibold">⚠️ ถนนซอยหน้าโครงการมีน้ำท่วมขัง ' + outerDepth + ' ซม.</span> แต่ <span class="text-emerald-400 font-bold">ถนนภายในโครงการยกพื้นสูงกว่าระดับน้ำภายนอก +' + safetyMargin + ' ซม.</span> (As-Built ยกสูง +' + elevMeters + ' ม.) ทำให้น้ำภายนอกไม่สามารถไหลเข้าโครงการได้ บานพับ Flap Valve ปิดกันน้ำย้อน สัญจรในโครงการแห้ง 100%';
+          if (dzStatusTag) {
+            dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            dzStatusTag.innerText = 'ถนนนอกท่วม / ในโครงการแห้ง';
+          }
+        } else if (innerDepth > 0) {
+          dzSynthesisText.innerHTML = '<span class="text-rose-400 font-bold">🚨 ระดับน้ำภายนอกสูงเกินระดับยกพื้นโครงการ</span> (' + outerDepth + ' ซม. > ' + innerElev + ' ซม.) ส่งผลให้มีน้ำเอ่อเข้าผิวถนนในโครงการ ' + innerDepth + ' ซม. เร่งเดินเครื่องสูบน้ำระบายออก';
+          if (dzStatusTag) {
+            dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+            dzStatusTag.innerText = 'น้ำท่วมขังในโครงการ';
+          }
+        } else if (hasReport) {
+          dzSynthesisText.innerHTML = '<span class="text-emerald-400 font-semibold">🟢 สภาพปกติทั้งสองโซน:</span> ถนนหน้าโครงการและถนนเมนภายในแห้งสนิท สัญจรได้คล่องตัว ระดับยกพื้นตามแบบ As-Built +' + elevMeters + ' ม. รองรับสถานการณ์ได้ปลอดภัย';
+          if (dzStatusTag) {
+            dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            dzStatusTag.innerText = 'สภาวะปกติ';
+          }
+        } else {
+          dzSynthesisText.innerHTML = '<span class="text-slate-400">⚪ รอข้อมูลตรวจเช็คสภาพผิวถนนหน้าโครงการจากภาคสนาม</span> โดยโครงการได้ถมดินยกพื้นสูง +' + elevMeters + ' ม. (As-Built) ตามเกณฑ์ป้องกันน้ำท่วมของแลนด์ แอนด์ เฮ้าส์';
+          if (dzStatusTag) {
+            dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/50 text-slate-300 border border-slate-600/50';
+            dzStatusTag.innerText = 'รอข้อมูลภาคสนาม';
+          }
+        }
+      }
 
       // Update As-Built Badge in Cross-Section Header
       const asbuiltBadge = document.getElementById('cs-asbuilt-badge');
@@ -1013,6 +1223,21 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         waterLine.setAttribute('d', 'M 330,' + waterY + ' Q 360,' + (waterY - 2) + ' 395,' + waterY + ' T 460,' + waterY);
       }
 
+      // Road water puddle on outer road (middle: x=170 to 320)
+      const roadWater = document.getElementById('svg-road-water');
+      if (roadWater) {
+        if (outerDepth > 0) {
+          const puddleH = Math.min(25, Math.max(4, Math.round(outerDepth * 0.4)));
+          roadWater.setAttribute('y', 110 - puddleH);
+          roadWater.setAttribute('height', puddleH);
+          roadWater.setAttribute('fill', '#f59e0b');
+          roadWater.setAttribute('opacity', '0.8');
+          roadWater.style.display = 'block';
+        } else {
+          roadWater.style.display = 'none';
+        }
+      }
+
       // Flap valve rotation
       const flap = document.getElementById('svg-flap-valve');
       if (flap) {
@@ -1029,15 +1254,26 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
       // Text annotations on SVG
       const innerSrcBadge = hydro.innerSource === 'AS_BUILT' ? 'As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? 'ตรวจวัด' : 'มาตรฐาน');
-      const innerStatusTxt = hydro.roadWaterDepth > 0 ? ('น้ำขัง ' + hydro.roadWaterDepth + ' ซม.') : ('แห้ง 100% (' + innerSrcBadge + ')');
+      const innerStatusTxt = innerDepth > 0 ? ('น้ำขัง ' + innerDepth + ' ซม.') : ('แห้ง 100% (' + innerSrcBadge + ')');
       const svgInnerTxt = document.getElementById('svg-inner-txt');
       if (svgInnerTxt) {
         svgInnerTxt.innerText = elevSign + elevMeters + ' ม. ' + innerStatusTxt;
-        svgInnerTxt.setAttribute('fill', hydro.roadWaterDepth > 0 ? '#ef4444' : '#10b981');
+        svgInnerTxt.setAttribute('fill', innerDepth > 0 ? '#ef4444' : '#10b981');
       }
 
-      document.getElementById('svg-outer-txt').innerText = hydro.roadWaterDepth > 0 ? ('น้ำขัง ' + hydro.roadWaterDepth + ' ซม.') : '0.00 ม. (ปกติ)';
-      document.getElementById('svg-outer-txt').setAttribute('fill', hydro.roadWaterDepth > 0 ? '#ef4444' : '#f8fafc');
+      const svgOuterTxt = document.getElementById('svg-outer-txt');
+      if (svgOuterTxt) {
+        if (outerDepth > 0) {
+          svgOuterTxt.innerText = 'น้ำขัง ' + outerDepth + ' ซม.';
+          svgOuterTxt.setAttribute('fill', '#f59e0b');
+        } else if (hasReport) {
+          svgOuterTxt.innerText = '0.00 ม. (แห้งปกติ)';
+          svgOuterTxt.setAttribute('fill', '#f8fafc');
+        } else {
+          svgOuterTxt.innerText = '0.00 ม. (รอตรวจ)';
+          svgOuterTxt.setAttribute('fill', '#94a3b8');
+        }
+      }
       document.getElementById('svg-canal-txt').innerText = '-' + (hydro.canalBelowOuter / 100).toFixed(2) + ' ม. (' + (hydro.canalBelowOuter <= 15 ? 'หนุนสูง' : 'ในเกณฑ์') + ')';
       document.getElementById('svg-canal-txt').setAttribute('fill', hydro.canalBelowOuter <= 15 ? '#f59e0b' : '#38bdf8');
 
@@ -1091,11 +1327,25 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const linkWindy = document.getElementById('link-windy');
       if (linkWindy) linkWindy.href = 'https://www.windy.com/?' + p.lat + ',' + p.lon + ',11';
 
-      // Field Section
-      document.getElementById('field-updated-at').innerText = p.reportDateThai || 'รอบตรวจล่าสุด';
-      document.getElementById('field-water').innerText = p.waterLevel || 'ถนนเมนแห้งสนิท สภาพปกติ (0 ซม.)';
-      document.getElementById('field-canal').innerText = p.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง';
-      document.getElementById('field-pumps').innerText = p.pumpsRunning || 'ระบบป้องกันน้ำท่วมทำงานปกติ (พร้อมใช้งาน 100%)';
+      // Field Section (Toggle Empty State vs Actual Field Report)
+      const fieldEmptyBox = document.getElementById('field-empty-box');
+      const fieldDataBox = document.getElementById('field-data-box');
+      const photosSection = document.getElementById('photos-section');
+
+      if (!hasReport) {
+        if (fieldEmptyBox) fieldEmptyBox.classList.remove('hidden');
+        if (fieldDataBox) fieldDataBox.classList.add('hidden');
+        if (photosSection) photosSection.classList.add('hidden');
+        document.getElementById('field-updated-at').innerText = 'ยังไม่มีข้อมูลตรวจจริงรอบนี้';
+      } else {
+        if (fieldEmptyBox) fieldEmptyBox.classList.add('hidden');
+        if (fieldDataBox) fieldDataBox.classList.remove('hidden');
+        if (photosSection) photosSection.classList.remove('hidden');
+        document.getElementById('field-updated-at').innerText = p.reportDateThai || 'รอบตรวจล่าสุด';
+        document.getElementById('field-water').innerText = p.waterLevel || '-';
+        document.getElementById('field-canal').innerText = p.drainageCondition || '-';
+        document.getElementById('field-pumps').innerText = p.pumpsRunning || '-';
+      }
 
       // Photos Section
       const photoGrid = document.getElementById('photos-grid');

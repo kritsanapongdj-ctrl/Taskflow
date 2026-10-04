@@ -1162,15 +1162,17 @@ async function handleFloodMap(req, res) {
     // โหลดข้อมูลโทรมาตรระดับน้ำสดจากคลังข้อมูลน้ำแห่งชาติ ThaiWater (สสน. / กรมชลประทาน)
     await fetchLiveWaterStations().catch(() => []);
 
-    // ประกอบข้อมูล 30 โครงการใน FLOOD_PROJECTS
+    // ประกอบข้อมูลโครงการทั้งหมดใน FLOOD_PROJECTS
     const projectsData = [];
     for (const [code, pInfo] of Object.entries(FLOOD_PROJECTS)) {
       const report = projectMap.get(code);
-      let status = report?.status || 'NORMAL';
-      let reportId = report?.reportId || report?.id || null;
-      let waterLevel = report?.waterLevel || 'ถนนเมนแห้งสนิท สภาพปกติ (0 ซม.)';
-      let pumpsRunning = report?.pumpsRunning || 'ระบบป้องกันน้ำท่วมพร้อมใช้งาน 100%';
-      let drainageCondition = report?.drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำหลักเปิดโล่ง';
+      const hasReport = Boolean(report && (report.reportId || report.id || report.createdAt));
+
+      let status = hasReport ? (report.status || 'NORMAL') : 'NO_REPORT';
+      let reportId = hasReport ? (report.reportId || report.id || null) : null;
+      let waterLevel = hasReport ? (report.waterLevel || null) : null;
+      let pumpsRunning = hasReport ? (report.pumpsRunning || null) : null;
+      let drainageCondition = hasReport ? (report.drainageCondition || null) : null;
       let weather = report?.weather || {
         temp: 31,
         condition: 'มีเมฆเป็นส่วนมาก',
@@ -1182,8 +1184,8 @@ async function handleFloodMap(req, res) {
       const liveWater = await getNearestWaterStation(pInfo.lat, pInfo.lon);
 
       // วันที่และเวลาตรวจสอบ
-      let reportDateThai = 'พร้อมรับข้อมูลตรวจรอบบ่าย';
-      if (report?.createdAt) {
+      let reportDateThai = 'ยังไม่มีข้อมูลตรวจจริงรอบนี้';
+      if (hasReport && report?.createdAt) {
         const d = new Date(report.createdAt);
         const bkk = new Date(d.getTime() + (7 * 60 * 60 * 1000));
         reportDateThai = `${bkk.getUTCDate()} ${thaiMonths[bkk.getUTCMonth()]} ${bkk.getUTCFullYear() + 543} เวลา ${String(bkk.getUTCHours()).padStart(2, '0')}:${String(bkk.getUTCMinutes()).padStart(2, '0')} น.`;
@@ -1205,8 +1207,8 @@ async function handleFloodMap(req, res) {
         asBuiltNotes
       };
 
-      // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report และ mergedPInfo เพื่ออ้างอิง As-Built Drawing)
-      const hydro = calculateHydrologicalLevels(report || { status: 'NORMAL' }, mergedPInfo);
+      // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report, mergedPInfo และ liveWater เพื่อวิเคราะห์ทั้งในและนอกโครงการ)
+      const hydro = calculateHydrologicalLevels(report || {}, mergedPInfo, liveWater);
 
       const resolvedStationName = liveWater ? `${liveWater.stationName} [${liveWater.agencyShort}] (ห่าง ${liveWater.distanceKm} กม.)` : pInfo.stationName;
       const resolvedBasinAlert = liveWater ? `ระดับน้ำโทรมาตร ${liveWater.waterLevelMSL ?? '-'} ม.รทก. (${liveWater.bankStatusText} ${liveWater.bankDiff ?? '-'} ม.) สถานะ: ${liveWater.situationText} [อัปเดต ${liveWater.datetime} น.]` : pInfo.basinAlert;
@@ -1228,6 +1230,7 @@ async function handleFloodMap(req, res) {
         asBuiltElevationDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes,
+        hasReport,
         status,
         reportId,
         waterLevel,
@@ -1242,9 +1245,10 @@ async function handleFloodMap(req, res) {
 
     const summaryStats = {
       total: projectsData.length,
-      normal: projectsData.filter(p => p.status === 'NORMAL').length,
-      watch: projectsData.filter(p => p.status === 'WATCH').length,
-      critical: projectsData.filter(p => p.status === 'CRITICAL').length
+      normal: projectsData.filter(p => p.hasReport && p.status === 'NORMAL').length,
+      watch: projectsData.filter(p => p.hasReport && p.status === 'WATCH').length,
+      critical: projectsData.filter(p => p.hasReport && p.status === 'CRITICAL').length,
+      pending: projectsData.filter(p => !p.hasReport).length
     };
 
     const html = generateFloodMapHtml({ projectsData, summaryStats });
