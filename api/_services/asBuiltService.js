@@ -49,8 +49,10 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
     if (updates.projectCode) {
       const code = updates.projectCode;
       const diff = parseFloat(updates.asBuiltElevationDiff);
+      const crestDiff = updates.entranceCrestDiff !== undefined && updates.entranceCrestDiff !== '' && updates.entranceCrestDiff !== null ? parseFloat(updates.entranceCrestDiff) : null;
       payload[code] = {
         asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
+        entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
         asBuiltBenchmarkMSL: (updates.asBuiltBenchmarkMSL || '').trim() || null,
         asBuiltNotes: (updates.asBuiltNotes || '').trim() || null,
         updatedAt: nowIso
@@ -59,8 +61,10 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
       for (const [code, val] of Object.entries(updates)) {
         if (typeof val === 'object' && val !== null && code !== 'action' && code !== 'adminPin') {
           const diff = parseFloat(val.asBuiltElevationDiff);
+          const crestDiff = val.entranceCrestDiff !== undefined && val.entranceCrestDiff !== '' && val.entranceCrestDiff !== null ? parseFloat(val.entranceCrestDiff) : null;
           payload[code] = {
             asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
+            entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
             asBuiltBenchmarkMSL: (val.asBuiltBenchmarkMSL || '').trim() || null,
             asBuiltNotes: (val.asBuiltNotes || '').trim() || null,
             updatedAt: nowIso
@@ -291,6 +295,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         if (customOverrides[p.code]) {
           const ov = customOverrides[p.code];
           if (ov.asBuiltElevationDiff != null) p.asBuiltElevationDiff = ov.asBuiltElevationDiff;
+          if (ov.entranceCrestDiff != null) p.entranceCrestDiff = ov.entranceCrestDiff;
           if (ov.asBuiltBenchmarkMSL != null) p.asBuiltBenchmarkMSL = ov.asBuiltBenchmarkMSL;
           if (ov.asBuiltNotes != null) p.asBuiltNotes = ov.asBuiltNotes;
         }
@@ -442,14 +447,15 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         card.className = 'glass-card p-4 rounded-2xl border ' + (isDirty ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800') + ' transition-all shadow-md';
 
         const elevVal = p.asBuiltElevationDiff != null ? p.asBuiltElevationDiff.toFixed(2) : '0.80';
+        const crestVal = p.entranceCrestDiff != null ? p.entranceCrestDiff.toFixed(2) : '';
         const mslVal = p.asBuiltBenchmarkMSL || '';
         const notesVal = p.asBuiltNotes || '';
 
         card.innerHTML = \`
-          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             
             <!-- Left: Project Info -->
-            <div class="lg:w-1/3 space-y-1">
+            <div class="lg:w-1/4 space-y-1">
               <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-sky-400 border border-slate-700/80">\${p.code}</span>
                 <h3 class="text-sm font-bold text-white tracking-tight truncate">\${p.name}</h3>
@@ -464,13 +470,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
               </div>
             </div>
 
-            <!-- Middle: Elevation Inputs -->
-            <div class="lg:w-1/2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <!-- Middle: Elevation Inputs (4 Columns) -->
+            <div class="lg:w-8/12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
               
-              <!-- Field 1: As-Built Elevation Difference -->
+              <!-- Field 1: As-Built Road Elevation Difference -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
-                  <span>ระดับยกพื้นถนน (ม.)</span>
+                  <span>ระดับถนนใน (ม.)</span>
                   <span class="text-[9px] text-sky-400">เทียบถนนนอก</span>
                 </label>
                 <div class="flex items-center gap-1">
@@ -484,14 +490,38 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
                 <!-- Presets -->
                 <div class="flex items-center gap-1 pt-1">
+                  <button onclick="setElevationPreset('\${p.code}', 0.20)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.20</button>
                   <button onclick="setElevationPreset('\${p.code}', 0.70)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.70</button>
                   <button onclick="setElevationPreset('\${p.code}', 0.80)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
-                  <button onclick="setElevationPreset('\${p.code}', 0.90)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.90</button>
                   <button onclick="setElevationPreset('\${p.code}', 1.00)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+1.00</button>
                 </div>
               </div>
 
-              <!-- Field 2: MSL Benchmark -->
+              <!-- Field 2: Entrance Crest Level (Optional Hump at Guardhouse) -->
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
+                <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
+                  <span>สันเนินทางเข้า (ม.)</span>
+                  <span class="text-[9px] text-amber-400 font-normal">ถ้ามี (เว้นว่างได้)</span>
+                </label>
+                <div class="flex items-center gap-1">
+                  <span class="text-slate-500 font-mono font-bold text-xs">+</span>
+                  <input type="number" step="0.05" min="0.00" max="5.00" 
+                    id="input-crest-\${p.code}" 
+                    value="\${crestVal}" 
+                    placeholder="ไม่มีเนิน"
+                    oninput="handleFieldChange('\${p.code}', 'entranceCrestDiff', this.value)"
+                    class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-sm font-mono font-bold text-amber-400 focus:outline-none focus:border-lh-gold">
+                  <span class="text-slate-400 text-xs">ม.</span>
+                </div>
+                <!-- Presets for Hump -->
+                <div class="flex items-center gap-1 pt-1">
+                  <button onclick="setCrestPreset('\${p.code}', 0.50)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.50</button>
+                  <button onclick="setCrestPreset('\${p.code}', 0.80)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
+                  <button onclick="setCrestPreset('\${p.code}', null)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ล้าง</button>
+                </div>
+              </div>
+
+              <!-- Field 3: MSL Benchmark -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
                   <span>ระดับอ้างอิง รทก.</span>
@@ -503,10 +533,10 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                   placeholder="เช่น +1.90 ม.รทก."
                   oninput="handleFieldChange('\${p.code}', 'asBuiltBenchmarkMSL', this.value)"
                   class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-lh-gold">
-                <span class="text-[9px] text-slate-500 block">ระดับน้ำทะเลปานกลาง</span>
+                <span class="text-[9px] text-slate-500 block truncate">เทียบระดับน้ำทะเล</span>
               </div>
 
-              <!-- Field 3: Notes / Drawing No. -->
+              <!-- Field 4: Notes / Drawing No. -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block">
                   <span>หมายเหตุแบบ As-Built</span>
@@ -547,6 +577,14 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       }
     }
 
+    function setCrestPreset(code, val) {
+      const input = document.getElementById('input-crest-' + code);
+      if (input) {
+        input.value = (val !== null && val !== undefined) ? val.toFixed(2) : '';
+        handleFieldChange(code, 'entranceCrestDiff', (val !== null && val !== undefined) ? val : '');
+      }
+    }
+
     function handleFieldChange(code, field, rawValue) {
       const p = currentProjects.find(item => item.code === code);
       if (!p) return;
@@ -554,6 +592,9 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       if (field === 'asBuiltElevationDiff') {
         const num = parseFloat(rawValue);
         p[field] = !isNaN(num) ? num : 0.80;
+      } else if (field === 'entranceCrestDiff') {
+        const num = parseFloat(rawValue);
+        p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
       } else {
         p[field] = rawValue;
       }
@@ -593,6 +634,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         const payload = {
           projectCode: code,
           asBuiltElevationDiff: p.asBuiltElevationDiff,
+          entranceCrestDiff: p.entranceCrestDiff,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
           adminPin: pin
@@ -619,6 +661,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         // Update local overrides
         customOverrides[code] = {
           asBuiltElevationDiff: p.asBuiltElevationDiff,
+          entranceCrestDiff: p.entranceCrestDiff,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
           updatedAt: data.updatedAt || new Date().toISOString()
@@ -678,6 +721,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           if (p) {
             batchUpdates[code] = {
               asBuiltElevationDiff: p.asBuiltElevationDiff,
+              entranceCrestDiff: p.entranceCrestDiff,
               asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
               asBuiltNotes: p.asBuiltNotes
             };

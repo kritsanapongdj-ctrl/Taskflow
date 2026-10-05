@@ -73,6 +73,7 @@ export default async function handler(req, res) {
     const customAsBuilt = asBuiltOverrides[report.projectCode];
     if (customAsBuilt) {
       if (customAsBuilt.asBuiltElevationDiff != null) projectConfig.asBuiltElevationDiff = customAsBuilt.asBuiltElevationDiff;
+      if (customAsBuilt.entranceCrestDiff != null) projectConfig.entranceCrestDiff = customAsBuilt.entranceCrestDiff;
       if (customAsBuilt.asBuiltBenchmarkMSL != null) projectConfig.asBuiltBenchmarkMSL = customAsBuilt.asBuiltBenchmarkMSL;
       if (customAsBuilt.asBuiltNotes != null) projectConfig.asBuiltNotes = customAsBuilt.asBuiltNotes;
     }
@@ -1197,12 +1198,14 @@ async function handleFloodMap(req, res) {
       // ดึงค่าระดับ As-Built จาก Overrides ใน Firestore (ถ้ามีการบันทึกไว้)
       const customAsBuilt = asBuiltOverrides[code];
       const asBuiltElevationDiff = customAsBuilt?.asBuiltElevationDiff ?? pInfo.asBuiltElevationDiff ?? 0.80;
+      const entranceCrestDiff = customAsBuilt?.entranceCrestDiff !== undefined ? customAsBuilt.entranceCrestDiff : (pInfo.entranceCrestDiff ?? null);
       const asBuiltBenchmarkMSL = customAsBuilt?.asBuiltBenchmarkMSL ?? pInfo.asBuiltBenchmarkMSL ?? null;
       const asBuiltNotes = customAsBuilt?.asBuiltNotes ?? pInfo.asBuiltNotes ?? null;
 
       const mergedPInfo = {
         ...pInfo,
         asBuiltElevationDiff,
+        entranceCrestDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes
       };
@@ -1228,6 +1231,7 @@ async function handleFloodMap(req, res) {
         thaiWaterUrl: 'https://www.thaiwater.net/',
         gistdaUrl: 'https://disaster.gistda.or.th/',
         asBuiltElevationDiff,
+        entranceCrestDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes,
         hasReport,
