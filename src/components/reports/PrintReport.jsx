@@ -245,13 +245,60 @@ export default function PrintReport({
   const rC = rT.filter((t) => t.status?.startsWith('จบงาน') && !rOd.includes(t));
   const rO = rT.filter((t) => !t.status?.startsWith('จบงาน') && !rOd.includes(t));
 
-  const pSt = {};
+  // ฟังก์ชันจัดกลุ่มใบงาน: รายการงานใดๆ ก็ตาม หากมีเลขที่ใบงานเหมือนกัน ให้นับเป็น 1 ใบงาน
+  const getWorkOrderKey = (t) => {
+    const no = String(t.workOrderNo || t.woNo || '').trim();
+    if (no && no !== '-' && no !== 'ไม่มี' && no !== '.' && no !== 'ออกใบงานช้า') {
+      return 'WO_' + no;
+    }
+    return 'ID_' + t.id;
+  };
+
+  // จัดกลุ่มงานในงวดตามใบงาน
+  const periodWoGroups = {};
   rT.forEach((t) => {
-    const pName = getStdName(t.project);
-    if (!pSt[pName]) pSt[pName] = { t: 0, d: 0, o: 0, od: 0 };
+    const k = getWorkOrderKey(t);
+    if (!periodWoGroups[k]) periodWoGroups[k] = [];
+    periodWoGroups[k].push(t);
+  });
+  const totalPeriodWOs = Object.keys(periodWoGroups).length;
+
+  let donePeriodWOs = 0;
+  let inProgPeriodWOs = 0;
+  let latePeriodWOs = 0;
+
+  Object.values(periodWoGroups).forEach((tList) => {
+    const isLate = tList.some(
+      (t) =>
+        t.overdueStatus === 'เกินกำหนด' ||
+        t.overdueStatus === 'ออกใบงานช้า' ||
+        chkOvdTimeAware(t, tS)
+    );
+    const isDone = tList.every((t) => t.status?.startsWith('จบงาน'));
+    if (isLate) {
+      latePeriodWOs++;
+    } else if (isDone) {
+      donePeriodWOs++;
+    } else {
+      inProgPeriodWOs++;
+    }
+  });
+
+  const pSt = {};
+  Object.values(periodWoGroups).forEach((tList) => {
+    const pName = getStdName(tList[0].project);
+    if (!pSt[pName]) pSt[pName] = { t: 0, d: 0, o: 0, od: 0, taskCount: 0 };
     pSt[pName].t++;
-    if (rOd.includes(t)) pSt[pName].od++;
-    else if (t.status?.startsWith('จบงาน')) pSt[pName].d++;
+    pSt[pName].taskCount += tList.length;
+    const isLate = tList.some(
+      (t) =>
+        t.overdueStatus === 'เกินกำหนด' ||
+        t.overdueStatus === 'ออกใบงานช้า' ||
+        chkOvdTimeAware(t, tS)
+    );
+    const isDone = tList.every((t) => t.status?.startsWith('จบงาน'));
+    if (isLate) pSt[pName].od++;
+    else if (isDone) pSt[pName].d++;
     else pSt[pName].o++;
   });
 
@@ -271,16 +318,34 @@ export default function PrintReport({
     return true;
   });
 
+  // 1. ส่งเบิกแล้วในรอบเดือนนี้ (fS)
+  const billedThisPeriodTasks = allC.filter((t) => 
+    t.billingStatus === 'ส่งเบิกแล้ว' && 
+    (t.billingMonth === fS || (fS === '2026-06' && (!t.billingMonth || t.billingMonth < '2026-07')))
+  );
+  const billedThisPeriodWOs = new Set(billedThisPeriodTasks.map(getWorkOrderKey)).size;
+
+  // 2. ค้างเบิกสะสมทั้งหมด (All-time Unbilled)
   const unbilledTasks = allC.filter((t) => t.billingStatus !== 'ส่งเบิกแล้ว');
-  const ub = unbilledTasks.length;
-  const b = allC.filter((t) => t.billingStatus === 'ส่งเบิกแล้ว').length;
+  const unbilledAllWOs = new Set(unbilledTasks.map(getWorkOrderKey)).size;
+
+  // 3. ส่งเบิกแล้วสะสมทั้งหมดในระบบ (All-time Billed)
+  const billedAllTasks = allC.filter((t) => t.billingStatus === 'ส่งเบิกแล้ว');
+  const billedAllWOs = new Set(billedAllTasks.map(getWorkOrderKey)).size;
+
+  // 4. แจกแจงรายการค้างเบิกตามรอบเดือน (นับเป็นใบงาน)
   const ubBreakdown = {};
+  const ubTaskBreakdown = {};
   unbilledTasks.forEach((t) => {
     let m = 'ไม่ระบุเดือน';
     if (t.completedDate) m = String(t.completedDate || '').substring(0, 7);
     else if (t.endDate) m = String(t.endDate || '').substring(0, 7);
-    if (!ubBreakdown[m]) ubBreakdown[m] = 0;
-    ubBreakdown[m]++;
+    if (!ubBreakdown[m]) {
+      ubBreakdown[m] = new Set();
+      ubTaskBreakdown[m] = 0;
+    }
+    ubBreakdown[m].add(getWorkOrderKey(t));
+    ubTaskBreakdown[m]++;
   });
   const sortedUbMonths = Object.keys(ubBreakdown).sort();
 
@@ -331,42 +396,83 @@ export default function PrintReport({
       <div className="flex gap-4 mb-8 print-break">
         <div className="flex-1 bg-gray-50 border p-4 rounded-lg text-center">
           <p className="text-xs text-gray-500 font-bold">ปริมาณงานที่ได้รับ</p>
-          <h2 className="text-2xl font-black">{rT.length}</h2>
+          <h2 className="text-2xl font-black text-gray-800">
+            {totalPeriodWOs} <span className="text-xs font-normal text-gray-500">ใบงาน</span>
+          </h2>
+          <p className="text-[11px] text-gray-400 font-medium">({rT.length} รายการย่อย)</p>
         </div>
         <div className="flex-1 bg-green-50 border p-4 rounded-lg text-center">
           <p className="text-xs text-green-700 font-bold">จบงาน(ในกำหนด)</p>
-          <h2 className="text-2xl font-black text-green-700">{rC.length}</h2>
+          <h2 className="text-2xl font-black text-green-700">
+            {donePeriodWOs} <span className="text-xs font-normal text-green-600">ใบงาน</span>
+          </h2>
+          <p className="text-[11px] text-green-600/70 font-medium">({rC.length} รายการย่อย)</p>
         </div>
         <div className="flex-1 bg-yellow-50 border p-4 rounded-lg text-center">
           <p className="text-xs text-yellow-700 font-bold">ดำเนินการ</p>
-          <h2 className="text-2xl font-black text-yellow-700">{rO.length}</h2>
+          <h2 className="text-2xl font-black text-yellow-700">
+            {inProgPeriodWOs} <span className="text-xs font-normal text-yellow-600">ใบงาน</span>
+          </h2>
+          <p className="text-[11px] text-yellow-600/70 font-medium">({rO.length} รายการย่อย)</p>
         </div>
         <div className="flex-1 bg-red-50 border p-4 rounded-lg text-center">
           <p className="text-xs text-red-700 font-bold">ล่าช้า/เกินกำหนด</p>
-          <h2 className="text-2xl font-black text-red-700">{rOd.length}</h2>
+          <h2 className="text-2xl font-black text-red-700">
+            {latePeriodWOs} <span className="text-xs font-normal text-red-600">ใบงาน</span>
+          </h2>
+          <p className="text-[11px] text-red-600/70 font-medium">({rOd.length} รายการย่อย)</p>
         </div>
       </div>
       <div className="mb-8 p-4 border rounded-lg bg-gray-50 print-break">
-        <h3 className="font-bold text-[#0f2e4a] mb-2 text-sm border-b pb-2">
-          สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)
+        <h3 className="font-bold text-[#0f2e4a] mb-3 text-sm border-b pb-2 flex justify-between items-center">
+          <span>สรุปส่งเบิก (เฉพาะงานที่จบแล้ว)</span>
+          <span className="text-[11px] text-gray-500 font-normal">
+            *รายการงานที่มีเลขที่ใบงานเดียวกันนับเป็น 1 ใบงาน
+          </span>
         </h3>
-        <div className="flex justify-between px-4 text-sm mb-2">
-          <div>
-            <span className="font-bold text-green-600">ส่งเบิกแล้วทั้งหมดในระบบ:</span> {b} รายการ
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
+            <span className="text-xs text-green-700 font-bold block mb-1">
+              ส่งเบิกแล้ว (รอบ {isY ? `ปี ${fS}` : `เดือน ${fS}`}):
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-green-700">{billedThisPeriodWOs}</span>
+              <span className="text-xs font-bold text-green-600">ใบงาน</span>
+              <span className="text-[11px] text-gray-400 font-normal ml-1">({billedThisPeriodTasks.length} รายการย่อย)</span>
+            </div>
           </div>
-          <div>
-            <span className="font-bold text-red-600">ค้างเบิก (สะสมทั้งหมด):</span> {ub} รายการ
+          <div className="bg-white p-3 rounded-lg border border-red-200 shadow-sm">
+            <span className="text-xs text-red-700 font-bold block mb-1">
+              ค้างเบิก (สะสมทั้งหมด):
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-red-700">{unbilledAllWOs}</span>
+              <span className="text-xs font-bold text-red-600">ใบงาน</span>
+              <span className="text-[11px] text-gray-400 font-normal ml-1">({unbilledTasks.length} รายการย่อย)</span>
+            </div>
+          </div>
+          <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+            <span className="text-xs text-gray-600 font-bold block mb-1">
+              ส่งเบิกแล้วสะสมทั้งหมด (All-time):
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-gray-700">{billedAllWOs}</span>
+              <span className="text-xs font-bold text-gray-600">ใบงาน</span>
+              <span className="text-[11px] text-gray-400 font-normal ml-1">({billedAllTasks.length} รายการย่อย)</span>
+            </div>
           </div>
         </div>
-        {ub > 0 && (
-          <div className="px-4 text-[11px] mt-3 border-t pt-3 text-gray-600 flex flex-wrap gap-2 items-center">
+        {unbilledAllWOs > 0 && (
+          <div className="px-2 text-[11px] mt-2 border-t pt-2 text-gray-600 flex flex-wrap gap-2 items-center">
             <span className="font-bold text-gray-800">แจกแจงรายการค้างเบิกตามรอบเดือน:</span>
             {sortedUbMonths.map((m) => (
               <span
                 key={m}
-                className="bg-white border border-gray-300 px-2 py-0.5 rounded shadow-sm text-red-600 font-bold"
+                className="bg-white border border-gray-300 px-2.5 py-1 rounded shadow-sm text-red-600 font-bold inline-flex items-center gap-1"
               >
-                {m} : {ubBreakdown[m]} รายการ
+                <span>{m} :</span>
+                <span className="text-red-700 font-black">{ubBreakdown[m].size} ใบงาน</span>
+                <span className="text-[10px] text-gray-400 font-normal">({ubTaskBreakdown[m]} รายการย่อย)</span>
               </span>
             ))}
           </div>
@@ -403,7 +509,8 @@ export default function PrintReport({
                   )}
                 </div>
                 <div className="w-1/4 pl-3 text-[10px] text-gray-500">
-                  รวม {s.t} (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})
+                  รวม {s.t} ใบงาน (จบ:{s.d}, ทำ:{s.o}, ช้า:{s.od})
+                  <span className="block text-[9px] text-gray-400">({s.taskCount} รายการย่อย)</span>
                 </div>
               </div>
             );

@@ -37,7 +37,7 @@ export default function KanbanBillingTab({
         <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border">
           <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between">
             <span>รอส่งเบิก / ค้างเบิก</span>
-            <span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} กลุ่ม</span>
+            <span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} ใบงาน</span>
           </h3>
           <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
             {ubGrp.map((g) => (
@@ -76,7 +76,7 @@ export default function KanbanBillingTab({
         <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100">
           <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between">
             <span>ส่งเบิกแล้ว (รอบ {gFilt.month})</span>
-            <span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} กลุ่ม</span>
+            <span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} ใบงาน</span>
           </h3>
           <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
             {biGrp.map((g) => (
