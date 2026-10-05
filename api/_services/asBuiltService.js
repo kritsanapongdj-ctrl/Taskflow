@@ -304,6 +304,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           const ov = customOverrides[p.code];
           if (ov.asBuiltElevationDiff != null) p.asBuiltElevationDiff = ov.asBuiltElevationDiff;
           if (ov.entranceCrestDiff != null) p.entranceCrestDiff = ov.entranceCrestDiff;
+          if (ov.hasFloodwall !== undefined) p.hasFloodwall = Boolean(ov.hasFloodwall);
+          if (ov.floodwallHeightDiff !== undefined) p.floodwallHeightDiff = ov.floodwallHeightDiff;
           if (ov.asBuiltBenchmarkMSL != null) p.asBuiltBenchmarkMSL = ov.asBuiltBenchmarkMSL;
           if (ov.asBuiltNotes != null) p.asBuiltNotes = ov.asBuiltNotes;
         }
@@ -456,6 +458,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
 
         const elevVal = p.asBuiltElevationDiff != null ? p.asBuiltElevationDiff.toFixed(2) : '0.80';
         const crestVal = p.entranceCrestDiff != null ? p.entranceCrestDiff.toFixed(2) : '';
+        const floodwallVal = p.hasFloodwall && p.floodwallHeightDiff != null ? p.floodwallHeightDiff.toFixed(2) : (p.hasFloodwall ? '0.40' : '');
         const mslVal = p.asBuiltBenchmarkMSL || '';
         const notesVal = p.asBuiltNotes || '';
 
@@ -463,7 +466,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             
             <!-- Left: Project Info -->
-            <div class="lg:w-1/4 space-y-1">
+            <div class="lg:w-2/12 space-y-1">
               <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-sky-400 border border-slate-700/80">\${p.code}</span>
                 <h3 class="text-sm font-bold text-white tracking-tight truncate">\${p.name}</h3>
@@ -478,8 +481,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
               </div>
             </div>
 
-            <!-- Middle: Elevation Inputs (4 Columns) -->
-            <div class="lg:w-8/12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+            <!-- Middle: Elevation Inputs (5 Columns) -->
+            <div class="lg:w-9/12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
               
               <!-- Field 1: As-Built Road Elevation Difference -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
@@ -529,7 +532,39 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
               </div>
 
-              <!-- Field 3: MSL Benchmark -->
+              <!-- Field 3: Canal Floodwall (เขื่อนริมคลอง คสล.) -->
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
+                <div class="flex items-center justify-between">
+                  <label class="text-[10px] text-slate-400 font-semibold block">
+                    <span>เขื่อนริมคลอง</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" id="check-floodwall-\${p.code}" \${p.hasFloodwall ? 'checked' : ''}
+                      onchange="handleFloodwallToggle('\${p.code}', this.checked)"
+                      class="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0 cursor-pointer">
+                    <span id="label-floodwall-\${p.code}" class="text-[9px] \${p.hasFloodwall ? 'text-sky-400 font-bold' : 'text-slate-500'}">\${p.hasFloodwall ? 'มีเขื่อน' : 'ไม่มี'}</span>
+                  </label>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-slate-500 font-mono font-bold text-xs">+</span>
+                  <input type="number" step="0.05" min="0.00" max="5.00" 
+                    id="input-floodwall-\${p.code}" 
+                    value="\${floodwallVal}" 
+                    placeholder="\${p.hasFloodwall ? '0.40' : 'ไม่มีเขื่อน'}"
+                    \${!p.hasFloodwall ? 'disabled' : ''}
+                    oninput="handleFieldChange('\${p.code}', 'floodwallHeightDiff', this.value)"
+                    class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-sm font-mono font-bold \${p.hasFloodwall ? 'text-sky-400' : 'text-slate-600 opacity-60'} focus:outline-none focus:border-lh-gold">
+                  <span class="text-slate-400 text-xs">ม.</span>
+                </div>
+                <!-- Presets for Floodwall -->
+                <div class="flex items-center gap-1 pt-1">
+                  <button onclick="setFloodwallPreset('\${p.code}', 0.40)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.40</button>
+                  <button onclick="setFloodwallPreset('\${p.code}', 0.60)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.60</button>
+                  <button onclick="setFloodwallPreset('\${p.code}', null)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ปิด</button>
+                </div>
+              </div>
+
+              <!-- Field 4: MSL Benchmark -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
                   <span>ระดับอ้างอิง รทก.</span>
@@ -544,7 +579,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 <span class="text-[9px] text-slate-500 block truncate">เทียบระดับน้ำทะเล</span>
               </div>
 
-              <!-- Field 4: Notes / Drawing No. -->
+              <!-- Field 5: Notes / Drawing No. -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block">
                   <span>หมายเหตุแบบ As-Built</span>
@@ -593,6 +628,55 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       }
     }
 
+    function handleFloodwallToggle(code, checked) {
+      const p = currentProjects.find(item => item.code === code);
+      if (!p) return;
+      p.hasFloodwall = Boolean(checked);
+      if (p.hasFloodwall && (p.floodwallHeightDiff == null || isNaN(p.floodwallHeightDiff))) {
+        p.floodwallHeightDiff = 0.40;
+      } else if (!p.hasFloodwall) {
+        p.floodwallHeightDiff = null;
+      }
+      const input = document.getElementById('input-floodwall-' + code);
+      const label = document.getElementById('label-floodwall-' + code);
+      if (input) {
+        input.disabled = !p.hasFloodwall;
+        input.value = p.hasFloodwall ? (p.floodwallHeightDiff || 0.40).toFixed(2) : '';
+        input.placeholder = p.hasFloodwall ? '0.40' : 'ไม่มีเขื่อน';
+        input.className = 'w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-sm font-mono font-bold ' + 
+          (p.hasFloodwall ? 'text-sky-400' : 'text-slate-600 opacity-60') + ' focus:outline-none focus:border-lh-gold';
+      }
+      if (label) {
+        label.innerText = p.hasFloodwall ? 'มีเขื่อน' : 'ไม่มี';
+        label.className = 'text-[9px] ' + (p.hasFloodwall ? 'text-sky-400 font-bold' : 'text-slate-500');
+      }
+      dirtyProjects.add(code);
+      updateStats();
+      const card = document.getElementById('project-card-' + code);
+      if (card) card.className = 'glass-card p-4 rounded-2xl border border-amber-500/50 bg-amber-950/10 transition-all shadow-md';
+      const btn = document.getElementById('btn-save-' + code);
+      if (btn) {
+        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
+        btn.innerHTML = '<span>💾 บันทึก</span>';
+      }
+    }
+
+    function setFloodwallPreset(code, val) {
+      const p = currentProjects.find(item => item.code === code);
+      if (!p) return;
+      const checkbox = document.getElementById('check-floodwall-' + code);
+      if (val === null) {
+        if (checkbox) checkbox.checked = false;
+        handleFloodwallToggle(code, false);
+      } else {
+        if (checkbox) checkbox.checked = true;
+        handleFloodwallToggle(code, true);
+        p.floodwallHeightDiff = val;
+        const input = document.getElementById('input-floodwall-' + code);
+        if (input) input.value = val.toFixed(2);
+      }
+    }
+
     function handleFieldChange(code, field, rawValue) {
       const p = currentProjects.find(item => item.code === code);
       if (!p) return;
@@ -603,6 +687,19 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       } else if (field === 'entranceCrestDiff') {
         const num = parseFloat(rawValue);
         p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
+      } else if (field === 'floodwallHeightDiff') {
+        const num = parseFloat(rawValue);
+        p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
+        if (p[field] !== null && !p.hasFloodwall) {
+          p.hasFloodwall = true;
+          const checkbox = document.getElementById('check-floodwall-' + code);
+          if (checkbox) checkbox.checked = true;
+          const label = document.getElementById('label-floodwall-' + code);
+          if (label) {
+            label.innerText = 'มีเขื่อน';
+            label.className = 'text-[9px] text-sky-400 font-bold';
+          }
+        }
       } else {
         p[field] = rawValue;
       }
@@ -643,6 +740,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           projectCode: code,
           asBuiltElevationDiff: p.asBuiltElevationDiff,
           entranceCrestDiff: p.entranceCrestDiff,
+          hasFloodwall: Boolean(p.hasFloodwall),
+          floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
           adminPin: pin
@@ -670,6 +769,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         customOverrides[code] = {
           asBuiltElevationDiff: p.asBuiltElevationDiff,
           entranceCrestDiff: p.entranceCrestDiff,
+          hasFloodwall: Boolean(p.hasFloodwall),
+          floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
           updatedAt: data.updatedAt || new Date().toISOString()
@@ -730,6 +831,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
             batchUpdates[code] = {
               asBuiltElevationDiff: p.asBuiltElevationDiff,
               entranceCrestDiff: p.entranceCrestDiff,
+              hasFloodwall: Boolean(p.hasFloodwall),
+              floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
               asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
               asBuiltNotes: p.asBuiltNotes
             };

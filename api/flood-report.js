@@ -1049,6 +1049,9 @@ async function handleAsBuiltManager(req, res) {
       lon: p.lon,
       googleMapsUrl: p.googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`,
       asBuiltElevationDiff: overrides[p.code]?.asBuiltElevationDiff ?? p.asBuiltElevationDiff ?? 0.80,
+      entranceCrestDiff: overrides[p.code]?.entranceCrestDiff !== undefined ? overrides[p.code].entranceCrestDiff : (p.entranceCrestDiff ?? null),
+      hasFloodwall: overrides[p.code]?.hasFloodwall !== undefined ? Boolean(overrides[p.code].hasFloodwall) : Boolean(p.hasFloodwall),
+      floodwallHeightDiff: overrides[p.code]?.floodwallHeightDiff !== undefined ? overrides[p.code].floodwallHeightDiff : (p.floodwallHeightDiff ?? (p.hasFloodwall ? 0.40 : null)),
       asBuiltBenchmarkMSL: overrides[p.code]?.asBuiltBenchmarkMSL ?? p.asBuiltBenchmarkMSL ?? null,
       asBuiltNotes: overrides[p.code]?.asBuiltNotes ?? p.asBuiltNotes ?? null
     }));
