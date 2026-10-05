@@ -35,6 +35,8 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
     if (customAsBuilt) {
       if (customAsBuilt.asBuiltElevationDiff != null) project.asBuiltElevationDiff = customAsBuilt.asBuiltElevationDiff;
       if (customAsBuilt.entranceCrestDiff != null) project.entranceCrestDiff = customAsBuilt.entranceCrestDiff;
+      if (customAsBuilt.hasFloodwall != null) project.hasFloodwall = customAsBuilt.hasFloodwall;
+      if (customAsBuilt.floodwallHeightDiff != null) project.floodwallHeightDiff = customAsBuilt.floodwallHeightDiff;
       if (customAsBuilt.asBuiltBenchmarkMSL != null) project.asBuiltBenchmarkMSL = customAsBuilt.asBuiltBenchmarkMSL;
       if (customAsBuilt.asBuiltNotes != null) project.asBuiltNotes = customAsBuilt.asBuiltNotes;
     }
@@ -156,6 +158,8 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
       weather,
       asBuiltElevationDiff: typeof project.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
       entranceCrestDiff: typeof project.entranceCrestDiff === 'number' ? project.entranceCrestDiff : null,
+      hasFloodwall: Boolean(project.hasFloodwall),
+      floodwallHeightDiff: typeof project.floodwallHeightDiff === 'number' ? project.floodwallHeightDiff : null,
       asBuiltBenchmarkMSL: project.asBuiltBenchmarkMSL || null,
       photoCount: finalPhotos.length,
       surveyDateThai,
