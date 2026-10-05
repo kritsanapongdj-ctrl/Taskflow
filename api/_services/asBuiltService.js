@@ -557,7 +557,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
               <button onclick="saveProjectRow('\${p.code}')" id="btn-save-\${p.code}" class="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold \${isDirty ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'} transition-all shadow-sm">
                 <span>\${isDirty ? '💾 บันทึก' : '✓ เรียบร้อย'}</span>
               </button>
-              <a href="/api/flood-report?mode=map&focus=\${p.code}" target="_blank" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors" title="ดูภาพจำลองบนแผนที่">
+              <a href="/api/flood-report?mode=map&focus=\${p.code}&_t=\${Date.now()}" target="_blank" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors" title="ดูภาพจำลองบนแผนที่ (ข้อมูลสด)">
                 🗺️
               </a>
             </div>

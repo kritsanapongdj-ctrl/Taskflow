@@ -1097,10 +1097,11 @@ async function handleSaveAsBuilt(req, res) {
 async function handleFloodMap(req, res) {
   try {
     const now = Date.now();
-    // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 120 วินาที (Zero Latency)
-    if (floodMapCache.html && now < floodMapCache.expiresAt && !req.query.nocache) {
+    // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 60 วินาที (Zero Latency)
+    const isBypassCache = Boolean(req.query.nocache || req.query._t || req.query.t);
+    if (floodMapCache.html && now < floodMapCache.expiresAt && !isBypassCache) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+      res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=15, stale-while-revalidate=30');
       res.setHeader('X-Cache-Status', 'HIT');
       return res.status(200).send(floodMapCache.html);
     }
@@ -1257,14 +1258,14 @@ async function handleFloodMap(req, res) {
 
     const html = generateFloodMapHtml({ projectsData, summaryStats });
     
-    // บันทึกลงแคชในหน่วยความจำ (TTL 120 วินาที)
+    // บันทึกลงแคชในหน่วยความจำ (TTL 60 วินาที)
     floodMapCache = {
       html,
-      expiresAt: Date.now() + 120 * 1000
+      expiresAt: Date.now() + 60 * 1000
     };
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=15, stale-while-revalidate=30');
     res.setHeader('X-Cache-Status', 'MISS');
     return res.status(200).send(html);
   } catch (error) {
