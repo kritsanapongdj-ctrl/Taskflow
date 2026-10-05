@@ -35,41 +35,54 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   }
 
   // 2. ถ้ามีรายงานตรวจจริงหน้างานระบุระดับคลอง ให้อ้างอิงตามหน้างาน (ลำดับความสำคัญสูงสุด)
-  // ตรวจจับตัวเลขวัดระดับผิวน้ำคลองเทียบกับถนน/ตลิ่ง
-  const canalBelowMatch = rawNotes.match(/(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง|ปากบ่อ)[^\d\n\-+]*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
-                          rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากตลิ่ง|จากถนน|จากระดับปากบ่อ|ต่ำจาก)/i) ||
-                          rawNotes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
+  // คัดแยกข้อความเฉพาะที่เกี่ยวข้องกับคลอง/ตลิ่งภายนอก โดยตัดข้อความเกี่ยวกับ "บ่อบำบัด/ปากบ่อพักน้ำเสียภายใน" ออก เพื่อไม่ให้สับสน
+  const canalSearchText = rawNotes
+    .replace(/\([^)]*(?:บ่อบำบัด|ปากบ่อ|บ่อพัก|บ่อหน่วง|บ่อสูบ)[^)]*\)/gi, '')
+    .replace(/(?:ถนนในโครงการ|ในโครงการ)[^\n\r]*(?:บ่อบำบัด|ปากบ่อ)[^\n\r]*/gi, '');
 
-  const canalAboveMatch = rawNotes.match(/(?:สูงกว่า)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n\-+]*\+?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
-                          rawNotes.match(/\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:สูงกว่า|เสมอระดับผิวถนน|เหนือถนน)/i);
+  const canalAboveMatch = canalSearchText.match(/(?:สูงกว่า|เสมอระดับ)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n\-+]*\+?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:สูงกว่า|เสมอระดับผิวถนน|เสมอผิวถนน|เสมอถนน|เหนือถนน)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง)[^0-9\n]*?\(\s*\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง)[^0-9\n]*?\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง)[^0-9\n]*?สูง(?:กว่า|ขึ้นมา)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
 
-  const canalOverflowMatch = rawNotes.match(/(?:คลอง|น้ำในคลอง|ตลิ่ง)[^.\n\r\-•;>>]*?(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น|เอ่อล้น|ล้นท่วม)/i) ||
-                             rawNotes.match(/(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น)/i) ||
+  const canalBelowMatch = canalSearchText.match(/(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n\-+]*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากตลิ่ง|จากถนน)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง|น้ำในคลอง)[^0-9\n\-]*?ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
+
+  const canalOverflowMatch = canalSearchText.match(/(?:คลอง|น้ำในคลอง|ตลิ่ง)[^.\n\r\-•;>>]*?(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น|เอ่อล้น|ล้นท่วม)/i) ||
+                             canalSearchText.match(/(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น)/i) ||
                              /ท่วมอยู่ที่ระดับเดียวกับฟุตบาท|เสมอระดับฟุตบาท/i.test(report.drainageCondition || '');
 
-  if (canalBelowMatch) {
+  if (canalAboveMatch) {
+    let parsedCm = parseFloat(canalAboveMatch[1]);
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(canalAboveMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(canalAboveMatch[0])) parsedCm *= 100;
+    canalBelowOuter = -Math.round(parsedCm);
+    canalWaterElevation = +(canalBelowOuter < 0 ? Math.abs(canalBelowOuter) / 100 : 0);
+    isCanalOverflow = parsedCm > 0;
+    const isFlush = /เสมอระดับ|เสมอผิวถนน|เสมอถนน/i.test(canalSearchText);
+    canalStatusText = isFlush 
+      ? `หน้างานแจ้ง: น้ำคลองเสมอระดับถนน (+${Math.round(parsedCm)} ซม. มีเขื่อนคอนกรีตกั้น) ⚠️`
+      : `หน้างานแจ้ง: น้ำคลองสูงกว่าถนน +${Math.round(parsedCm)} ซม. (มีเขื่อนคอนกรีตกั้น) ⚠️`;
+    canalSource = 'FIELD_REPORT';
+  } else if (canalBelowMatch) {
     let parsedCm = parseFloat(canalBelowMatch[1]);
-    if (canalBelowMatch[0].includes('ม') && !canalBelowMatch[0].includes('ซม')) parsedCm *= 100;
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(canalBelowMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(canalBelowMatch[0])) parsedCm *= 100;
     canalBelowOuter = Math.round(parsedCm);
     canalWaterElevation = -(canalBelowOuter / 100);
     isCanalOverflow = false;
     canalStatusText = `หน้างานตรวจวัด: ต่ำกว่าตลิ่ง/ถนน ${canalBelowOuter} ซม.`;
     canalSource = 'FIELD_REPORT';
-  } else if (canalAboveMatch) {
-    let parsedCm = parseFloat(canalAboveMatch[1]);
-    if (canalAboveMatch[0].includes('ม') && !canalAboveMatch[0].includes('ซม')) parsedCm *= 100;
-    canalBelowOuter = -Math.round(parsedCm);
-    canalWaterElevation = +(canalBelowOuter < 0 ? Math.abs(canalBelowOuter) / 100 : 0);
-    isCanalOverflow = parsedCm > 0;
-    canalStatusText = `หน้างานแจ้ง: น้ำคลองสูงกว่าถนน +${Math.round(parsedCm)} ซม.`;
-    canalSource = 'FIELD_REPORT';
   } else if (canalOverflowMatch) {
-    const overflowNumMatch = rawNotes.match(/(?:ล้นตลิ่ง|ล้นคัน|เอ่อล้น)[^0-9\n]*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
-    const overflowCm = overflowNumMatch ? parseFloat(overflowNumMatch[1]) : (/ฟุตบาท|ทางเท้า/i.test(rawNotes) ? 10 : 10);
+    const overflowNumMatch = canalSearchText.match(/(?:ล้นตลิ่ง|ล้นคัน|เอ่อล้น)[^0-9\n]*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+    const overflowCm = overflowNumMatch ? parseFloat(overflowNumMatch[1]) : (/ฟุตบาท|ทางเท้า/i.test(canalSearchText) ? 10 : 10);
     canalBelowOuter = -overflowCm;
     canalWaterElevation = +(overflowCm / 100);
     isCanalOverflow = true;
-    canalStatusText = `หน้างานแจ้ง: น้ำคลองล้นตลิ่ง (+${overflowCm} ซม.${/ฟุตบาท/i.test(rawNotes) ? ' เสมอระดับฟุตบาท' : ''}) ⚠️`;
+    canalStatusText = `หน้างานแจ้ง: น้ำคลองล้นตลิ่ง (+${overflowCm} ซม.${/ฟุตบาท/i.test(canalSearchText) ? ' เสมอระดับฟุตบาท' : ''}) ⚠️`;
     canalSource = 'FIELD_REPORT';
   } else if (/หนุน|สูง|ปริ่ม|ใกล้ตลิ่ง/i.test(report.drainageCondition || '')) {
     canalBelowOuter = 10;
@@ -101,7 +114,8 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   const innerMatch = rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากพื้นโครงการ|จากถนนในโครงการ|จากในโครงการ)/i);
   if (innerMatch) {
     let parsedInner = parseFloat(innerMatch[1]);
-    if (innerMatch[0].includes('ม') && !innerMatch[0].includes('ซม')) parsedInner *= 100;
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(innerMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(innerMatch[0])) parsedInner *= 100;
     if (parsedInner > canalBelowOuter) {
       innerElevation = parsedInner - canalBelowOuter;
       innerSource = 'FIELD_MEASURED';
@@ -198,11 +212,11 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   } else if (/แห้ง|ปกติ|เรียบร้อย/i.test(report.waterLevel || '') && !/ท่วม|ขัง/i.test(report.waterLevel || '')) {
     outerRoadWaterDepth = 0;
   } else if (isCanalOverflow && canalWaterElevation > 0 && canalSource === 'FIELD_REPORT') {
-    // คลองหน้างานล้นตลิ่งจริง
-    outerRoadWaterDepth = Math.round(canalWaterElevation * 100);
+    // คลองหน้างานล้นตลิ่งจริง แต่ถ้าไม่เกินแนวเขื่อนกั้น คสล. (+0.40ม.) น้ำจะไม่ท่วมถนนหน้าโครงการ
+    outerRoadWaterDepth = Math.max(0, Math.round((canalWaterElevation - 0.40) * 100));
   } else if (isCanalOverflow && canalWaterElevation > 0 && canalSource === 'LIVE_TELEMETRY' && !hasFieldReport) {
     // กรณีไม่มีรายงานหน้างานเลย แต่อิงโทรมาตรแม่น้ำสายหลัก
-    outerRoadWaterDepth = Math.round(canalWaterElevation * 100);
+    outerRoadWaterDepth = Math.max(0, Math.round((canalWaterElevation - 0.40) * 100));
   } else {
     outerRoadWaterDepth = 0;
   }
@@ -212,7 +226,7 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     outerRoadConditionText = `มีน้ำท่วมขัง ${outerRoadWaterDepth} ซม. (${depthDetail})`;
   } else if (isCanalOverflow) {
     const overflowCm = Math.round(Math.abs(canalWaterElevation) * 100);
-    outerRoadConditionText = `คลองภายนอกล้นตลิ่ง ${overflowCm} ซม. เสี่ยงน้ำเอ่อเข้าถนนภายนอก`;
+    outerRoadConditionText = `แห้งสนิท สัญจรได้คล่องตัว (น้ำคลอง +${overflowCm} ซม. มีเขื่อนคอนกรีตกั้น)`;
   } else if (hasFieldReport) {
     outerRoadConditionText = 'แห้งสนิท สัญจรได้คล่องตัว (0 ซม.)';
   } else {
@@ -761,6 +775,18 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <!-- Flap Valve Connector (Under road culvert) -->
             <circle cx="325" cy="130" r="7" fill="#0f172a" stroke="#cbd5e1" stroke-width="2"/>
             <line id="svg-flap-valve" x1="325" y1="130" x2="331" y2="124" stroke="#eab308" stroke-width="3" stroke-linecap="round"/>
+
+            <!-- Concrete Floodwall / เขื่อนคอนกรีต คสล. ริมคลอง (+0.40ม.) -->
+            <g id="svg-floodwall-group">
+              <!-- Wall base & footing -->
+              <rect x="322" y="124" width="8" height="11" fill="#475569" opacity="0.7"/>
+              <!-- Wall body (+0.40m = y:96) -->
+              <rect id="svg-floodwall" x="323" y="96" width="7" height="28" fill="#64748b" stroke="#475569" stroke-width="1" rx="1"/>
+              <!-- Wall concrete cap -->
+              <rect id="svg-floodwall-cap" x="321" y="94" width="11" height="3" fill="#94a3b8" rx="0.5"/>
+              <!-- Text label -->
+              <text id="svg-floodwall-txt" x="326" y="89" fill="#94a3b8" font-size="6.5" font-weight="700" text-anchor="middle">เขื่อนริมคลอง</text>
+            </g>
 
             <!-- 3-Zone Engineering HUD Badges (Top Area - Never Collides with Water or Ground) -->
             <!-- Zone 1: ถนนในโครงการ (Left) -->
@@ -1658,8 +1684,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         canalRect.setAttribute('y', canalY);
         canalRect.setAttribute('height', Math.max(15, 170 - canalY));
         waterLine.setAttribute('d', 'M 330,' + canalY + ' Q 360,' + (canalY - 2) + ' 395,' + canalY + ' T 460,' + canalY);
-        if (canalElevationM > 0) {
-          waterLine.setAttribute('stroke', '#f43f5e'); // Red wave on overflow
+        if (canalElevationM > 0.40) {
+          waterLine.setAttribute('stroke', '#f43f5e'); // Red wave on overflow wall
+        } else if (canalElevationM > 0) {
+          waterLine.setAttribute('stroke', '#f59e0b'); // Amber wave at/above road level but held by floodwall
         } else if (canalElevationM >= -0.15) {
           waterLine.setAttribute('stroke', '#f59e0b'); // Amber wave near road
         } else {
@@ -1667,8 +1695,41 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         }
       }
 
+      // Concrete Floodwall visual state (+0.40m barrier)
+      const floodwall = document.getElementById('svg-floodwall');
+      const floodwallCap = document.getElementById('svg-floodwall-cap');
+      const floodwallTxt = document.getElementById('svg-floodwall-txt');
+      if (floodwall) {
+        if (canalElevationM > 0.40) {
+          floodwall.setAttribute('fill', '#ef4444');
+          floodwall.setAttribute('stroke', '#fca5a5');
+          if (floodwallCap) floodwallCap.setAttribute('fill', '#fca5a5');
+          if (floodwallTxt) {
+            floodwallTxt.textContent = 'น้ำล้นข้ามเขื่อน! ⚠️';
+            floodwallTxt.setAttribute('fill', '#ef4444');
+          }
+        } else if (canalElevationM > 0) {
+          floodwall.setAttribute('fill', '#0284c7');
+          floodwall.setAttribute('stroke', '#38bdf8');
+          if (floodwallCap) floodwallCap.setAttribute('fill', '#38bdf8');
+          if (floodwallTxt) {
+            floodwallTxt.textContent = 'เขื่อนกั้นน้ำอยู่ 🛡️';
+            floodwallTxt.setAttribute('fill', '#38bdf8');
+          }
+        } else {
+          floodwall.setAttribute('fill', '#64748b');
+          floodwall.setAttribute('stroke', '#475569');
+          if (floodwallCap) floodwallCap.setAttribute('fill', '#94a3b8');
+          if (floodwallTxt) {
+            floodwallTxt.textContent = 'เขื่อนริมคลอง';
+            floodwallTxt.setAttribute('fill', '#94a3b8');
+          }
+        }
+      }
+
       // Road water puddle (outer road x=170..320)
-      const effectiveOuterDepth = Math.max(outerDepth, canalElevationM > 0 ? Math.round(canalElevationM * 100) : 0);
+      // Only overflows onto outer road if water exceeds concrete floodwall (+0.40m) or if field reported outerDepth > 0
+      const effectiveOuterDepth = Math.max(outerDepth, canalElevationM > 0.40 ? Math.round((canalElevationM - 0.40) * 100) : 0);
       const roadWater = document.getElementById('svg-road-water');
       if (roadWater) {
         if (effectiveOuterDepth > 0) {
@@ -1712,9 +1773,12 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       // SVG Text Annotations (Top HUD Badges)
       const svgCanalTxt = document.getElementById('svg-canal-txt');
       if (svgCanalTxt) {
-        if (canalElevationM > 0) {
-          const valTxt = '+' + canalElevationM.toFixed(2) + ' ม. (ล้นตลิ่ง ⚠️)';
+        if (canalElevationM > 0.40) {
+          const valTxt = '+' + canalElevationM.toFixed(2) + ' ม. (ล้นข้ามเขื่อน ⚠️)';
           setSvgText(svgCanalTxt, valTxt, '#ef4444');
+        } else if (canalElevationM > 0) {
+          const valTxt = '+' + canalElevationM.toFixed(2) + ' ม. (เสมอถนน มีเขื่อนกั้น)';
+          setSvgText(svgCanalTxt, valTxt, '#f59e0b');
         } else {
           const subLabel = canalElevationM >= -0.15 ? 'หนุนสูง' : 'ในเกณฑ์';
           const valTxt = canalElevationM.toFixed(2) + ' ม. (' + subLabel + ')';
@@ -1747,11 +1811,16 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const canalOuterElem = document.getElementById('cs-canal-outer');
       const canalOuterSub = document.getElementById('cs-canal-outer-sub');
       if (canalOuterElem) {
-        if (canalElevationM > 0) {
-          const overCm = Math.round(canalElevationM * 100);
-          canalOuterElem.innerText = 'ล้นตลิ่ง +' + overCm + ' ซม. ⚠️';
+        if (canalElevationM > 0.40) {
+          const overWallCm = Math.round((canalElevationM - 0.40) * 100);
+          canalOuterElem.innerText = 'ล้นข้ามเขื่อน +' + overWallCm + ' ซม. ⚠️';
           canalOuterElem.className = 'font-bold text-rose-400 text-sm';
-          if (canalOuterSub) canalOuterSub.innerText = 'ระดับน้ำสูงกว่าผิวถนนหน้าโครงการ!';
+          if (canalOuterSub) canalOuterSub.innerText = 'ระดับน้ำสูงเกินแนวเขื่อนกั้นริมคลอง (+40 ซม.)';
+        } else if (canalElevationM > 0) {
+          const overCm = Math.round(canalElevationM * 100);
+          canalOuterElem.innerText = 'สูงกว่าถนน +' + overCm + ' ซม.';
+          canalOuterElem.className = 'font-bold text-amber-400 text-sm';
+          if (canalOuterSub) canalOuterSub.innerText = 'เขื่อน คสล. ริมคลองกั้นน้ำไว้ ถนนหน้าโครงการแห้งปกติ';
         } else {
           const belowCm = Math.abs(Math.round(canalElevationM * 100));
           canalOuterElem.innerText = 'ต่ำกว่า ' + belowCm + ' ซม.';
