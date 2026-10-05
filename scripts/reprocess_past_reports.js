@@ -28,6 +28,8 @@ async function main() {
       if (custom.entranceCrestDiff != null) project.entranceCrestDiff = custom.entranceCrestDiff;
       if (custom.asBuiltBenchmarkMSL != null) project.asBuiltBenchmarkMSL = custom.asBuiltBenchmarkMSL;
       if (custom.asBuiltNotes != null) project.asBuiltNotes = custom.asBuiltNotes;
+      if (custom.hasFloodwall != null) project.hasFloodwall = custom.hasFloodwall;
+      if (custom.floodwallHeightDiff != null) project.floodwallHeightDiff = custom.floodwallHeightDiff;
     }
 
     // 1. Re-extract direct report from notes if notes exist
@@ -93,6 +95,8 @@ async function main() {
       status: customStatus,
       asBuiltElevationDiff: typeof project.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
       entranceCrestDiff: typeof project.entranceCrestDiff === 'number' ? project.entranceCrestDiff : null,
+      hasFloodwall: Boolean(project.hasFloodwall),
+      floodwallHeightDiff: typeof project.floodwallHeightDiff === 'number' ? project.floodwallHeightDiff : null,
       asBuiltBenchmarkMSL: project.asBuiltBenchmarkMSL || null
     };
 

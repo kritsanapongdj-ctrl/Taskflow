@@ -1200,6 +1200,8 @@ async function handleFloodMap(req, res) {
       const customAsBuilt = asBuiltOverrides[code];
       const asBuiltElevationDiff = customAsBuilt?.asBuiltElevationDiff ?? pInfo.asBuiltElevationDiff ?? 0.80;
       const entranceCrestDiff = customAsBuilt?.entranceCrestDiff !== undefined ? customAsBuilt.entranceCrestDiff : (pInfo.entranceCrestDiff ?? null);
+      const hasFloodwall = customAsBuilt?.hasFloodwall !== undefined ? Boolean(customAsBuilt.hasFloodwall) : Boolean(pInfo.hasFloodwall);
+      const floodwallHeightDiff = customAsBuilt?.floodwallHeightDiff !== undefined ? customAsBuilt.floodwallHeightDiff : (pInfo.floodwallHeightDiff ?? (hasFloodwall ? 0.40 : null));
       const asBuiltBenchmarkMSL = customAsBuilt?.asBuiltBenchmarkMSL ?? pInfo.asBuiltBenchmarkMSL ?? null;
       const asBuiltNotes = customAsBuilt?.asBuiltNotes ?? pInfo.asBuiltNotes ?? null;
 
@@ -1208,7 +1210,9 @@ async function handleFloodMap(req, res) {
         asBuiltElevationDiff,
         entranceCrestDiff,
         asBuiltBenchmarkMSL,
-        asBuiltNotes
+        asBuiltNotes,
+        hasFloodwall,
+        floodwallHeightDiff
       };
 
       // คำนวณระดับน้ำ 3 ชั้น (ส่งทั้ง report, mergedPInfo และ liveWater เพื่อวิเคราะห์ทั้งในและนอกโครงการ)
@@ -1235,6 +1239,8 @@ async function handleFloodMap(req, res) {
         entranceCrestDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes,
+        hasFloodwall,
+        floodwallHeightDiff,
         hasReport,
         status,
         reportId,

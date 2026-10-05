@@ -50,9 +50,13 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
       const code = updates.projectCode;
       const diff = parseFloat(updates.asBuiltElevationDiff);
       const crestDiff = updates.entranceCrestDiff !== undefined && updates.entranceCrestDiff !== '' && updates.entranceCrestDiff !== null ? parseFloat(updates.entranceCrestDiff) : null;
+      const hasFloodwall = updates.hasFloodwall !== undefined ? Boolean(updates.hasFloodwall === true || updates.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
+      const floodwallDiff = updates.floodwallHeightDiff !== undefined && updates.floodwallHeightDiff !== '' && updates.floodwallHeightDiff !== null ? parseFloat(updates.floodwallHeightDiff) : null;
       payload[code] = {
         asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
         entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
+        hasFloodwall,
+        floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
         asBuiltBenchmarkMSL: (updates.asBuiltBenchmarkMSL || '').trim() || null,
         asBuiltNotes: (updates.asBuiltNotes || '').trim() || null,
         updatedAt: nowIso
@@ -62,9 +66,13 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
         if (typeof val === 'object' && val !== null && code !== 'action' && code !== 'adminPin') {
           const diff = parseFloat(val.asBuiltElevationDiff);
           const crestDiff = val.entranceCrestDiff !== undefined && val.entranceCrestDiff !== '' && val.entranceCrestDiff !== null ? parseFloat(val.entranceCrestDiff) : null;
+          const hasFloodwall = val.hasFloodwall !== undefined ? Boolean(val.hasFloodwall === true || val.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
+          const floodwallDiff = val.floodwallHeightDiff !== undefined && val.floodwallHeightDiff !== '' && val.floodwallHeightDiff !== null ? parseFloat(val.floodwallHeightDiff) : null;
           payload[code] = {
             asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
             entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
+            hasFloodwall,
+            floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
             asBuiltBenchmarkMSL: (val.asBuiltBenchmarkMSL || '').trim() || null,
             asBuiltNotes: (val.asBuiltNotes || '').trim() || null,
             updatedAt: nowIso
