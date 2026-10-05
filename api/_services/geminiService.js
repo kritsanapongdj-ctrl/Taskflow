@@ -33,9 +33,9 @@ export function extractDirectFieldReport(notes = '') {
   const canalRegex = /(?:คลอง|คันกั้นน้ำ|ทุ่งรับน้ำ|ระดับน้ำภายนอก|ระดับน้ำในคลอง|น้ำในคลอง|น้ำคลอง|แม่น้ำ|ประตูระบาย|ปตร\.|ขอบตลิ่ง|ทางระบาย|ท่อระบาย)/i;
   const roadRegex = /(?:ถนน|ผิวจราจร|ผิวทาง|น้ำท่วมขัง|น้ำขัง|แห้งสนิท|แห้งปกติ|สัญจร|ซอย|ทางเข้า)/i;
 
-  // 1. แยกข้อความด้วย newline, bullets (- * •) หรือข้อเลข (1. 2.)
+  // 1. แยกข้อความด้วย newline, bullets (- * •) หรือข้อเลข (1. 2.) โดยไม่ตัดเครื่องหมายลบของตัวเลข เช่น -61 cm
   const rawSegments = text
-    .split(/(?:\r?\n|(?<=\S|\b)\s*(?:[-*•]|\d+[\.\)])\s*)/)
+    .split(/(?:\r?\n|(?<=\S|\b)\s*(?:-(?!\d)|[*•]|\d+[\.\)])\s*)/)
     .map(line => line.trim())
     .filter(Boolean);
 
@@ -50,13 +50,19 @@ export function extractDirectFieldReport(notes = '') {
     currentSeg = currentSeg.replace(/^[-*•\s;,:]+|[-*•\s;,:]+$/g, '').trim();
     if (!currentSeg) continue;
 
+    // ถ้าเซกเมนต์เป็นเรื่องปั๊มป้องกันน้ำท่วมอย่างชัดเจน ไม่ให้คำว่า "น้ำท่วม" ไปกระตุ้น roadRegex
+    const isExplicitPump = /(?:ปั๊ม|ปั้ม|เครื่องสูบ|ระบบ)[\w\s]*ป้องกันน้ำท่วม/i.test(currentSeg) ||
+                           /^(?:บานพับ|ปั๊ม|ปั้ม)/i.test(currentSeg);
+
     // ตรวจสอบ keyword ภายนอกวงเล็บเท่านั้น เพื่อไม่ให้ตัดคำกลางวงเล็บ
     const outsideParens = currentSeg.replace(/\([^)]*\)/g, ' ');
-    const hits = (outsideParens.match(pumpRegex) ? 1 : 0) + 
-                 (outsideParens.match(canalRegex) ? 1 : 0) + 
-                 (outsideParens.match(roadRegex) ? 1 : 0);
+    const cleanedOutside = isExplicitPump ? outsideParens.replace(/(?:ปั๊ม|ปั้ม|เครื่องสูบ|ระบบ)[\w\s]*ป้องกันน้ำท่วม/gi, 'ปั๊ม') : outsideParens;
 
-    if (hits > 1) {
+    const hits = (cleanedOutside.match(pumpRegex) ? 1 : 0) + 
+                 (cleanedOutside.match(canalRegex) ? 1 : 0) + 
+                 (cleanedOutside.match(roadRegex) ? 1 : 0);
+
+    if (hits > 1 && !isExplicitPump) {
       const splitKeywords = [
         { type: 'pump', regex: /(?:สถานะเครื่องสูบน้ำ|สถานะปั๊ม|ระบบป้องกันน้ำท่วม|ระบบสูบน้ำ|เครื่องสูบน้ำ|เครื่องสูบ|ปั๊มสูบน้ำ|ปั้มสูบน้ำ|ปั๊มป้องกันน้ำท่วม|ปั้มป้องกันน้ำท่วม|ปั๊มน้ำ|ปั้มน้ำ|ปั๊ม|ปั้ม)/g },
         { type: 'canal', regex: /(?:ระดับน้ำในคลอง|ระดับน้ำคลอง|น้ำในคลอง|น้ำคลอง|คลองหน้าโครงการ|คลองภายนอก|สภาพคลอง|คลอง|ทางระบายน้ำ|ท่อระบายน้ำ)/g },
@@ -77,7 +83,12 @@ export function extractDirectFieldReport(notes = '') {
         while ((m = sk.regex.exec(currentSeg)) !== null) {
           const inParen = parenRanges.some(r => m.index >= r.start && m.index < r.end);
           if (!inParen) {
-            matches.push({ type: sk.type, index: m.index, length: m[0].length });
+            // ตรวจสอบว่า keyword นี้เป็นจุดอ้างอิงระดับ (Reference Datum) หรือไม่ เช่น "ต่ำกว่าระดับถนน", "สูงกว่าถนน"
+            const prefix = currentSeg.substring(0, m.index);
+            const isDatum = /(?:ต่ำกว่า|ต่ำจาก|สูงกว่า|สูงกว[่้]+า|เสมอ|เทียบ|จาก|วัดจาก|ลดลงจาก)\s*(?:ระดับ)?\s*$/i.test(prefix);
+            if (!isDatum) {
+              matches.push({ type: sk.type, index: m.index, length: m[0].length });
+            }
           }
         }
       }
@@ -113,9 +124,13 @@ export function extractDirectFieldReport(notes = '') {
     if (!cleaned) continue;
 
     const outsideParens = cleaned.replace(/\([^)]*\)/g, ' ');
-    const hasPump = pumpRegex.test(outsideParens);
-    const hasCanal = canalRegex.test(outsideParens);
-    const hasRoad = roadRegex.test(outsideParens);
+    const isExplicitPump = /(?:ปั๊ม|ปั้ม|เครื่องสูบ|ระบบ)[\w\s]*ป้องกันน้ำท่วม/i.test(cleaned) ||
+                           /^(?:บานพับ|ปั๊ม|ปั้ม)/i.test(cleaned);
+    const cleanedOutside = isExplicitPump ? outsideParens.replace(/(?:ปั๊ม|ปั้ม|เครื่องสูบ|ระบบ)[\w\s]*ป้องกันน้ำท่วม/gi, 'ปั๊ม') : outsideParens;
+
+    const hasPump = pumpRegex.test(cleanedOutside) || isExplicitPump;
+    const hasCanal = canalRegex.test(cleanedOutside);
+    const hasRoad = !isExplicitPump && roadRegex.test(cleanedOutside);
 
     if (hasCanal) {
       let canalText = cleaned;
@@ -165,19 +180,28 @@ export function extractDirectFieldReport(notes = '') {
 }
 
 // สร้างบทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken) เชิงวิศวกรรม
-export function generateFallbackEngineeringSynthesis({ project, weather = {}, directReport = {}, notes = '' }) {
+export function generateFallbackEngineeringSynthesis({ project = {}, weather = {}, directReport = {}, notes = '' }) {
   const wl = directReport.waterLevel || '';
   const dc = directReport.drainageCondition || '';
   const pr = directReport.pumpsRunning || '';
   const rainProb = weather.rainProb || 60;
   const rain24h = weather.expectedRain24h || '25.0';
 
+  const asBuiltDiff = typeof project?.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80;
+  const crestDiff = typeof project?.entranceCrestDiff === 'number' && project.entranceCrestDiff > 0 ? project.entranceCrestDiff : null;
+  const barrierText = crestDiff ? `สันเนินทางเข้าป้อม รปภ. (+${crestDiff.toFixed(2)} ม.)` : `ระดับยกพื้นถนน As-Built (+${asBuiltDiff.toFixed(2)} ม.)`;
+
   // 1. assessmentField (สภาพพื้นที่และผิวจราจร)
   let assessmentField = '';
-  if (wl && /น้ำท่วม|น้ำขัง|รอการระบาย|\d+\s*ซม/i.test(wl) && !/ไม่พบน้ำท่วมขัง|แห้ง/i.test(wl)) {
+  const isOuterRoadFlooded = /ถนนภาระจำยอม|ภาระจำยอม|ถนนนอก|ทางเข้า/i.test(wl) && /ท่วม|ขัง|ฟุตบาท/i.test(wl);
+  const isInnerRoadDry = /แห้ง|ปกติ|เรียบร้อย|ไม่พบน้ำท่วม/i.test(wl) || /ถนนในโครงการ:.*(?:แห้ง|ปกติ)/i.test(notes);
+
+  if (isOuterRoadFlooded && isInnerRoadDry) {
+    assessmentField = `ตรวจพบน้ำท่วมขังบริเวณถนนทางเข้า/ถนนภาระจำยอม (${wl}) แต่ถนนเมนและพื้นที่พักอาศัยภายในโครงการแห้งสนิท สัญจรได้ปกติ 100% โดยมี ${barrierText} ป้องกันน้ำบ่าเข้าสู่โครงการ`;
+  } else if (wl && /น้ำท่วม|น้ำขัง|รอการระบาย|\d+\s*ซม/i.test(wl) && !/ไม่พบน้ำท่วมขัง|แห้ง/i.test(wl)) {
     assessmentField = `ตรวจพบน้ำท่วมขังผิวจราจรบางจุด (${wl}) ทีมช่างเข้ากวาดเร่งระบายน้ำและเปิดตะแกรงระบายน้ำ พร้อมจัดแนวกระสอบทรายป้องกันน้ำเข้าแปลงที่พักอาศัย`;
   } else if (wl && /แห้ง|ปกติ|เรียบร้อย|ไม่พบ/i.test(wl)) {
-    assessmentField = `ผิวจราจรถนนเมนและซอยย่อยแห้งสนิท สัญจรได้ปกติ 100% (${wl}) จัดเตรียมแนวกระสอบทรายจุดเสี่ยงและพร่องน้ำในบ่อพักรอรับฝนสะสม ${rain24h} มม.`;
+    assessmentField = `ผิวจราจรถนนเมน ซอยย่อย และทางเข้าโครงการแห้งสนิท สัญจรได้ปกติ 100% (${wl}) จัดเตรียมแนวกระสอบทรายจุดเสี่ยงและพร่องน้ำในบ่อพักรอรับฝนสะสม ${rain24h} มม.`;
   } else {
     assessmentField = `ผิวจราจรหลักและทางเข้า-ออกโครงการแห้งสนิท สัญจรได้ปกติ จัดเตรียมความพร้อมรองรับปริมาณฝนสะสม 24 ชม. (${rain24h} มม.)`;
   }
@@ -286,6 +310,9 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
     return generateFallbackEngineeringSynthesis({ project, weather, directReport, notes });
   }
 
+  const asBuiltDiff = typeof project?.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80;
+  const crestDiff = typeof project?.entranceCrestDiff === 'number' && project.entranceCrestDiff > 0 ? project.entranceCrestDiff : null;
+
   const prompt = `คุณคือหัวหน้าวิศวกรผู้เชี่ยวชาญด้านบริหารจัดการน้ำและสาธารณูปโภคของบริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน) (Land & Houses)
 ภารกิจของคุณคือวิเคราะห์ข้อมูลการตรวจเช็คหน้างานร่วมกับข้อมูลสภาพอากาศและระดับน้ำ Real-time เพื่อออกรายงานสถานการณ์น้ำท่วมและการระบายน้ำระดับผู้บริหาร (Drainage & Flood Monitoring Report)
 
@@ -296,6 +323,11 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
   * ระดับน้ำ/ผิวถนน: "${directReport?.waterLevel || '-'}"
   * สถานะเครื่องสูบน้ำ: "${directReport?.pumpsRunning || '-'}"
   * สภาพคลอง/ทางระบายน้ำ: "${directReport?.drainageCondition || '-'}"
+- ข้อมูลทางวิศวกรรมแบบก่อสร้างจริง (As-Built Engineering Elevation):
+  * ระดับยกพื้นถนนในโครงการ: +${asBuiltDiff.toFixed(2)} ม. (เทียบระดับถนนภายนอก 0.00 ม.)
+  * สันเนินทางเข้าป้อม รปภ. ป้องกันน้ำบ่า: ${crestDiff ? `+${crestDiff.toFixed(2)} ม. (สูงกว่าถนนภายนอก ${Math.round(crestDiff * 100)} ซม.)` : 'ไม่มีสันเนินเพิ่มเติม (ใช้ระดับยกพื้นถนนเป็นแนวป้องกัน)'}
+  * หมุดหลักฐานระดับอ้างอิง MSL: ${project?.asBuiltBenchmarkMSL || 'หมุดมาตรฐานโครงการ'}
+  * มาตรวัดระดับน้ำทางกายภาพ (Physical Benchmarks): "ระดับฟุตบาท / ทางเท้า" = น้ำท่วมขัง 10 ซม., "ท่วมมิดฟุตบาท" = 15 ซม., "ระดับแข้ง" = 20 ซม., "ระดับเข่า / ครึ่งล้อ" = 30-35 ซม., "ระดับเอว" = 75 ซม.
 - จำนวนภาพถ่ายสำรวจหน้างาน: ${photoCount} ภาพ
 
 ส่วนที่ 2: ข้อมูลตรวจวัดสภาพอากาศและลุ่มน้ำ Real-time ณ ปัจจุบัน (Macro Weather & Water Intelligence):
@@ -311,13 +343,13 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
 
 [ข้อกำหนดสำคัญในการจำแนกและวิเคราะห์]:
 1. คัดแยกข้อมูลหน้างานให้ตรงหมวดหมู่ 100% (Overall Status):
-   - waterLevel: ระดับน้ำท่วมขังบนผิวถนน (คัดแยกเฉพาะสภาพถนน/ผิวจราจร/น้ำขังในโครงการ เช่น "ถนนในโครงการเรียบร้อยปกติ ไม่พบน้ำท่วมขังที่ผิวจราจร (0 ซม.)" ห้ามนำข้อความปั๊มหรือคลองมาปนเด็ดขาด)
+   - waterLevel: ระดับน้ำท่วมขังบนผิวถนน คัดแยกเฉพาะสภาพถนน/ผิวจราจร โดยต้องแยกความแตกต่างระหว่าง "ถนนหน้าโครงการ/ถนนภาระจำยอม/ทางเข้า" กับ "ถนนภายในโครงการ" อย่างแม่นยำ เช่น หากถนนภาระจำยอมท่วมระดับฟุตบาท (10 ซม.) แต่ถนนในโครงการแห้ง ให้ระบุทั้งสองส่วนให้ชัดเจน และห้ามตีความเป็นน้ำท่วมถนนในโครงการ
    - pumpsRunning: สถานะเครื่องสูบน้ำ (คัดแยกเฉพาะปั๊มน้ำ/เครื่องสูบน้ำ รวมปั๊มทุกตัวที่ระบุ เช่น "ปั๊มป้องกันน้ำท่วม No.1 และ No.2 ทดสอบระบบปกติ พร้อมใช้งาน 100%")
    - drainageCondition: สภาพคลองและทางระบายน้ำ (คัดแยกเฉพาะระดับน้ำคลอง/การไหล/คันกั้นน้ำ เช่น "ระดับน้ำในคลองหนุนขึ้นขังริมฟุตบาทเล็กน้อย ระบายได้ช้าลง")
 2. ห้ามระบุชื่อบุคคลหรือชื่อผู้รายงานเด็ดขาด (ตามนโยบายความเป็นส่วนตัว Land & Houses)
 3. บทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken):
    ห้ามนำข้อความในข้อ 1 มาวางต่อกันหรือก๊อปปี้มาผสมกันเฉยๆ แต่ต้อง "วิเคราะห์สังเคราะห์ความสัมพันธ์เชิงวิศวกรรม (Cross-Correlation Engineering Synthesis)" ร่วมกับข้อมูลสภาพอากาศ/ลุ่มน้ำของหน่วยงานต่างๆ พร้อมทั้งระบุ "มาตรการเชิงรุก (Action Taken)" ที่โครงการดำเนินการจริง:
-   - assessmentField: ผสานสภาพผิวจราจรหน้างาน กับปริมาณฝนคาดการณ์ 24 ชม. (${weather.expectedRain24h} มม., โอกาสฝน ${weather.rainProb}%) + ระบุมาตรการปกป้องพื้นที่ (เช่น เสริมกระสอบทรายจุดเสี่ยงต่ำ ตรวจสอบทางลาดเข้า-ออก พร่องน้ำในบ่อพักรอรับน้ำ)
+   - assessmentField: ผสานสภาพผิวจราจรหน้างาน กับระดับยกพื้นถนน As-Built / สันเนินป้อม รปภ. และปริมาณฝนคาดการณ์ 24 ชม. (${weather.expectedRain24h} มม., โอกาสฝน ${weather.rainProb}%) + ระบุมาตรการปกป้องพื้นที่จริง
    - assessmentCanal: ผสานระดับน้ำคลองหน้าโครงการ กับภาพถ่ายดาวเทียมน้ำทุ่ง GISTDA, Google Flood Hub, และประกาศลุ่มน้ำ RID + ระบุมาตรการป้องกันน้ำหนุน/น้ำย้อน (เช่น ตรวจสอบปิดบานพับ Flap Valve, วางแนวกระสอบทรายริมตลิ่ง, จัดชุดลาดตระเวนวัดระดับคลองทุก 1 ชม.)
    - assessmentPumps: ผสานสถานะปั๊มที่ทดสอบหน้างาน กับภาระการระบายน้ำจากพยากรณ์ฝน + ระบุมาตรการบริหารเครื่องจักร (เช่น ระบบตัด-ต่อลูกลอยอัตโนมัติ, ช่างเทคนิค Standby 24 ชม., สำรองน้ำมันเชื้อเพลิงและเช็คเครื่องกำเนิดไฟฟ้าฉุกเฉิน)
    - assessmentOutlook: สรุปภาพรวมความเสี่ยง 24 ชม. จากกลุ่มฝนเรดาร์ Windy และ AccuWeather + คำสั่งการระดับผู้บริหารและแผนเผชิญเหตุ
@@ -329,7 +361,7 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
 ให้ตอบกลับเป็น JSON เท่านั้น (ห้ามมี markdown codeblock ห้ามมีข้อความอื่น):
 {
   "status": "NORMAL" | "WATCH" | "CRITICAL",
-  "waterLevel": "ระดับน้ำท่วมขังบนผิวถนน (คัดแยกเฉพาะสภาพถนน/ผิวจราจรอย่างถูกต้อง)",
+  "waterLevel": "ระดับน้ำท่วมขังบนผิวถนน (คัดแยกเฉพาะสภาพถนน/ผิวจราจรอย่างถูกต้อง โดยแยกถนนนอกและถนนในโครงการชัดเจน)",
   "pumpsRunning": "สถานะเครื่องสูบน้ำ (รวมปั๊มทุกตัวที่พิมพ์มา เช่น No.1 และ No.2 พร้อมใช้งาน)",
   "drainageCondition": "สภาพทางระบายน้ำ/คลอง (สะท้อนสถานะคลองและการระบายน้ำให้เป็นประโยคที่สมบูรณ์ชัดเจน เช่น อยู่ในเกณฑ์ปกติ ระบายได้คล่องตัว ห้ามระบุแค่หัวข้อลอยๆ)",
   "assessmentField": "บทวิเคราะห์สภาพพื้นที่และผิวจราจร 1-2 บรรทัด พร้อมระบุมาตรการปกป้องพื้นที่จริง",
@@ -360,3 +392,4 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
     return generateFallbackEngineeringSynthesis({ project, weather, directReport, notes });
   }
 }
+

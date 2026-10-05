@@ -177,7 +177,7 @@ export default async function handler(req, res) {
 
     // สังเคราะห์บทวิเคราะห์และการประเมินสถานการณ์ (Executive Assessment & Action Taken)
     const fallback = generateFallbackEngineeringSynthesis({
-      project: { code: report.projectCode, name: report.projectName, area: report.projectArea },
+      project: { code: report.projectCode, name: report.projectName, area: report.projectArea, ...projectConfig },
       weather,
       directReport: { waterLevel, pumpsRunning, drainageCondition },
       notes: report.notes

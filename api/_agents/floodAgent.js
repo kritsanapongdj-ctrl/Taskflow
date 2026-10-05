@@ -8,6 +8,7 @@ import {
   analyzeWaterLevelFromPhotos,
   analyzeFloodReportWithGemini
 } from '../_services/geminiService.js';
+import { getAsBuiltOverrides } from '../_services/asBuiltService.js';
 
 // รวมรายงาน สรุปผลด้วย AI และส่งกลับให้ Admin ในแชทส่วนตัว
 export async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
@@ -17,7 +18,7 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
     if (!draftSnap.exists()) return;
 
     const draft = draftSnap.data();
-    const project = FLOOD_PROJECTS[draft.projectCode] || {
+    const baseProject = FLOOD_PROJECTS[draft.projectCode] || {
       code: draft.projectCode,
       name: draft.projectName,
       area: draft.projectArea,
@@ -27,6 +28,16 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
       basinAlert: 'เฝ้าระวังระดับน้ำคลองสายหลัก สูบระบายต่อเนื่อง',
       tmdAlert: 'กรมอุตุนิยมวิทยา: ร่องมรสุมพาดผ่านภาคกลาง เฝ้าระวังฝนตกสะสม'
     };
+
+    const asBuiltOverrides = await getAsBuiltOverrides().catch(() => ({}));
+    const customAsBuilt = asBuiltOverrides[draft.projectCode];
+    const project = { ...baseProject };
+    if (customAsBuilt) {
+      if (customAsBuilt.asBuiltElevationDiff != null) project.asBuiltElevationDiff = customAsBuilt.asBuiltElevationDiff;
+      if (customAsBuilt.entranceCrestDiff != null) project.entranceCrestDiff = customAsBuilt.entranceCrestDiff;
+      if (customAsBuilt.asBuiltBenchmarkMSL != null) project.asBuiltBenchmarkMSL = customAsBuilt.asBuiltBenchmarkMSL;
+      if (customAsBuilt.asBuiltNotes != null) project.asBuiltNotes = customAsBuilt.asBuiltNotes;
+    }
 
     const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
     const photos = [];
@@ -143,6 +154,9 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
       executiveSummary,
       notes: draft.notes || '',
       weather,
+      asBuiltElevationDiff: typeof project.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
+      entranceCrestDiff: typeof project.entranceCrestDiff === 'number' ? project.entranceCrestDiff : null,
+      asBuiltBenchmarkMSL: project.asBuiltBenchmarkMSL || null,
       photoCount: finalPhotos.length,
       surveyDateThai,
       surveyTimeThai,

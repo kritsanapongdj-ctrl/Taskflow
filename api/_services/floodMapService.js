@@ -4,7 +4,7 @@ import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from '
 // คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก/ซอยหน้าโครงการ vs ถนนในโครงการ As-Built)
 export function calculateHydrologicalLevels(report = {}, project = {}, liveWater = null) {
   const hasFieldReport = Boolean(report && (report.reportId || report.id || report.createdAt));
-  const rawNotes = ((report.notes || '') + ' ' + (report.drainageCondition || '') + ' ' + (report.waterLevel || '')).trim();
+  const rawNotes = ((report.notes || '') + ' \n ' + (report.drainageCondition || '') + ' \n ' + (report.waterLevel || '')).trim();
   const status = hasFieldReport ? (report.status || 'NORMAL') : 'NO_REPORT';
 
   let canalBelowOuter = 50; // ซม. (ผิวน้ำคลองต่ำกว่าถนนภายนอก: ค่าบวก = ต่ำกว่าตลิ่ง, ค่าลบ = ล้นตลิ่ง)
@@ -34,20 +34,34 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     canalSource = 'LIVE_TELEMETRY';
   }
 
-  // 2. ถ้ามีรายงานตรวจจริงหน้างานระบุระดับคลอง ให้อ้างอิงตามหน้างาน
-  const outerMatch = rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากตลิ่ง|จากถนน)/i) || 
-                     rawNotes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
-  const canalOverflowMatch = rawNotes.match(/(?:คลอง|น้ำในคลอง|ตลิ่ง)[^.]*?(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น|เอ่อล้น|ล้นท่วม)/i) ||
-                             rawNotes.match(/(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น|เอ่อล้น|ล้นท่วม)/i) ||
-                             /ท่วมอยู่ที่ระดับเดียวกับฟุตบาท|เสมอระดับฟุตบาท|ล้นตลิ่ง/i.test(report.drainageCondition || '');
+  // 2. ถ้ามีรายงานตรวจจริงหน้างานระบุระดับคลอง ให้อ้างอิงตามหน้างาน (ลำดับความสำคัญสูงสุด)
+  // ตรวจจับตัวเลขวัดระดับผิวน้ำคลองเทียบกับถนน/ตลิ่ง
+  const canalBelowMatch = rawNotes.match(/(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง|ปากบ่อ)[^\d\n\-+]*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากตลิ่ง|จากถนน|จากระดับปากบ่อ|ต่ำจาก)/i) ||
+                          rawNotes.match(/ต่ำกว่า(?:ผิวถนน|ถนน|ตลิ่ง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
 
-  if (outerMatch) {
-    let parsedCm = parseFloat(outerMatch[1]);
-    if (outerMatch[0].includes('ม')) parsedCm *= 100;
+  const canalAboveMatch = rawNotes.match(/(?:สูงกว่า)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n\-+]*\+?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          rawNotes.match(/\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:สูงกว่า|เสมอระดับผิวถนน|เหนือถนน)/i);
+
+  const canalOverflowMatch = rawNotes.match(/(?:คลอง|น้ำในคลอง|ตลิ่ง)[^.\n\r\-•;>>]*?(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น|เอ่อล้น|ล้นท่วม)/i) ||
+                             rawNotes.match(/(?:ล้นตลิ่ง|ล้นคัน|ท่วมสูงล้น)/i) ||
+                             /ท่วมอยู่ที่ระดับเดียวกับฟุตบาท|เสมอระดับฟุตบาท/i.test(report.drainageCondition || '');
+
+  if (canalBelowMatch) {
+    let parsedCm = parseFloat(canalBelowMatch[1]);
+    if (canalBelowMatch[0].includes('ม') && !canalBelowMatch[0].includes('ซม')) parsedCm *= 100;
     canalBelowOuter = Math.round(parsedCm);
     canalWaterElevation = -(canalBelowOuter / 100);
     isCanalOverflow = false;
-    canalStatusText = `หน้างานตรวจวัด: ต่ำกว่าตลิ่ง ${canalBelowOuter} ซม.`;
+    canalStatusText = `หน้างานตรวจวัด: ต่ำกว่าตลิ่ง/ถนน ${canalBelowOuter} ซม.`;
+    canalSource = 'FIELD_REPORT';
+  } else if (canalAboveMatch) {
+    let parsedCm = parseFloat(canalAboveMatch[1]);
+    if (canalAboveMatch[0].includes('ม') && !canalAboveMatch[0].includes('ซม')) parsedCm *= 100;
+    canalBelowOuter = -Math.round(parsedCm);
+    canalWaterElevation = +(canalBelowOuter < 0 ? Math.abs(canalBelowOuter) / 100 : 0);
+    isCanalOverflow = parsedCm > 0;
+    canalStatusText = `หน้างานแจ้ง: น้ำคลองสูงกว่าถนน +${Math.round(parsedCm)} ซม.`;
     canalSource = 'FIELD_REPORT';
   } else if (canalOverflowMatch) {
     const overflowNumMatch = rawNotes.match(/(?:ล้นตลิ่ง|ล้นคัน|เอ่อล้น)[^0-9\n]*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
@@ -80,14 +94,14 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     }
   }
 
-  // 2. คำนวณระดับยกพื้น/ระดับถนนในโครงการ (innerElevation) ตามลำดับความสำคัญ (3-Tier Precedence)
+  // 3. คำนวณระดับยกพื้น/ระดับถนนในโครงการ (innerElevation) ตามลำดับความสำคัญ (3-Tier Precedence)
   let innerElevation = 80;
   let innerSource = 'ENGINEERING_STANDARD'; // 'FIELD_MEASURED' | 'AS_BUILT' | 'ENGINEERING_STANDARD'
 
   const innerMatch = rawNotes.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากพื้นโครงการ|จากถนนในโครงการ|จากในโครงการ)/i);
   if (innerMatch) {
     let parsedInner = parseFloat(innerMatch[1]);
-    if (innerMatch[0].includes('ม')) parsedInner *= 100;
+    if (innerMatch[0].includes('ม') && !innerMatch[0].includes('ซม')) parsedInner *= 100;
     if (parsedInner > canalBelowOuter) {
       innerElevation = parsedInner - canalBelowOuter;
       innerSource = 'FIELD_MEASURED';
@@ -100,7 +114,7 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     innerSource = 'ENGINEERING_STANDARD';
   }
 
-  // 2.1 สันเนินทางเข้า / ป้อม รปภ. (Entrance Crest Level) ถ้ามี
+  // 3.1 สันเนินทางเข้า / ป้อม รปภ. (Entrance Crest Level) ถ้ามี
   const hasEntranceCrest = typeof project?.entranceCrestDiff === 'number' && !isNaN(project.entranceCrestDiff) && project.entranceCrestDiff > 0;
   const entranceCrestDiff = hasEntranceCrest ? Number(project.entranceCrestDiff) : null;
   const crestElevation = hasEntranceCrest ? Math.round(entranceCrestDiff * 100) : null;
@@ -110,39 +124,87 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   // ระยะผิวน้ำคลองเทียบถนนในโครงการ (innerElevation ลบด้วยระดับน้ำคลอง)
   const canalBelowInner = innerElevation - Math.round(canalWaterElevation * 100);
 
-  // 3. วิเคราะห์ระดับน้ำบนถนนหน้าโครงการ / ซอยภายนอก / ถนนภาระจำยอม (Outer Road Water) จาก 2 แหล่ง
-  // แหล่งที่ 1: รายงานตรวจเช็คจริงหน้างาน (Field Inspection)
-  const outerFloodDepthMatch = rawNotes.match(/(?:ซอย|ถนนนอก|หน้าโครงการ|ถนนภายนอก|ผิวจราจรนอก|ถนนภาระจำยอม|ภาระจำยอม|ทางเข้า|สะพาน|ถนน|เคหะร่มเกล้า)[^0-9\n]*(?:ท่วม|ขัง|สูง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i) ||
-                              rawNotes.match(/(?:น้ำท่วม|น้ำขัง|รอการระบาย|ท่วมขัง)[^0-9\n]*(?:ซอย|ถนนนอก|หน้าโครงการ|ถนนภาระจำยอม|ภาระจำยอม|ทางเข้า|ถนน)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+  // 4. วิเคราะห์ระดับน้ำบนถนนหน้าโครงการ / ซอยภายนอก / ถนนภาระจำยอม (Outer Road Water) จาก 2 แหล่ง
+  // แยกข้อความเป็นส่วนๆ ตาม bullet dashes หรือบรรทัด เพื่อไม่ให้ regex วิ่งข้ามประโยค
+  const segments = rawNotes
+    .split(/(?:\r?\n|(?<=\S|\b)\s*(?:-(?!\d)|[*•]|\d+[\.\)]|>>)\s*)/)
+    .map(s => s.trim())
+    .filter(Boolean);
 
-  if (outerFloodDepthMatch) {
-    outerRoadWaterDepth = parseFloat(outerFloodDepthMatch[1]);
-  } else if (/ระดับเอว|เสมอเอว|ถึงเอว/i.test(rawNotes)) {
-    outerRoadWaterDepth = 75; // ระดับเอว ~75 ซม.
-  } else if (/ระดับเข่า|เสมอเข่า|ถึงเข่า/i.test(rawNotes)) {
-    outerRoadWaterDepth = 35; // ระดับเข่า ~35 ซม.
-  } else if (/ครึ่งล้อ|เสมอขอบล้อ|ดุมล้อ/i.test(rawNotes)) {
-    outerRoadWaterDepth = 30; // ครึ่งล้อรถยนต์ ~30 ซม.
-  } else if (/ระดับแข้ง|ครึ่งแข้ง|ถึงแข้ง/i.test(rawNotes)) {
-    outerRoadWaterDepth = 20; // ระดับแข้ง ~20 ซม.
-  } else if (/ท่วมมิดฟุตบาท|ล้นข้ามฟุตบาท|ท่วมเลยฟุตบาท|มิดทางเท้า/i.test(rawNotes)) {
-    outerRoadWaterDepth = 15; // ท่วมมิดฟุตบาท ~15 ซม.
-  } else if (/ระดับฟุตบาท|เสมอระดับฟุตบาท|ระดับเดียวกับฟุตบาท|ถึงระดับฟุตบาท|ปริ่มฟุตบาท|เสมอทางเท้า|ถึงฟุตบาท|ระดับทางเท้า|เสมอขอบทาง/i.test(rawNotes)) {
-    outerRoadWaterDepth = 10; // ระดับฟุตบาท ~10 ซม. (ขอบคันทางเท้าสูงกว่าผิวถนน 10 ซม.)
-  } else if (/ระดับตาตุ่ม|เสมอตาตุ่ม|ถึงตาตุ่ม/i.test(rawNotes)) {
-    outerRoadWaterDepth = 10; // ระดับตาตุ่ม ~10 ซม.
-  } else if (/(?:ถนนภาระจำยอม|ภาระจำยอม|ถนนนอก|หน้าโครงการ|ซอย|ทางเข้า)[^.]*?(?:มีน้ำท่วมขัง|น้ำท่วมขัง|ท่วมขัง|น้ำท่วม|มีน้ำขัง)/i.test(rawNotes) ||
-             /(?:มีน้ำท่วมขัง|น้ำท่วมขัง|ท่วมขัง|น้ำท่วม|มีน้ำขัง)[^.]*?(?:ถนนภาระจำยอม|ภาระจำยอม|ถนนนอก|หน้าโครงการ|ซอย|ทางเข้า)/i.test(rawNotes)) {
-    outerRoadWaterDepth = 10; // มีน้ำท่วมขังถนนนอก/ทางเข้าแต่ไม่ระบุตัวเลข กำหนดขั้นต่ำ 10 ซม.
-  } else if (/แห้ง|ปกติ|เรียบร้อย/i.test(report.waterLevel || '') && !/ท่วม|ขัง/i.test(rawNotes)) {
-    outerRoadWaterDepth = 0;
+  let hasExplicitOuterDry = false;
+  let hasExplicitOuterFlood = false;
+  let detectedOuterDepth = 0;
+
+  for (const seg of segments) {
+    // ลบคำว่า "ปั๊มป้องกันน้ำท่วม" ออกจากเซกเมนต์เพื่อป้องกันคำว่า "น้ำท่วม" ไปหลอกการตรวจจับ
+    const cleanedSeg = seg.replace(/(?:ปั๊ม|ปั้ม|เครื่องสูบ|ระบบ)\s*ป้องกันน้ำท่วม/gi, 'ปั๊มระบายน้ำ');
+
+    // ตรวจสอบว่าเซกเมนต์นี้เกี่ยวข้องกับ ถนนหน้าโครงการ / ถนนนอก / ทางเข้า / ถนนภาระจำยอม / ผิวจราจร หรือไม่
+    const isOuterRoadTarget = /(?:ถนนหน้าโครงการ|หน้าโครงการ|ถนนนอก|ถนนภายนอก|ถนนภาระจำยอม|ภาระจำยอม|ทางเข้า|ซอย|ผิวจราจรนอก)/i.test(cleanedSeg);
+    const isGeneralRoadTarget = /(?:ผิวจราจร|ถนน|ผิวถนน)/i.test(cleanedSeg) && !/(?:ถนนในโครงการ|ในโครงการ)/i.test(cleanedSeg);
+
+    // ตรวจสอบข้อความปฏิเสธ / แห้ง (Explicit Negation / Dryness)
+    const isDrySeg = /(?:ไม่มีน้ำขัง|ไม่มีน้ำท่วม|ไม่พบน้ำท่วมขัง|ไม่พบน้ำขัง|ไม่ท่วม|แห้งสนิท|แห้ง 100%|แห้งปกติ|เรียบร้อยปกติ|สัญจรได้ปกติ|สัญจรได้คล่องตัว)/i.test(cleanedSeg);
+
+    if ((isOuterRoadTarget || isGeneralRoadTarget) && isDrySeg) {
+      hasExplicitOuterDry = true;
+    }
+
+    // ตรวจสอบการท่วมของถนนภายนอก (Positive Flood Detection)
+    if (isOuterRoadTarget || /ถนนภาระจำยอม|ภาระจำยอม|หน้าโครงการ|ทางเข้า/i.test(cleanedSeg)) {
+      // 1. ระบุตัวเลขความลึกน้ำชัดเจน เช่น "น้ำท่วมขัง 10 cm", "มีน้ำขัง 15 ซม."
+      const numMatch = cleanedSeg.match(/(?:ท่วมขัง|น้ำท่วมขัง|มีน้ำขัง|น้ำท่วม|ท่วมสูง|รอการระบาย)[^0-9\n]*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+      if (numMatch && !isDrySeg) {
+        hasExplicitOuterFlood = true;
+        detectedOuterDepth = Math.max(detectedOuterDepth, parseFloat(numMatch[1]));
+      }
+
+      // 2. ระดับหมุดหมายกายภาพ (Physical Landmark Depths)
+      if (!isDrySeg) {
+        if (/ระดับเอว|เสมอเอว|ถึงเอว/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 75);
+        } else if (/ระดับเข่า|เสมอเข่า|ถึงเข่า/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 35);
+        } else if (/ครึ่งล้อ|เสมอขอบล้อ|ดุมล้อ/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 30);
+        } else if (/ระดับแข้ง|ครึ่งแข้ง|ถึงแข้ง/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 20);
+        } else if (/ท่วมมิดฟุตบาท|ล้นข้ามฟุตบาท|ท่วมเลยฟุตบาท|มิดทางเท้า/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 15);
+        } else if (/(?:ท่วม|น้ำท่วม|น้ำขัง|เอ่อ|ล้น|สูง)[^-\n•;>>]*?(?:ระดับฟุตบาท|เสมอระดับฟุตบาท|ระดับเดียวกับฟุตบาท|ถึงระดับฟุตบาท|ปริ่มฟุตบาท|เสมอทางเท้า|ระดับทางเท้า|เสมอขอบทาง)/i.test(cleanedSeg) ||
+                   /(?:ระดับฟุตบาท|เสมอระดับฟุตบาท|ระดับเดียวกับฟุตบาท)[^-\n•;>>]*?(?:ท่วม|น้ำท่วม|น้ำขัง)/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 10);
+        } else if (/ระดับตาตุ่ม|เสมอตาตุ่ม|ถึงตาตุ่ม/i.test(cleanedSeg)) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 10);
+        } else if (/(?:มีน้ำท่วมขัง|น้ำท่วมขัง|ท่วมขัง|น้ำท่วม|มีน้ำขัง)/i.test(cleanedSeg) && !isDrySeg) {
+          hasExplicitOuterFlood = true;
+          detectedOuterDepth = Math.max(detectedOuterDepth, 10);
+        }
+      }
+    }
   }
 
-  // แหล่งที่ 2: โทรมาตรสดคลองภายนอก (ThaiWater / สสน.) หรือ คลองล้นตลิ่งจากหน้างาน
-  if (isCanalOverflow && canalWaterElevation > 0) {
-    const overflowCm = Math.round(canalWaterElevation * 100);
-    // หากคลองล้นตลิ่ง น้ำบนถนนภายนอกต้องอย่างน้อยเท่ากับระดับน้ำที่ล้น
-    outerRoadWaterDepth = Math.max(outerRoadWaterDepth, overflowCm);
+  if (hasExplicitOuterFlood) {
+    outerRoadWaterDepth = detectedOuterDepth || 10;
+  } else if (hasExplicitOuterDry) {
+    outerRoadWaterDepth = 0;
+  } else if (/แห้ง|ปกติ|เรียบร้อย/i.test(report.waterLevel || '') && !/ท่วม|ขัง/i.test(report.waterLevel || '')) {
+    outerRoadWaterDepth = 0;
+  } else if (isCanalOverflow && canalWaterElevation > 0 && canalSource === 'FIELD_REPORT') {
+    // คลองหน้างานล้นตลิ่งจริง
+    outerRoadWaterDepth = Math.round(canalWaterElevation * 100);
+  } else if (isCanalOverflow && canalWaterElevation > 0 && canalSource === 'LIVE_TELEMETRY' && !hasFieldReport) {
+    // กรณีไม่มีรายงานหน้างานเลย แต่อิงโทรมาตรแม่น้ำสายหลัก
+    outerRoadWaterDepth = Math.round(canalWaterElevation * 100);
+  } else {
+    outerRoadWaterDepth = 0;
   }
 
   if (outerRoadWaterDepth > 0) {
@@ -157,11 +219,11 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     outerRoadConditionText = 'รอข้อมูลตรวจเช็คสภาพถนนหน้าโครงการ';
   }
 
-  // 4. วิเคราะห์ระดับน้ำบนถนนในโครงการ (Inner Road Water)
+  // 5. วิเคราะห์ระดับน้ำบนถนนในโครงการ (Inner Road Water)
   if (outerRoadWaterDepth > effectiveBarrier) {
     innerRoadWaterDepth = outerRoadWaterDepth - effectiveBarrier;
   } else {
-    const innerFloodMatch = rawNotes.match(/(?:ในโครงการ|ถนนใน|ถนนเมนโครงการ)[^0-9]*(?:ท่วม|ขัง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+    const innerFloodMatch = rawNotes.match(/(?:ในโครงการ|ถนนใน|ถนนเมนโครงการ)[^0-9\n]*(?:ท่วม|ขัง)\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
     if (innerFloodMatch) {
       innerRoadWaterDepth = parseFloat(innerFloodMatch[1]);
     } else {
