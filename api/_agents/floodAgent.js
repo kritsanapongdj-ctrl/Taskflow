@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from '../_services/firebase.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction } from '../_services/firebase.js';
 import { FLOOD_PROJECTS, lookupProjectForFlood } from '../_services/projectsConfig.js';
 import { replyToLine, pushToLine, fetchLineImageBuffer, buildFloodFlexMessage } from '../_services/lineService.js';
 import { fetchProjectWeather } from '../_services/weatherService.js';
@@ -386,17 +386,37 @@ export const FloodAgent = {
         const expected = draft.expectedCount || 0;
         const timeSinceLastPhoto = Date.now() - (draft.lastPhotoAt || 0);
 
-        // หากยังไม่ครบ expectedCount หรือเพิ่งมีรูปล่าสุดเข้ามาไม่ถึง 3 วินาที ให้รอ buffer ให้รูปที่เหลือโหลดเสร็จสมบูรณ์
-        if ((expected > 0 && currentCount < expected) || (timeSinceLastPhoto < 3000)) {
-          await new Promise(r => setTimeout(r, 2000));
+        // หากยังไม่ครบ expectedCount หรือเพิ่งมีรูปล่าสุดเข้ามาไม่ถึง 2.5 วินาที ให้รอสั้นๆ 1.5 วินาทีเพื่อให้รูปที่เหลือโหลดเสร็จสมบูรณ์
+        if ((expected > 0 && currentCount < expected) || (timeSinceLastPhoto < 2500)) {
+          await new Promise(r => setTimeout(r, 1500));
           photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
         }
 
         const finalPhotoCount = photosSnap.size;
         if (finalPhotoCount > 0) {
-          await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
-          // ส่ง replyToken ตรงเข้า compileAndSendFloodReport เพื่อให้ส่ง PDF กลับหาผู้ใช้ทันทีโดยไม่เสียโควต้า Push
-          await compileAndSendFloodReport({ userId, replyToken, host, proto });
+          // ใช้ Atomic Transaction Lock ป้องกัน Race Condition
+          let canFinalize = false;
+          try {
+            await runTransaction(db, async (transaction) => {
+              const dSnap = await transaction.get(draftRef);
+              if (!dSnap.exists()) return;
+              const dData = dSnap.data();
+              const isLocked = dData.finalizing && (Date.now() - (dData.finalizingAt || 0) < 60000);
+              if (!isLocked) {
+                transaction.update(draftRef, { finalizing: true, finalizingAt: Date.now() });
+                canFinalize = true;
+              }
+            });
+          } catch (tErr) {
+            console.error("Finish transaction lock error:", tErr);
+          }
+
+          if (canFinalize) {
+            // ส่ง replyToken ตรงเข้า compileAndSendFloodReport เพื่อให้ส่ง PDF กลับหาผู้ใช้ทันทีโดยไม่เสียโควต้า Push
+            await compileAndSendFloodReport({ userId, replyToken, host, proto });
+          } else {
+            await replyToLine(replyToken, `⏳ ระบบกำลังประมวลผลรายงานให้เรียบร้อยแล้วครับ กรุณารอสักครู่...`);
+          }
           return true;
         } else {
           await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างาน (5–10 รูป) เข้ามาก่อนครับ`);
@@ -462,12 +482,25 @@ export const FloodAgent = {
       const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
       const draftSnap = await getDoc(draftRef);
 
+      // ตรวจหา imageSet.total จาก events ในชุดนี้ (ถ้าผู้ใช้ส่งมาเป็นชุด/อัลบั้ม)
+      let detectedImageSetTotal = null;
+      for (const evt of userEvents) {
+        if (evt.message?.imageSet?.total) {
+          detectedImageSetTotal = evt.message.imageSet.total;
+          break;
+        }
+      }
+
       // ดาวน์โหลดภาพถ่ายจาก LINE Content API และบันทึกลง Firestore แบบขนาน (Parallel) เพื่อความรวดเร็วและไม่ตกหล่น
       await Promise.all(userEvents.map(async (evt) => {
         const messageId = evt.message.id;
         const imageSet = evt.message.imageSet;
         try {
           const imgBuffer = await fetchLineImageBuffer(messageId);
+          // Safety guard: แจ้งเตือนหากรูปภาพมีขนาดใหญ่เกิน 750 KB (เสี่ยงชน 1 MB Firestore limit เมื่อเป็น Base64)
+          if (imgBuffer.length > 750 * 1024) {
+            console.warn(`[FloodAgent Warning] Image ${messageId} is large: ${(imgBuffer.length / 1024).toFixed(1)} KB`);
+          }
           const dataUrl = `data:image/jpeg;base64,${imgBuffer.toString('base64')}`;
           const photoRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos", messageId);
           await setDoc(photoRef, {
@@ -488,43 +521,59 @@ export const FloodAgent = {
           return;
         }
 
-        await updateDoc(draftRef, {
+        const draftUpdates = {
           lastPhotoAt: Date.now()
-        });
+        };
+        // อัปเดต expectedCount หากพบ imageSet.total จากอัลบั้มภาพ
+        if (detectedImageSetTotal && (!draft.expectedCount || draft.expectedCount < detectedImageSetTotal)) {
+          draftUpdates.expectedCount = detectedImageSetTotal;
+        }
+        await updateDoc(draftRef, draftUpdates);
 
         const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
         const count = photosSnap.size;
+        const targetExpected = draftUpdates.expectedCount || draft.expectedCount || 0;
 
-        if (count >= 10) {
-          // ได้รับครบเต็มโควต้า 10 ภาพแล้ว ให้รอ 1.5 วินาทีเพื่อให้ write ในรอบเดียวกันเสร็จสมบูรณ์ แล้วออกรายงาน PDF ทันที
-          await new Promise(r => setTimeout(r, 1500));
-          const latestDraftSnap = await getDoc(draftRef);
-          if (latestDraftSnap.exists()) {
-            const data = latestDraftSnap.data();
-            const isLocked = data.finalizing && (Date.now() - (data.finalizingAt || 0) < 60000);
-            if (!isLocked) {
-              await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
-              await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
-            }
+        // เงื่อนไขจบชุดภาพ: ได้รับครบตาม expectedCount (เช่น ได้รับครบ 10/10 ภาพจากอัลบั้ม)
+        // หรือได้รับครบเพดานสูงสุด 10 ภาพแล้ว
+        const isCompleteBatch = (targetExpected > 0 && count >= targetExpected) || count >= 10;
+
+        if (isCompleteBatch) {
+          // รอสั้นๆ 1 วินาที เพื่อให้ write ในรอบเดียวกัน flush ลง Firestore สมบูรณ์
+          await new Promise(r => setTimeout(r, 1000));
+
+          // ใช้ Atomic Transaction Lock ป้องกัน Race Condition
+          let canFinalize = false;
+          try {
+            await runTransaction(db, async (transaction) => {
+              const dSnap = await transaction.get(draftRef);
+              if (!dSnap.exists()) return;
+              const dData = dSnap.data();
+              const isLocked = dData.finalizing && (Date.now() - (dData.finalizingAt || 0) < 60000);
+              if (!isLocked) {
+                transaction.update(draftRef, { finalizing: true, finalizingAt: Date.now() });
+                canFinalize = true;
+              }
+            });
+          } catch (tErr) {
+            console.error("Image batch transaction lock error:", tErr);
           }
-        } else if (count >= 5) {
-          // ได้รับ 5-9 ภาพ: รอ 12 วินาที (Debounce window) เผื่อมีรูปชุดที่ 2 เข้ามา (เช่น ส่ง 5+5 รูป) หรือเน็ตกำลังอัปโหลด
-          await new Promise(r => setTimeout(r, 12000));
-          const latestDraftSnap = await getDoc(draftRef);
-          if (latestDraftSnap.exists()) {
-            const data = latestDraftSnap.data();
-            const timeSinceLast = Date.now() - (data.lastPhotoAt || 0);
-            const isLocked = data.finalizing && (Date.now() - (data.finalizingAt || 0) < 60000);
-            // หากไม่มีรูปใหม่เข้ามาเพิ่มเป็นเวลาอย่างน้อย 11 วินาที ให้จัดทำรายงานได้ทันที
-            if (!isLocked && timeSinceLast >= 11000) {
-              await updateDoc(draftRef, { finalizing: true, finalizingAt: Date.now() });
-              await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
-            }
+
+          if (canFinalize) {
+            await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
           }
-        } else if (count >= 1 && count < 5) {
-          // ตอบกลับแจ้งเตือนจำนวนภาพที่ได้รับ (1-4 ภาพ) เพื่อให้ผู้ใช้งานทราบสถานะว่าระบบบันทึกรูปไว้แล้ว
-          const firstReplyToken = userEvents[0]?.replyToken;
-          if (firstReplyToken) {
+          return;
+        }
+
+        // หากยังไม่ครบ targetExpected (เช่น เพิ่งได้รับ 5/10 ภาพ) หรือผู้ใช้ส่งทีละรูป
+        // -> ไม่สั่ง sleep 12 วินาที คา Webhook อีกต่อไป! ปล่อยให้ Webhook ถัดไปนำรูปที่เหลือมาเติม
+        const firstReplyToken = userEvents[0]?.replyToken;
+        if (firstReplyToken) {
+          if (targetExpected > 0) {
+            // กรณีเป็นอัลบั้ม แต่รูปยังมาไม่ครบ (ระบบรอรับ Webhook ถัดไปอย่างเงียบๆ และรวดเร็ว)
+            console.log(`[FloodAgent ImageSet] User ${userId} uploaded ${count}/${targetExpected} images, waiting for remaining batch...`);
+          } else {
+            // กรณีส่งทีละรูป แจ้งเตือนสถานะทันที เพื่อให้ผู้ใช้ทราบว่าพิมพ์ !เสร็จ ได้
             await replyToLine(firstReplyToken, `📸 บอทได้รับรูปถ่ายหน้างานแล้ว ${count} ภาพครับ (สามารถส่งต่อได้จนครบ 10 รูป หรือพิมพ์ !เสร็จ เพื่อรับ PDF ได้ทันทีครับ)`);
           }
         }
