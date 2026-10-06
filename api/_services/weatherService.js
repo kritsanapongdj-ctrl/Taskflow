@@ -14,7 +14,7 @@ export async function fetchProjectWeather(project) {
     // ดึง Open-Meteo และ คลังข้อมูลน้ำแห่งชาติ ThaiWater (สสน. / กรมชลประทาน) พร้อมกัน
     const [data, liveWater] = await Promise.all([
       fetch(url).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-      getNearestWaterStation(lat, lon).catch(() => null)
+      getNearestWaterStation(lat, lon, project.preferredStationCodes).catch(() => null)
     ]);
     const cur = data.current || {};
     const daily = data.daily || {};

@@ -1185,8 +1185,8 @@ async function handleFloodMap(req, res) {
         expectedRain24h: '25.0'
       };
 
-      // ค้นหาสถานีโทรมาตรน้ำสดที่ใกล้โครงการที่สุด (ThaiWater / สสน. / กรมชลประทาน)
-      const liveWater = await getNearestWaterStation(pInfo.lat, pInfo.lon);
+      // ค้นหาสถานีโทรมาตรน้ำสดที่ตรงกับลุ่มน้ำของโครงการที่สุด (ThaiWater / สสน. / กรมชลประทาน)
+      const liveWater = await getNearestWaterStation(pInfo.lat, pInfo.lon, pInfo.preferredStationCodes);
 
       // วันที่และเวลาตรวจสอบ
       let reportDateThai = 'ยังไม่มีข้อมูลตรวจจริงรอบนี้';

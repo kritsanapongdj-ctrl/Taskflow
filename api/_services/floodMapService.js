@@ -568,12 +568,15 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         <button onclick="setZoneFilter('south_bangna')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="south_bangna">พระราม 2-บางนา</button>
       </div>
 
-      <!-- Secondary Filters: Status & Radar -->
-      <div class="pt-1.5 border-t border-slate-700/60 flex items-center justify-between gap-1">
-        <button onclick="toggleRiskOnly()" id="risk-only-btn" class="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors">
-          <span>⚠️ จุดเฝ้าระวัง</span>
+      <!-- Secondary Filters: Outer Flood Triage, Risk & Radar -->
+      <div class="pt-1.5 border-t border-slate-700/60 grid grid-cols-3 gap-1">
+        <button onclick="toggleOuterFloodOnly()" id="outer-flood-btn" class="flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-amber-300 hover:text-white border border-slate-700 transition-all text-center" title="คัดกรองเฉพาะโครงการที่ถนนภายนอก/ซอยมีน้ำท่วมขัง">
+          <span>🚨 ถนนนอก</span>
         </button>
-        <button onclick="toggleRadarLayer()" id="radar-toggle-btn" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-blue-900/40 text-blue-300 hover:text-blue-100 border border-blue-700/50 transition-colors" title="เปิด/ปิด แผ่นเรดาร์ฝน RainViewer">
+        <button onclick="toggleRiskOnly()" id="risk-only-btn" class="flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all text-center" title="คัดกรองเฉพาะจุดเฝ้าระวังและวิกฤติ">
+          <span>⚠️ เฝ้าระวัง</span>
+        </button>
+        <button onclick="toggleRadarLayer()" id="radar-toggle-btn" class="flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-semibold bg-blue-900/40 text-blue-300 hover:text-blue-100 border border-blue-700/50 transition-all text-center" title="เปิด/ปิด แผ่นเรดาร์ฝน RainViewer">
           <span>🌧️ เรดาร์สด</span>
         </button>
       </div>
@@ -639,33 +642,51 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       </button>
     </div>
 
-    <!-- Drawer Content (Scrollable) -->
+    <!-- Drawer Content (Scrollable 4-Pillar Architecture) -->
     <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
 
-      <!-- ⚖️ 1. สรุปวิเคราะห์ระดับน้ำ 2 โซน: ถนนหน้าโครงการ VS ถนนในโครงการ (Two-Zone Water Assessment) -->
-      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
+      <!-- ========================================== -->
+      <!-- 📋 หมวด 1: สถานะตรวจวัดจริงหน้างาน (Field Reality / Ground Truth) -->
+      <!-- แหล่งข้อมูล: วิศวกรโครงการ Land & Houses & การตรวจเช็คจริง -->
+      <!-- ========================================== -->
+      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-emerald-900/50 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
-          <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
-            <span class="text-amber-400">⚖️</span>
-            <span>เปรียบเทียบระดับน้ำ: ถนนหน้าโครงการ VS ในโครงการ</span>
-          </h3>
-          <span id="dz-status-tag" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">Two-Zone Analysis</span>
+          <div class="space-y-0.5">
+            <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span>หมวด 1: สถานะตรวจวัดจริงหน้างาน</span>
+            </h3>
+            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: วิศวกรประจำโครงการ LH (Ground Truth)</p>
+          </div>
+          <span id="field-updated-at" class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">-</span>
         </div>
 
+        <!-- Case 1: ยังไม่มีการส่งรายงานจากหน้างานรอบนี้ -->
+        <div id="field-empty-box" class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1 hidden">
+          <div class="text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5">
+            <span>⚪ ยังไม่มีการส่งรายงานตรวจเช็คหน้างานในรอบนี้</span>
+          </div>
+          <p class="text-[10px] text-slate-500 leading-relaxed">
+            ยังไม่มีเจ้าหน้าที่โครงการส่งผลสำรวจจริง ข้อมูลที่แสดงประเมินจากโทรมาตรสถานีน้ำใกล้เคียงและแบบก่อสร้างจริง (As-Built)
+          </p>
+        </div>
+
+        <!-- 2-Zone Ground Reality Grid -->
         <div class="grid grid-cols-2 gap-2 text-[11px]">
           <!-- Zone 1: ถนนหน้าโครงการ / ซอยทางเข้า -->
           <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
-            <div class="flex items-center gap-1 text-slate-400 text-[10px] font-semibold">
+            <div class="flex items-center justify-between text-[10px] font-semibold text-slate-400">
               <span>🚗 ถนนหน้าโครงการ / ซอย</span>
+              <span class="text-[9px] text-slate-500 font-mono">ภายนอก</span>
             </div>
             <div id="dz-outer-depth" class="text-sm font-bold text-slate-200">แห้งสนิท (0 ซม.)</div>
             <div class="text-[9px] text-slate-400 leading-tight">
-              <span class="text-slate-500 block">แหล่งข้อมูลอ้างอิง:</span>
+              <span class="text-slate-500 block">แหล่งข้อมูล:</span>
               <span id="dz-outer-source" class="text-sky-300">-</span>
             </div>
           </div>
 
-          <!-- Zone 2: ภายในโครงการ (As-Built) -->
+          <!-- Zone 2: ภายในโครงการ (LH Ground Truth) -->
           <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
             <div class="flex items-center justify-between text-[10px] font-semibold">
               <span class="text-slate-400">🏡 ภายในโครงการ</span>
@@ -673,50 +694,82 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             </div>
             <div id="dz-inner-depth" class="text-sm font-bold text-emerald-400">แห้ง 100% (น้ำไม่ท่วม)</div>
             <div class="text-[9px] text-slate-400 leading-tight">
-              <span class="text-slate-500 block">ระยะเผื่อปลอดภัย (Freeboard):</span>
+              <span class="text-slate-500 block">ระยะปลอดภัย (Freeboard):</span>
               <span id="dz-safety-margin" class="font-bold text-emerald-400">+80 ซม. เหนือน้ำนอก</span>
             </div>
           </div>
         </div>
 
-        <!-- วิศวกรรมสังเคราะห์ (Engineering Synthesis Box) -->
-        <div id="dz-synthesis-box" class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-1 text-[11px]">
-          <div class="flex items-center gap-1 font-bold text-[10px] text-lh-gold">
-            <span>💡 บทสรุปวิศวกรรม (Engineering Synthesis):</span>
+        <!-- Drainage Condition & Pumps -->
+        <div id="field-data-box" class="space-y-1.5 text-[11px] bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between">
+            <div><strong class="text-slate-400">สภาพผิวจราจร:</strong> <span id="field-water" class="text-white">-</span></div>
+            <span id="dz-status-tag" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700">Two-Zone Analysis</span>
           </div>
-          <p id="dz-synthesis-text" class="text-slate-300 text-[11px] leading-relaxed">
-            -
-          </p>
+          <div><strong class="text-slate-400">สภาพคลอง/ทางน้ำ:</strong> <span id="field-canal" class="text-white">-</span></div>
+          <div><strong class="text-slate-400">สถานะเครื่องสูบน้ำ:</strong> <span id="field-pumps" class="text-white">-</span></div>
+        </div>
+
+        <!-- Photos Section -->
+        <div id="photos-section" class="space-y-1.5">
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>ภาพถ่ายสำรวจหน้างาน (<span id="photo-count">0</span> ภาพ)</span>
+            <span class="text-[10px] text-lh-gold">คลิกเพื่อดูภาพขยาย</span>
+          </div>
+          <div id="photos-grid" class="grid grid-cols-4 gap-1.5">
+            <!-- Dynamic Thumbnails -->
+          </div>
+        </div>
+
+        <!-- Actionable Field Reporting Tool for Engineers -->
+        <div class="pt-1 border-t border-slate-800/80 flex items-center gap-2">
+          <a id="btn-line-report" href="https://line.me" target="_blank" class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl bg-[#06C755]/15 hover:bg-[#06C755]/25 border border-[#06C755]/40 text-[#06C755] font-semibold text-[11px] transition-all" title="แชร์สรุปสถานการณ์โครงการนี้เข้า LINE กลุ่มประจำพื้นที่">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.82 2 10.53c0 2.92 1.76 5.51 4.5 7.02-.2.74-.71 2.7-1.15 3.37-.1.14-.04.3.1.22.8-.46 3.6-2.4 4.55-3.05.65.1 1.32.16 2 .16 5.52 0 10-3.82 10-8.53S17.52 2 12 2z"/></svg>
+            <span>แชร์สรุปสถานการณ์เข้า LINE กลุ่ม</span>
+          </a>
         </div>
       </div>
 
-      <!-- 🌊 2. ไดอะแกรมจำลองระดับน้ำ 3 ชั้น (Hydrological 3-Tier Cross-Section) -->
-      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
+      <!-- ========================================== -->
+      <!-- 🌊 หมวด 2: โทรมาตรลุ่มน้ำ & คลองสายหลัก (Basin & Canal Telemetry) -->
+      <!-- แหล่งข้อมูล: คลังข้อมูลน้ำแห่งชาติ สสน. / กรมชลประทาน (ThaiWater API) -->
+      <!-- ========================================== -->
+      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-blue-900/50 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
-          <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-lh-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            <span>แบบจำลองอุทกวิทยาระดับน้ำ 3 มิติ (LH Cross-Section)</span>
-          </h3>
-          <div class="flex items-center gap-1.5">
-            <span id="cs-asbuilt-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">📐 As-Built: +0.80 ม.</span>
-            <span class="text-[10px] text-slate-400 font-mono hidden sm:inline" id="cs-baseline">อ้างอิงถนน 0.00 ม.</span>
+          <div class="space-y-0.5">
+            <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+              <span>หมวด 2: โทรมาตรลุ่มน้ำ & คลองสายหลัก</span>
+            </h3>
+            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: คลังข้อมูลน้ำแห่งชาติ สสน. / กรมชลประทาน (ThaiWater)</p>
+          </div>
+          <div class="flex items-center gap-1">
+            <span id="cs-freshness-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 สด Realtime</span>
           </div>
         </div>
 
-        <!-- Live Telemetry Banner (สสน. / ชป. / ThaiWater) -->
-        <div class="p-2 rounded-xl bg-blue-950/40 border border-blue-800/50 flex flex-wrap items-center justify-between gap-1 text-[10px]">
-          <div class="flex items-center gap-1.5">
-            <span id="cs-live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-slate-400">สถานีเชื่อมต่อสด:</span>
-            <a id="cs-station-link" href="https://www.thaiwater.net/" target="_blank" class="font-bold text-sky-300 hover:underline flex items-center gap-0.5" title="เปิดข้อมูลสถานีสดบน ThaiWater">
-              <span id="cs-station-name">-</span>
-              <span class="text-[9px]">↗</span>
-            </a>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="cs-sensor-msl" class="font-mono text-white font-semibold">- ม.รทก.</span>
-            <span id="cs-sensor-diff" class="font-semibold text-sky-400">-</span>
+        <!-- Live Telemetry Station Card -->
+        <div class="p-2.5 rounded-xl bg-blue-950/40 border border-blue-800/50 space-y-1.5 text-[10px]">
+          <div class="flex items-center justify-between gap-1">
+            <div class="flex items-center gap-1.5">
+              <span id="cs-live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-slate-400">สถานีโทรมาตร:</span>
+              <a id="cs-station-link" href="https://www.thaiwater.net/" target="_blank" class="font-bold text-sky-300 hover:underline flex items-center gap-0.5" title="เปิดข้อมูลสถานีสดบน ThaiWater">
+                <span id="cs-station-name">-</span>
+                <span class="text-[9px]">↗</span>
+              </a>
+            </div>
             <span id="cs-sensor-time" class="text-slate-400 font-mono text-[9px]">-</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">ระดับน้ำเซ็นเซอร์ (ม.รทก.)</span>
+              <span id="cs-sensor-msl" class="font-mono text-white font-bold text-xs">- ม.รทก.</span>
+            </div>
+            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">ระยะเทียบตลิ่ง / สภาพน้ำ</span>
+              <span id="cs-sensor-diff" class="font-semibold text-sky-400 text-xs">-</span>
+            </div>
           </div>
         </div>
 
@@ -765,7 +818,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           </div>
         </div>
 
-        <!-- Dynamic SVG Diagram -->
+        <!-- Dynamic SVG Diagram (Hydrological 3-Tier Cross-Section) -->
         <div class="relative overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950 p-2">
           <svg id="cross-section-graphic" class="w-full h-44" viewBox="0 0 460 170" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Sky Gradient Background -->
@@ -805,30 +858,23 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
             <circle cx="325" cy="130" r="7" fill="#0f172a" stroke="#cbd5e1" stroke-width="2"/>
             <line id="svg-flap-valve" x1="325" y1="130" x2="331" y2="124" stroke="#eab308" stroke-width="3" stroke-linecap="round"/>
 
-            <!-- Concrete Floodwall / เขื่อนคอนกรีต คสล. ริมคลอง (ซ่อนเป็นค่าเริ่มต้น จะแสดงเฉพาะโครงการที่มีเขื่อนกั้นริมคลองเท่านั้น) -->
+            <!-- Concrete Floodwall / เขื่อนคอนกรีต คสล. ริมคลอง -->
             <g id="svg-floodwall-group" style="display:none;">
-              <!-- Wall base & footing -->
               <rect x="322" y="124" width="8" height="11" fill="#475569" opacity="0.7"/>
-              <!-- Wall body (+0.40m = y:96) -->
               <rect id="svg-floodwall" x="323" y="96" width="7" height="28" fill="#64748b" stroke="#475569" stroke-width="1" rx="1"/>
-              <!-- Wall concrete cap -->
               <rect id="svg-floodwall-cap" x="321" y="94" width="11" height="3" fill="#94a3b8" rx="0.5"/>
-              <!-- Text label -->
               <text id="svg-floodwall-txt" x="326" y="89" fill="#94a3b8" font-size="6.5" font-weight="700" text-anchor="middle">เขื่อนริมคลอง</text>
             </g>
 
-            <!-- 3-Zone Engineering HUD Badges (Top Area - Never Collides with Water or Ground) -->
-            <!-- Zone 1: ถนนในโครงการ (Left) -->
+            <!-- 3-Zone Engineering HUD Badges -->
             <rect x="8" y="6" width="144" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
             <text x="14" y="17" fill="#94a3b8" font-size="8" font-weight="600">🏠 ถนนในโครงการ (LH)</text>
             <text id="svg-inner-txt" x="14" y="30" fill="#10b981" font-size="9" font-weight="700">+0.80 ม. (แห้ง 100%)</text>
 
-            <!-- Zone 2: ถนนหน้าโครงการ (Middle) -->
             <rect x="158" y="6" width="148" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
             <text x="164" y="17" fill="#94a3b8" font-size="8" font-weight="600">🛣️ ถนนหน้าโครงการ (0.00 ม.)</text>
             <text id="svg-outer-txt" x="164" y="30" fill="#f8fafc" font-size="9" font-weight="700">0.00 ม. (รอตรวจ)</text>
 
-            <!-- Zone 3: คลองข้างโครงการ (Right) -->
             <rect x="312" y="6" width="140" height="32" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
             <text x="318" y="17" fill="#94a3b8" font-size="8" font-weight="600">🌊 คลองระบายน้ำข้างเคียง</text>
             <text id="svg-canal-txt" x="318" y="30" fill="#38bdf8" font-size="9" font-weight="700">กำลังเชื่อมต่อ...</text>
@@ -875,14 +921,20 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </div>
       </div>
 
-      <!-- ⛅ 3. ข้อมูลพยากรณ์อากาศและเรดาร์ Real-time (Open-Meteo & TMD) -->
-      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2 shadow-md">
+      <!-- ========================================== -->
+      <!-- ⛅ หมวด 3: สภาพอากาศ ฝน และเรดาร์เตือนภัย (Weather & Early Warning) -->
+      <!-- แหล่งข้อมูล: Open-Meteo GPS Global Satellite & TMD & RainViewer -->
+      <!-- ========================================== -->
+      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-sky-900/50 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
-          <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
-            <span>พยากรณ์อากาศระดับพิกัด (Open-Meteo & TMD)</span>
-          </h3>
-          <span class="text-[10px] text-slate-400">Real-time GPS API</span>
+          <div class="space-y-0.5">
+            <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span>หมวด 3: สภาพอากาศ ฝน และเรดาร์เตือนภัย</span>
+            </h3>
+            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: Open-Meteo GPS Global Satellite & กรมอุตุนิยมวิทยา</p>
+          </div>
+          <span class="text-[10px] text-sky-400 font-mono bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-800/60">GPS Real-time</span>
         </div>
 
         <div class="grid grid-cols-3 gap-2 text-center text-xs">
@@ -937,35 +989,12 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           </div>
         </div>
 
-        <!-- 🌊 Live Telemetry Water Station (ThaiWater / สสน. / ชป.) -->
-        <div class="p-2.5 rounded-xl bg-blue-950/30 border border-blue-800/40 space-y-1.5 text-[11px]">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-sky-300 flex items-center gap-1">
-              <span>🌊 โทรมาตรสด (คลังข้อมูลน้ำแห่งชาติ สสน./ชป.)</span>
-            </span>
-            <span id="livewater-sit-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ปกติ</span>
-          </div>
-          <div class="text-slate-300 flex items-start gap-1">
-            <span class="text-sky-400 shrink-0">📡</span>
-            <div><span id="livewater-name" class="font-semibold text-white">-</span> <span id="livewater-dist" class="text-[10px] text-slate-400"></span></div>
-          </div>
-          <div class="grid grid-cols-2 gap-1.5 pt-1 text-[10px]">
-            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">ระดับน้ำเซ็นเซอร์</span>
-              <span id="livewater-msl" class="font-bold text-white text-xs">-</span>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">ระยะเทียบตลิ่ง</span>
-              <span id="livewater-diff" class="font-bold text-sky-400 text-xs">-</span>
-            </div>
-          </div>
-          <div class="text-[9px] text-slate-400 flex items-center justify-between pt-0.5">
-            <span>ตรวจวัด: <span id="livewater-time" class="font-mono text-slate-300">-</span></span>
-            <a href="https://www.thaiwater.net/" target="_blank" class="text-sky-400 hover:underline">thaiwater.net ↗</a>
-          </div>
-        </div>
+        <!-- Radar Toggle Shortcut -->
+        <button type="button" onclick="toggleRadarLayer()" class="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl bg-blue-900/30 hover:bg-blue-900/50 border border-blue-700/50 text-blue-300 font-semibold text-[11px] transition-all">
+          <span>🌧️ เปิด/ปิด แผ่นเรดาร์ฝนสด RainViewer บนแผนที่</span>
+        </button>
 
-        <!-- 🌐 External Live Surveillance Links (Windy, GISTDA, Flood Hub) -->
+        <!-- External Live Surveillance Links (Windy, GISTDA, Flood Hub) -->
         <div class="pt-1 border-t border-slate-800/80 flex items-center gap-1.5 text-[10px]">
           <a id="link-windy" href="https://www.windy.com" target="_blank" class="flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors" title="เปิดแผนที่ลมและเรดาร์สด Windy">
             <span>🌪️ Windy สด</span>
@@ -979,42 +1008,67 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </div>
       </div>
 
-      <!-- 📋 4. สภาพหน้างานจริงและภาพถ่ายล่าสุด (Field Reality & Inspection Photos) -->
-      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-800 space-y-2.5 shadow-md">
+      <!-- ========================================== -->
+      <!-- 📐 หมวด 4: ข้อมูลวิศวกรรม As-Built & แนวคันกั้นน้ำ (LH Engineering Resilience) -->
+      <!-- แหล่งข้อมูล: แบบก่อสร้างจริง Land & Houses & การสำรวจหมุดระดับ -->
+      <!-- ========================================== -->
+      <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-amber-900/50 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
-          <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>รายงานตรวจเช็คจริงหน้างาน (Field Inspection)</span>
-          </h3>
-          <span id="field-updated-at" class="text-[10px] text-slate-400 font-mono">-</span>
+          <div class="space-y-0.5">
+            <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-lh-gold"></span>
+              <span>หมวด 4: ข้อมูลวิศวกรรม As-Built & แนวคันกั้นน้ำ</span>
+            </h3>
+            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: แบบก่อสร้างจริง Land & Houses & การสำรวจหมุดระดับ</p>
+          </div>
+          <span id="cs-asbuilt-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">📐 As-Built: +0.80 ม.</span>
         </div>
 
-        <!-- Case 1: ยังไม่มีการส่งรายงานจากหน้างานรอบนี้ -->
-        <div id="field-empty-box" class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1.5 hidden">
-          <div class="text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5">
-            <span>⚪ ยังไม่มีการส่งรายงานตรวจเช็คหน้างานในรอบนี้</span>
+        <!-- Engineering Elevation Specs Grid -->
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
+            <span class="text-slate-400 block text-[10px]">🏡 ถนนในโครงการ (As-Built)</span>
+            <div id="spec-inner-elev" class="font-bold text-emerald-400 text-xs">+0.80 ม.</div>
+            <span class="text-[9px] text-slate-500 block">ยกสูงเหนือถนนภายนอก</span>
           </div>
-          <p class="text-[10px] text-slate-500 leading-relaxed">
-            ยังไม่มีเจ้าหน้าที่โครงการส่งผลการสำรวจจริง ข้อมูลที่แสดงประเมินจากโทรมาตรสถานีน้ำใกล้เคียงและแบบก่อสร้างจริง (As-Built)
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
+            <span class="text-slate-400 block text-[10px]">🛡️ สันเนินทางเข้า / ป้อม รปภ.</span>
+            <div id="spec-crest-elev" class="font-bold text-amber-400 text-xs">ไม่มีสันเนิน</div>
+            <span class="text-[9px] text-slate-500 block">แนวคันกั้นน้ำบ่าภายนอก</span>
+          </div>
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
+            <span class="text-slate-400 block text-[10px]">🧱 เขื่อน คสล. ริมคลอง</span>
+            <div id="spec-floodwall" class="font-bold text-sky-400 text-xs">ไม่มีแนวเขื่อน</div>
+            <span class="text-[9px] text-slate-500 block">กำแพงกันน้ำล้นคลอง</span>
+          </div>
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
+            <span class="text-slate-400 block text-[10px]">📏 ระยะปลอดภัย (Freeboard)</span>
+            <div id="spec-freeboard" class="font-bold text-emerald-400 text-xs">+80 ซม.</div>
+            <span class="text-[9px] text-slate-500 block">ความสูงเหนือผิวน้ำภายนอก</span>
+          </div>
+        </div>
+
+        <!-- Benchmark Elevation Reference -->
+        <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-[10px]">
+          <span class="text-slate-400">หมุดอ้างอิงระดับ (Benchmark):</span>
+          <span id="spec-benchmark-msl" class="font-mono text-white font-semibold">อ้างอิงถนน 0.00 ม.</span>
+        </div>
+
+        <!-- วิศวกรรมสังเคราะห์ (Engineering Synthesis Box) -->
+        <div id="dz-synthesis-box" class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-1 text-[11px]">
+          <div class="flex items-center gap-1 font-bold text-[10px] text-lh-gold">
+            <span>💡 บทสรุปวิศวกรรม (Engineering Synthesis):</span>
+          </div>
+          <p id="dz-synthesis-text" class="text-slate-300 text-[11px] leading-relaxed">
+            -
           </p>
         </div>
 
-        <!-- Case 2: มีข้อมูลตรวจเช็คจริงจากหน้างาน -->
-        <div id="field-data-box" class="space-y-1.5 text-[11px] bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-          <div><strong class="text-slate-400">สภาพผิวจราจร:</strong> <span id="field-water" class="text-white">-</span></div>
-          <div><strong class="text-slate-400">สภาพคลอง/ทางน้ำ:</strong> <span id="field-canal" class="text-white">-</span></div>
-          <div><strong class="text-slate-400">สถานะเครื่องสูบน้ำ:</strong> <span id="field-pumps" class="text-white">-</span></div>
-        </div>
-
-        <!-- Photos Grid -->
-        <div id="photos-section" class="space-y-1.5">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>ภาพถ่ายสำรวจหน้างาน (<span id="photo-count">0</span> ภาพ)</span>
-            <span class="text-[10px] text-lh-gold">คลิกเพื่อดูภาพขยาย</span>
-          </div>
-          <div id="photos-grid" class="grid grid-cols-4 gap-1.5">
-            <!-- Dynamic Thumbnails -->
-          </div>
+        <!-- Shortcut to As-Built Elevation Manager -->
+        <div class="pt-1">
+          <a id="btn-asbuilt-mgr" href="/api/flood-report?mode=asbuilt" target="_blank" class="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 transition-all font-semibold text-xs shadow-xs" title="เปิดระบบบันทึกและปรับปรุงค่าระดับวิศวกรรม As-Built">
+            <span>📐 เปิดระบบจัดการระดับวิศวกรรม As-Built Manager ↗</span>
+          </a>
         </div>
       </div>
 
@@ -1054,6 +1108,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     let isRadarActive = false;
     let currentFilterZone = 'all';
     let filterRiskOnly = false;
+    let filterOuterFloodOnly = false;
     let useClustering = true;
     let clusterGroup = null;
     let currentBasemap = 'street';
@@ -1230,6 +1285,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         }
         if (filterRiskOnly) {
           if (p.status !== 'WATCH' && p.status !== 'CRITICAL') return false;
+        }
+        if (filterOuterFloodOnly) {
+          const outerDepth = (p.hydro && p.hydro.outerRoadWaterDepth) || Number(p.floodDepthOuter || 0);
+          if (outerDepth <= 0) return false;
         }
         return true;
       });
@@ -1496,6 +1555,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       const csSensorMsl = document.getElementById('cs-sensor-msl');
       const csSensorDiff = document.getElementById('cs-sensor-diff');
       const csSensorTime = document.getElementById('cs-sensor-time');
+      const csFreshnessBadge = document.getElementById('cs-freshness-badge');
 
       if (p.liveWater && p.liveWater.stationName) {
         if (csLiveDot) csLiveDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
@@ -1507,6 +1567,20 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           csSensorDiff.className = 'font-bold ' + (p.liveWater.isOverflow ? 'text-rose-400' : 'text-sky-400');
         }
         if (csSensorTime) csSensorTime.innerText = p.liveWater.datetime || 'ล่าสุด';
+        if (csFreshnessBadge) {
+          const fresh = p.liveWater.freshness || 'LIVE';
+          if (fresh === 'LIVE') {
+            csFreshnessBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            csFreshnessBadge.innerText = p.liveWater.freshnessBadge || '🟢 สด Realtime';
+          } else if (fresh === 'DELAYED') {
+            csFreshnessBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+            csFreshnessBadge.innerText = p.liveWater.freshnessBadge || '🟡 ล่าช้า';
+          } else {
+            csFreshnessBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30';
+            csFreshnessBadge.innerText = p.liveWater.freshnessBadge || '🔴 ข้อมูลค้าง';
+          }
+          csFreshnessBadge.title = p.liveWater.freshnessText || '';
+        }
       } else {
         if (csLiveDot) csLiveDot.className = 'w-2 h-2 rounded-full bg-slate-500';
         if (csStationName) csStationName.innerText = p.stationName || 'สถานีลุ่มน้ำเจ้าพระยา (สสน./ชป.)';
@@ -1517,6 +1591,10 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
           csSensorDiff.className = 'font-bold text-sky-400';
         }
         if (csSensorTime) csSensorTime.innerText = 'ตามรอบประกาศ';
+        if (csFreshnessBadge) {
+          csFreshnessBadge.className = 'px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700';
+          csFreshnessBadge.innerText = '⚪ รอบประกาศ';
+        }
       }
 
       // Update inner road height & house SVG in cross section
@@ -1638,6 +1716,67 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
       } else {
         photoGrid.innerHTML = '<div class=\"col-span-4 py-2 text-center text-slate-500 text-[10px]\">ไม่มีภาพถ่ายในรายงานรอบนี้</div>';
       }
+      // 1-Click LINE Field Report Share
+      const btnLine = document.getElementById('btn-line-report');
+      if (btnLine) {
+        const outerStatus = outerDepth > 0 ? ('น้ำท่วมขัง ' + outerDepth + ' ซม.') : 'แห้งสนิท (0 ซม.)';
+        const innerStatus = innerDepth > 0 ? ('น้ำท่วมขัง ' + innerDepth + ' ซม.') : 'แห้ง 100%';
+        const stLabel = status === 'NORMAL' ? 'ปกติ' : (status === 'WATCH' ? 'เฝ้าระวัง' : (status === 'CRITICAL' ? 'วิกฤติ' : 'รอตรวจ'));
+        const lineText = encodeURIComponent(
+          '🚨 [รายงานน้ำท่วม LH] ' + p.name + ' (' + p.code + ')\n' +
+          '• พื้นที่: ' + (p.area || '-') + '\n' +
+          '• สถานะ: ' + stLabel + '\n' +
+          '• ถนนหน้าโครงการ: ' + outerStatus + '\n' +
+          '• ถนนในโครงการ: ' + innerStatus + ' (As-Built ยก +' + elevMeters + ' ม.)\n' +
+          '• โทรมาตร: ' + ((p.liveWater && p.liveWater.stationName) ? p.liveWater.stationName : (p.stationName || '-')) + '\n' +
+          '🔗 ตรวจสอบสดบนแผนที่: https://lh-taskflow.vercel.app/api/flood-report?focus=' + p.code
+        );
+        btnLine.href = 'https://line.me/R/share?text=' + lineText;
+      }
+
+      // Populate Pillar 4: As-Built Engineering Specs
+      const specInner = document.getElementById('spec-inner-elev');
+      if (specInner) {
+        const srcText = hydro.innerSource === 'AS_BUILT' ? 'As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? 'วัดจริง' : 'มาตรฐาน');
+        specInner.innerText = elevSign + elevMeters + ' ม. (' + srcText + ')';
+      }
+      const specCrest = document.getElementById('spec-crest-elev');
+      if (specCrest) {
+        if (hydro.hasEntranceCrest && hydro.crestElevation) {
+          specCrest.innerText = '+' + (hydro.crestElevation / 100).toFixed(2) + ' ม.';
+          specCrest.className = 'font-bold text-amber-400 text-xs';
+        } else {
+          specCrest.innerText = 'ไม่มีสันเนิน (เสมอถนน)';
+          specCrest.className = 'font-medium text-slate-400 text-xs';
+        }
+      }
+      const specFloodwall = document.getElementById('spec-floodwall');
+      if (specFloodwall) {
+        if (hydro.hasFloodwall && hydro.floodwallHeightDiff) {
+          specFloodwall.innerText = '+' + Number(hydro.floodwallHeightDiff).toFixed(2) + ' ม. (ริมคลอง)';
+          specFloodwall.className = 'font-bold text-sky-400 text-xs';
+        } else {
+          specFloodwall.innerText = 'ไม่มีแนวเขื่อน';
+          specFloodwall.className = 'font-medium text-slate-400 text-xs';
+        }
+      }
+      const specFreeboard = document.getElementById('spec-freeboard');
+      if (specFreeboard) {
+        if (innerDepth > 0) {
+          specFreeboard.innerText = '-' + innerDepth + ' ซม. (น้ำล้นเข้า)';
+          specFreeboard.className = 'font-bold text-rose-400 text-xs';
+        } else if (safetyMargin > 0) {
+          specFreeboard.innerText = '+' + safetyMargin + ' ซม. เหนือน้ำนอก';
+          specFreeboard.className = 'font-bold text-emerald-400 text-xs';
+        } else {
+          specFreeboard.innerText = '0 ซม. (ปริ่มน้ำ)';
+          specFreeboard.className = 'font-bold text-amber-400 text-xs';
+        }
+      }
+      const specBenchmark = document.getElementById('spec-benchmark-msl');
+      if (specBenchmark) {
+        specBenchmark.innerText = p.asBuiltBenchmarkMSL || 'หมุดท้องถิ่น (0.00 ม.)';
+      }
 
       // Buttons Links
       const btnReport = document.getElementById('btn-full-report');
@@ -1646,6 +1785,11 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         btnReport.style.display = 'flex';
       } else {
         btnReport.style.display = 'none';
+      }
+
+      const btnAsbuilt = document.getElementById('btn-asbuilt-mgr');
+      if (btnAsbuilt) {
+        btnAsbuilt.href = '/api/flood-report?mode=asbuilt';
       }
 
       document.getElementById('btn-gmaps').href = p.googleMapsUrl || \`https://www.google.com/maps/dir/?api=1&destination=\${p.lat},\${p.lon}\`;
@@ -2036,10 +2180,26 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
     function toggleRiskOnly() {
       filterRiskOnly = !filterRiskOnly;
       const btn = document.getElementById('risk-only-btn');
-      if (filterRiskOnly) {
-        btn.className = 'flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500 text-slate-950 border border-amber-400 transition-colors shadow-sm';
-      } else {
-        btn.className = 'flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors';
+      if (btn) {
+        if (filterRiskOnly) {
+          btn.className = 'flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-bold bg-amber-500 text-slate-950 border border-amber-400 transition-all shadow-sm text-center';
+        } else {
+          btn.className = 'flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all text-center';
+        }
+      }
+      renderMarkers();
+    }
+
+    // Toggle Outer Road Flooding Triage Filter
+    function toggleOuterFloodOnly() {
+      filterOuterFloodOnly = !filterOuterFloodOnly;
+      const btn = document.getElementById('outer-flood-btn');
+      if (btn) {
+        if (filterOuterFloodOnly) {
+          btn.className = 'flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-bold bg-rose-500 text-white border border-rose-400 transition-all shadow-sm text-center';
+        } else {
+          btn.className = 'flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-amber-300 hover:text-white border border-slate-700 transition-all text-center';
+        }
       }
       renderMarkers();
     }
