@@ -2409,20 +2409,28 @@ export function generateFloodMapHtml({
       const t = Date.now();
 
       if (tab === 'bma_nongchok') {
-        extLink.href = 'https://weather.bangkok.go.th/radar/RadarNongjok.aspx';
+        extLink.href = 'https://weather.bangkok.go.th/Radar/RadarNongchok.aspx';
         content.innerHTML = \`
-          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
-            <img src="https://weather.bangkok.go.th/Upload/Radar/หนองจอก.png?_t=\${t}" alt="เรดาร์หนองจอก กทม." class="w-full h-auto object-contain mx-auto" onerror="this.onerror=null; this.src='https://weather.bangkok.go.th/Upload/Radar/RadarNongjok.png';"/>
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[320px] flex items-center justify-center">
+            <div id="radar-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-400 gap-2 text-xs">
+              <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              <span>กำลังดึงสัญญาณเรดาร์สด กทม. หนองจอก...</span>
+            </div>
+            <img src="/api/radar?station=nongchok&_t=\${t}" alt="เรดาร์หนองจอก กทม." class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="this.onerror=null; this.src='/api/flood-report?mode=radar&station=nongchok&_t=' + Date.now();"/>
           </div>
-          <p class="text-xs text-slate-300 font-semibold">เรดาร์หนองจอก (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ตะวันออก, ปทุมธานี (รังสิต/ลำลูกกา), และฉะเชิงเทรา</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์หนองจอก (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ตะวันออก, ปทุมธานี (รังสิต/ลำลูกกา), และฉะเชิงเทรา</p>
         \`;
       } else if (tab === 'bma_bangna') {
-        extLink.href = 'https://weather.bangkok.go.th/radar/RadarBangna.aspx';
+        extLink.href = 'https://weather.bangkok.go.th/Radar/RadarNongkam.aspx';
         content.innerHTML = \`
-          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
-            <img src="https://weather.bangkok.go.th/Upload/Radar/บางนา.png?_t=\${t}" alt="เรดาร์บางนา กทม." class="w-full h-auto object-contain mx-auto" onerror="this.onerror=null; this.src='https://weather.bangkok.go.th/Upload/Radar/RadarBangna.png';"/>
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[320px] flex items-center justify-center">
+            <div id="radar-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-400 gap-2 text-xs">
+              <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              <span>กำลังดึงสัญญาณเรดาร์สด กทม. หนองแขม/บางนา...</span>
+            </div>
+            <img src="/api/radar?station=nongkam&_t=\${t}" alt="เรดาร์หนองแขม/บางนา กทม." class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="this.onerror=null; this.src='/api/flood-report?mode=radar&station=nongkam&_t=' + Date.now();"/>
           </div>
-          <p class="text-xs text-slate-300 font-semibold">เรดาร์บางนา (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ใต้, สมุทรปราการ (บางนา/สุขสวัสดิ์), และสมุทรสาคร (พระราม 2)</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์หนองแขม (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ใต้/ฝั่งธนบุรี, สมุทรปราการ (บางนา/สุขสวัสดิ์), และสมุทรสาคร (พระราม 2)</p>
         \`;
       } else if (tab === 'thaiwater') {
         extLink.href = 'https://www.thaiwater.net/weather/radar';
@@ -2430,7 +2438,7 @@ export function generateFloodMapHtml({
           <div class="w-full h-[400px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
             <iframe src="https://www.thaiwater.net/weather/radar" class="w-full h-full border-0 rounded-lg"></iframe>
           </div>
-          <p class="text-xs text-slate-300 font-semibold">คลังข้อมูลน้ำแห่งชาติ (สสน.) เรดาร์รวมภาพดาวเทียมและกลุ่มฝนสดทั่วประเทศ</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">คลังข้อมูลน้ำแห่งชาติ (สสน.) เรดาร์รวมภาพดาวเทียมและกลุ่มฝนสดทั่วประเทศ</p>
         \`;
       } else if (tab === 'windy') {
         extLink.href = 'https://www.windy.com/?weatherRadar,13.754,100.501,8';
@@ -2438,7 +2446,7 @@ export function generateFloodMapHtml({
           <div class="w-full h-[420px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
             <iframe src="https://embed.windy.com/embed2.html?lat=13.754&lon=100.501&detailLat=13.754&detailLon=100.501&width=650&height=450&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" class="w-full h-full border-0 rounded-lg"></iframe>
           </div>
-          <p class="text-xs text-slate-300 font-semibold">Windy Doppler Radar & Lightning (เรดาร์ตรวจจับเมฆฝนและฟ้าผ่าความถี่สูง)</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">Windy Doppler Radar & Lightning (เรดาร์ตรวจจับเมฆฝนและฟ้าผ่าความถี่สูง)</p>
         \`;
       }
     }
@@ -2473,7 +2481,7 @@ export function generateFloodMapHtml({
       <!-- Station Selector Tabs -->
       <div class="px-3 pt-2 border-b border-slate-800 flex gap-1.5 bg-slate-950/60 overflow-x-auto text-xs">
         <button onclick="switchDopplerTab('bma_nongchok')" id="tab-btn-bma_nongchok" class="doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90">กทม. (หนองจอก)</button>
-        <button onclick="switchDopplerTab('bma_bangna')" id="tab-btn-bma_bangna" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">กทม. (บางนา)</button>
+        <button onclick="switchDopplerTab('bma_bangna')" id="tab-btn-bma_bangna" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">กทม. (หนองแขม/บางนา)</button>
         <button onclick="switchDopplerTab('thaiwater')" id="tab-btn-thaiwater" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">สสน. (ThaiWater)</button>
         <button onclick="switchDopplerTab('windy')" id="tab-btn-windy" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">Windy Radar สด</button>
       </div>
