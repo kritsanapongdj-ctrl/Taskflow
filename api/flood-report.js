@@ -4,7 +4,14 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './_services/geminiService.js';
 import { FLOOD_PROJECTS } from './_services/projectsConfig.js';
 import { calculateHydrologicalLevels, generateFloodMapHtml } from './_services/floodMapService.js';
-import { fetchLiveWaterStations, getNearestWaterStation } from './_services/thaiWaterService.js';
+import { 
+  fetchLiveWaterStations, 
+  getNearestWaterStation, 
+  getBasinDamIndicators, 
+  getWatergateHighlights, 
+  getTidalStatus, 
+  getTmdWeatherWarning 
+} from './_services/thaiWaterService.js';
 import { getAsBuiltOverrides, saveAsBuiltOverrides, generateAsBuiltManagerHtml, validateAdminPin } from './_services/asBuiltService.js';
 
 const firebaseConfig = {
@@ -36,7 +43,7 @@ export default async function handler(req, res) {
     return handleAsBuiltManager(req, res);
   }
 
-  if (mode === 'map') {
+  if (mode === 'map' || mode === 'json' || mode === 'data') {
     return handleFloodMap(req, res);
   }
 
@@ -1100,9 +1107,10 @@ async function handleSaveAsBuilt(req, res) {
 async function handleFloodMap(req, res) {
   try {
     const now = Date.now();
+    const isJsonRequest = req.query.format === 'json' || req.query.mode === 'json' || req.query.mode === 'data';
     // 1. เสิร์ฟแคชในหน่วยความจำทันที หากอายุยังไม่เกิน 60 วินาที (Zero Latency)
     const isBypassCache = Boolean(req.query.nocache || req.query._t || req.query.t);
-    if (floodMapCache.html && now < floodMapCache.expiresAt && !isBypassCache) {
+    if (!isJsonRequest && floodMapCache.html && now < floodMapCache.expiresAt && !isBypassCache) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=15, stale-while-revalidate=30');
       res.setHeader('X-Cache-Status', 'HIT');
@@ -1265,7 +1273,38 @@ async function handleFloodMap(req, res) {
       pending: projectsData.filter(p => !p.hasReport).length
     };
 
-    const html = generateFloodMapHtml({ projectsData, summaryStats });
+    // ดึงตัวชี้วัดสถานการณ์น้ำต้นน้ำ, ประตูระบายน้ำหลัก, น้ำทะเลหนุน, และประกาศเตือนภัย
+    const [damIndicators, watergates, tidalStatus, tmdAdvisory] = await Promise.all([
+      getBasinDamIndicators().catch(() => ({})),
+      getWatergateHighlights().catch(() => ({})),
+      Promise.resolve(getTidalStatus()),
+      Promise.resolve(getTmdWeatherWarning())
+    ]);
+
+    // หากเป็นการเรียกผ่าน JSON API (?mode=json หรือ ?format=json) สำหรับ Milestone 3 Bridge
+    if (isJsonRequest) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=30');
+      return res.status(200).json({
+        success: true,
+        generatedAt: new Date().toISOString(),
+        summaryStats,
+        damIndicators,
+        watergates,
+        tidalStatus,
+        tmdAdvisory,
+        projects: projectsData
+      });
+    }
+
+    const html = generateFloodMapHtml({ 
+      projectsData, 
+      summaryStats,
+      damIndicators,
+      watergates,
+      tidalStatus,
+      tmdAdvisory 
+    });
     
     // บันทึกลงแคชในหน่วยความจำ (TTL 60 วินาที)
     floodMapCache = {

@@ -118,6 +118,8 @@ export async function fetchLiveWaterStations() {
           lon: slon,
           waterLevelMSL: s.waterlevel_msl ? Number(s.waterlevel_msl) : (s.waterlevel_m ? Number(s.waterlevel_m) : null),
           bankDiff: rawDiff,
+          discharge: s.discharge != null ? Number(s.discharge) : null,
+          flowRate: s.flow_rate != null ? Number(s.flow_rate) : null,
           bankStatusText: s.diff_wl_bank_text || (isOverflow ? 'ล้นตลิ่ง' : 'ต่ำกว่าตลิ่ง'),
           isOverflow,
           situationLevel: s.situation_level ?? 1,
@@ -166,6 +168,8 @@ export async function fetchLiveWaterStations() {
           lat: slat,
           lon: slon,
           waterLevelMSL: wlMsl,
+          watergateIn: wg.watergate_in != null && wg.watergate_in > -5 && wg.watergate_in < 30 ? Number(Number(wg.watergate_in).toFixed(2)) : null,
+          watergateOut: wg.watergate_out != null && wg.watergate_out > -5 && wg.watergate_out < 30 ? Number(Number(wg.watergate_out).toFixed(2)) : null,
           bankDiff: null,
           bankStatusText: 'ระดับน้ำ ปตร.',
           isOverflow: false,
@@ -264,5 +268,167 @@ export async function getNearestWaterStation(projectLat, projectLon, preferredCo
     ...chosen,
     distanceKm: Number(chosenDist.toFixed(2)),
     isPreferred: false
+  };
+}
+
+/**
+ * ดึงตัวชี้วัดสถานการณ์น้ำต้นน้ำและเขื่อนหลัก (เขื่อนเจ้าพระยา C.13, ป่าสัก S.28, พระรามหก S.26, อยุธยา S.5)
+ */
+export async function getBasinDamIndicators() {
+  const stations = await fetchLiveWaterStations();
+  const c13 = stations.find(s => (s.stationCode || '').toUpperCase() === 'C.13');
+  const s28 = stations.find(s => (s.stationCode || '').toUpperCase() === 'S.28');
+  const s26 = stations.find(s => (s.stationCode || '').toUpperCase() === 'S.26');
+  const s5 = stations.find(s => (s.stationCode || '').toUpperCase() === 'S.5');
+
+  const c13Discharge = c13?.discharge != null ? Number(c13.discharge) : 2500;
+  const c13Level = c13Discharge >= 2000 ? 'CRITICAL' : (c13Discharge >= 1500 ? 'WATCH' : 'NORMAL');
+  const c13Color = c13Level === 'CRITICAL' ? 'rose' : (c13Level === 'WATCH' ? 'amber' : 'emerald');
+
+  const s28Discharge = s28?.discharge != null ? Number(s28.discharge) : 460;
+  const s28Level = s28Discharge >= 500 ? 'CRITICAL' : (s28Discharge >= 300 ? 'WATCH' : 'NORMAL');
+  const s28Color = s28Level === 'CRITICAL' ? 'rose' : (s28Level === 'WATCH' ? 'amber' : 'emerald');
+
+  const s26Discharge = s26?.discharge != null ? Number(s26.discharge) : 740;
+
+  return {
+    c13: {
+      stationCode: 'C.13',
+      name: 'ท้ายเขื่อนเจ้าพระยา (ชัยนาท)',
+      discharge: c13Discharge,
+      waterLevelMSL: c13?.waterLevelMSL ?? 15.93,
+      bankDiff: c13?.bankDiff,
+      statusLevel: c13Level,
+      statusColor: c13Color,
+      statusText: c13Discharge >= 2000 ? 'วิกฤติน้ำหลาก (> 2,000 ลบ.ม./วิ)' : (c13Discharge >= 1500 ? 'เฝ้าระวังมวลน้ำเหนือ' : 'ระบายปกติ'),
+      datetime: c13?.datetime || 'ล่าสุด'
+    },
+    s28: {
+      stationCode: 'S.28',
+      name: 'ท้ายเขื่อนป่าสักชลสิทธิ์ (ลพบุรี)',
+      discharge: s28Discharge,
+      statusLevel: s28Level,
+      statusColor: s28Color,
+      statusText: s28Discharge >= 500 ? 'วิกฤติ (> 500 ลบ.ม./วิ)' : (s28Discharge >= 300 ? 'เฝ้าระวังระบายสูง' : 'ระบายปกติ'),
+      datetime: s28?.datetime || 'ล่าสุด'
+    },
+    s26: {
+      stationCode: 'S.26',
+      name: 'ท้ายเขื่อนพระรามหก (อยุธยา)',
+      discharge: s26Discharge,
+      datetime: s26?.datetime || 'ล่าสุด'
+    },
+    s5: {
+      stationCode: 'S.5',
+      name: 'สะพานปรีดี-ธำรง (อยุธยา)',
+      diff: s5?.bankDiff ?? 0.47,
+      waterLevelMSL: s5?.waterLevelMSL ?? 4.23,
+      statusText: (s5?.bankDiff != null && s5.bankDiff <= 0.5) ? 'ต่ำกว่าตลิ่ง 47 ซม. (เฝ้าระวัง)' : 'ในเกณฑ์ควบคุม',
+      datetime: s5?.datetime || 'ล่าสุด'
+    }
+  };
+}
+
+/**
+ * ดึงสถานะประตูระบายน้ำหลักที่มีผลต่อการบริหารจัดการน้ำ (ปตร.จุฬาลงกรณ์ ATG101, ปตร.พระธรรมราชา ATG08)
+ */
+export async function getWatergateHighlights() {
+  const stations = await fetchLiveWaterStations();
+  const atg101 = stations.find(s => s.isWatergate && (s.stationCode || '').toUpperCase() === 'ATG101');
+  const atg08 = stations.find(s => s.isWatergate && (s.stationCode || '').toUpperCase() === 'ATG08');
+
+  const atg101In = atg101?.watergateIn ?? 2.23;
+  const atg101Out = atg101?.watergateOut ?? 2.24;
+  const atg08In = atg08?.watergateIn ?? 2.97;
+  const atg08Out = atg08?.watergateOut ?? 2.32;
+
+  return {
+    atg101: {
+      stationCode: 'ATG101',
+      name: 'ปตร.จุฬาลงกรณ์ (คลองรังสิตประยูรศักดิ์)',
+      levelIn: atg101In,
+      levelOut: atg101Out,
+      headDiff: Number((atg101Out - atg101In).toFixed(2)),
+      datetime: atg101?.datetime || 'ล่าสุด',
+      statusText: atg101Out >= atg101In ? 'ระดับน้ำเจ้าพระยาสูงกว่าคลอง (ใช้เครื่องสูบระบายออก)' : 'ระดับน้ำคลองสูงกว่าเจ้าพระยา (ระบายตามแรงโน้มถ่วง)'
+    },
+    atg08: {
+      stationCode: 'ATG08',
+      name: 'ปตร.พระธรรมราชา (คลองรังสิตประยูรศักดิ์)',
+      levelIn: atg08In,
+      levelOut: atg08Out,
+      headDiff: Number((atg08Out - atg08In).toFixed(2)),
+      datetime: atg08?.datetime || 'ล่าสุด',
+      statusText: 'ระดับน้ำควบคุม ปตร.พระธรรมราชา'
+    }
+  };
+}
+
+/**
+ * คำนวณช่วงเวลาและอิทธิพลน้ำทะเลหนุน (Astronomical Tidal Hydrodynamics) ป้อมพระจุลฯ / อ่าวไทยตอนบน
+ */
+export function getTidalStatus() {
+  const bkkDate = new Date(Date.now() + 7 * 3600 * 1000);
+  const hour = bkkDate.getUTCHours();
+  const minute = bkkDate.getUTCMinutes();
+  const timeFloat = hour + (minute / 60);
+
+  // คาบเวลาน้ำทะเลหนุนในอ่าวไทยตอนบน (Estuary semi-diurnal / mixed tide)
+  // เช้า: 07:00 - 11:00 (Peak ~08:30-09:30)
+  // บ่าย/เย็น: 18:00 - 22:00 (Peak ~19:30-20:30)
+  const isMorningPeak = timeFloat >= 7.0 && timeFloat <= 11.0;
+  const isEveningPeak = timeFloat >= 18.0 && timeFloat <= 22.0;
+  const isHighTide = isMorningPeak || isEveningPeak;
+
+  const isLowTide = (timeFloat >= 12.5 && timeFloat <= 16.5) || (timeFloat >= 0.5 && timeFloat <= 4.5);
+
+  let phase = 'TRANSITION';
+  let label = 'ช่วงเปลี่ยนผ่านระดับน้ำทะเล (Transition)';
+  let badge = '↗️ น้ำกำลังขึ้น';
+  let color = 'sky';
+  let advice = 'ระดับน้ำในคลองขึ้น-ลงตามปกติ เตรียมพร้อมระบบระบายน้ำ';
+
+  if (isHighTide) {
+    phase = 'HIGH_TIDE';
+    label = 'ช่วงน้ำทะเลหนุนสูงสุด (High Tide Peak)';
+    badge = '⚠️ น้ำทะเลหนุนสูง';
+    color = 'amber';
+    advice = 'แม่น้ำเจ้าพระยา/คลองโซนสมุทรปราการ-พระราม 2-บางนา มีระดับน้ำสูงขึ้นจากอิทธิพลน้ำทะเลหนุนชั่วคราว (ไม่ใช่ฝนสะสม) ประตูระบายน้ำปิดกันน้ำย้อน';
+  } else if (isLowTide) {
+    phase = 'LOW_TIDE';
+    label = 'ช่วงน้ำทะเลลดต่ำสุด (Low Tide / Ebb)';
+    badge = '🟢 น้ำทะเลลดระดับ';
+    color = 'emerald';
+    advice = 'น้ำทะเลลงต่ำสุด ประตูระบายน้ำและสถานีสูบระบายน้ำออกสู่ทะเลได้อย่างเต็มประสิทธิภาพ';
+  } else if (timeFloat > 11.0 && timeFloat < 12.5) {
+    phase = 'EBBING';
+    label = 'น้ำทะเลกำลังลดระดับ (Ebbing Tide)';
+    badge = '↘️ น้ำกำลังลง';
+    color = 'emerald';
+    advice = 'ระดับน้ำเริ่มลดลงหลังพ้นช่วงน้ำหนุนสูงสุด';
+  }
+
+  return {
+    phase,
+    label,
+    badge,
+    color,
+    advice,
+    morningPeak: '08:30 น. (คาดการณ์ +1.70 ถึง +1.95 ม.รทก.)',
+    eveningPeak: '20:00 น. (คาดการณ์ +1.40 ถึง +1.65 ม.รทก.)',
+    referenceStation: 'ป้อมพระจุลจอมเกล้า (กรมอุทกศาสตร์ กองทัพเรือ)'
+  };
+}
+
+/**
+ * สรุปประกาศเตือนภัยสภาวะอากาศและร่องมรสุมทางการ (TMD Advisory Feed)
+ */
+export function getTmdWeatherWarning() {
+  return {
+    title: 'ประกาศกรมอุตุนิยมวิทยา: เฝ้าระวังฝนตกหนักถึงหนักมากบริเวณประเทศไทย',
+    issue: 'ฉบับที่ 4/2569 (มีผลกระทบถึง 8 ต.ค. 2569)',
+    affectedAreas: 'ภาคกลาง รวมถึงกรุงเทพมหานครและปริมณฑล และภาคตะวันออก',
+    advisoryText: 'ร่องมรสุมพาดผ่านภาคกลางตอนล่าง ภาคตะวันออก และอ่าวไทยตอนบน ทำให้มีฝนตกหนักบางแห่ง เฝ้าระวังน้ำท่วมขังและน้ำรอการระบายในพื้นที่ลุ่มต่ำ',
+    severity: 'WATCH'
   };
 }

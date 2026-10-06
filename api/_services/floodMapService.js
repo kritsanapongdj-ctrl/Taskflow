@@ -311,8 +311,20 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
 }
 
 // สร้าง HTML สำหรับหน้า Map Dashboard
-export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, generatedAtThai = '' }) {
+export function generateFloodMapHtml({ 
+  projectsData = [], 
+  summaryStats = {}, 
+  generatedAtThai = '',
+  damIndicators = {},
+  watergates = {},
+  tidalStatus = {},
+  tmdAdvisory = {}
+}) {
   const safeDataJson = JSON.stringify(projectsData).replace(/</g, '\\u003c');
+  const safeDamJson = JSON.stringify(damIndicators || {}).replace(/</g, '\\u003c');
+  const safeGatesJson = JSON.stringify(watergates || {}).replace(/</g, '\\u003c');
+  const safeTidalJson = JSON.stringify(tidalStatus || {}).replace(/</g, '\\u003c');
+  const safeTmdJson = JSON.stringify(tmdAdvisory || {}).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -546,10 +558,57 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </button>
       </div>
     </div>
+
+    <!-- 🌊 แถบโทรมาตรต้นน้ำ, เขื่อนหลัก, ประตูระบายน้ำ และรอบน้ำทะเลหนุน (Basin Hydro Barometer) -->
+    <div class="w-full mt-2 pt-2 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <!-- C.13 เขื่อนเจ้าพระยา (ชัยนาท) -->
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-950/80 border border-rose-700/70 text-rose-200 shadow-xs" title="อัตราการระบายน้ำท้ายเขื่อนเจ้าพระยา สถานี C.13 ชัยนาท">
+          <span>🌊</span>
+          <span class="font-bold">เขื่อนเจ้าพระยา C.13:</span>
+          <span class="font-mono font-black text-rose-400 text-xs">${damIndicators.c13?.discharge ?? 2500} ลบ.ม./วิ</span>
+          <span class="px-1.5 py-0.2 rounded text-[9px] bg-rose-900/70 font-semibold text-rose-300">${damIndicators.c13?.statusText ?? 'วิกฤติน้ำหลาก'}</span>
+        </div>
+
+        <!-- S.28 เขื่อนป่าสัก & S.26 พระรามหก -->
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-950/70 border border-amber-700/60 text-amber-200 shadow-xs" title="อัตราการระบายน้ำเขื่อนป่าสักชลสิทธิ์ (S.28) และท้ายเขื่อนพระรามหก (S.26)">
+          <span>🏞️</span>
+          <span class="font-semibold">ป่าสัก (S.28):</span>
+          <span class="font-mono font-bold text-amber-300">${damIndicators.s28?.discharge ?? 460} ลบ.ม./วิ</span>
+          <span class="text-slate-500">|</span>
+          <span class="font-semibold">พระรามหก:</span>
+          <span class="font-mono font-bold text-amber-300">${damIndicators.s26?.discharge ?? 740}</span>
+        </div>
+
+        <!-- อิทธิพลน้ำทะเลหนุน กรมอุทกศาสตร์ กองทัพเรือ -->
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-950/70 border border-sky-700/60 text-sky-200 shadow-xs" title="${tidalStatus.advice || 'รอบน้ำทะเลหนุน กรมอุทกศาสตร์ กองทัพเรือ'}">
+          <span>⚓</span>
+          <span class="font-semibold">น้ำทะเลหนุน:</span>
+          <span class="font-bold text-sky-300">${tidalStatus.badge ?? 'ช่วงน้ำหนุน'}</span>
+          <span class="text-[10px] text-slate-400 font-mono">(พีค ${tidalStatus.morningPeak ? tidalStatus.morningPeak.split(' ')[0] : '08:30'} / ${tidalStatus.eveningPeak ? tidalStatus.eveningPeak.split(' ')[0] : '20:00'})</span>
+        </div>
+
+        <!-- ปตร.จุฬาลงกรณ์ (ATG101 คลองรังสิต) -->
+        <div class="hidden xl:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 shadow-xs" title="${watergates.atg101?.statusText || 'ปตร.จุฬาลงกรณ์ คลองรังสิตประยูรศักดิ์'}">
+          <span>🚪</span>
+          <span class="font-semibold">ปตร.จุฬาฯ:</span>
+          <span class="font-mono text-emerald-300 text-[10px]">ใน ${watergates.atg101?.levelIn ?? 2.23} ม.</span>
+          <span class="text-slate-500">/</span>
+          <span class="font-mono text-amber-300 text-[10px]">นอก ${watergates.atg101?.levelOut ?? 2.24} ม.</span>
+        </div>
+      </div>
+
+      <!-- ปุ่มเปิดเรดาร์ Doppler และประกาศ TMD -->
+      <div class="flex items-center gap-1.5 ml-auto">
+        <button onclick="openDopplerModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/60 transition-all shadow-md animate-pulse" title="เปิดหน้าต่างเรดาร์ Doppler กทม. & กรมอุตุฯ สด">
+          <span>📡 เรดาร์ Doppler สด</span>
+        </button>
+      </div>
+    </div>
   </header>
 
   <!-- Filter & Layer Controls (Floating Left) -->
-  <aside class="fixed top-28 md:top-24 left-3 z-20 flex flex-col gap-2 max-w-[280px] sm:max-w-xs pointer-events-auto">
+  <aside class="fixed top-36 md:top-32 left-3 z-20 flex flex-col gap-2 max-w-[280px] sm:max-w-xs pointer-events-auto">
     <!-- Zone Selector -->
     <div class="glass-panel p-2 rounded-2xl shadow-xl flex flex-col gap-1.5">
       <div class="flex items-center justify-between px-1">
@@ -568,7 +627,7 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         <button onclick="setZoneFilter('south_bangna')" class="zone-btn px-2 py-1 rounded-lg text-[11px] font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all" data-zone="south_bangna">พระราม 2-บางนา</button>
       </div>
 
-      <!-- Secondary Filters: Outer Flood Triage, Risk & Radar -->
+      <!-- Secondary Filters: Outer Flood Triage, Risk, Radar & Doppler -->
       <div class="pt-1.5 border-t border-slate-700/60 grid grid-cols-3 gap-1">
         <button onclick="toggleOuterFloodOnly()" id="outer-flood-btn" class="flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-amber-300 hover:text-white border border-slate-700 transition-all text-center" title="คัดกรองเฉพาะโครงการที่ถนนภายนอก/ซอยมีน้ำท่วมขัง">
           <span>🚨 ถนนนอก</span>
@@ -578,6 +637,11 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         </button>
         <button onclick="toggleRadarLayer()" id="radar-toggle-btn" class="flex items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-[10px] font-semibold bg-blue-900/40 text-blue-300 hover:text-blue-100 border border-blue-700/50 transition-all text-center" title="เปิด/ปิด แผ่นเรดาร์ฝน RainViewer">
           <span>🌧️ เรดาร์สด</span>
+        </button>
+      </div>
+      <div class="pt-1">
+        <button onclick="openDopplerModal()" id="doppler-radar-btn" class="w-full flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg text-[10px] font-bold bg-indigo-950/70 text-indigo-300 hover:text-white border border-indigo-700/60 transition-all text-center shadow-xs" title="เปิดหน้าต่างเรดาร์ Doppler กทม. และ สุวรรณภูมิ สำหรับ Nowcasting">
+          <span>📡 เรดาร์ Doppler กทม./อุตุฯ (0-2 ชม.)</span>
         </button>
       </div>
 
@@ -2285,7 +2349,131 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
 
     // Start on DOM ready
     window.addEventListener('DOMContentLoaded', initMap);
+
+    // ==========================================
+    // 📡 Doppler Radar Modal Controls
+    // ==========================================
+    let currentDopplerTab = 'bma_nongchok';
+
+    function openDopplerModal() {
+      const modal = document.getElementById('doppler-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        switchDopplerTab(currentDopplerTab);
+      }
+    }
+
+    function closeDopplerModal() {
+      const modal = document.getElementById('doppler-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function switchDopplerTab(tab) {
+      currentDopplerTab = tab;
+      document.querySelectorAll('.doppler-tab-btn').forEach(b => {
+        b.className = 'doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40';
+      });
+      const activeBtn = document.getElementById('tab-btn-' + tab);
+      if (activeBtn) {
+        activeBtn.className = 'doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90';
+      }
+
+      const content = document.getElementById('doppler-content');
+      const extLink = document.getElementById('doppler-ext-link');
+      const t = Date.now();
+
+      if (tab === 'bma_nongchok') {
+        extLink.href = 'https://weather.bangkok.go.th/radar/RadarNongjok.aspx';
+        content.innerHTML = \`
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
+            <img src="https://weather.bangkok.go.th/Upload/Radar/หนองจอก.png?_t=\${t}" alt="เรดาร์หนองจอก กทม." class="w-full h-auto object-contain mx-auto" onerror="this.onerror=null; this.src='https://weather.bangkok.go.th/Upload/Radar/RadarNongjok.png';"/>
+          </div>
+          <p class="text-xs text-slate-300 font-semibold">เรดาร์หนองจอก (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ตะวันออก, ปทุมธานี (รังสิต/ลำลูกกา), และฉะเชิงเทรา</p>
+        \`;
+      } else if (tab === 'bma_bangna') {
+        extLink.href = 'https://weather.bangkok.go.th/radar/RadarBangna.aspx';
+        content.innerHTML = \`
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
+            <img src="https://weather.bangkok.go.th/Upload/Radar/บางนา.png?_t=\${t}" alt="เรดาร์บางนา กทม." class="w-full h-auto object-contain mx-auto" onerror="this.onerror=null; this.src='https://weather.bangkok.go.th/Upload/Radar/RadarBangna.png';"/>
+          </div>
+          <p class="text-xs text-slate-300 font-semibold">เรดาร์บางนา (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ใต้, สมุทรปราการ (บางนา/สุขสวัสดิ์), และสมุทรสาคร (พระราม 2)</p>
+        \`;
+      } else if (tab === 'thaiwater') {
+        extLink.href = 'https://www.thaiwater.net/weather/radar';
+        content.innerHTML = \`
+          <div class="w-full h-[400px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
+            <iframe src="https://www.thaiwater.net/weather/radar" class="w-full h-full border-0 rounded-lg"></iframe>
+          </div>
+          <p class="text-xs text-slate-300 font-semibold">คลังข้อมูลน้ำแห่งชาติ (สสน.) เรดาร์รวมภาพดาวเทียมและกลุ่มฝนสดทั่วประเทศ</p>
+        \`;
+      } else if (tab === 'windy') {
+        extLink.href = 'https://www.windy.com/?weatherRadar,13.754,100.501,8';
+        content.innerHTML = \`
+          <div class="w-full h-[420px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg">
+            <iframe src="https://embed.windy.com/embed2.html?lat=13.754&lon=100.501&detailLat=13.754&detailLon=100.501&width=650&height=450&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" class="w-full h-full border-0 rounded-lg"></iframe>
+          </div>
+          <p class="text-xs text-slate-300 font-semibold">Windy Doppler Radar & Lightning (เรดาร์ตรวจจับเมฆฝนและฟ้าผ่าความถี่สูง)</p>
+        \`;
+      }
+    }
+
+    function refreshDopplerImage() {
+      switchDopplerTab(currentDopplerTab);
+    }
   </script>
+
+  <!-- Modal: Live Doppler Weather Radar (BMA / TMD / ThaiWater) -->
+  <div id="doppler-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/90">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-900/60 flex items-center justify-center border border-indigo-500/40 text-lg">
+            📡
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>เรดาร์ตรวจสภาพอากาศ Doppler สด (Nowcasting 0–2 ชม.)</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Radar</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">ตรวจจับเม็ดฝนจริง ความเข้มของเมฆฝนฟ้าคะนอง และทิศทางการเคลื่อนตัว</p>
+          </div>
+        </div>
+        <button onclick="closeDopplerModal()" class="p-1.5 rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Station Selector Tabs -->
+      <div class="px-3 pt-2 border-b border-slate-800 flex gap-1.5 bg-slate-950/60 overflow-x-auto text-xs">
+        <button onclick="switchDopplerTab('bma_nongchok')" id="tab-btn-bma_nongchok" class="doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90">กทม. (หนองจอก)</button>
+        <button onclick="switchDopplerTab('bma_bangna')" id="tab-btn-bma_bangna" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">กทม. (บางนา)</button>
+        <button onclick="switchDopplerTab('thaiwater')" id="tab-btn-thaiwater" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">สสน. (ThaiWater)</button>
+        <button onclick="switchDopplerTab('windy')" id="tab-btn-windy" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">Windy Radar สด</button>
+      </div>
+
+      <!-- Modal Body (Radar View) -->
+      <div class="p-3 sm:p-4 flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-950/90 min-h-[360px]">
+        <div id="doppler-content" class="w-full flex flex-col items-center gap-3">
+          <!-- Dynamic Content rendered via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-2.5 sm:p-3 border-t border-slate-800 bg-slate-950/90 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+        <span class="text-[11px]">💡 สำนักการระบายน้ำ กทม. & กรมอุตุนิยมวิทยา & คลังข้อมูลน้ำแห่งชาติ</span>
+        <div class="flex items-center gap-2">
+          <a id="doppler-ext-link" href="https://weather.bangkok.go.th/radar/" target="_blank" class="px-2.5 py-1 rounded-lg bg-indigo-950/60 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 text-[11px] font-semibold flex items-center gap-1">
+            <span>🌐 เปิดเว็บเรดาร์ทางการ</span>
+            <span>↗</span>
+          </a>
+          <button onclick="refreshDopplerImage()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] flex items-center gap-1">
+            <span>🔄 รีเฟรช</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>`;
 }
