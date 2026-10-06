@@ -370,105 +370,124 @@ export default function StaffAssessmentReportModal({
           {/* RIGHT COLUMN (7/12 Cols): Field Performance & Intelligence (WHAT) */}
           <div className="col-span-7 flex flex-col gap-2.5">
             
-            {/* Box 3: The Outer Layer Performance */}
-            <div className="p-2.5 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white/92 to-slate-50/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
-              <div className="flex justify-between items-center pb-1.5 border-b border-indigo-100/70">
-                <div className="flex items-center gap-1 text-[#0f2e4a] font-bold text-[11px]">
-                  <Icon name="layers" size={13} className="text-indigo-600" />
-                  <span>6 แกนสมรรถนะผลงานหน้างาน (WHAT)</span>
+            {!outerSummary.isAssessed ? (
+              <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 flex flex-col items-center justify-center text-center gap-2 shadow-xs">
+                <div className="w-10 h-10 rounded-full bg-slate-200/80 flex items-center justify-center text-slate-500">
+                  <Icon name="layers" size={20} />
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
-                  เฉลี่ย {outerSummary.avgOuter} / 10
-                </span>
-              </div>
-
-              {/* Performance DNA Profile Banner */}
-              <div className="p-2 rounded-lg bg-white border border-indigo-100">
-                <div className="flex items-center justify-between gap-1 mb-0.5">
-                  <strong className="text-[10px] text-indigo-950 font-black">
-                    ⭐ {outerSummary.performanceDna.title}
-                  </strong>
-                  <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {outerSummary.performanceDna.tag}
-                  </span>
+                <div>
+                  <h4 className="text-xs font-black text-slate-700">ยังไม่ได้รับการประเมินสมรรถนะหน้างาน 6 แกน (WHAT)</h4>
+                  <p className="text-[9px] text-slate-500 mt-1 max-w-sm leading-relaxed">
+                    รายงานฉบับนี้แสดงเฉพาะสเตตัสศักยภาพตั้งต้น (HOW) หากต้องการดูการเปรียบเทียบผลงานจริง, ช่องว่างศักยภาพ (Gap), และ 9-Box Grid กรุณาบันทึกการประเมิน 6 แกนสมรรถนะ
+                  </p>
                 </div>
-                <p className="text-[8.5px] text-slate-600 leading-snug">
-                  {outerSummary.performanceDna.desc}
-                </p>
+                <div className="text-[8.5px] font-bold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs">
+                  📌 ไปที่เมนู "ทีม & ค่าพลัง" เพื่อกดประเมินสมรรถนะ 6 แกนต่อ
+                </div>
               </div>
-
-              {/* 6 Outer Axes Grid */}
-              <div className="grid grid-cols-3 gap-1.5 text-[8.5px]">
-                {[
-                  { key: 'cx', name: 'รับมือลูกบ้าน & เจรจา', val: outerSummary.actualValues.cx },
-                  { key: 'tech', name: 'วินิจฉัยเชิงช่าง & ระบบ', val: outerSummary.actualValues.tech },
-                  { key: 'sla', name: 'วินัยเวลา & ปิดงาน SLA', val: outerSummary.actualValues.sla },
-                  { key: 'crisis', name: 'ระงับเหตุฉุกเฉินโครงการ', val: outerSummary.actualValues.crisis },
-                  { key: 'resource', name: 'คุมงบ & ผู้รับเหมา/อะไหล่', val: outerSummary.actualValues.resource },
-                  { key: 'innovation', name: 'งานเชิงรุก PM & ดิจิทัล', val: outerSummary.actualValues.innovation }
-                ].map((m) => (
-                  <div key={m.key} className="p-1.5 rounded-lg bg-white border border-slate-200 flex flex-col justify-between">
-                    <div className="text-[8px] font-medium text-slate-500 truncate mb-0.5">
-                      {m.name}
+            ) : (
+              <>
+                {/* Box 3: The Outer Layer Performance */}
+                <div className="p-2.5 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white/92 to-slate-50/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
+                  <div className="flex justify-between items-center pb-1.5 border-b border-indigo-100/70">
+                    <div className="flex items-center gap-1 text-[#0f2e4a] font-bold text-[11px]">
+                      <Icon name="layers" size={13} className="text-indigo-600" />
+                      <span>6 แกนสมรรถนะผลงานหน้างาน (WHAT)</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="w-10 h-1 bg-slate-100 rounded-full overflow-hidden mr-1">
-                        <div
-                          className="h-full bg-indigo-500 rounded-full"
-                          style={{ width: `${(m.val / 10) * 100}%` }}
-                        ></div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
+                      เฉลี่ย {outerSummary.avgOuter} / 10
+                    </span>
+                  </div>
+
+                  {/* Performance DNA Profile Banner */}
+                  <div className="p-2 rounded-lg bg-white border border-indigo-100">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <strong className="text-[10px] text-indigo-950 font-black">
+                        ⭐ {outerSummary.performanceDna.title}
+                      </strong>
+                      <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        {outerSummary.performanceDna.tag}
+                      </span>
+                    </div>
+                    <p className="text-[8.5px] text-slate-600 leading-snug">
+                      {outerSummary.performanceDna.desc}
+                    </p>
+                  </div>
+
+                  {/* 6 Outer Axes Grid */}
+                  <div className="grid grid-cols-3 gap-1.5 text-[8.5px]">
+                    {[
+                      { key: 'cx', name: 'รับมือลูกบ้าน & เจรจา', val: outerSummary.actualValues.cx },
+                      { key: 'tech', name: 'วินิจฉัยเชิงช่าง & ระบบ', val: outerSummary.actualValues.tech },
+                      { key: 'sla', name: 'วินัยเวลา & ปิดงาน SLA', val: outerSummary.actualValues.sla },
+                      { key: 'crisis', name: 'ระงับเหตุฉุกเฉินโครงการ', val: outerSummary.actualValues.crisis },
+                      { key: 'resource', name: 'คุมงบ & ผู้รับเหมา/อะไหล่', val: outerSummary.actualValues.resource },
+                      { key: 'innovation', name: 'งานเชิงรุก PM & ดิจิทัล', val: outerSummary.actualValues.innovation }
+                    ].map((m) => (
+                      <div key={m.key} className="p-1.5 rounded-lg bg-white border border-slate-200 flex flex-col justify-between">
+                        <div className="text-[8px] font-medium text-slate-500 truncate mb-0.5">
+                          {m.name}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="w-10 h-1 bg-slate-100 rounded-full overflow-hidden mr-1">
+                            <div
+                              className="h-full bg-indigo-500 rounded-full"
+                              style={{ width: `${(m.val / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="font-bold text-[#0f2e4a] text-[9px]">{m.val}</span>
+                        </div>
                       </div>
-                      <span className="font-bold text-[#0f2e4a] text-[9px]">{m.val}</span>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Box 4: HOW vs WHAT Gap & 9-Box Grid */}
-            <div className="p-2.5 rounded-xl border border-slate-200 bg-white/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
-              <div className="flex justify-between items-center text-[9.5px] pb-1 border-b border-slate-100">
-                <span className="font-bold text-slate-700">
-                  ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong>
-                </span>
-                <span className="font-bold text-slate-700">
-                  ผลสัมฤทธิ์จริง (WHAT): <strong className="text-indigo-600">{outerSummary.avgOuter}</strong>
-                </span>
-                <span className={`font-bold px-2 py-0.5 rounded-full text-[8.5px] ${
-                  outerSummary.gap >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                }`}>
-                  Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full border ${outerSummary.talentGrid.badge}`}>
-                  📦 {outerSummary.talentGrid.title}
-                </span>
-                <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
-                  {outerSummary.alignmentTitle}
-                </span>
-              </div>
-
-              <p className="text-[8.5px] text-slate-600 leading-snug">
-                {outerSummary.alignmentDesc}
-              </p>
-
-              <div className="p-1.5 rounded-lg bg-purple-50/60 border border-purple-100 text-[8.5px] text-purple-950 leading-snug">
-                <strong>📦 แผนขับเคลื่อน 9-Box Grid:</strong> {outerSummary.talentGrid.action}
-              </div>
-            </div>
-
-            {/* Box 5: Operational Risk Alerts (if any) */}
-            {outerSummary.riskAlerts && outerSummary.riskAlerts.length > 0 && (
-              <div className="space-y-1">
-                {outerSummary.riskAlerts.map((r, i) => (
-                  <div key={i} className="text-[8px] p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 leading-tight">
-                    <strong className="text-rose-900 block font-bold mb-0.5">{r.title}</strong>
-                    <span>{r.desc} <strong className="text-rose-950 font-bold ml-0.5">💡 แนวทาง: {r.advice}</strong></span>
+                {/* Box 4: HOW vs WHAT Gap & 9-Box Grid */}
+                <div className="p-2.5 rounded-xl border border-slate-200 bg-white/92 shadow-xs flex flex-col gap-1.5 backdrop-blur-xs">
+                  <div className="flex justify-between items-center text-[9.5px] pb-1 border-b border-slate-100">
+                    <span className="font-bold text-slate-700">
+                      ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong>
+                    </span>
+                    <span className="font-bold text-slate-700">
+                      ผลสัมฤทธิ์จริง (WHAT): <strong className="text-indigo-600">{outerSummary.avgOuter}</strong>
+                    </span>
+                    <span className={`font-bold px-2 py-0.5 rounded-full text-[8.5px] ${
+                      outerSummary.gap >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}>
+                      Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
+                    </span>
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full border ${outerSummary.talentGrid.badge}`}>
+                      📦 {outerSummary.talentGrid.title}
+                    </span>
+                    <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
+                      {outerSummary.alignmentTitle}
+                    </span>
+                  </div>
+
+                  <p className="text-[8.5px] text-slate-600 leading-snug">
+                    {outerSummary.alignmentDesc}
+                  </p>
+
+                  <div className="p-1.5 rounded-lg bg-purple-50/60 border border-purple-100 text-[8.5px] text-purple-950 leading-snug">
+                    <strong>📦 แผนขับเคลื่อน 9-Box Grid:</strong> {outerSummary.talentGrid.action}
+                  </div>
+                </div>
+
+                {/* Box 5: Operational Risk Alerts (if any) */}
+                {outerSummary.riskAlerts && outerSummary.riskAlerts.length > 0 && (
+                  <div className="space-y-1">
+                    {outerSummary.riskAlerts.map((r, i) => (
+                      <div key={i} className="text-[8px] p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 leading-tight">
+                        <strong className="text-rose-900 block font-bold mb-0.5">{r.title}</strong>
+                        <span>{r.desc} <strong className="text-rose-950 font-bold ml-0.5">💡 แนวทาง: {r.advice}</strong></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Box 6: Operational Assignment & Strategic Pairing (Tight, Compact Layout) */}

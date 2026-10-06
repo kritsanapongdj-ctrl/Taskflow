@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as lucide from 'lucide-react';
-import { analyzeArchetype, generateHeuristicTalentDiagnostic, getRoleTargetProfile } from '../../utils/archetypeEngine';
+import { analyzeArchetype, generateHeuristicTalentDiagnostic, getRoleTargetProfile, analyzeOuterLayer } from '../../utils/archetypeEngine';
 
 const Icon = ({ name, ...props }) => {
   const LucideIcon = lucide[name];
@@ -39,6 +39,14 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
           sen: Number(staff.sen) || 5
         };
 
+        const outerSummary = analyzeOuterLayer(staff, stats);
+        const featurePacket = {
+          subInsights: archAnalysis.subInsights,
+          statInteractions: archAnalysis.statInteractions,
+          roleFitPct: archAnalysis.roleFitPct,
+          outerSummary
+        };
+
         const res = await fetch('/api/talent-assessment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,7 +54,8 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
             staff,
             stats,
             roleName: roleProfile.name,
-            archAnalysis
+            archAnalysis,
+            featurePacket
           })
         });
 

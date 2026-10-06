@@ -21,12 +21,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { staff, stats, roleName, archAnalysis } = req.body || {};
+    const { staff, stats, roleName, archAnalysis, featurePacket } = req.body || {};
     if (!staff || !stats) {
       return res.status(400).json({ error: 'Missing required parameters: staff and stats' });
     }
 
-    const aiResult = await analyzeTalentWithGemini({ staff, stats, roleName, archAnalysis });
+    const aiResult = await analyzeTalentWithGemini({ staff, stats, roleName, archAnalysis, featurePacket });
     if (aiResult) {
       return res.status(200).json({
         success: true,

@@ -388,17 +388,43 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     desc: getDesc(s[0])
   }));
 
+  const STAT_SPECIFIC_ADVICE = {
+    str: {
+      core: 'กำหนด Check-list การตัดสินใจหน้างานให้ชัดเจน และให้หัวหน้าประกบช่วยตัดสินใจในเคสที่มีความเสี่ยงสูง',
+      support: 'จัดคู่หูสายลุยงานคอยช่วยขับเคลื่อนและร่วมลงพื้นที่แก้ไขปัญหาเฉพาะหน้า'
+    },
+    agi: {
+      core: 'ฝึกทักษะการจัดลำดับความสำคัญของใบงานเร่งด่วน (Triage) และตั้งระบบแจ้งเตือนก่อนถึงกำหนด SLA',
+      support: 'ให้ทีมงานช่วยคัดกรองงานด่วนและช่วยกระจายงานเพื่อป้องกันงานค้างสะสม'
+    },
+    dex: {
+      core: 'สร้างระเบียบการตรวจรับงานซ้ำ (Double-check) ก่อนส่งมอบงาน และตรวจสอบการกรอกข้อมูลแปลง/เลขที่อ้างอิงให้ครบ',
+      support: 'ให้เพื่อนร่วมทีมที่ละเอียดเรื่องเอกสารช่วยตรวจทานความถูกต้องก่อนปิดใบงาน'
+    },
+    int: {
+      core: 'จัดติวเข้มการใช้งาน Taskflow และระบบรายงานดิจิทัล รวมถึงการอ่านประวัติงานซ่อมเพื่อวางแผน PM',
+      support: 'ให้คู่หูที่มีความคุ้นเคยกับระบบดิจิทัลช่วยแนะนำขั้นตอนการใช้งานระบบงาน'
+    },
+    con: {
+      core: 'ติดตามภาระงานอย่างใกล้ชิด หลีกเลี่ยงการให้รับงานตึงเครียดต่อเนื่อง และสอนเทคนิคการรับมืออารมณ์',
+      support: 'จัดตารางงานให้มีการสลับผลัดเพื่อป้องกันอาการล้าสะสม และคอยรับฟังข้อติดขัด'
+    },
+    sen: {
+      core: 'ฝึกอบรมศิลปะการเจรจาและ Service Mind ให้คำแนะนำเรื่องการใช้น้ำเสียงและการรับฟังลูกบ้านเชิงรุก',
+      support: 'ในเคสที่ลูกบ้านอารมณ์ร้อน ให้หัวหน้าหรือเพื่อนร่วมทีมที่มี SEN สูงร่วมเข้าเจรจาด้วย'
+    }
+  };
+
   const considerations = sortedStats.filter(s => s[1] <= 4).map(s => {
     const isCore = roleProfile.coreFocus.includes(s[0]);
+    const adviceObj = STAT_SPECIFIC_ADVICE[s[0]] || { core: 'เน้นการประกบดูแล', support: 'จัดคู่หูช่วยเสริม' };
     return {
       key: s[0],
       val: s[1],
       name: STAT_DEFINITIONS[s[0]]?.name || s[0].toUpperCase(),
       isCore,
       roleStatus: isCore ? 'จุดสำคัญของตำแหน่งที่ต้องพัฒนา' : 'จุดสนับสนุน (ทีม/คู่หูช่วยเสริมได้)',
-      advice: isCore 
-        ? `ควรเน้นการโค้ชชิ่งและกำหนด Check-list ตรวจสอบในด้าน ${s[0].toUpperCase()}`
-        : `เป็นธรรมชาติของสายงาน${roleProfile.shortRole} สามารถจัดคู่หูที่ถนัดด้านนี้มาช่วยเสริมได้`
+      advice: isCore ? adviceObj.core : adviceObj.support
     };
   });
 
@@ -517,6 +543,10 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     };
   }
 
+  const roleFitPct = calculateRoleFit(statsObj, roleProfile);
+  const statInteractions = STAT_INTERACTION_RULES.filter(rule => rule.check(statsObj));
+  const subInsights = analyzeSubCriteria(u, rubricsData);
+
   return {
     rawStats,
     sortedStats,
@@ -542,54 +572,278 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     dynamicStrengthLabel,
     dynamicStrengthColor,
     dynamicStrength,
-    actionPlaybook
+    actionPlaybook,
+    roleFitPct,
+    statInteractions,
+    subInsights
   };
+};
+
+export const STAT_INTERACTION_RULES = [
+  {
+    pair: 'agi_dex',
+    check: (s) => (s.agi >= 6 && s.dex <= 4),
+    title: 'เร็วแต่งานอาจหลุดมาตรฐาน (Rapid but Prone to Rework)',
+    desc: 'มีความรวดเร็วในการเข้าถึงงานสูง (AGI) แต่ความละเอียดรอบคอบยังตามไม่ทัน (DEX) เสี่ยงต่องานซ่อมซ้ำหรือเอกสารตีกลับ',
+    coaching: 'เน้นให้หยุดตรวจทานงาน (Self-Check 2 นาทีก่อนปิดเคส) ไม่รีบปิดงานจนขาดความประณีต'
+  },
+  {
+    pair: 'dex_agi',
+    check: (s) => (s.dex >= 6 && s.agi <= 4),
+    title: 'ประณีตแต่งานอาจชะลอตัว (High Precision, Pace Gap)',
+    desc: 'คุณภาพงานละเอียดถูกต้องสูงมาก (DEX) แต่ความเร็วและการปรับตัวยังช้า (AGI) เสี่ยงต่อการหลุดกรอบ SLA เมื่องานชุก',
+    coaching: 'ช่วยจัดลำดับความสำคัญ แนะนำว่างานส่วนใดต้องการความประณีต 100% และส่วนใดต้องการความรวดเร็วตามกรอบเวลา'
+  },
+  {
+    pair: 'str_con',
+    check: (s) => (s.str >= 6 && s.con <= 4),
+    title: 'ลุยแรงแต่หมดพลังไว (High Drive, Stamina Vulnerability)',
+    desc: 'พลังขับเคลื่อนในการตัดสินใจลุยงานสูง (STR) แต่ความทรหดต่อแรงกดดันสะสมยังเปราะบาง (CON) เสี่ยงต่ออาการ Burnout',
+    coaching: 'ควบคุมการกระจายงานไม่ให้ลุยเดี่ยวจนหมดแรง ส่งเสริมการผ่อนคลายและดูแลสภาวะอารมณ์'
+  },
+  {
+    pair: 'con_str',
+    check: (s) => (s.con >= 6 && s.str <= 4),
+    title: 'ทนทานมั่นคงแต่งานเชิงรุกยังชะลอ (Steady Resilience, Low Initiative)',
+    desc: 'อึด ทน นิ่งต่อแรงกดดันได้ดีเยี่ยม (CON) แต่งานเชิงรุกและการตัดสินใจลุยยังขาดพลังผลักดัน (STR)',
+    coaching: 'กระตุ้นความมั่นใจในการกล้าตัดสินใจแก้ปัญหาหน้างาน โดยหัวหน้าคอยเป็นแนวหลังสนับสนุน'
+  },
+  {
+    pair: 'int_sen',
+    check: (s) => (s.int >= 6 && s.sen <= 4),
+    title: 'ตรรกะระบบเป๊ะแต่การสื่อสารอาจแข็งกร้าว (System Logic, Empathy Gap)',
+    desc: 'คิดวิเคราะห์เชิงระบบและใช้เทคโนโลยีเก่ง (INT) แต่มุมมองจิตวิทยาผู้คนและการสื่อสารยังแข็ง (SEN) เสี่ยงต่อข้อขัดแย้งกับลูกบ้าน',
+    coaching: 'ฝึกการใช้ Soft Skills และ Empathy ในการพูดคุย รับฟังความรู้สึกของคู่สนทนาก่อนอธิบายเหตุผลและข้อเท็จจริง'
+  },
+  {
+    pair: 'sen_str',
+    check: (s) => (s.sen >= 6 && s.str <= 4),
+    title: 'เข้าอกเข้าใจคนสูงแต่ไม่เด็ดขาด (Empathetic Diplomat, Reluctant Decision)',
+    desc: 'รับฟังและประสานงานผู้คนได้ราบรื่น (SEN) แต่ขาดความเด็ดขาดในการตัดบทหรือยืนหยัดตามระเบียบ (STR)',
+    coaching: 'ฝึกทักษะการปฏิเสธอย่างสุภาพ (Assertive Communication) ไม่ยอมตามใจลูกบ้านหรือผู้รับเหมาจนกระทบมาตรฐาน'
+  },
+  {
+    pair: 'int_dex',
+    check: (s) => (s.int >= 6 && s.dex <= 4),
+    title: 'เข้าใจหลักการแต่ขาดความแม่นยำหน้างาน (Theoretical Knowledge, Hands-on Deficit)',
+    desc: 'วางแผนและเข้าใจระบบดิจิทัลได้ดี (INT) แต่งานช่างจริงหรือการตรวจงานภาคสนามยังมีความคลาดเคลื่อน (DEX)',
+    coaching: 'ให้ลงมือปฏิบัติจริงคู่กับช่างผู้มีประสบการณ์ เพื่อแปลงความเข้าใจเชิงทฤษฎีสู่ความแม่นยำทางปฏิบัติ'
+  },
+  {
+    pair: 'dex_int',
+    check: (s) => (s.dex >= 6 && s.int <= 4),
+    title: 'ช่างฝีมือประณีตแต่ยังไม่คล่องระบบดิจิทัล (Master Craftsman, Digital Gap)',
+    desc: 'ฝีมือช่างและการลงมือทำละเอียดถูกต้องสูง (DEX) แต่การใช้งาน Taskflow และการจัดการข้อมูลเชิงระบบยังช้า (INT)',
+    coaching: 'สอนใช้งาน Taskflow แบบ Step-by-Step มอบหมายคู่หูคอยประกบด้านการบันทึกระบบ'
+  },
+  {
+    pair: 'str_sen',
+    check: (s) => (s.str >= 6 && s.sen <= 4),
+    title: 'เด็ดขาดลุยงานแต่ขาดความนุ่มนวล (Direct Commander, Blunt Delivery)',
+    desc: 'ตัดสินใจรวดเร็ว งานเดินหน้าได้ดั่งใจ (STR) แต่วิธีการพูดคุยหรือการเจรจาอาจตรงเกินไปจนคู่สนทนารู้สึกกดดัน (SEN)',
+    coaching: 'แนะนำศิลปะการสื่อสารแบบประนีประนอม และให้ระมัดระวังคำพูดในสถานการณ์ที่ลูกบ้านกำลังตึงเครียด'
+  },
+  {
+    pair: 'sen_int',
+    check: (s) => (s.sen >= 6 && s.int <= 4),
+    title: 'มนุษยสัมพันธ์ดีเด่นแต่การวางระบบยังไม่เป็นขั้นตอน (People Person, Process Gap)',
+    desc: 'ลูกบ้านรัก เพื่อนร่วมงานชอบ (SEN) แต่การวางแผนงานเชิงระบบ การทำ PM และการติดตามสถิติยังไม่เป็นระบบ (INT)',
+    coaching: 'ช่วยสร้าง Checklist และตารางเวลาทำงานที่ชัดเจนเพื่อไม่ให้หลงลืมงานเชิงกระบวนการ'
+  }
+];
+
+export const calculateRoleFit = (statsObj, roleProfile) => {
+  if (!roleProfile || !roleProfile.targetStats) return 100;
+  let weightedSum = 0;
+  let totalWeight = 0;
+  
+  STAT_KEYS.forEach(k => {
+    const val = Number(statsObj[k]) || 5;
+    const target = Number(roleProfile.targetStats[k]) || 6;
+    const isCore = (roleProfile.coreFocus || []).includes(k);
+    const weight = isCore ? 2 : 1;
+    const ratio = Math.min(val / target, 1.2);
+    weightedSum += ratio * weight;
+    totalWeight += weight;
+  });
+  
+  return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) : 100;
+};
+
+export const analyzeSubCriteria = (staff, rubrics = rubricsData) => {
+  const innerScores = staff?.innerScores || staff?.subScores;
+  if (!innerScores || typeof innerScores !== 'object') return null;
+  
+  const subInsights = [];
+  STAT_KEYS.forEach(k => {
+    const list = innerScores[k];
+    if (Array.isArray(list) && list.length === 3) {
+      const minVal = Math.min(...list);
+      const maxVal = Math.max(...list);
+      const diff = maxVal - minVal;
+      
+      const statRubrics = rubrics[k] || [];
+      const minIdx = list.indexOf(minVal);
+      const maxIdx = list.indexOf(maxVal);
+      
+      const minCriterion = statRubrics[minIdx];
+      const maxCriterion = statRubrics[maxIdx];
+      
+      const minLevelDesc = minCriterion?.levels?.[String(minVal)] || '';
+      const minNextLevelDesc = minCriterion?.levels?.[String(Math.min(minVal + 1, 10))] || '';
+      const maxLevelDesc = maxCriterion?.levels?.[String(maxVal)] || '';
+      
+      subInsights.push({
+        statKey: k,
+        statName: STAT_DEFINITIONS[k]?.name || k.toUpperCase(),
+        scores: list,
+        minVal,
+        maxVal,
+        variance: diff,
+        hasVariance: diff >= 2,
+        lowestCriterionLabel: minCriterion?.label || `เกณฑ์ย่อยที่ ${minIdx + 1}`,
+        highestCriterionLabel: maxCriterion?.label || `เกณฑ์ย่อยที่ ${maxIdx + 1}`,
+        currentBehaviorText: minLevelDesc,
+        nextGrowthBehaviorText: minNextLevelDesc,
+        strengthBehaviorText: maxLevelDesc
+      });
+    }
+  });
+  
+  return subInsights;
 };
 
 export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesData = defaultArchetypesData, roleInput = null) => {
   const analysis = analyzeArchetype(staff, sets, archetypesData, roleInput);
   if (!analysis) return null;
 
-  const { roleProfile, competencyTier, dynamicStrength, actionPlaybook, signatureStrengths, considerations } = analysis;
+  const { 
+    roleProfile, 
+    competencyTier, 
+    dynamicStrength, 
+    actionPlaybook, 
+    signatureStrengths, 
+    considerations, 
+    roleFitPct = 100, 
+    statInteractions = [], 
+    subInsights = null 
+  } = analysis;
+
+  const statsObj = {
+    str: Number(staff.str) || 5,
+    agi: Number(staff.agi) || 5,
+    dex: Number(staff.dex) || 5,
+    int: Number(staff.int) || 5,
+    con: Number(staff.con) || 5,
+    sen: Number(staff.sen) || 5
+  };
+
+  const outerAnalysis = analyzeOuterLayer(staff, statsObj);
+
   const staffName = staff.name || 'พนักงาน';
   const roleName = roleProfile.name || 'เจ้าหน้าที่ปฏิบัติการ';
 
+  // 1. Overall Verdict (Personalized with Role-Fit & Primary Work Style)
   let overallVerdict = '';
   if (competencyTier.level === 4) {
-    overallVerdict = `${staffName} เป็นบุคลากรระดับต้นแบบ (Benchmark) มีทักษะความเชี่ยวชาญสูงเด่นสอดคล้องกับบทบาท ${roleName} อย่างสมบูรณ์แบบ สามารถปฏิบัติงานได้อย่างเป็นอิสระและเป็นเสาหลักของทีม`;
+    overallVerdict = `${staffName} แสดงความพร้อมต่อบทบาท ${roleName} สูงถึง ${roleFitPct}% จัดอยู่ในระดับต้นแบบขององค์กร (Benchmark) มีทักษะหลักโดดเด่นสมบูรณ์แบบ สามารถปฏิบัติงานได้อย่างอิสระและเป็นเสาหลักถ่ายทอดองค์ความรู้ให้ทีม`;
   } else if (competencyTier.level === 3) {
-    overallVerdict = `${staffName} มีสมรรถนะระดับชำนาญการเฉพาะทาง มีจุดแข็งในการขับเคลื่อนงานตามบทบาท ${roleName} อย่างชัดเจน ผลงานมีความเสถียรและพร้อมพัฒนาสู่บทบาทผู้นำเทคนิค`;
+    overallVerdict = `${staffName} มีความพร้อมต่อบทบาท ${roleName} อยู่ที่ ${roleFitPct}% จัดอยู่ในระดับชำนาญการเฉพาะทาง มีจุดแข็งชัดเจนในการขับเคลื่อนงาน ผลงานมีความเสถียรและพร้อมพัฒนาสู่การเป็นพี่เลี้ยง`;
   } else if (competencyTier.level === 2) {
-    overallVerdict = `${staffName} มีสมรรถนะพื้นฐานครอบคลุมตามมาตรฐานองค์กร (Baseline 5/10) สามารถปฏิบัติงานประจำวันได้ราบรื่น แต่อยู่ในจุดที่ต้องได้รับการชี้แนะเพื่อสร้างจุดเด่นเฉพาะทาง (Spike Skill)`;
+    overallVerdict = `${staffName} มีความพร้อมต่อบทบาท ${roleName} อยู่ที่ ${roleFitPct}% ทักษะผ่านเกณฑ์มาตรฐานการทำงานพื้นฐาน (Universal Baseline 5/10) ครบทุกมิติ แต่ยังไม่มีทักษะโดดเด่นเฉพาะทาง (Spike Skill) แนะนำให้หัวหน้าช่วยกำหนดทิศทางเพื่อสร้างความเชี่ยวชาญ`;
   } else {
-    overallVerdict = `${staffName} กำลังอยู่ในช่วงสร้างสมรรถนะพื้นฐาน (Foundational Stage) สเตตัสส่วนใหญ่ยังไม่ผ่านเกณฑ์มาตรฐานการทำงานอิสระ 5/10 จำเป็นต้องมีระบบพี่เลี้ยงและแผนพัฒนาประกบดูแลอย่างใกล้ชิด`;
+    overallVerdict = `${staffName} กำลังอยู่ในช่วงสร้างสมรรถนะพื้นฐาน (ความพร้อมต่อบทบาท ${roleName}: ${roleFitPct}%) สเตตัสส่วนใหญ่ยังไม่ผ่านเกณฑ์มาตรฐานการทำงานอิสระ 5/10 จำเป็นต้องมีระบบพี่เลี้ยง OJT ประกบดูแลและตรวจสอบอย่างใกล้ชิด`;
   }
 
-  const operationalRisks = considerations.length > 0
-    ? considerations.map(c => `• ${c.name} (${c.val}/10): ${c.advice}`).join('\n')
-    : '• ไม่พบความเสี่ยงวิกฤต: สเตตัสทุกด้านผ่านเกณฑ์มาตรฐานองค์กร (≥ 5/10)';
+  // 2. Verified Strengths (Anchored with Sub-criteria rubric if available)
+  let verifiedStrengths = dynamicStrength;
+  if (subInsights && subInsights.length > 0) {
+    const highestSub = [...subInsights].sort((a, b) => b.maxVal - a.maxVal)[0];
+    if (highestSub && highestSub.maxVal >= 6 && highestSub.strengthBehaviorText) {
+      verifiedStrengths += `\n▶ พฤติกรรมเด่นเชิงประจักษ์: ${highestSub.statName} ในด้าน「${highestSub.highestCriterionLabel}」— ${highestSub.strengthBehaviorText}`;
+    }
+  }
 
-  const nextGrowthMilestone = competencyTier.level === 1
-    ? `ยกระดับสเตตัสในแกนวิกฤต (${considerations[0]?.name || 'งานพื้นฐาน'}) ให้แตะเกณฑ์มาตรฐาน 5/10 ภายใน 30-60 วัน โดยเน้นการปฏิบัติตาม Job Checklist รายวัน`
-    : competencyTier.level === 2
-    ? `เลือกทักษะที่สนใจ 1-2 ด้าน (เช่น ${roleProfile.coreFocus.slice(0, 2).map(k => k.toUpperCase()).join(', ')}) เพื่อผลักดันให้แตะระดับชำนาญการ (≥ 7/10) ภายใน 60 วัน`
-    : competencyTier.level === 3
-    ? `ถ่ายทอดทักษะจุดแข็ง (${signatureStrengths.map(s => s.name).join(', ')}) สู่เพื่อนร่วมทีม และปิดจุดสนับสนุน (${considerations[0]?.name || 'ส่วนประสานงาน'}) ให้แตะมาตรฐาน 5/10`
-    : `พัฒนาหลักสูตรหรือ Best Practice หน้างานของสายงาน ${roleName} เพื่อส่งต่อองค์ความรู้และขยายผลทั่วทั้งโครงการ`;
+  // 3. Operational Risks (Combined with Interaction rules & Outer Can-Do/Will-Do gap)
+  const riskLines = [];
+  if (considerations.length > 0) {
+    considerations.forEach(c => {
+      riskLines.push(`• ${c.name} (${c.val}/10): ${c.advice}`);
+    });
+  } else {
+    riskLines.push('• สเตตัสหลักทุกด้านผ่านเกณฑ์มาตรฐานองค์กร (≥ 5/10)');
+  }
+
+  // Add stat interaction nuances if found
+  if (statInteractions.length > 0) {
+    statInteractions.forEach(inter => {
+      riskLines.push(`⚠️ ความไม่สมดุลคู่ทักษะ (${inter.title}): ${inter.desc}`);
+    });
+  }
+
+  // Add Outer Layer Can-Do vs Will-Do gap if assessed
+  if (outerAnalysis?.isAssessed && outerAnalysis.gapInsights?.length > 0) {
+    outerAnalysis.gapInsights.forEach(gi => {
+      riskLines.push(`⚡ มิติผลงานหน้างาน (${gi.name}): ${gi.text}`);
+    });
+  } else if (outerAnalysis && !outerAnalysis.isAssessed) {
+    riskLines.push('ℹ️ สมรรถนะหน้างาน 6 แกน (The Outer Layer): ยังไม่ได้รับการประเมินผลงานจริง ควรทำแบบประเมินต่อเพื่อวิเคราะห์ความสอดคล้องระหว่างศักยภาพกับผลสัมฤทธิ์');
+  }
+
+  const operationalRisks = riskLines.join('\n');
+
+  // 4. Manager Action Plan
+  let managerActionPlan = `${actionPlaybook.title}\n▶ ${actionPlaybook.desc}`;
+  if (statInteractions.length > 0) {
+    managerActionPlan += `\n▶ จุดเน้นพิเศษ: ${statInteractions[0].coaching}`;
+  }
+
+  // 5. Tailored 1-on-1 Coaching Questions
+  const coachingQuestions = [actionPlaybook.question];
+  if (statInteractions.length > 0) {
+    coachingQuestions.push(`สังเกตเห็นว่าคุณมีจุดเด่นและจุดที่กำลังพัฒนาควบคู่กัน มีขั้นตอนหรือเครื่องมือใดที่คิดว่าจะช่วยลดข้อผิดพลาดในเคสที่ต้องใช้ทั้งสองด้านนี้พร้อมกัน?`);
+  } else if (subInsights && subInsights.length > 0) {
+    const targetSub = subInsights.find(s => s.hasVariance);
+    if (targetSub) {
+      coachingQuestions.push(`ในด้าน ${targetSub.statName} คุณทำ「${targetSub.highestCriterionLabel}」ได้ดีมาก อะไรคือเคล็ดลับ และคิดว่าจะนำมาปรับใช้กับ「${targetSub.lowestCriterionLabel}」ได้อย่างไร?`);
+    } else {
+      coachingQuestions.push(`ในการปฏิบัติงานสัปดาห์ที่ผ่านมา มีเคสหรือปัญหาใดที่ทำให้รู้สึกว่าต้องใช้ทักษะพิเศษในการแก้ไขมากที่สุด?`);
+    }
+  } else {
+    coachingQuestions.push(`ในการปฏิบัติงานสัปดาห์ที่ผ่านมา มีเคสหรือปัญหาใดที่ทำให้รู้สึกว่าต้องใช้ทักษะพิเศษในการแก้ไขมากที่สุด?`);
+  }
+
+  // 6. Next Growth Milestone (Anchored with Next-Level Rubric Text)
+  let nextGrowthMilestone = '';
+  if (subInsights && subInsights.length > 0) {
+    const targetSub = subInsights.find(s => s.minVal <= 5) || subInsights[0];
+    if (targetSub && targetSub.nextGrowthBehaviorText) {
+      nextGrowthMilestone = `ยกระดับทักษะ ${targetSub.statName} ในหัวข้อ「${targetSub.lowestCriterionLabel}」จากระดับ ${targetSub.minVal} สู่เป้าหมายถัดไป: "${targetSub.nextGrowthBehaviorText}" ภายใน 30-60 วัน`;
+    }
+  }
+
+  if (!nextGrowthMilestone) {
+    nextGrowthMilestone = competencyTier.level === 1
+      ? `ยกระดับสเตตัสในแกนวิกฤต (${considerations[0]?.name || 'งานพื้นฐาน'}) ให้แตะเกณฑ์มาตรฐาน 5/10 ภายใน 30-60 วัน โดยเน้นการปฏิบัติตาม Job Checklist รายวัน`
+      : competencyTier.level === 2
+      ? `เลือกทักษะที่สนใจ 1-2 ด้าน (เช่น ${roleProfile.coreFocus.slice(0, 2).map(k => k.toUpperCase()).join(', ')}) เพื่อผลักดันให้แตะระดับชำนาญการ (≥ 7/10) ภายใน 60 วัน`
+      : competencyTier.level === 3
+      ? `ถ่ายทอดทักษะจุดแข็ง (${signatureStrengths.map(s => s.name).join(', ')}) สู่เพื่อนร่วมทีม และปิดจุดสนับสนุน (${considerations[0]?.name || 'ส่วนประสานงาน'}) ให้แตะมาตรฐาน 5/10`
+      : `พัฒนาหลักสูตรหรือ Best Practice หน้างานของสายงาน ${roleName} เพื่อส่งต่อองค์ความรู้และขยายผลทั่วทั้งโครงการ`;
+  }
 
   return {
     overallVerdict,
     competencyTier: `${competencyTier.name} (${competencyTier.thai})`,
     tierLevel: competencyTier.level,
-    verifiedStrengths: dynamicStrength,
+    roleFitPct,
+    verifiedStrengths,
     operationalRisks,
-    managerActionPlan: `${actionPlaybook.title}\n▶ ${actionPlaybook.desc}`,
-    coachingQuestions: [
-      actionPlaybook.question,
-      `ในการปฏิบัติงานสัปดาห์ที่ผ่านมา มีเคสหรือปัญหาใดที่ทำให้รู้สึกว่าต้องใช้ทักษะพิเศษในการแก้ไขมากที่สุด?`
-    ],
+    managerActionPlan,
+    coachingQuestions,
     nextGrowthMilestone,
-    source: 'engine'
+    source: 'engine',
+    isOuterAssessed: outerAnalysis?.isAssessed || false
   };
 };
 
@@ -771,7 +1025,14 @@ export const OUTER_DEFINITIONS = {
   }
 };
 
-export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
+export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
+  const isPreview = options.preview === true || u?._preview === true;
+  const isExplicitAssessed = Boolean(
+    u?.outerAssessed === true ||
+    (u?.outerCustomized && typeof u.outerCustomized === 'object' && Object.values(u.outerCustomized).some(Boolean))
+  );
+  const isAssessed = isPreview || isExplicitAssessed;
+
   const str = Number(statsObj.str) || Number(u.str) || 5;
   const agi = Number(statsObj.agi) || Number(u.agi) || 5;
   const dex = Number(statsObj.dex) || Number(u.dex) || 5;
@@ -787,6 +1048,47 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     resource: Math.round((str + sen) / 2),
     innovation: Math.round((int + sen) / 2)
   };
+
+  const avgInner = (str + agi + dex + int + con + sen) / 6;
+
+  if (!isAssessed) {
+    return {
+      isAssessed: false,
+      autoValues,
+      actualValues: {
+        cx: null,
+        tech: null,
+        sla: null,
+        crisis: null,
+        resource: null,
+        innovation: null
+      },
+      avgInner: Math.round(avgInner * 10) / 10,
+      avgOuter: null,
+      gap: null,
+      alignmentKey: 'unassessed',
+      alignmentTitle: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน',
+      alignmentDesc: 'พนักงานได้รับการประเมินเฉพาะสเตตัสศักยภาพตั้งต้น (HOW) ยังไม่ได้บันทึกผลการประเมิน 6 แกนสมรรถนะหน้างาน (WHAT)',
+      alignmentBadge: 'bg-slate-100 text-slate-600 border-slate-300',
+      coachingAdvice: 'เข้าเมนูประเมินเพื่อกำหนดสมรรถนะ 6 แกนหน้างานจริง ช่วยวัดผลสัมฤทธิ์เทียบกับศักยภาพตั้งต้น',
+      performanceDna: {
+        title: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน',
+        tag: 'รอการประเมิน 6 แกน',
+        desc: 'ยังไม่มีข้อมูลผลสัมฤทธิ์ 6 แกนสมรรถนะหน้างานจริง (Customer Experience, Technical Expertise, Ops & SLA, Crisis Resolution, Resource Control, Innovation & PM)'
+      },
+      topOuter: [],
+      talentGrid: {
+        title: '⏳ รอการประเมินผลงานหน้างาน (WHAT)',
+        desc: 'ต้องประเมินสมรรถนะ 6 แกนก่อน จึงจะสามารถจัดวางใน 9-Box Operational Talent Grid ได้อย่างแม่นยำ',
+        badge: 'bg-slate-100 text-slate-700 border-slate-300',
+        action: 'เปิดเมนูประเมินเพื่อบันทึกผลสัมฤทธิ์ 6 แกนหน้างานจริง'
+      },
+      riskAlerts: [],
+      gapInsights: [],
+      bestFitAssignment: 'รอการประเมินสมรรถนะหน้างาน 6 แกนเพื่อวิเคราะห์ภารกิจที่เหมาะสม',
+      pairingRecommendation: 'รอการประเมินสมรรถนะหน้างานเพื่อวิเคราะห์การจับคู่คู่หู'
+    };
+  }
 
   const actualValues = {
     cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : autoValues.cx,
@@ -806,7 +1108,6 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     { key: 'innovation', name: 'Innovation & PM', fullName: 'Preventive Maintenance & Digital Systems', thai: 'งานเชิงรุก บำรุงรักษาป้องกัน และระบบดิจิทัล', rawVal: (int + sen) / 2, statSum: int + sen }
   ];
 
-  const avgInner = (str + agi + dex + int + con + sen) / 6;
   const avgOuter = Object.values(actualValues).reduce((a, b) => a + b, 0) / 6;
   const gap = Math.round((avgOuter - avgInner) * 10) / 10;
 
@@ -1178,12 +1479,38 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}) => {
     pairingRecommendation = 'ผลงานอยู่ในเกณฑ์มาตรฐาน สามารถปฏิบัติหน้าที่เดี่ยวได้ และหมุนเวียนจับคู่เพื่อเสริมทักษะข้ามสายงาน (Cross-functional)';
   }
 
+  const gapInsights = outerMeta.map(m => {
+    const act = actualValues[m.key];
+    const base = autoValues[m.key];
+    const diff = act - base;
+    let text = '';
+    if (diff >= 2) {
+      text = `ผลงานจริง (${act}/10) โดดเด่นแซงศักยภาพคำนวณ (${base}/10) สะท้อนความขยัน/ประสบการณ์หน้างานเข้มข้น`;
+    } else if (diff <= -2) {
+      text = `ผลงานจริง (${act}/10) ต่ำกว่าศักยภาพคำนวณ (${base}/10) อย่างมีนัยสำคัญ อาจมีอุปสรรคหรือขาดการสนับสนุน`;
+    } else {
+      text = `ผลงานจริง (${act}/10) สอดคล้องกับศักยภาพคำนวณ (${base}/10)`;
+    }
+    return {
+      key: m.key,
+      name: m.name,
+      thai: m.thai,
+      actual: act,
+      baseline: base,
+      diff,
+      text,
+      isSignificantGap: Math.abs(diff) >= 2
+    };
+  }).filter(g => g.isSignificantGap);
+
   return {
+    isAssessed: true,
     autoValues,
     actualValues,
     avgInner: Math.round(avgInner * 10) / 10,
     avgOuter: Math.round(avgOuter * 10) / 10,
     gap,
+    gapInsights,
     alignmentKey,
     alignmentTitle,
     alignmentDesc,

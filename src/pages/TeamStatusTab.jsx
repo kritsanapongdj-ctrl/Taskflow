@@ -350,6 +350,41 @@ export default function TeamStatusTab({
                 {/* The Outer Layer Performance Intelligence */}
                 {(() => {
                   const outerSummary = analyzeOuterLayer(u, statsObj);
+                  if (!outerSummary.isAssessed) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2.5">
+                        <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-900/90 to-indigo-950/40 border border-dashed border-indigo-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+                          <div className="flex items-center gap-2.5">
+                            <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                              <Icon name="layers" size={18} />
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <strong className="text-xs sm:text-sm text-slate-200 font-bold">
+                                  ยังไม่ได้ประเมิน 6 แกนสมรรถนะหน้างาน (WHAT)
+                                </strong>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  รอการประเมิน
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                พนักงานได้รับการประเมินเฉพาะสเตตัสศักยภาพตั้งต้น (HOW) ประเมินผลงาน 6 แกนเพื่อสังเคราะห์ DNA และ 9-Box Grid
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAssessMode(true)}
+                            className="w-full sm:w-auto px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-lg text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5 shrink-0"
+                          >
+                            <Icon name="clipboard-check" size={14} />
+                            <span>+ ประเมินสมรรถนะ 6 แกนต่อ</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2.5">
                       {/* Header & Performance DNA Profile */}
@@ -517,12 +552,18 @@ export default function TeamStatusTab({
                         <div className="w-full mt-2 text-left space-y-1.5 text-[10px]">
                           <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">
                             <div className="flex justify-between items-center mb-1">
-                              <strong className="text-[#e6d0a7] font-black text-xs">{o.performanceDna.title}</strong>
-                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded ${o.alignmentBadge}`}>
-                                {o.alignmentTitle.split(' (')[0]}
+                              <strong className="text-[#e6d0a7] font-black text-xs">
+                                {o.isAssessed ? o.performanceDna.title : 'สเตตัสศักยภาพตั้งต้น (HOW)'}
+                              </strong>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded border ${
+                                o.isAssessed ? o.alignmentBadge : 'bg-slate-800 text-slate-400 border-slate-700'
+                              }`}>
+                                {o.isAssessed ? o.alignmentTitle.split(' (')[0] : 'ยังไม่ประเมิน 6 แกน'}
                               </span>
                             </div>
-                            <p className="text-[9px] text-slate-400 leading-snug">{m.shapeDesc}</p>
+                            <p className="text-[9px] text-slate-400 leading-snug">
+                              {o.isAssessed ? o.performanceDna.desc : `${m.shapeDesc} — ${m.managementAdvice}`}
+                            </p>
                           </div>
                           <div className="flex justify-between items-center text-[9px] text-slate-400 px-1 pt-0.5">
                             <span>พื้นที่ครอบคลุม: <strong className="text-[#e6d0a7]">{m.coveragePct}%</strong></span>
@@ -862,6 +903,23 @@ export default function TeamStatusTab({
               {/* Outer Layer Executive Performance Summary */}
               {(() => {
                 const outerSummary = analyzeOuterLayer(teamForm, statsObj);
+                if (!outerSummary.isAssessed) {
+                  return (
+                    <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-dashed border-slate-300 text-center space-y-2">
+                      <span className="text-xs font-bold text-slate-600 block">ยังไม่ได้ประเมิน 6 แกนสมรรถนะหน้างาน (WHAT)</span>
+                      <p className="text-[10px] text-slate-400">พนักงานยังไม่มีผลการประเมินผลสัมฤทธิ์จริงหน้างาน</p>
+                      <button
+                        type="button"
+                        onClick={() => setAssessMode(true)}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs inline-flex items-center gap-1.5"
+                      >
+                        <Icon name="clipboard-check" size={13} />
+                        <span>เปิดตัวช่วยประเมิน (Wizard)</span>
+                      </button>
+                    </div>
+                  );
+                }
+
                 return (
                   <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-indigo-900/5 via-slate-50 to-indigo-50/40 border border-indigo-200 shadow-sm space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">

@@ -399,7 +399,7 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
 }
 
 // Gemini AI วิเคราะห์ศักยภาพพนักงานเชิงลึก (Talent Development & Coaching Diagnostic)
-export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName = '', archAnalysis = {} }) {
+export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName = '', archAnalysis = {}, featurePacket = {} }) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_API_KEY) return null;
 
@@ -408,15 +408,51 @@ export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName
   const mainStyle = archAnalysis.mainStyle || archAnalysis.identityText || 'Specialist';
   const tierName = archAnalysis.competencyTier?.name || 'Standard';
 
+  const subInsights = featurePacket?.subInsights || archAnalysis?.subInsights || [];
+  const statInteractions = featurePacket?.statInteractions || archAnalysis?.statInteractions || [];
+  const roleFitPct = featurePacket?.roleFitPct || archAnalysis?.roleFitPct || 100;
+  const outerSummary = featurePacket?.outerSummary || null;
+  const isOuterAssessed = Boolean(outerSummary?.isAssessed);
+
+  // Format sub-criteria insights for prompt
+  let subCriteriaContext = 'ไม่มีข้อมูลคะแนนย่อย 3 มิติ';
+  if (Array.isArray(subInsights) && subInsights.length > 0) {
+    subCriteriaContext = subInsights.map(s => {
+      let line = `* ${s.statName}: คะแนนย่อย [${s.scores.join(', ')}] (ต่ำสุด: ${s.minVal}, สูงสุด: ${s.maxVal}, ผลต่าง: ${s.variance})`;
+      if (s.lowestCriterionLabel) line += ` | จุดที่ควรพัฒนา: "${s.lowestCriterionLabel}" (พฤติกรรมปัจจุบัน: "${s.currentBehaviorText}")`;
+      if (s.highestCriterionLabel) line += ` | จุดเด่น: "${s.highestCriterionLabel}" (พฤติกรรมเด่น: "${s.strengthBehaviorText}")`;
+      return line;
+    }).join('\n');
+  }
+
+  // Format stat interactions for prompt
+  let interactionContext = 'ไม่มีความไม่สมดุลของคู่ทักษะ';
+  if (Array.isArray(statInteractions) && statInteractions.length > 0) {
+    interactionContext = statInteractions.map(inter => `* ${inter.title}: ${inter.desc} (คำแนะนำ: ${inter.coaching})`).join('\n');
+  }
+
+  // Format outer layer context
+  let outerLayerContext = 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน 6 แกน (The Outer Layer) - กรุณาวิเคราะห์เฉพาะศักยภาพตั้งต้น (HOW) และแนะนำการสังเกตหน้างาน';
+  if (isOuterAssessed && outerSummary) {
+    const gaps = (outerSummary.gapInsights || []).map(g => `${g.name}: ${g.text}`).join('; ');
+    outerLayerContext = `ได้รับการประเมินสมรรถนะหน้างานจริงแล้ว:
+* ค่าเฉลี่ยผลงานจริง (WHAT): ${outerSummary.avgOuter}/10 vs ศักยภาพตั้งต้น (HOW): ${outerSummary.avgInner}/10 (Gap: ${outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap})
+* สังเคราะห์ Performance DNA: ${outerSummary.performanceDna?.title}
+* รูปแบบ Alignment: ${outerSummary.alignmentTitle}
+* คะแนน 6 แกนจริง: CX=${outerSummary.actualValues?.cx}, TECH=${outerSummary.actualValues?.tech}, SLA=${outerSummary.actualValues?.sla}, CRISIS=${outerSummary.actualValues?.crisis}, RESOURCE=${outerSummary.actualValues?.resource}, INNOVATION=${outerSummary.actualValues?.innovation}
+* ช่องว่าง Can-Do vs Will-Do ที่มีนัยสำคัญ: ${gaps || 'ผลงานและศักยภาพสอดคล้องกันดี'}`;
+  }
+
   const prompt = `คุณคือผู้เชี่ยวชาญระดับสูงด้านการพัฒนาบุคลากร (Senior Talent Development Consultant & Organizational Psychologist) ของบริษัท Land & Houses (LH)
 หน้าที่ของคุณคือ: วิเคราะห์ผลการประเมินศักยภาพพนักงาน (Competency Assessment) จากข้อมูลคะแนนจริงอย่างเป็นกลาง ตรงไปตรงมา และสร้างสรรค์ (Constructive Feedback)
 
 ข้อมูลพนักงาน:
 - ชื่อ: ${staffName}
 - ตำแหน่ง/บทบาท: ${role}
+- ความสอดคล้องกับบทบาทหน้าที่ (Role Fit): ${roleFitPct}%
 - สไตล์การทำงาน (Archetype): ${mainStyle}
 - ระดับสมรรถนะ: ${tierName}
-- คะแนนสมรรถนะ (Core Stats เต็ม 10, เกณฑ์มาตรฐานสากล = 5):
+- คะแนนสมรรถนะหลัก (Core Stats เต็ม 10, เกณฑ์มาตรฐาน = 5):
   * STR (พลังขับเคลื่อน/การตัดสินใจลุยงาน): ${stats.str || 5}/10
   * AGI (ความรวดเร็ว/การปรับตัว): ${stats.agi || 5}/10
   * DEX (ความแม่นยำ/มาตรฐานคุณภาพงาน): ${stats.dex || 5}/10
@@ -427,11 +463,22 @@ export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName
 - สเตตัสที่ผ่านเกณฑ์มาตรฐาน (5-6): ${archAnalysis.standardPass?.map(s => `${s.name} (${s.val}/10)`).join(', ') || 'ไม่มี'}
 - จุดที่ต่ำกว่าเกณฑ์มาตรฐาน (≤4): ${archAnalysis.considerations?.map(s => `${s.name} (${s.val}/10)`).join(', ') || 'ไม่มี (ผ่านเกณฑ์ทุกด้าน)'}
 
+ข้อมูลพฤติกรรมย่อยเชิงลึก (Sub-Criteria Rubric Insights):
+${subCriteriaContext}
+
+ข้อมูลปฏิสัมพันธ์คู่ทักษะ (Stat Interactions):
+${interactionContext}
+
+ข้อมูลสมรรถนะหน้างาน 6 แกน (The Outer Layer):
+${outerLayerContext}
+
 กฎเหล็กในการวิเคราะห์ (HR Professional Guardrails):
-1. หากคะแนนสูงสุด (Max Stat) ไม่ถึง 6: ห้ามระบุว่าเขามี "จุดเด่นเชิงวิชาชีพ" เด็ดขาด ให้ระบุว่าอยู่ในขั้น "กำลังสร้างสมรรถนะพื้นฐาน (Foundational Stage)" และระบุทักษะที่พอมีแววเป็นจุดตั้งต้นในการพัฒนา
-2. หากมีคะแนน ≥ 7: ให้ชื่นชมเป็น "จุดเด่นประจำตัว (Core Strength)" และหาก ≥ 8 ให้ยกย่องเป็น "ความเชี่ยวชาญระดับองค์กร (Mastery)"
-3. หากมีคะแนน ≤ 4: ให้ระบุเป็น "ความเสี่ยงหน้างานจริง (Operational Risk)" โดยเฉพาะผลกระทบต่องานของ ${role}
-4. เขียนคำแนะนำสำหรับหัวหน้างาน (Action Plan) และคำถามที่หัวหน้าควรใช้คุย 1-on-1 โค้ชชิ่ง
+1. กฎการวิเคราะห์ปัจเจกบุคคล (Zero-Template Mandate): ห้ามใช้ข้อความแม่แบบซ้ำๆ ผลวิเคราะห์ต้องสะท้อนข้อมูลจริงจากพฤติกรรมย่อย Rubric, การปฏิสัมพันธ์คู่ทักษะ, และความสอดคล้องต่อบทบาท ${role} ของพนักงานคนนี้โดยเฉพาะ
+2. หากคะแนนสูงสุด (Max Stat) ไม่ถึง 6: ห้ามระบุว่าเขามี "จุดเด่นเชิงวิชาชีพ" เด็ดขาด ให้ระบุว่าอยู่ในขั้น "กำลังสร้างสมรรถนะพื้นฐาน (Foundational Stage)" และระบุทักษะที่พอมีแววเป็นจุดตั้งต้นในการพัฒนา
+3. หากมีคะแนน ≥ 7: ให้ชื่นชมเป็น "จุดเด่นประจำตัว (Core Strength)" และหาก ≥ 8 ให้ยกย่องเป็น "ความเชี่ยวชาญระดับองค์กร (Mastery)"
+4. หากมีคะแนน ≤ 4 หรือมีความไม่สมดุลคู่ทักษะ: ให้ระบุเป็น "ความเสี่ยงหน้างานจริง (Operational Risk)" โดยเฉพาะผลกระทบต่องานของ ${role}
+5. หากยังไม่ได้รับการประเมิน 6 แกนสมรรถนะ: ให้ระบุชัดเจนว่ายังรอการประเมินผลงานหน้างาน และเน้นวิเคราะห์ศักยภาพตั้งต้น
+6. เขียนคำแนะนำสำหรับหัวหน้างาน (Action Plan) และคำถามที่หัวหน้าควรใช้คุย 1-on-1 โค้ชชิ่ง
 
 ตอบกลับเป็น JSON เท่านั้น (Strict JSON object):
 {
@@ -447,26 +494,42 @@ export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName
   "nextGrowthMilestone": "เป้าหมายการพัฒนาตนเองที่เป็นรูปธรรมใน 30-60 วันข้างหน้า"
 }`;
 
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3 }
-      })
-    });
-    const data = await res.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return { ...parsed, source: 'gemini' };
+  const candidateModels = [
+    process.env.GEMINI_MODEL,
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash'
+  ].filter(Boolean).filter((m, i, arr) => arr.indexOf(m) === i);
+
+  for (const model of candidateModels) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 }
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`Gemini Model ${model} returned status ${res.status}:`, errText);
+        continue;
+      }
+
+      const data = await res.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return { ...parsed, source: 'gemini', modelUsed: model };
+      }
+    } catch (modelErr) {
+      console.warn(`Gemini Model ${model} failed:`, modelErr.message || modelErr);
     }
-    return null;
-  } catch (err) {
-    console.error("Gemini Talent Analysis Error:", err);
-    return null;
   }
+
+  return null;
 }
 

@@ -15,6 +15,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   const [innerScores, setInnerScores] = useState({ str: [], agi: [], dex: [], int: [], con: [], sen: [] });
   const [outerScores, setOuterScores] = useState({ cx: 5, tech: 5, sla: 5, crisis: 5, resource: 5, innovation: 5 });
   const [outerCustomized, setOuterCustomized] = useState({ cx: false, tech: false, sla: false, crisis: false, resource: false, innovation: false });
+  const [outerAssessed, setOuterAssessed] = useState(false);
   
   const [activeInnerTab, setActiveInnerTab] = useState('str');
   const [activeOuterTab, setActiveOuterTab] = useState('cx');
@@ -87,6 +88,12 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
         }
       });
 
+      const isAlreadyAssessed = Boolean(
+        staff.outerAssessed === true || 
+        (staff.outerCustomized && typeof staff.outerCustomized === 'object' && Object.values(staff.outerCustomized).some(Boolean))
+      );
+      setOuterAssessed(isAlreadyAssessed);
+
       setOuterScores(initOuter);
       setOuterCustomized(initCustomized);
       setAssessmentSection('inner');
@@ -136,6 +143,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     const val = Math.min(Math.max(Number(value), 1), 10);
     setOuterScores(prev => ({ ...prev, [outerKey]: val }));
     setOuterCustomized(prev => ({ ...prev, [outerKey]: true }));
+    setOuterAssessed(true);
   };
 
   const resetOuterToBaseline = (outerKey) => {
@@ -164,7 +172,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
     sen: calculateAverage('sen')
   };
 
-  const currentOuterAnalysis = analyzeOuterLayer(outerScores, currentInnerStatsObj);
+  const currentOuterAnalysis = analyzeOuterLayer(outerScores, currentInnerStatsObj, { preview: true });
 
   const handleSave = () => {
     const getListAvg = (list) => {
@@ -185,14 +193,26 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
       ...calculatedInner,
       innerScores: JSON.parse(JSON.stringify(innerScores)),
       subScores: JSON.parse(JSON.stringify(innerScores)),
-      cx: outerScores.cx,
-      tech: outerScores.tech,
-      sla: outerScores.sla,
-      crisis: outerScores.crisis,
-      resource: outerScores.resource,
-      innovation: outerScores.innovation,
+      outerAssessed: Boolean(outerAssessed),
       outerCustomized: { ...outerCustomized }
     };
+
+    if (outerAssessed) {
+      payload.cx = outerScores.cx;
+      payload.tech = outerScores.tech;
+      payload.sla = outerScores.sla;
+      payload.crisis = outerScores.crisis;
+      payload.resource = outerScores.resource;
+      payload.innovation = outerScores.innovation;
+    } else {
+      payload.cx = null;
+      payload.tech = null;
+      payload.sla = null;
+      payload.crisis = null;
+      payload.resource = null;
+      payload.innovation = null;
+    }
+
     onSave(payload);
   };
 
@@ -301,7 +321,10 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
 
             <button
               type="button"
-              onClick={() => setAssessmentSection('outer')}
+              onClick={() => {
+                setAssessmentSection('outer');
+                setOuterAssessed(true);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
                 assessmentSection === 'outer'
                   ? 'bg-white text-indigo-900 shadow-sm'
@@ -310,9 +333,15 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
             >
               <Icon name="layers" size={16} className={assessmentSection === 'outer' ? 'text-indigo-600' : 'text-slate-400'} />
               <span>2. สมรรถนะหน้างาน (WHAT)</span>
-              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-indigo-200">
-                เฉลี่ย {avgOuterScore}
-              </span>
+              {outerAssessed ? (
+                <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-indigo-200">
+                  เฉลี่ย {avgOuterScore}
+                </span>
+              ) : (
+                <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold border border-amber-300">
+                  รอประเมิน
+                </span>
+              )}
             </button>
           </div>
 
@@ -429,10 +458,13 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
                 <div className="flex justify-end pt-2">
                   <button
                     type="button"
-                    onClick={() => setAssessmentSection('outer')}
+                    onClick={() => {
+                      setAssessmentSection('outer');
+                      setOuterAssessed(true);
+                    }}
                     className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
                   >
-                    <span>ถัดไป: ประเมินสมรรถนะหน้างาน (Outer Layer)</span>
+                    <span>ถัดไป: ประเมินสมรรถนะหน้างาน 6 แกน (WHAT)</span>
                     <Icon name="chevron-right" size={16} />
                   </button>
                 </div>
@@ -500,6 +532,22 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
               {/* Main Content Area for Outer Layer */}
               <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-white space-y-5">
                 
+                {!outerAssessed && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center justify-between gap-2 text-amber-800 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Icon name="info" size={16} className="text-amber-600 shrink-0" />
+                      <span>พนักงานยังไม่ได้รับการประเมินสมรรถนะ 6 แกนหน้างานจริง เลือกระดับสมรรถนะเพื่อยืนยันบันทึกผลงาน</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOuterAssessed(true)}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs shrink-0 shadow-xs"
+                    >
+                      ยืนยันเริ่มประเมิน 6 แกน
+                    </button>
+                  </div>
+                )}
+
                 {/* Outer Axis Header */}
                 <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/70 via-slate-50 to-indigo-50/40 border border-indigo-100">
                   <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
