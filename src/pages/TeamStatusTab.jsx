@@ -4,6 +4,8 @@ import ClassEmblem from '../ClassEmblem';
 import AssessmentModal from '../AssessmentModal';
 import RadarChart from '../components/charts/RadarChart';
 import StaffAssessmentReportModal from '../components/reports/StaffAssessmentReportModal';
+import AITalentAdvisorModal from '../components/modals/AITalentAdvisorModal';
+import TeamCalibrationModal from '../components/modals/TeamCalibrationModal';
 import archetypesData from '../data/archetypes.json';
 import { 
   calculateArchetypeKey,
@@ -47,6 +49,8 @@ export default function TeamStatusTab({
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
   const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
   const [staffReportModalOpen, setStaffReportModalOpen] = useState(false);
+  const [aiAdvisorModalOpen, setAiAdvisorModalOpen] = useState(false);
+  const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
     if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
 
     const sList = sets.staffStats || [];
@@ -162,15 +166,51 @@ export default function TeamStatusTab({
       const flavorText = flavorMap[prefixText] || '';
 
       const bottomDescText = (
-        <span className="flex flex-col gap-1.5 mt-2 bg-stone-900/40 p-2.5 rounded-lg border border-stone-800/50">
-          {archObj.strengths && archObj.strengths !== '-' && (
-            <span className="flex items-start"><span className="text-emerald-400 font-bold mr-1 shrink-0">จุดเด่นของสายอาชีพ:</span> <span>{archObj.strengths}</span></span>
-          )}
-          {archObj.weaknesses && archObj.weaknesses !== '-' && (
-            <span className="flex items-start"><span className="text-rose-400 font-bold mr-1 shrink-0">จุดควรระวังประจำสาย:</span> <span>{archObj.weaknesses}</span></span>
-          )}
+        <span className="flex flex-col gap-2 mt-2 bg-stone-900/60 p-2.5 rounded-lg border border-stone-800/80">
+          {/* Tier & Assessment Badge */}
+          <div className="flex items-center justify-between gap-2 pb-1 border-b border-stone-800/60">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${archAnalysis.competencyTier?.badgeColor || 'text-sky-300 bg-sky-950/60 border-sky-800'}`}>
+              {archAnalysis.competencyTier?.name} ({archAnalysis.competencyTier?.thai})
+            </span>
+            <button
+              type="button"
+              onClick={() => setAiAdvisorModalOpen(true)}
+              className="text-[10px] font-bold px-2 py-0.5 rounded bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 flex items-center gap-1 shadow-xs transition"
+            >
+              <Icon name="sparkles" size={11} />
+              <span>วิเคราะห์เชิงลึก AI</span>
+            </button>
+          </div>
+
+          {/* Dynamic Strengths / Baseline Status */}
+          <span className="flex items-start text-xs leading-relaxed">
+            <span className={`${archAnalysis.dynamicStrengthColor || 'text-emerald-400'} font-bold mr-1 shrink-0`}>
+              {archAnalysis.dynamicStrengthLabel || 'จุดเด่นของสายอาชีพ:'}
+            </span>
+            <span className="text-stone-300">{archAnalysis.dynamicStrength || archObj.strengths}</span>
+          </span>
+
+          {/* Dynamic Weakness / Critical Deficit */}
           {archAnalysis.dynamicWeakness && (
-            <span className="flex items-start"><span className={`font-bold mr-1 shrink-0 ${archAnalysis.weaknessColor || 'text-amber-400'}`}>{archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:'}</span> <span>{archAnalysis.dynamicWeakness}</span></span>
+            <span className="flex items-start text-xs leading-relaxed">
+              <span className={`font-bold mr-1 shrink-0 ${archAnalysis.weaknessColor || 'text-amber-400'}`}>
+                {archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:'}
+              </span>
+              <span className="text-stone-300">{archAnalysis.dynamicWeakness}</span>
+            </span>
+          )}
+
+          {/* Action Playbook for Managers */}
+          {archAnalysis.actionPlaybook && (
+            <div className="mt-1 pt-1.5 border-t border-stone-800/60 flex items-center justify-between text-[10px]">
+              <span className="text-stone-400 flex items-center gap-1">
+                <span className="text-amber-400 font-bold">💡 คำแนะนำหัวหน้า:</span>
+                <strong className="text-stone-200">{archAnalysis.actionPlaybook.title}</strong>
+              </span>
+              <span className={`px-1.5 py-0.2 rounded border text-[9px] font-bold ${archAnalysis.actionPlaybook.color}`}>
+                {archAnalysis.actionPlaybook.tag}
+              </span>
+            </div>
           )}
         </span>
       );
@@ -218,6 +258,15 @@ export default function TeamStatusTab({
 
            <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
               <div className="absolute top-4 right-4 z-20 flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setAiAdvisorModalOpen(true)} 
+                    title="วิเคราะห์ศักยภาพเชิงลึกด้วย AI (AI Talent Coach)" 
+                    className="bg-gradient-to-r from-amber-500/20 to-amber-600/30 hover:from-amber-500/40 hover:to-amber-600/50 border border-amber-400/40 text-amber-300 hover:text-white px-2.5 py-1.5 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(245,158,11,0.2)] flex items-center gap-1.5 text-xs font-bold"
+                  >
+                    <Icon name="sparkles" size={15} className="text-amber-300" />
+                    <span className="hidden sm:inline">AI วิเคราะห์</span>
+                  </button>
                   <button 
                     type="button" 
                     onClick={() => setStaffReportModalOpen(true)} 
@@ -904,9 +953,17 @@ export default function TeamStatusTab({
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
         <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
-          <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-            <h3 className="font-bold text-[#0f2e4a]">รายชื่อทีมงาน</h3>
-            <div className="flex gap-2">
+          <div className="p-3 sm:p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl gap-1">
+            <h3 className="font-bold text-[#0f2e4a] text-sm truncate">รายชื่อทีมงาน</h3>
+            <div className="flex items-center gap-1.5 shrink-0">
+               <button 
+                 type="button" 
+                 onClick={() => setCalibrationModalOpen(true)} 
+                 title="ตรวจสอบและเทียบระดับศักยภาพทั้งทีม (Talent Calibration)"
+                 className="bg-slate-800 hover:bg-slate-900 text-amber-300 text-[11px] px-2 py-1 rounded flex items-center transition shadow-xs font-bold border border-slate-700"
+               >
+                 <Icon name="sliders" size={11} className="mr-1 text-amber-400" /> ตรวจสอบทีม
+               </button>
                <label className="bg-indigo-600 text-white text-[11px] px-2 py-1 rounded hover:bg-indigo-700 cursor-pointer flex items-center transition shadow-sm">
                  <Icon name="upload" size={12} className="mr-1" /> Excel
                  <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
@@ -1127,6 +1184,24 @@ export default function TeamStatusTab({
           staff={teamForm?.id ? teamForm : selTeam} 
           sets={sets} 
           Icon={Icon} 
+        />
+        <AITalentAdvisorModal
+          isOpen={aiAdvisorModalOpen}
+          onClose={() => setAiAdvisorModalOpen(false)}
+          staff={teamForm?.id ? teamForm : selTeam}
+          sets={sets}
+          archetypesData={archetypesData}
+        />
+        <TeamCalibrationModal
+          isOpen={calibrationModalOpen}
+          onClose={() => setCalibrationModalOpen(false)}
+          staffList={sList}
+          sets={sets}
+          archetypesData={archetypesData}
+          onSelectStaff={(staff) => {
+            setSelTeam(staff);
+            setTeamForm({ ...staff });
+          }}
         />
       </div>
     );

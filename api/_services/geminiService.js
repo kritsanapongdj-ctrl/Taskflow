@@ -398,3 +398,75 @@ export async function analyzeFloodReportWithGemini({ project, weather, notes, ph
   }
 }
 
+// Gemini AI วิเคราะห์ศักยภาพพนักงานเชิงลึก (Talent Development & Coaching Diagnostic)
+export async function analyzeTalentWithGemini({ staff = {}, stats = {}, roleName = '', archAnalysis = {} }) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) return null;
+
+  const staffName = staff.name || 'พนักงาน';
+  const role = roleName || 'ช่างเทคนิค/เจ้าหน้าที่บริการ';
+  const mainStyle = archAnalysis.mainStyle || archAnalysis.identityText || 'Specialist';
+  const tierName = archAnalysis.competencyTier?.name || 'Standard';
+
+  const prompt = `คุณคือผู้เชี่ยวชาญระดับสูงด้านการพัฒนาบุคลากร (Senior Talent Development Consultant & Organizational Psychologist) ของบริษัท Land & Houses (LH)
+หน้าที่ของคุณคือ: วิเคราะห์ผลการประเมินศักยภาพพนักงาน (Competency Assessment) จากข้อมูลคะแนนจริงอย่างเป็นกลาง ตรงไปตรงมา และสร้างสรรค์ (Constructive Feedback)
+
+ข้อมูลพนักงาน:
+- ชื่อ: ${staffName}
+- ตำแหน่ง/บทบาท: ${role}
+- สไตล์การทำงาน (Archetype): ${mainStyle}
+- ระดับสมรรถนะ: ${tierName}
+- คะแนนสมรรถนะ (Core Stats เต็ม 10, เกณฑ์มาตรฐานสากล = 5):
+  * STR (พลังขับเคลื่อน/การตัดสินใจลุยงาน): ${stats.str || 5}/10
+  * AGI (ความรวดเร็ว/การปรับตัว): ${stats.agi || 5}/10
+  * DEX (ความแม่นยำ/มาตรฐานคุณภาพงาน): ${stats.dex || 5}/10
+  * INT (ระบบเทคโนโลยี/การจัดการ): ${stats.int || 5}/10
+  * CON (ความทรหด/การคุมอารมณ์): ${stats.con || 5}/10
+  * SEN (การเจรจา/ความเข้าใจผู้คน): ${stats.sen || 5}/10
+- จุดเด่นประจำตัวที่คะแนนถึงเกณฑ์ (≥7): ${archAnalysis.signatureStrengths?.map(s => `${s.name} (${s.val}/10)`).join(', ') || 'ไม่มี (ยังไม่มีค่าใดแตะเกณฑ์เชี่ยวชาญ)'}
+- สเตตัสที่ผ่านเกณฑ์มาตรฐาน (5-6): ${archAnalysis.standardPass?.map(s => `${s.name} (${s.val}/10)`).join(', ') || 'ไม่มี'}
+- จุดที่ต่ำกว่าเกณฑ์มาตรฐาน (≤4): ${archAnalysis.considerations?.map(s => `${s.name} (${s.val}/10)`).join(', ') || 'ไม่มี (ผ่านเกณฑ์ทุกด้าน)'}
+
+กฎเหล็กในการวิเคราะห์ (HR Professional Guardrails):
+1. หากคะแนนสูงสุด (Max Stat) ไม่ถึง 6: ห้ามระบุว่าเขามี "จุดเด่นเชิงวิชาชีพ" เด็ดขาด ให้ระบุว่าอยู่ในขั้น "กำลังสร้างสมรรถนะพื้นฐาน (Foundational Stage)" และระบุทักษะที่พอมีแววเป็นจุดตั้งต้นในการพัฒนา
+2. หากมีคะแนน ≥ 7: ให้ชื่นชมเป็น "จุดเด่นประจำตัว (Core Strength)" และหาก ≥ 8 ให้ยกย่องเป็น "ความเชี่ยวชาญระดับองค์กร (Mastery)"
+3. หากมีคะแนน ≤ 4: ให้ระบุเป็น "ความเสี่ยงหน้างานจริง (Operational Risk)" โดยเฉพาะผลกระทบต่องานของ ${role}
+4. เขียนคำแนะนำสำหรับหัวหน้างาน (Action Plan) และคำถามที่หัวหน้าควรใช้คุย 1-on-1 โค้ชชิ่ง
+
+ตอบกลับเป็น JSON เท่านั้น (Strict JSON object):
+{
+  "overallVerdict": "สรุปภาพรวมความพร้อมและระดับสมรรถนะในบทบาทปัจจุบัน 1-2 ประโยค",
+  "competencyTier": "Tier 1: Foundational / Tier 2: Developing Baseline / Tier 3: Proficient Specialist / Tier 4: Master Benchmark",
+  "verifiedStrengths": "จุดเด่นจริงที่พิสูจน์ได้จากคะแนน (หรือถ้าคะแนนยังไม่ถึง ให้ระบุว่าอยู่ระหว่างสร้างพื้นฐานพร้อมทักษะที่มีแวว)",
+  "operationalRisks": "จุดควรระวังและความเสี่ยงที่อาจเกิดขึ้นในการทำงานจริงหน้างาน",
+  "managerActionPlan": "แนวทางการบริหารจัดการและมอบหมายงานที่หัวหน้าควรใช้กับพนักงานคนนี้",
+  "coachingQuestions": [
+    "คำถามที่ 1 ที่หัวหน้าควรใช้ถามเพื่อโค้ชชิ่ง",
+    "คำถามที่ 2 ที่หัวหน้าควรใช้ถามเพื่อโค้ชชิ่ง"
+  ],
+  "nextGrowthMilestone": "เป้าหมายการพัฒนาตนเองที่เป็นรูปธรรมใน 30-60 วันข้างหน้า"
+}`;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3 }
+      })
+    });
+    const data = await res.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return { ...parsed, source: 'gemini' };
+    }
+    return null;
+  } catch (err) {
+    console.error("Gemini Talent Analysis Error:", err);
+    return null;
+  }
+}
+

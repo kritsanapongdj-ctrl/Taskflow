@@ -402,6 +402,121 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     };
   });
 
+  // --- Score-Tiered Competency Framework (HR Calibration Standard) ---
+  let competencyTier = {
+    level: 2,
+    code: 'tier2',
+    name: 'Tier 2: Baseline Developing',
+    thai: 'ระดับสมรรถนะพื้นฐาน (กำลังพัฒนา)',
+    badgeColor: 'text-sky-300 bg-sky-950/60 border-sky-800'
+  };
+
+  if (maxStat < 5) {
+    competencyTier = {
+      level: 1,
+      code: 'tier1',
+      name: 'Tier 1: Foundational Stage',
+      thai: 'ระดับสร้างพื้นฐาน (ยังไม่ผ่านเกณฑ์ 5/10)',
+      badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-800'
+    };
+  } else if (maxStat >= 8 && minStat >= 5) {
+    competencyTier = {
+      level: 4,
+      code: 'tier4',
+      name: 'Tier 4: Master Benchmark',
+      thai: 'ระดับเชี่ยวชาญพิเศษ (ต้นแบบองค์กร)',
+      badgeColor: 'text-emerald-300 bg-emerald-950/60 border-emerald-800'
+    };
+  } else if (maxStat >= 7 || (maxStat >= 6 && minStat >= 4)) {
+    competencyTier = {
+      level: 3,
+      code: 'tier3',
+      name: 'Tier 3: Proficient Specialist',
+      thai: 'ระดับชำนาญการเฉพาะทาง',
+      badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-800'
+    };
+  }
+
+  // --- Dynamic Strengths Calculation (Eliminating False Strengths) ---
+  let dynamicStrengthLabel = 'จุดเด่นของสายอาชีพ:';
+  let dynamicStrengthColor = 'text-emerald-400';
+  let dynamicStrength = '';
+
+  if (maxStat < 5) {
+    dynamicStrengthLabel = 'สถานะสมรรถนะ:';
+    dynamicStrengthColor = 'text-amber-400';
+    const topStat = sortedStats[0];
+    const topStatName = STAT_DEFINITIONS[topStat[0]]?.name || topStat[0].toUpperCase();
+    dynamicStrength = `อยู่ระหว่างสร้างสมรรถนะพื้นฐาน (ทุกค่าต่ำกว่าเกณฑ์มาตรฐาน 5/10) ยังไม่มีจุดเด่นระดับปฏิบัติการอิสระ${topStat[1] >= 3 ? ` • ศักยภาพเริ่มต้นที่พอมีแววเพื่อใช้เป็นจุดตั้งต้นในการพัฒนา: ${topStatName} (${topStat[1]}/10)` : ''}`;
+  } else if (signatureStrengths.length === 0) {
+    if (minStat >= 4 && maxStat <= 5) {
+      dynamicStrengthLabel = 'ระดับสมรรถนะพื้นฐาน:';
+      dynamicStrengthColor = 'text-sky-300';
+      dynamicStrength = 'ทักษะผ่านเกณฑ์การทำงานทั่วไปตามมาตรฐานองค์กร (Baseline 5/10) ครบทุกมิติ แต่ยังไม่มีทักษะโดดเด่นเฉพาะทาง (Spike Skill) แนะนำให้ค้นหาความถนัดเพื่อเลือกสายทางเฉพาะด้าน';
+    } else {
+      dynamicStrengthLabel = 'สมรรถนะระดับปฏิบัติการ (5-6):';
+      dynamicStrengthColor = 'text-emerald-400';
+      dynamicStrength = standardPass.map(s => `${s.name} (${s.val}/10)`).join(', ') + ' — ปฏิบัติงานตามกรอบมาตรฐานได้ครบถ้วน';
+    }
+  } else {
+    if (maxStat >= 8) {
+      dynamicStrengthLabel = 'จุดเด่นระดับเชี่ยวชาญพิเศษ (≥ 8):';
+      dynamicStrengthColor = 'text-emerald-300 font-bold';
+    } else {
+      dynamicStrengthLabel = 'จุดเด่นประจำตัว (≥ 7):';
+      dynamicStrengthColor = 'text-emerald-400 font-bold';
+    }
+    dynamicStrength = signatureStrengths.map(s => `${s.name} (${s.val}/10: ${s.desc})`).join(' | ');
+  }
+
+  // --- Action Playbook for Managers (The 4-Box Talent Action Framework) ---
+  let actionPlaybook = {
+    type: 'specialize',
+    title: 'ส่งเสริมการสร้างความเชี่ยวชาญเฉพาะด้าน (Specialization Track)',
+    tag: 'ค้นหาความถนัด',
+    color: 'text-sky-400 border-sky-700 bg-sky-950/30',
+    desc: 'มอบหมายงานหรือโปรเจกต์ที่หลากหลาย เพื่อให้ค้นพบทักษะที่ตนเองสนใจและถนัดที่สุด พัฒนาจาก Generalist สู่ Specialist',
+    question: 'งานประเภทไหนที่ทำแล้วรู้สึกท้าทายและอยากพัฒนาให้เก่งขึ้นเป็นพิเศษ?'
+  };
+
+  if (maxStat < 5) {
+    actionPlaybook = {
+      type: 'mentor',
+      title: 'ประกบดูแลแบบ OJT รายวัน (Daily Mentoring & Supervision)',
+      tag: 'ประกบดูแลเร่งด่วน',
+      color: 'text-amber-400 border-amber-700 bg-amber-950/30',
+      desc: 'เน้นการสอนงานแบบ Step-by-Step มอบหมายงานที่มี Checklist ชัดเจน และมีพี่เลี้ยงตรวจทานความถูกต้องก่อนส่งมอบ',
+      question: 'ขั้นตอนการทำงานส่วนไหนที่รู้สึกติดขัดหรือไม่มั่นใจที่สุด อยากให้หัวหน้าช่วยแนะนำตรงไหนเป็นพิเศษ?'
+    };
+  } else if (maxStat >= 7 && minStat <= 3) {
+    actionPlaybook = {
+      type: 'pairing',
+      title: 'ใช้จุดแข็งนำ & จัดคู่บัดดี้ปิดจุดบอด (Pairing & Shielding)',
+      tag: 'จับคู่เสริมทัพ',
+      color: 'text-purple-400 border-purple-700 bg-purple-950/30',
+      desc: 'มอบหมายงานที่ได้ใช้จุดแข็งขั้นสูงอย่างเต็มที่ และจัดทีมคู่หูช่วยเสริมในส่วนที่เป็นจุดอ่อน ไม่ปล่อยให้รับผิดชอบจุดบอดคนเดียว',
+      question: 'จะดึงจุดเด่นของตัวเองมาแก้ปัญหาในงานนี้ได้อย่างไร และอยากให้ใครมาช่วยสนับสนุนส่วนงานเอกสาร/ประสานงาน?'
+    };
+  } else if (maxStat >= 8 && minStat >= 5) {
+    actionPlaybook = {
+      type: 'delegate',
+      title: 'มอบหมายงานอิสระ & เป็นพี่เลี้ยงถ่ายทอดความรู้ (Delegation & SME)',
+      tag: 'ส่งต่อองค์ความรู้',
+      color: 'text-emerald-400 border-emerald-700 bg-emerald-950/30',
+      desc: 'ให้อิสระในการตัดสินใจวางแผนงาน ยกระดับให้เป็น Role Model และมอบหมายให้เป็นพี่เลี้ยงสอนงานสมาชิกรุ่นน้องในทีม',
+      question: 'มีกระบวนการหรือนวัตกรรมใดที่คิดว่าสามารถนำมาปรับปรุงระบบงานของทั้งแผนกให้ดียิ่งขึ้นได้บ้าง?'
+    };
+  } else if (signatureStrengths.length > 0) {
+    actionPlaybook = {
+      type: 'empower',
+      title: 'ต่อยอดทักษะหลักสู่ความเป็นเลิศ (Core Skill Deepening)',
+      tag: 'ผลักดันสู่ยอดฝีมือ',
+      color: 'text-indigo-400 border-indigo-700 bg-indigo-950/30',
+      desc: 'สนับสนุนให้ขยายขอบเขตความรับผิดชอบในทักษะเด่น พร้อมพัฒนาจุดสนับสนุนให้แตะระดับมาตรฐานอย่างต่อเนื่อง',
+      question: 'คิดว่าจะนำจุดแข็งที่มีไปช่วยยกระดับเป้าหมายและผลงานของทีมในไตรมาสนี้ได้อย่างไร?'
+    };
+  }
+
   return {
     rawStats,
     sortedStats,
@@ -422,7 +537,59 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     roleProfile,
     signatureStrengths,
     standardPass,
-    considerations
+    considerations,
+    competencyTier,
+    dynamicStrengthLabel,
+    dynamicStrengthColor,
+    dynamicStrength,
+    actionPlaybook
+  };
+};
+
+export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesData = defaultArchetypesData, roleInput = null) => {
+  const analysis = analyzeArchetype(staff, sets, archetypesData, roleInput);
+  if (!analysis) return null;
+
+  const { roleProfile, competencyTier, dynamicStrength, actionPlaybook, signatureStrengths, considerations } = analysis;
+  const staffName = staff.name || 'พนักงาน';
+  const roleName = roleProfile.name || 'เจ้าหน้าที่ปฏิบัติการ';
+
+  let overallVerdict = '';
+  if (competencyTier.level === 4) {
+    overallVerdict = `${staffName} เป็นบุคลากรระดับต้นแบบ (Benchmark) มีทักษะความเชี่ยวชาญสูงเด่นสอดคล้องกับบทบาท ${roleName} อย่างสมบูรณ์แบบ สามารถปฏิบัติงานได้อย่างเป็นอิสระและเป็นเสาหลักของทีม`;
+  } else if (competencyTier.level === 3) {
+    overallVerdict = `${staffName} มีสมรรถนะระดับชำนาญการเฉพาะทาง มีจุดแข็งในการขับเคลื่อนงานตามบทบาท ${roleName} อย่างชัดเจน ผลงานมีความเสถียรและพร้อมพัฒนาสู่บทบาทผู้นำเทคนิค`;
+  } else if (competencyTier.level === 2) {
+    overallVerdict = `${staffName} มีสมรรถนะพื้นฐานครอบคลุมตามมาตรฐานองค์กร (Baseline 5/10) สามารถปฏิบัติงานประจำวันได้ราบรื่น แต่อยู่ในจุดที่ต้องได้รับการชี้แนะเพื่อสร้างจุดเด่นเฉพาะทาง (Spike Skill)`;
+  } else {
+    overallVerdict = `${staffName} กำลังอยู่ในช่วงสร้างสมรรถนะพื้นฐาน (Foundational Stage) สเตตัสส่วนใหญ่ยังไม่ผ่านเกณฑ์มาตรฐานการทำงานอิสระ 5/10 จำเป็นต้องมีระบบพี่เลี้ยงและแผนพัฒนาประกบดูแลอย่างใกล้ชิด`;
+  }
+
+  const operationalRisks = considerations.length > 0
+    ? considerations.map(c => `• ${c.name} (${c.val}/10): ${c.advice}`).join('\n')
+    : '• ไม่พบความเสี่ยงวิกฤต: สเตตัสทุกด้านผ่านเกณฑ์มาตรฐานองค์กร (≥ 5/10)';
+
+  const nextGrowthMilestone = competencyTier.level === 1
+    ? `ยกระดับสเตตัสในแกนวิกฤต (${considerations[0]?.name || 'งานพื้นฐาน'}) ให้แตะเกณฑ์มาตรฐาน 5/10 ภายใน 30-60 วัน โดยเน้นการปฏิบัติตาม Job Checklist รายวัน`
+    : competencyTier.level === 2
+    ? `เลือกทักษะที่สนใจ 1-2 ด้าน (เช่น ${roleProfile.coreFocus.slice(0, 2).map(k => k.toUpperCase()).join(', ')}) เพื่อผลักดันให้แตะระดับชำนาญการ (≥ 7/10) ภายใน 60 วัน`
+    : competencyTier.level === 3
+    ? `ถ่ายทอดทักษะจุดแข็ง (${signatureStrengths.map(s => s.name).join(', ')}) สู่เพื่อนร่วมทีม และปิดจุดสนับสนุน (${considerations[0]?.name || 'ส่วนประสานงาน'}) ให้แตะมาตรฐาน 5/10`
+    : `พัฒนาหลักสูตรหรือ Best Practice หน้างานของสายงาน ${roleName} เพื่อส่งต่อองค์ความรู้และขยายผลทั่วทั้งโครงการ`;
+
+  return {
+    overallVerdict,
+    competencyTier: `${competencyTier.name} (${competencyTier.thai})`,
+    tierLevel: competencyTier.level,
+    verifiedStrengths: dynamicStrength,
+    operationalRisks,
+    managerActionPlan: `${actionPlaybook.title}\n▶ ${actionPlaybook.desc}`,
+    coachingQuestions: [
+      actionPlaybook.question,
+      `ในการปฏิบัติงานสัปดาห์ที่ผ่านมา มีเคสหรือปัญหาใดที่ทำให้รู้สึกว่าต้องใช้ทักษะพิเศษในการแก้ไขมากที่สุด?`
+    ],
+    nextGrowthMilestone,
+    source: 'engine'
   };
 };
 
