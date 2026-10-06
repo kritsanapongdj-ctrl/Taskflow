@@ -2379,7 +2379,7 @@ export function generateFloodMapHtml({
     // ==========================================
     // 📡 Doppler Radar Modal Controls
     // ==========================================
-    let currentDopplerTab = 'bma_nongchok';
+    let currentDopplerTab = 'bma_radar';
 
     function openDopplerModal() {
       const modal = document.getElementById('doppler-modal');
@@ -2397,40 +2397,52 @@ export function generateFloodMapHtml({
     function switchDopplerTab(tab) {
       currentDopplerTab = tab;
       document.querySelectorAll('.doppler-tab-btn').forEach(b => {
-        b.className = 'doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40';
+        b.className = 'doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 whitespace-nowrap';
       });
       const activeBtn = document.getElementById('tab-btn-' + tab);
       if (activeBtn) {
-        activeBtn.className = 'doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90';
+        activeBtn.className = 'doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90 whitespace-nowrap';
       }
 
       const content = document.getElementById('doppler-content');
       const extLink = document.getElementById('doppler-ext-link');
       const t = Date.now();
 
-      if (tab === 'bma_nongchok') {
-        extLink.href = 'https://weather.bangkok.go.th/Radar/RadarNongchok.aspx';
+      if (tab === 'bma_radar') {
+        extLink.href = 'https://weather.bangkok.go.th/Radar/RadarAnimation.aspx';
         content.innerHTML = \`
-          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[320px] flex items-center justify-center">
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[300px] flex items-center justify-center">
             <div id="radar-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-400 gap-2 text-xs">
               <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-              <span>กำลังดึงสัญญาณเรดาร์สด กทม. หนองจอก...</span>
+              <span>กำลังดึงภาพเรดาร์ สำนักการระบายน้ำ กทม...</span>
             </div>
-            <img src="/api/radar?station=nongchok&_t=\${t}" alt="เรดาร์หนองจอก กทม." class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="this.onerror=null; this.src='/api/flood-report?mode=radar&station=nongchok&_t=' + Date.now();"/>
+            <img src="https://weather.bangkok.go.th/Images/Radar/radar.jpg?_t=\${t}" alt="เรดาร์สำนักการระบายน้ำ กทม." class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="this.onerror=null; this.src='https://weather.tmd.go.th/svp/svp120_latest.jpg?_t=' + Date.now(); document.getElementById('radar-loader')?.remove(); this.classList.remove('opacity-0');"/>
           </div>
-          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์หนองจอก (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ตะวันออก, ปทุมธานี (รังสิต/ลำลูกกา), และฉะเชิงเทรา</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์ตรวจสภาพอากาศสด สำนักการระบายน้ำ กทม. ครอบคลุม กรุงเทพฯ และปริมณฑล (อัปเดตทุก 5–10 นาที)</p>
         \`;
-      } else if (tab === 'bma_bangna') {
-        extLink.href = 'https://weather.bangkok.go.th/Radar/RadarNongkam.aspx';
+      } else if (tab === 'tmd_suvarnabhumi') {
+        extLink.href = 'https://weather.tmd.go.th/svp/';
         content.innerHTML = \`
-          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[320px] flex items-center justify-center">
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[300px] flex items-center justify-center">
             <div id="radar-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-400 gap-2 text-xs">
               <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-              <span>กำลังดึงสัญญาณเรดาร์สด กทม. หนองแขม/บางนา...</span>
+              <span>กำลังดึงภาพเรดาร์สุวรรณภูมิ TMD 120 กม...</span>
             </div>
-            <img src="/api/radar?station=nongkam&_t=\${t}" alt="เรดาร์หนองแขม/บางนา กทม." class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="this.onerror=null; this.src='/api/flood-report?mode=radar&station=nongkam&_t=' + Date.now();"/>
+            <img src="https://weather.tmd.go.th/svp/svp120_latest.jpg?_t=\${t}" alt="เรดาร์สุวรรณภูมิ กรมอุตุนิยมวิทยา" class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="document.getElementById('radar-loader')?.remove(); this.classList.remove('opacity-0');"/>
           </div>
-          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์หนองแขม (สำนักการระบายน้ำ กทม.) รัศมีครอบคลุม กรุงเทพฯ ใต้/ฝั่งธนบุรี, สมุทรปราการ (บางนา/สุขสวัสดิ์), และสมุทรสาคร (พระราม 2)</p>
+          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์ TMD Doppler สุวรรณภูมิ รัศมี 120 กม. ครอบคลุม กทม., สมุทรปราการ, ปทุมธานี (รังสิต), นนทบุรี, ฉะเชิงเทรา</p>
+        \`;
+      } else if (tab === 'tmd_wide') {
+        extLink.href = 'https://weather.tmd.go.th/';
+        content.innerHTML = \`
+          <div class="relative max-w-xl w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg min-h-[300px] flex items-center justify-center">
+            <div id="radar-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-400 gap-2 text-xs">
+              <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              <span>กำลังดึงภาพเรดาร์ภาคกลาง TMD 240 กม...</span>
+            </div>
+            <img src="https://weather.tmd.go.th/svp/svp240_latest.jpg?_t=\${t}" alt="เรดาร์สุวรรณภูมิ 240 กม. กรมอุตุนิยมวิทยา" class="w-full h-auto object-contain mx-auto transition-opacity duration-300 opacity-0" onload="this.classList.remove('opacity-0'); document.getElementById('radar-loader')?.remove();" onerror="document.getElementById('radar-loader')?.remove(); this.classList.remove('opacity-0');"/>
+          </div>
+          <p class="text-xs text-slate-300 font-semibold text-center">เรดาร์ TMD Doppler สุวรรณภูมิ มุมกว้าง 240 กม. ตรวจจับการเคลื่อนตัวของกลุ่มฝนจากอ่าวไทยและภาคกลาง</p>
         \`;
       } else if (tab === 'thaiwater') {
         extLink.href = 'https://www.thaiwater.net/weather/radar';
@@ -2449,6 +2461,12 @@ export function generateFloodMapHtml({
           <p class="text-xs text-slate-300 font-semibold text-center">Windy Doppler Radar & Lightning (เรดาร์ตรวจจับเมฆฝนและฟ้าผ่าความถี่สูง)</p>
         \`;
       }
+
+      // Safety timeout: ป้องกันสถานะค้าง หากเซิร์ฟเวอร์ช้าเกิน 2.5 วินาที ให้ซ่อน loader ทันที
+      setTimeout(() => {
+        document.getElementById('radar-loader')?.remove();
+        document.querySelectorAll('#doppler-content img').forEach(img => img.classList.remove('opacity-0'));
+      }, 2500);
     }
 
     function refreshDopplerImage() {
@@ -2480,10 +2498,11 @@ export function generateFloodMapHtml({
 
       <!-- Station Selector Tabs -->
       <div class="px-3 pt-2 border-b border-slate-800 flex gap-1.5 bg-slate-950/60 overflow-x-auto text-xs">
-        <button onclick="switchDopplerTab('bma_nongchok')" id="tab-btn-bma_nongchok" class="doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90">กทม. (หนองจอก)</button>
-        <button onclick="switchDopplerTab('bma_bangna')" id="tab-btn-bma_bangna" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">กทม. (หนองแขม/บางนา)</button>
-        <button onclick="switchDopplerTab('thaiwater')" id="tab-btn-thaiwater" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">สสน. (ThaiWater)</button>
-        <button onclick="switchDopplerTab('windy')" id="tab-btn-windy" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40">Windy Radar สด</button>
+        <button onclick="switchDopplerTab('bma_radar')" id="tab-btn-bma_radar" class="doppler-tab-btn active px-3 py-1.5 rounded-t-lg font-bold border-b-2 border-indigo-400 text-white bg-slate-800/90 whitespace-nowrap">กทม. (สำนักการระบายน้ำ)</button>
+        <button onclick="switchDopplerTab('tmd_suvarnabhumi')" id="tab-btn-tmd_suvarnabhumi" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 whitespace-nowrap">กรมอุตุฯ สุวรรณภูมิ (120 กม.)</button>
+        <button onclick="switchDopplerTab('tmd_wide')" id="tab-btn-tmd_wide" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 whitespace-nowrap">กรมอุตุฯ ภาคกลาง (240 กม.)</button>
+        <button onclick="switchDopplerTab('thaiwater')" id="tab-btn-thaiwater" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 whitespace-nowrap">สสน. (ThaiWater)</button>
+        <button onclick="switchDopplerTab('windy')" id="tab-btn-windy" class="doppler-tab-btn px-3 py-1.5 rounded-t-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800/40 whitespace-nowrap">Windy Radar สด</button>
       </div>
 
       <!-- Modal Body (Radar View) -->
