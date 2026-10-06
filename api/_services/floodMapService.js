@@ -1722,16 +1722,16 @@ export function generateFloodMapHtml({ projectsData = [], summaryStats = {}, gen
         const outerStatus = outerDepth > 0 ? ('น้ำท่วมขัง ' + outerDepth + ' ซม.') : 'แห้งสนิท (0 ซม.)';
         const innerStatus = innerDepth > 0 ? ('น้ำท่วมขัง ' + innerDepth + ' ซม.') : 'แห้ง 100%';
         const stLabel = status === 'NORMAL' ? 'ปกติ' : (status === 'WATCH' ? 'เฝ้าระวัง' : (status === 'CRITICAL' ? 'วิกฤติ' : 'รอตรวจ'));
-        const lineText = encodeURIComponent(
-          '🚨 [รายงานน้ำท่วม LH] ' + p.name + ' (' + p.code + ')\n' +
-          '• พื้นที่: ' + (p.area || '-') + '\n' +
-          '• สถานะ: ' + stLabel + '\n' +
-          '• ถนนหน้าโครงการ: ' + outerStatus + '\n' +
-          '• ถนนในโครงการ: ' + innerStatus + ' (As-Built ยก +' + elevMeters + ' ม.)\n' +
-          '• โทรมาตร: ' + ((p.liveWater && p.liveWater.stationName) ? p.liveWater.stationName : (p.stationName || '-')) + '\n' +
+        const lineParts = [
+          '🚨 [รายงานน้ำท่วม LH] ' + p.name + ' (' + p.code + ')',
+          '• พื้นที่: ' + (p.area || '-'),
+          '• สถานะ: ' + stLabel,
+          '• ถนนหน้าโครงการ: ' + outerStatus,
+          '• ถนนในโครงการ: ' + innerStatus + ' (As-Built ยก +' + elevMeters + ' ม.)',
+          '• โทรมาตร: ' + ((p.liveWater && p.liveWater.stationName) ? p.liveWater.stationName : (p.stationName || '-')),
           '🔗 ตรวจสอบสดบนแผนที่: https://lh-taskflow.vercel.app/api/flood-report?focus=' + p.code
-        );
-        btnLine.href = 'https://line.me/R/share?text=' + lineText;
+        ];
+        btnLine.href = 'https://line.me/R/share?text=' + encodeURIComponent(lineParts.join(String.fromCharCode(10)));
       }
 
       // Populate Pillar 4: As-Built Engineering Specs
