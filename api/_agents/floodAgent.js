@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, runTransaction } from '../_services/firebase.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from '../_services/firebase.js';
 import { FLOOD_PROJECTS, lookupProjectForFlood } from '../_services/projectsConfig.js';
 import { replyToLine, pushToLine, fetchLineImageBuffer, buildFloodFlexMessage } from '../_services/lineService.js';
 import { fetchProjectWeather } from '../_services/weatherService.js';
@@ -11,7 +11,7 @@ import {
 import { getAsBuiltOverrides } from '../_services/asBuiltService.js';
 
 // รวมรายงาน สรุปผลด้วย AI และส่งกลับให้ Admin ในแชทส่วนตัว
-export async function compileAndSendFloodReport({ userId, replyToken, host, proto }) {
+export async function compileAndSendFloodReport({ userId, replyToken, host, proto, prefetchedPhotosSnap }) {
   try {
     const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
     const draftSnap = await getDoc(draftRef);
@@ -41,7 +41,7 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
       if (customAsBuilt.asBuiltNotes != null) project.asBuiltNotes = customAsBuilt.asBuiltNotes;
     }
 
-    const photosSnap = await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
+    const photosSnap = prefetchedPhotosSnap || await getDocs(collection(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId, "photos"));
     const photos = [];
     photosSnap.forEach(d => {
       photos.push(d.data());
@@ -231,6 +231,12 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
 
   } catch (err) {
     console.error("compileAndSendFloodReport Error:", err);
+    // ปลดล็อก draft ทันที เพื่อไม่ให้สถานะค้างหากเกิดข้อผิดพลาด
+    try {
+      const draftRef = doc(db, "artifacts", "default-app-id", "public", "data", "flood_drafts", userId);
+      await updateDoc(draftRef, { finalizing: false, finalizingAt: null });
+    } catch (_) {}
+
     if (replyToken) {
       await replyToLine(replyToken, "❌ เกิดข้อผิดพลาดในการรวมรายงาน PDF กรุณาลองใหม่อีกครั้งครับ");
     } else if (userId) {
@@ -372,7 +378,7 @@ export const FloodAgent = {
       if (draftSnap.exists()) {
         const draft = draftSnap.data();
         const nowMs = Date.now();
-        const lockDuration = nowMs - (draft.finalizingAt || draft.lastPhotoAt || draft.createdAt || 0);
+        const lockDuration = nowMs - (draft.finalizingAt || 0);
 
         // หากกำลังประมวลผลอยู่และยังไม่เกิน 60 วินาที ให้แจ้งเตือนว่ากำลังดำเนินการอยู่เพื่อป้องกันการกดซ้ำ
         if (draft.finalizing && lockDuration < 60000) {
@@ -394,29 +400,18 @@ export const FloodAgent = {
 
         const finalPhotoCount = photosSnap.size;
         if (finalPhotoCount > 0) {
-          // ใช้ Atomic Transaction Lock ป้องกัน Race Condition
-          let canFinalize = false;
+          // ล็อก Draft อย่างปลอดภัยด้วย updateDoc (หลีกเลี่ยง runTransaction ซึ่งมักเกิด RESOURCE_EXHAUSTED บน Serverless)
           try {
-            await runTransaction(db, async (transaction) => {
-              const dSnap = await transaction.get(draftRef);
-              if (!dSnap.exists()) return;
-              const dData = dSnap.data();
-              const isLocked = dData.finalizing && (Date.now() - (dData.finalizingAt || 0) < 60000);
-              if (!isLocked) {
-                transaction.update(draftRef, { finalizing: true, finalizingAt: Date.now() });
-                canFinalize = true;
-              }
+            await updateDoc(draftRef, {
+              finalizing: true,
+              finalizingAt: Date.now()
             });
-          } catch (tErr) {
-            console.error("Finish transaction lock error:", tErr);
+          } catch (lockErr) {
+            console.error("Lock draft error:", lockErr);
           }
 
-          if (canFinalize) {
-            // ส่ง replyToken ตรงเข้า compileAndSendFloodReport เพื่อให้ส่ง PDF กลับหาผู้ใช้ทันทีโดยไม่เสียโควต้า Push
-            await compileAndSendFloodReport({ userId, replyToken, host, proto });
-          } else {
-            await replyToLine(replyToken, `⏳ ระบบกำลังประมวลผลรายงานให้เรียบร้อยแล้วครับ กรุณารอสักครู่...`);
-          }
+          // ส่งตรงเข้า compileAndSendFloodReport เพื่อประมวลผล AI และส่ง PDF ให้ผู้ใช้ทันที
+          await compileAndSendFloodReport({ userId, replyToken, host, proto, prefetchedPhotosSnap: photosSnap });
           return true;
         } else {
           await replyToLine(replyToken, `⚠️ ยังไม่มีภาพถ่ายในระบบ กรุณาส่งรูปภาพหน้างาน (5–10 รูป) เข้ามาก่อนครับ`);
@@ -542,25 +537,22 @@ export const FloodAgent = {
           // รอสั้นๆ 1 วินาที เพื่อให้ write ในรอบเดียวกัน flush ลง Firestore สมบูรณ์
           await new Promise(r => setTimeout(r, 1000));
 
-          // ใช้ Atomic Transaction Lock ป้องกัน Race Condition
-          let canFinalize = false;
-          try {
-            await runTransaction(db, async (transaction) => {
-              const dSnap = await transaction.get(draftRef);
-              if (!dSnap.exists()) return;
-              const dData = dSnap.data();
-              const isLocked = dData.finalizing && (Date.now() - (dData.finalizingAt || 0) < 60000);
-              if (!isLocked) {
-                transaction.update(draftRef, { finalizing: true, finalizingAt: Date.now() });
-                canFinalize = true;
+          // ตรวจสอบ Lock อย่างปลอดภัยด้วย getDoc และ updateDoc (หลีกเลี่ยง runTransaction)
+          const freshSnap = await getDoc(draftRef);
+          if (freshSnap.exists()) {
+            const freshData = freshSnap.data();
+            const isLocked = freshData.finalizing && (Date.now() - (freshData.finalizingAt || 0) < 60000);
+            if (!isLocked) {
+              try {
+                await updateDoc(draftRef, {
+                  finalizing: true,
+                  finalizingAt: Date.now()
+                });
+                await compileAndSendFloodReport({ userId, replyToken: null, host, proto, prefetchedPhotosSnap: photosSnap });
+              } catch (batchErr) {
+                console.error("Image batch finalize error:", batchErr);
               }
-            });
-          } catch (tErr) {
-            console.error("Image batch transaction lock error:", tErr);
-          }
-
-          if (canFinalize) {
-            await compileAndSendFloodReport({ userId, replyToken: null, host, proto });
+            }
           }
           return;
         }
