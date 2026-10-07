@@ -49,11 +49,20 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
     if (updates.projectCode) {
       const code = updates.projectCode;
       const diff = parseFloat(updates.asBuiltElevationDiff);
+      const sumpInner = updates.sumpRimVsInnerDiff !== undefined && updates.sumpRimVsInnerDiff !== '' && updates.sumpRimVsInnerDiff !== null ? parseFloat(updates.sumpRimVsInnerDiff) : null;
+      const sumpOuter = updates.sumpRimVsOuterDiff !== undefined && updates.sumpRimVsOuterDiff !== '' && updates.sumpRimVsOuterDiff !== null ? parseFloat(updates.sumpRimVsOuterDiff) : null;
       const crestDiff = updates.entranceCrestDiff !== undefined && updates.entranceCrestDiff !== '' && updates.entranceCrestDiff !== null ? parseFloat(updates.entranceCrestDiff) : null;
       const hasFloodwall = updates.hasFloodwall !== undefined ? Boolean(updates.hasFloodwall === true || updates.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
       const floodwallDiff = updates.floodwallHeightDiff !== undefined && updates.floodwallHeightDiff !== '' && updates.floodwallHeightDiff !== null ? parseFloat(updates.floodwallHeightDiff) : null;
+      
+      const safeDiff = !isNaN(diff) ? diff : 0.80;
+      const safeSumpInner = (sumpInner !== null && !isNaN(sumpInner)) ? sumpInner : 0.00;
+      const safeSumpOuter = (sumpOuter !== null && !isNaN(sumpOuter)) ? sumpOuter : Number((safeDiff + safeSumpInner).toFixed(2));
+
       payload[code] = {
-        asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
+        asBuiltElevationDiff: safeDiff,
+        sumpRimVsInnerDiff: safeSumpInner,
+        sumpRimVsOuterDiff: safeSumpOuter,
         entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
         hasFloodwall,
         floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
@@ -65,11 +74,20 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
       for (const [code, val] of Object.entries(updates)) {
         if (typeof val === 'object' && val !== null && code !== 'action' && code !== 'adminPin') {
           const diff = parseFloat(val.asBuiltElevationDiff);
+          const sumpInner = val.sumpRimVsInnerDiff !== undefined && val.sumpRimVsInnerDiff !== '' && val.sumpRimVsInnerDiff !== null ? parseFloat(val.sumpRimVsInnerDiff) : null;
+          const sumpOuter = val.sumpRimVsOuterDiff !== undefined && val.sumpRimVsOuterDiff !== '' && val.sumpRimVsOuterDiff !== null ? parseFloat(val.sumpRimVsOuterDiff) : null;
           const crestDiff = val.entranceCrestDiff !== undefined && val.entranceCrestDiff !== '' && val.entranceCrestDiff !== null ? parseFloat(val.entranceCrestDiff) : null;
           const hasFloodwall = val.hasFloodwall !== undefined ? Boolean(val.hasFloodwall === true || val.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
           const floodwallDiff = val.floodwallHeightDiff !== undefined && val.floodwallHeightDiff !== '' && val.floodwallHeightDiff !== null ? parseFloat(val.floodwallHeightDiff) : null;
+          
+          const safeDiff = !isNaN(diff) ? diff : 0.80;
+          const safeSumpInner = (sumpInner !== null && !isNaN(sumpInner)) ? sumpInner : 0.00;
+          const safeSumpOuter = (sumpOuter !== null && !isNaN(sumpOuter)) ? sumpOuter : Number((safeDiff + safeSumpInner).toFixed(2));
+
           payload[code] = {
-            asBuiltElevationDiff: !isNaN(diff) ? diff : 0.80,
+            asBuiltElevationDiff: safeDiff,
+            sumpRimVsInnerDiff: safeSumpInner,
+            sumpRimVsOuterDiff: safeSumpOuter,
             entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
             hasFloodwall,
             floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
@@ -92,7 +110,7 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
 }
 
 /**
- * สร้างหน้าเว็บ UI จัดการระดับความสูงตามแบบก่อสร้างจริง As-Built Elevation Manager พร้อมระบบล็อกรหัสผ่าน Admin
+ * สร้างหน้าเว็บ UI จัดการเกณฑ์ระดับความสูงอ้างอิงโครงการ (Project Elevation Benchmark Manager) พร้อมระบบล็อกรหัสผ่าน Admin
  */
 export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }) {
   const projectsJson = JSON.stringify(projectsData);
@@ -103,7 +121,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดการระดับความสูงแบบก่อสร้างจริง (As-Built Elevation Manager) | Land & Houses</title>
+  <title>ระบบจัดการเกณฑ์ระดับความสูงโครงการ (Project Elevation Benchmark Manager) | Land & Houses</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -153,13 +171,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">As-Built Elevation Manager</h1>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">วิศวกรรมสุขาภิบาล</span>
+            <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">ระบบจัดการเกณฑ์ระดับความสูงโครงการ</h1>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">เกณฑ์ระดับวิศวกรรม</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
               <span>🔒</span><span>Admin Secured</span>
             </span>
           </div>
-          <p class="text-[11px] text-slate-400">ระบบจัดการระดับความสูงถนนโครงการเทียบถนนภายนอกตามแบบก่อสร้างจริง (30 โครงการ)</p>
+          <p class="text-[11px] text-slate-400">ระบบบันทึกและจัดการระดับความสูงถนนและจุดระบายน้ำอ้างอิงโครงการ (30 โครงการ)</p>
         </div>
       </div>
 
@@ -198,7 +216,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           📐
         </div>
         <div>
-          <span class="text-xs text-slate-400 block font-medium">มีแบบ As-Built เฉพาะโครงการ</span>
+          <span class="text-xs text-slate-400 block font-medium">กำหนดเกณฑ์ระดับเฉพาะโครงการ</span>
           <span class="text-xl font-bold text-emerald-400 font-mono" id="stat-custom">0</span>
           <span class="text-[10px] text-slate-500 block">ระบุค่าต่างระดับเฉพาะ</span>
         </div>
@@ -211,7 +229,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         <div>
           <span class="text-xs text-slate-400 block font-medium">ใช้เกณฑ์มาตรฐาน LH (+0.80 ม.)</span>
           <span class="text-xl font-bold text-amber-400 font-mono" id="stat-standard">30</span>
-          <span class="text-[10px] text-slate-500 block">รออัปเดตแบบ As-Built</span>
+          <span class="text-[10px] text-slate-500 block">เกณฑ์วิศวกรรมเริ่มต้น</span>
         </div>
       </div>
     </div>
@@ -228,7 +246,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         <!-- Quick Help Tip -->
         <div class="text-[11px] text-slate-400 flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800">
           <span class="text-lh-gold">💡</span>
-          <span>กรอกตัวเลขหน่วย <strong>เมตร</strong> (เช่น <code class="text-sky-300">0.85</code> = +85 ซม. สูงกว่าถนนนอก)</span>
+          <span>กรอกหน่วย <strong>เมตร</strong> (เช่น <code class="text-sky-300">0.80</code> = ถนนในสูงกว่าถนนนอก +80 ซม. | ปากบ่อพักหลัง ปตร. เช่น <code class="text-amber-300">0.00</code> หรือ <code class="text-amber-300">-0.10</code> ม.)</span>
         </div>
       </div>
 
@@ -258,7 +276,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       </div>
       <div class="space-y-1.5">
         <h2 class="text-base font-bold text-white tracking-tight">ยืนยันสิทธิ์ผู้ดูแลระบบ (Admin)</h2>
-        <p class="text-xs text-slate-400 leading-relaxed">กรุณากรอกรหัสผ่าน Admin PIN เพื่อเข้าสู่ระบบจัดการและแก้ไขระดับความสูงตามแบบก่อสร้างจริง</p>
+        <p class="text-xs text-slate-400 leading-relaxed">กรุณากรอกรหัสผ่าน Admin PIN เพื่อเข้าสู่ระบบจัดการและแก้ไขเกณฑ์ระดับความสูงอ้างอิงโครงการ</p>
       </div>
       <form onsubmit="handleAuthSubmit(event)" class="space-y-3 pt-2">
         <div class="relative">
@@ -303,6 +321,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         if (customOverrides[p.code]) {
           const ov = customOverrides[p.code];
           if (ov.asBuiltElevationDiff != null) p.asBuiltElevationDiff = ov.asBuiltElevationDiff;
+          if (ov.sumpRimVsInnerDiff !== undefined) p.sumpRimVsInnerDiff = ov.sumpRimVsInnerDiff;
+          if (ov.sumpRimVsOuterDiff !== undefined) p.sumpRimVsOuterDiff = ov.sumpRimVsOuterDiff;
           if (ov.entranceCrestDiff != null) p.entranceCrestDiff = ov.entranceCrestDiff;
           if (ov.hasFloodwall !== undefined) p.hasFloodwall = Boolean(ov.hasFloodwall);
           if (ov.floodwallHeightDiff !== undefined) p.floodwallHeightDiff = ov.floodwallHeightDiff;
@@ -457,16 +477,18 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         card.className = 'glass-card p-4 rounded-2xl border ' + (isDirty ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800') + ' transition-all shadow-md';
 
         const elevVal = p.asBuiltElevationDiff != null ? p.asBuiltElevationDiff.toFixed(2) : '0.80';
+        const sumpInnerVal = (p.sumpRimVsInnerDiff !== undefined && p.sumpRimVsInnerDiff !== null) ? Number(p.sumpRimVsInnerDiff).toFixed(2) : '0.00';
+        const sumpOuterVal = (p.sumpRimVsOuterDiff !== undefined && p.sumpRimVsOuterDiff !== null) ? Number(p.sumpRimVsOuterDiff).toFixed(2) : ((p.asBuiltElevationDiff != null ? p.asBuiltElevationDiff : 0.80) + (p.sumpRimVsInnerDiff != null ? p.sumpRimVsInnerDiff : 0.00)).toFixed(2);
         const crestVal = p.entranceCrestDiff != null ? p.entranceCrestDiff.toFixed(2) : '';
         const floodwallVal = p.hasFloodwall && p.floodwallHeightDiff != null ? p.floodwallHeightDiff.toFixed(2) : (p.hasFloodwall ? '0.40' : '');
         const mslVal = p.asBuiltBenchmarkMSL || '';
         const notesVal = p.asBuiltNotes || '';
 
-        card.innerHTML = \`
-          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        card.innerHTML = `
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-start justify-between gap-3">
             
             <!-- Left: Project Info -->
-            <div class="lg:w-2/12 space-y-1">
+            <div class="lg:w-2/12 space-y-1 shrink-0">
               <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-sky-400 border border-slate-700/80">\${p.code}</span>
                 <h3 class="text-sm font-bold text-white tracking-tight truncate">\${p.name}</h3>
@@ -481,18 +503,18 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
               </div>
             </div>
 
-            <!-- Middle: Elevation Inputs (5 Columns) -->
-            <div class="lg:w-9/12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
+            <!-- Middle: Elevation Inputs (7 Columns) -->
+            <div class="lg:w-9/12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-2 text-xs">
               
-              <!-- Field 1: As-Built Road Elevation Difference -->
+              <!-- Field 1: Inner Road vs Outer Road -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
-                  <span>ระดับถนนใน (ม.)</span>
-                  <span class="text-[9px] text-sky-400">เทียบถนนนอก</span>
+                  <span>ถนนในโครงการ</span>
+                  <span class="text-[9px] text-sky-400">เทียบถนนนอก (ม.)</span>
                 </label>
                 <div class="flex items-center gap-1">
                   <span class="text-slate-500 font-mono font-bold text-xs">+</span>
-                  <input type="number" step="0.05" min="0.00" max="5.00" 
+                  <input type="number" step="0.05" min="-2.00" max="5.00" 
                     id="input-elev-\${p.code}" 
                     value="\${elevVal}" 
                     oninput="handleFieldChange('\${p.code}', 'asBuiltElevationDiff', this.value)"
@@ -501,18 +523,65 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
                 <!-- Presets -->
                 <div class="flex items-center gap-1 pt-1">
-                  <button onclick="setElevationPreset('\${p.code}', 0.20)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.20</button>
-                  <button onclick="setElevationPreset('\${p.code}', 0.70)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.70</button>
-                  <button onclick="setElevationPreset('\${p.code}', 0.80)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
-                  <button onclick="setElevationPreset('\${p.code}', 1.00)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+1.00</button>
+                  <button onclick="setElevationPreset('\${p.code}', 0.20)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.20</button>
+                  <button onclick="setElevationPreset('\${p.code}', 0.70)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.70</button>
+                  <button onclick="setElevationPreset('\${p.code}', 0.80)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
+                  <button onclick="setElevationPreset('\${p.code}', 1.00)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+1.00</button>
                 </div>
               </div>
 
-              <!-- Field 2: Entrance Crest Level (Optional Hump at Guardhouse) -->
+              <!-- Field 2: Outfall Sump Rim vs Inner Road -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
-                  <span>สันเนินทางเข้า (ม.)</span>
-                  <span class="text-[9px] text-amber-400 font-normal">ถ้ามี (เว้นว่างได้)</span>
+                  <span>ปากบ่อหลัง ปตร.</span>
+                  <span class="text-[9px] text-amber-400">เทียบถนนใน (ม.)</span>
+                </label>
+                <div class="flex items-center gap-1">
+                  <input type="number" step="0.05" min="-5.00" max="5.00" 
+                    id="input-sump-inner-\${p.code}" 
+                    value="\${sumpInnerVal}" 
+                    placeholder="0.00"
+                    oninput="handleFieldChange('\${p.code}', 'sumpRimVsInnerDiff', this.value)"
+                    class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-sm font-mono font-bold text-amber-400 focus:outline-none focus:border-lh-gold">
+                  <span class="text-slate-400 text-xs">ม.</span>
+                </div>
+                <!-- Presets -->
+                <div class="flex items-center gap-1 pt-1">
+                  <button onclick="setSumpInnerPreset('\${p.code}', 0.00)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">0.00</button>
+                  <button onclick="setSumpInnerPreset('\${p.code}', -0.10)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">-0.10</button>
+                  <button onclick="setSumpInnerPreset('\${p.code}', -0.20)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">-0.20</button>
+                </div>
+              </div>
+
+              <!-- Field 3: Outfall Sump Rim vs Outer Road -->
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
+                <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
+                  <span>ปากบ่อหลัง ปตร.</span>
+                  <span class="text-[9px] text-sky-400">เทียบถนนนอก (ม.)</span>
+                </label>
+                <div class="flex items-center gap-1">
+                  <span class="text-slate-500 font-mono font-bold text-xs">+</span>
+                  <input type="number" step="0.05" min="-5.00" max="5.00" 
+                    id="input-sump-outer-\${p.code}" 
+                    value="\${sumpOuterVal}" 
+                    placeholder="0.80"
+                    oninput="handleFieldChange('\${p.code}', 'sumpRimVsOuterDiff', this.value)"
+                    class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-sm font-mono font-bold text-sky-300 focus:outline-none focus:border-lh-gold">
+                  <span class="text-slate-400 text-xs">ม.</span>
+                </div>
+                <!-- Auto-sync button -->
+                <div class="pt-1">
+                  <button onclick="syncSumpOuter('\${p.code}')" class="w-full px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-sky-300 font-semibold flex items-center justify-center gap-1">
+                    <span>🔄 ซิงค์ถนน</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Field 4: Entrance Crest Level -->
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
+                <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
+                  <span>สันเนินทางเข้า</span>
+                  <span class="text-[9px] text-amber-400 font-normal">ถ้ามี (ม.)</span>
                 </label>
                 <div class="flex items-center gap-1">
                   <span class="text-slate-500 font-mono font-bold text-xs">+</span>
@@ -526,13 +595,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
                 <!-- Presets for Hump -->
                 <div class="flex items-center gap-1 pt-1">
-                  <button onclick="setCrestPreset('\${p.code}', 0.50)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.50</button>
-                  <button onclick="setCrestPreset('\${p.code}', 0.80)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
-                  <button onclick="setCrestPreset('\${p.code}', null)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ล้าง</button>
+                  <button onclick="setCrestPreset('\${p.code}', 0.50)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.50</button>
+                  <button onclick="setCrestPreset('\${p.code}', 0.80)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.80</button>
+                  <button onclick="setCrestPreset('\${p.code}', null)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ล้าง</button>
                 </div>
               </div>
 
-              <!-- Field 3: Canal Floodwall (เขื่อนริมคลอง คสล.) -->
+              <!-- Field 5: Canal Floodwall (เขื่อนริมคลอง คสล.) -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] text-slate-400 font-semibold block">
@@ -558,17 +627,17 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
                 <!-- Presets for Floodwall -->
                 <div class="flex items-center gap-1 pt-1">
-                  <button onclick="setFloodwallPreset('\${p.code}', 0.40)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.40</button>
-                  <button onclick="setFloodwallPreset('\${p.code}', 0.60)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.60</button>
-                  <button onclick="setFloodwallPreset('\${p.code}', null)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ปิด</button>
+                  <button onclick="setFloodwallPreset('\${p.code}', 0.40)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.40</button>
+                  <button onclick="setFloodwallPreset('\${p.code}', 0.60)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-300 font-mono">+0.60</button>
+                  <button onclick="setFloodwallPreset('\${p.code}', null)" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">ปิด</button>
                 </div>
               </div>
 
-              <!-- Field 4: MSL Benchmark -->
+              <!-- Field 6: MSL Benchmark -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
                   <span>ระดับอ้างอิง รทก.</span>
-                  <span class="text-[9px] text-slate-500">ม.รทก. (ถ้ามี)</span>
+                  <span class="text-[9px] text-slate-500">ม.รทก.</span>
                 </label>
                 <input type="text" 
                   id="input-msl-\${p.code}" 
@@ -579,10 +648,10 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 <span class="text-[9px] text-slate-500 block truncate">เทียบระดับน้ำทะเล</span>
               </div>
 
-              <!-- Field 5: Notes / Drawing No. -->
+              <!-- Field 7: Notes / Drawing No. -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block">
-                  <span>หมายเหตุแบบ As-Built</span>
+                  <span>หมายเหตุเกณฑ์ระดับ</span>
                 </label>
                 <input type="text" 
                   id="input-notes-\${p.code}" 
@@ -596,8 +665,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
             </div>
 
             <!-- Right: Actions -->
-            <div class="flex items-center gap-2 shrink-0">
-              <button onclick="saveProjectRow('\${p.code}')" id="btn-save-\${p.code}" class="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold \${isDirty ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'} transition-all shadow-sm">
+            <div class="flex items-center gap-2 shrink-0 pt-1 lg:pt-0">
+              <button onclick="saveProjectRow('\${p.code}')" id="btn-save-\${p.code}" class="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold \${isDirty ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'} transition-all shadow-sm">
                 <span>\${isDirty ? '💾 บันทึก' : '✓ เรียบร้อย'}</span>
               </button>
               <a href="/api/flood-report?mode=map&focus=\${p.code}&_t=\${Date.now()}" target="_blank" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors" title="ดูภาพจำลองบนแผนที่ (ข้อมูลสด)">
@@ -606,7 +675,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
             </div>
 
           </div>
-        \`;
+        `;
 
         container.appendChild(card);
       });
@@ -617,6 +686,34 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       if (input) {
         input.value = val.toFixed(2);
         handleFieldChange(code, 'asBuiltElevationDiff', val);
+      }
+    }
+
+    function setSumpInnerPreset(code, val) {
+      const input = document.getElementById('input-sump-inner-' + code);
+      if (input) {
+        input.value = val.toFixed(2);
+        handleFieldChange(code, 'sumpRimVsInnerDiff', val);
+      }
+    }
+
+    function syncSumpOuter(code) {
+      const p = currentProjects.find(item => item.code === code);
+      if (!p) return;
+      const innerElev = (typeof p.asBuiltElevationDiff === 'number') ? p.asBuiltElevationDiff : 0.80;
+      const sumpInner = (typeof p.sumpRimVsInnerDiff === 'number') ? p.sumpRimVsInnerDiff : 0.00;
+      const autoOuter = Number((innerElev + sumpInner).toFixed(2));
+      p.sumpRimVsOuterDiff = autoOuter;
+      const outerInput = document.getElementById('input-sump-outer-' + code);
+      if (outerInput) outerInput.value = autoOuter.toFixed(2);
+      dirtyProjects.add(code);
+      updateStats();
+      const card = document.getElementById('project-card-' + code);
+      if (card) card.className = 'glass-card p-4 rounded-2xl border border-amber-500/50 bg-amber-950/10 transition-all shadow-md';
+      const btn = document.getElementById('btn-save-' + code);
+      if (btn) {
+        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
+        btn.innerHTML = '<span>💾 บันทึก</span>';
       }
     }
 
@@ -656,7 +753,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       if (card) card.className = 'glass-card p-4 rounded-2xl border border-amber-500/50 bg-amber-950/10 transition-all shadow-md';
       const btn = document.getElementById('btn-save-' + code);
       if (btn) {
-        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
+        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
         btn.innerHTML = '<span>💾 บันทึก</span>';
       }
     }
@@ -684,6 +781,22 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       if (field === 'asBuiltElevationDiff') {
         const num = parseFloat(rawValue);
         p[field] = !isNaN(num) ? num : 0.80;
+        // Auto sync sumpRimVsOuterDiff
+        const sumpInner = (typeof p.sumpRimVsInnerDiff === 'number') ? p.sumpRimVsInnerDiff : 0.00;
+        p.sumpRimVsOuterDiff = Number((p[field] + sumpInner).toFixed(2));
+        const outerInput = document.getElementById('input-sump-outer-' + code);
+        if (outerInput) outerInput.value = p.sumpRimVsOuterDiff.toFixed(2);
+      } else if (field === 'sumpRimVsInnerDiff') {
+        const num = parseFloat(rawValue);
+        p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : 0.00;
+        // Auto sync sumpRimVsOuterDiff
+        const innerElev = (typeof p.asBuiltElevationDiff === 'number') ? p.asBuiltElevationDiff : 0.80;
+        p.sumpRimVsOuterDiff = Number((innerElev + p[field]).toFixed(2));
+        const outerInput = document.getElementById('input-sump-outer-' + code);
+        if (outerInput) outerInput.value = p.sumpRimVsOuterDiff.toFixed(2);
+      } else if (field === 'sumpRimVsOuterDiff') {
+        const num = parseFloat(rawValue);
+        p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
       } else if (field === 'entranceCrestDiff') {
         const num = parseFloat(rawValue);
         p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
@@ -714,7 +827,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       }
       const btn = document.getElementById('btn-save-' + code);
       if (btn) {
-        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
+        btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all shadow-sm';
         btn.innerHTML = '<span>💾 บันทึก</span>';
       }
     }
@@ -739,6 +852,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         const payload = {
           projectCode: code,
           asBuiltElevationDiff: p.asBuiltElevationDiff,
+          sumpRimVsInnerDiff: p.sumpRimVsInnerDiff,
+          sumpRimVsOuterDiff: p.sumpRimVsOuterDiff,
           entranceCrestDiff: p.entranceCrestDiff,
           hasFloodwall: Boolean(p.hasFloodwall),
           floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
@@ -768,6 +883,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         // Update local overrides
         customOverrides[code] = {
           asBuiltElevationDiff: p.asBuiltElevationDiff,
+          sumpRimVsInnerDiff: p.sumpRimVsInnerDiff,
+          sumpRimVsOuterDiff: p.sumpRimVsOuterDiff,
           entranceCrestDiff: p.entranceCrestDiff,
           hasFloodwall: Boolean(p.hasFloodwall),
           floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
@@ -785,18 +902,18 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           card.className = 'glass-card p-4 rounded-2xl border border-slate-800 transition-all shadow-md';
         }
         if (btn) {
-          btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all';
+          btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all';
           btn.innerText = '✓ บันทึกสำเร็จ';
           btn.disabled = false;
           setTimeout(() => {
             if (!dirtyProjects.has(code)) {
-              btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all';
+              btn.className = 'flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all';
               btn.innerText = '✓ เรียบร้อย';
             }
           }, 2000);
         }
 
-        showToast('บันทึกค่า As-Built โครงการ ' + code + ' เรียบร้อย');
+        showToast('บันทึกเกณฑ์ระดับโครงการ ' + code + ' เรียบร้อย');
       } catch (err) {
         console.error('Save error:', err);
         alert('บันทึกไม่สำเร็จ: ' + err.message);
@@ -830,6 +947,8 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           if (p) {
             batchUpdates[code] = {
               asBuiltElevationDiff: p.asBuiltElevationDiff,
+              sumpRimVsInnerDiff: p.sumpRimVsInnerDiff,
+              sumpRimVsOuterDiff: p.sumpRimVsOuterDiff,
               entranceCrestDiff: p.entranceCrestDiff,
               hasFloodwall: Boolean(p.hasFloodwall),
               floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
@@ -868,7 +987,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         dirtyProjects.clear();
         updateStats();
         renderProjects();
-        showToast('บันทึกข้อมูล As-Built ทั้งหมดเรียบร้อยแล้ว');
+        showToast('บันทึกเกณฑ์ระดับโครงการทั้งหมดเรียบร้อยแล้ว');
       } catch (err) {
         console.error('Batch save error:', err);
         alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);

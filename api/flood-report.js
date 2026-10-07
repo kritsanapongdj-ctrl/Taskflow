@@ -85,6 +85,8 @@ export default async function handler(req, res) {
     const customAsBuilt = asBuiltOverrides[report.projectCode];
     if (customAsBuilt) {
       if (customAsBuilt.asBuiltElevationDiff != null) projectConfig.asBuiltElevationDiff = customAsBuilt.asBuiltElevationDiff;
+      if (customAsBuilt.sumpRimVsInnerDiff != null) projectConfig.sumpRimVsInnerDiff = customAsBuilt.sumpRimVsInnerDiff;
+      if (customAsBuilt.sumpRimVsOuterDiff != null) projectConfig.sumpRimVsOuterDiff = customAsBuilt.sumpRimVsOuterDiff;
       if (customAsBuilt.entranceCrestDiff != null) projectConfig.entranceCrestDiff = customAsBuilt.entranceCrestDiff;
       if (customAsBuilt.asBuiltBenchmarkMSL != null) projectConfig.asBuiltBenchmarkMSL = customAsBuilt.asBuiltBenchmarkMSL;
       if (customAsBuilt.asBuiltNotes != null) projectConfig.asBuiltNotes = customAsBuilt.asBuiltNotes;
@@ -794,11 +796,18 @@ export default async function handler(req, res) {
             <span class="metric-val" style="color: ${drainageCondition && /หนุน|ล้น|สูง|วิกฤต|\+/i.test(drainageCondition) ? '#B91C1C' : 'inherit'};">${drainageCondition || 'ระบายได้คล่องตัว ท่อระบายน้ำเปิดโล่ง'}</span>
           </div>
           <div class="metric-row">
-            <span class="metric-label">ระดับยกพื้นโครงการ (As-Built):</span>
+            <span class="metric-label">เกณฑ์ระดับยกพื้นโครงการ (อ้างอิง):</span>
             <span class="metric-val" style="color: #0369a1; font-weight: 700;">
               +${(projectConfig.asBuiltElevationDiff ?? 0.80).toFixed(2)} ม. ${projectConfig.asBuiltBenchmarkMSL ? `<span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">(${projectConfig.asBuiltBenchmarkMSL})</span>` : '<span style="font-size: 9.5px; font-weight: normal; color: var(--lh-muted);">(เทียบถนนนอก)</span>'}
             </span>
           </div>
+          ${projectConfig.sumpRimVsInnerDiff !== undefined ? `
+          <div class="metric-row">
+            <span class="metric-label">ระดับปากบ่อพักระบายน้ำหลัง ปตร.:</span>
+            <span class="metric-val" style="color: #0284c7; font-weight: 600;">
+              ${projectConfig.sumpRimVsInnerDiff === 0 ? 'เสมอถนนใน (0.00 ม.)' : (projectConfig.sumpRimVsInnerDiff < 0 ? `ต่ำกว่าถนนใน ${projectConfig.sumpRimVsInnerDiff.toFixed(2)} ม.` : `สูงกว่าถนนใน +${projectConfig.sumpRimVsInnerDiff.toFixed(2)} ม.`)}
+            </span>
+          </div>` : ''}
         </div>
       </div>
 
@@ -1048,7 +1057,7 @@ let floodMapCache = {
 };
 
 // ==========================================
-// 📐 ระบบจัดการระดับความสูงแบบก่อสร้างจริง (AS-BUILT ELEVATION MANAGER)
+// 📐 ระบบจัดการเกณฑ์ระดับความสูงโครงการ (PROJECT ELEVATION BENCHMARK MANAGER)
 // ==========================================
 async function handleAsBuiltManager(req, res) {
   try {
@@ -1061,6 +1070,8 @@ async function handleAsBuiltManager(req, res) {
       lon: p.lon,
       googleMapsUrl: p.googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`,
       asBuiltElevationDiff: overrides[p.code]?.asBuiltElevationDiff ?? p.asBuiltElevationDiff ?? 0.80,
+      sumpRimVsInnerDiff: overrides[p.code]?.sumpRimVsInnerDiff !== undefined ? overrides[p.code].sumpRimVsInnerDiff : (p.sumpRimVsInnerDiff ?? 0.00),
+      sumpRimVsOuterDiff: overrides[p.code]?.sumpRimVsOuterDiff !== undefined ? overrides[p.code].sumpRimVsOuterDiff : (p.sumpRimVsOuterDiff ?? ((overrides[p.code]?.asBuiltElevationDiff ?? p.asBuiltElevationDiff ?? 0.80) + (overrides[p.code]?.sumpRimVsInnerDiff ?? p.sumpRimVsInnerDiff ?? 0.00))),
       entranceCrestDiff: overrides[p.code]?.entranceCrestDiff !== undefined ? overrides[p.code].entranceCrestDiff : (p.entranceCrestDiff ?? null),
       hasFloodwall: overrides[p.code]?.hasFloodwall !== undefined ? Boolean(overrides[p.code].hasFloodwall) : Boolean(p.hasFloodwall),
       floodwallHeightDiff: overrides[p.code]?.floodwallHeightDiff !== undefined ? overrides[p.code].floodwallHeightDiff : (p.floodwallHeightDiff ?? (p.hasFloodwall ? 0.40 : null)),
@@ -1261,9 +1272,11 @@ async function handleFloodMap(req, res) {
       // ดึงรูปภาพจาก photoMap ที่ดึงมาพร้อมกันเรียบร้อยแล้ว
       const photos = reportId ? (photoMap.get(reportId) || []) : [];
 
-      // ดึงค่าระดับ As-Built จาก Overrides ใน Firestore (ถ้ามีการบันทึกไว้)
+      // ดึงค่าเกณฑ์ระดับอ้างอิงโครงการจาก Overrides ใน Firestore (ถ้ามีการบันทึกไว้)
       const customAsBuilt = asBuiltOverrides[code];
       const asBuiltElevationDiff = customAsBuilt?.asBuiltElevationDiff ?? pInfo.asBuiltElevationDiff ?? 0.80;
+      const sumpRimVsInnerDiff = customAsBuilt?.sumpRimVsInnerDiff !== undefined ? customAsBuilt.sumpRimVsInnerDiff : (pInfo.sumpRimVsInnerDiff ?? 0.00);
+      const sumpRimVsOuterDiff = customAsBuilt?.sumpRimVsOuterDiff !== undefined ? customAsBuilt.sumpRimVsOuterDiff : (pInfo.sumpRimVsOuterDiff ?? (asBuiltElevationDiff + sumpRimVsInnerDiff));
       const entranceCrestDiff = customAsBuilt?.entranceCrestDiff !== undefined ? customAsBuilt.entranceCrestDiff : (pInfo.entranceCrestDiff ?? null);
       const hasFloodwall = customAsBuilt?.hasFloodwall !== undefined ? Boolean(customAsBuilt.hasFloodwall) : Boolean(pInfo.hasFloodwall);
       const floodwallHeightDiff = customAsBuilt?.floodwallHeightDiff !== undefined ? customAsBuilt.floodwallHeightDiff : (pInfo.floodwallHeightDiff ?? (hasFloodwall ? 0.40 : null));
@@ -1273,6 +1286,8 @@ async function handleFloodMap(req, res) {
       const mergedPInfo = {
         ...pInfo,
         asBuiltElevationDiff,
+        sumpRimVsInnerDiff,
+        sumpRimVsOuterDiff,
         entranceCrestDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes,
@@ -1301,6 +1316,8 @@ async function handleFloodMap(req, res) {
         thaiWaterUrl: 'https://www.thaiwater.net/',
         gistdaUrl: 'https://disaster.gistda.or.th/',
         asBuiltElevationDiff,
+        sumpRimVsInnerDiff,
+        sumpRimVsOuterDiff,
         entranceCrestDiff,
         asBuiltBenchmarkMSL,
         asBuiltNotes,

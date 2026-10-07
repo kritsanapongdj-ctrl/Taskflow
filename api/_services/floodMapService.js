@@ -1,17 +1,17 @@
 import { FLOOD_PROJECTS } from './projectsConfig.js';
 import { extractDirectFieldReport, generateFallbackEngineeringSynthesis } from './geminiService.js';
 
-// คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก/ซอยหน้าโครงการ vs ถนนในโครงการ As-Built)
+// คำนวณระดับน้ำอุทกวิทยา 3 ชั้น (คลอง vs ถนนนอก/ซอยหน้าโครงการ vs ถนนในโครงการ เกณฑ์ระดับอ้างอิง)
 export function calculateHydrologicalLevels(report = {}, project = {}, liveWater = null) {
   const hasFieldReport = Boolean(report && (report.reportId || report.id || report.createdAt || (report.notes && report.notes.trim().length > 0)));
   const rawNotes = ((report.notes || '') + ' \n ' + (report.drainageCondition || '') + ' \n ' + (report.waterLevel || '')).trim();
   const status = hasFieldReport ? (report.status || 'NORMAL') : 'NO_REPORT';
 
-  let canalBelowOuter = 50; // ซม. (ผิวน้ำคลองต่ำกว่าถนนภายนอก: ค่าบวก = ต่ำกว่าตลิ่ง, ค่าลบ = ล้นตลิ่ง)
-  let canalWaterElevation = -0.50; // เมตร เทียบระดับถนนหน้าโครงการ (0.00 ม.)
+  let canalBelowOuter = null; // ซม. (ผิวน้ำคลองต่ำกว่าถนนภายนอก: ค่าบวก = ต่ำกว่าตลิ่ง, ค่าลบ = ล้นตลิ่ง, null = ไม่ได้ระบุ)
+  let canalWaterElevation = null; // เมตร เทียบระดับถนนหน้าโครงการ (0.00 ม.)
   let isCanalOverflow = false;
-  let canalStatusText = 'ในเกณฑ์ปกติ';
-  let canalSource = 'REGIONAL_BASELINE'; // 'LIVE_TELEMETRY' | 'FIELD_REPORT' | 'REGIONAL_BASELINE'
+  let canalStatusText = 'ไม่ได้ระบุระดับคลอง';
+  let canalSource = 'UNSPECIFIED'; // 'LIVE_TELEMETRY' | 'FIELD_REPORT' | 'UNSPECIFIED'
   let outerRoadWaterDepth = 0; // ซม. (ระดับน้ำท่วมขังบนถนนหน้าโครงการ/ซอยภายนอก)
   let innerRoadWaterDepth = 0; // ซม. (ระดับน้ำท่วมขังบนถนนภายในโครงการ)
   let outerRoadConditionText = '';
@@ -116,21 +116,65 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     canalWaterElevation = -0.10;
     canalStatusText = 'หน้างานแจ้ง: น้ำคลองหนุนสูง (ต่ำกว่าตลิ่ง 10 ซม.)';
     canalSource = 'FIELD_REPORT';
-  } else if (canalSource === 'REGIONAL_BASELINE') {
-    // 3. ปรับระดับตามลุ่มน้ำจริงของแต่ละโครงการ (ไม่ให้ซ้ำ 40 ซม. เท่ากันทุกที่)
-    const area = ((project?.area || '') + ' ' + (project?.name || '')).toLowerCase();
-    if (area.includes('อยุธยา')) {
-      canalBelowOuter = 75; canalWaterElevation = -0.75; canalStatusText = 'ลุ่มน้ำเจ้าพระยา (อยุธยา)';
-    } else if (area.includes('ปทุม') || area.includes('รังสิต') || area.includes('ธัญบุรี')) {
-      canalBelowOuter = 45; canalWaterElevation = -0.45; canalStatusText = 'ลุ่มน้ำคลองรังสิตฯ';
-    } else if (area.includes('บางขุนเทียน') || area.includes('สมุทรปราการ') || area.includes('พระราม 2') || area.includes('สุขสวัสดิ์')) {
-      canalBelowOuter = 65; canalWaterElevation = -0.65; canalStatusText = 'ลุ่มน้ำชายฝั่ง/มหาชัย';
-    } else if (area.includes('นนทบุรี') || area.includes('บางใหญ่') || area.includes('ราชพฤกษ์')) {
-      canalBelowOuter = 60; canalWaterElevation = -0.60; canalStatusText = 'ลุ่มน้ำคลองอ้อมนนท์';
-    } else if (area.includes('ลาดกระบัง') || area.includes('ร่มเกล้า')) {
-      canalBelowOuter = 35; canalWaterElevation = -0.35; canalStatusText = 'ลุ่มน้ำคลองประเวศ/ลำปลาทิว';
+  } else if (canalSource === 'UNSPECIFIED') {
+    // ⚠️ คำสั่งเคร่งครัด: หากหน้างานไม่ได้พิมพ์ส่งมา และไม่มีโทรมาตร ห้ามคิดตัวเลขขึ้นมาเองเด็ดขาด
+    canalBelowOuter = null;
+    canalWaterElevation = null;
+    isCanalOverflow = false;
+    canalStatusText = hasFieldReport ? 'หน้างานไม่ได้ระบุระดับคลอง' : 'รอข้อมูลสำรวจระดับน้ำคลอง';
+  }
+
+  // 2.1 วิเคราะห์ระดับน้ำในบ่อพักระบายน้ำ (หลังประตูน้ำ จุดที่เชื่อมกับแหล่งน้ำสาธารณะ) เทียบกับขอบบ่อ
+  let outfallSumpWaterVsRimCm = null;
+  let outfallSumpConditionText = null;
+  const sumpPattern = /(?:ระดับน้ำใน)?(?:บ่อพัก(?:ระบายน้ำ)?|บ่อระบายน้ำ|บ่อสูบ|บ่อหน่วง)?\s*(?:หลัง\s*(?:ประตูน้ำ|ปตร\.)|จุดเชื่อม(?:แหล่ง)?น้ำสาธารณะ|จุดเชื่อมท่อสาธารณะ)[^\n\r]*?(?:ต่ำกว่า|ต่ำจาก|สูงกว่า|เสมอ|จาก)\s*(?:ขอบบ่อ|ปากบ่อ)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const sumpAltPattern = /(?:ระดับน้ำใน)?(?:บ่อพักระบายน้ำ|บ่อพักหลัง|บ่อระบายน้ำ)[^\n\r]*?(?:ต่ำกว่า|ต่ำจาก|สูงกว่า|เสมอ)\s*(?:ขอบบ่อ|ปากบ่อ)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const sumpGenericPattern = /(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)\s*(?:ขอบบ่อ|ปากบ่อ)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const sumpAboveGenericPattern = /(?:สูงกว่า|เสมอระดับ|เสมอ)\s*(?:ขอบบ่อ|ปากบ่อ)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const sumpMatch = rawNotes.match(sumpPattern) || rawNotes.match(sumpAltPattern) || rawNotes.match(sumpGenericPattern) || rawNotes.match(sumpAboveGenericPattern);
+
+  if (sumpMatch) {
+    let parsedCm = parseFloat(sumpMatch[1]);
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(sumpMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(sumpMatch[0])) parsedCm *= 100;
+    const isBelow = /(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)/i.test(sumpMatch[0]);
+    const isAbove = /(?:สูงกว่า|ล้นขอบ|เหนือขอบ)/i.test(sumpMatch[0]);
+
+    if (isBelow) {
+      outfallSumpWaterVsRimCm = -Math.abs(Math.round(parsedCm)); // ค่าติดลบ = ต่ำกว่าขอบบ่อ
+      outfallSumpConditionText = `ต่ำกว่าขอบบ่อ ${Math.abs(outfallSumpWaterVsRimCm)} ซม.`;
+    } else if (isAbove) {
+      outfallSumpWaterVsRimCm = +Math.abs(Math.round(parsedCm)); // ค่าบวก = ล้นสูงกว่าขอบบ่อ
+      outfallSumpConditionText = `ล้นสูงกว่าขอบบ่อ +${outfallSumpWaterVsRimCm} ซม. ⚠️`;
     } else {
-      canalBelowOuter = 50; canalWaterElevation = -0.50; canalStatusText = 'ลุ่มน้ำหลัก';
+      outfallSumpWaterVsRimCm = -Math.abs(Math.round(parsedCm));
+      outfallSumpConditionText = `ต่ำกว่าขอบบ่อ ${Math.abs(outfallSumpWaterVsRimCm)} ซม.`;
+    }
+  }
+
+  // 2.2 วิเคราะห์ระดับน้ำในท่อระบายน้ำเทียบกับระดับถนนนอกโครงการ (กรณีไม่ติดคลอง แต่มีท่อระบายน้ำ)
+  let publicDrainWaterVsOuterCm = null;
+  let publicDrainConditionText = null;
+  const drainPattern = /(?:ระดับน้ำใน)?(?:ท่อระบายน้ำ(?:สาธารณะ)?|ท่อสาธารณะ|ท่อระบาย)[^\n\r]*?(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก|สูงกว่า)\s*(?:ระดับ)?\s*(?:ผิวถนน(?:นอก)?|ถนนนอก|ถนนหน้าโครงการ|ถนน)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const drainAltPattern = /(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก|สูงกว่า)\s*(?:ระดับ)?\s*(?:ผิวถนน(?:นอก)?|ถนนนอก|ถนนหน้าโครงการ)[^\n\r]*?(?:ท่อระบายน้ำ|ท่อสาธารณะ)[^\d\n\-+]*?([-+]?\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i;
+  const drainMatch = rawNotes.match(drainPattern) || rawNotes.match(drainAltPattern);
+
+  if (drainMatch) {
+    let parsedCm = parseFloat(drainMatch[1]);
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(drainMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(drainMatch[0])) parsedCm *= 100;
+    const isBelow = /(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)/i.test(drainMatch[0]);
+    const isAbove = /(?:สูงกว่า|ล้นท่อ)/i.test(drainMatch[0]);
+
+    if (isBelow) {
+      publicDrainWaterVsOuterCm = -Math.abs(Math.round(parsedCm)); // ค่าติดลบ = ต่ำกว่าผิวถนนนอก
+      publicDrainConditionText = `ท่อระบายน้ำต่ำกว่าถนนนอก ${Math.abs(publicDrainWaterVsOuterCm)} ซม.`;
+    } else if (isAbove) {
+      publicDrainWaterVsOuterCm = +Math.abs(Math.round(parsedCm)); // ค่าบวก = น้ำในท่อเอ่อล้นถนนนอก
+      publicDrainConditionText = `ท่อระบายน้ำเอ่อล้นถนนนอก +${publicDrainWaterVsOuterCm} ซม. ⚠️`;
+    } else {
+      publicDrainWaterVsOuterCm = -Math.abs(Math.round(parsedCm));
+      publicDrainConditionText = `ท่อระบายน้ำต่ำกว่าถนนนอก ${Math.abs(publicDrainWaterVsOuterCm)} ซม.`;
     }
   }
 
@@ -147,7 +191,7 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
       let parsedInner = parseFloat(innerMatch[1]);
       const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(innerMatch[0]);
       if (isMeter && !/(?:cm|ซม|เซน)/i.test(innerMatch[0])) parsedInner *= 100;
-      if (parsedInner > canalBelowOuter) {
+      if (canalBelowOuter !== null && parsedInner > canalBelowOuter) {
         innerElevation = parsedInner - canalBelowOuter;
         innerSource = 'FIELD_MEASURED';
       }
@@ -168,7 +212,7 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   const effectiveBarrier = hasEntranceCrest ? Math.max(innerElevation, crestElevation) : innerElevation;
 
   // ระยะผิวน้ำคลองเทียบถนนในโครงการ (innerElevation ลบด้วยระดับน้ำคลอง)
-  const canalBelowInner = innerElevation - Math.round(canalWaterElevation * 100);
+  const canalBelowInner = (canalWaterElevation !== null) ? (innerElevation - Math.round(canalWaterElevation * 100)) : null;
 
   // 4. วิเคราะห์ระดับน้ำบนถนนหน้าโครงการ / ซอยภายนอก / ถนนภาระจำยอม (Outer Road Water) จาก 2 แหล่ง
   // แยกข้อความเป็นส่วนๆ ตาม bullet dashes หรือบรรทัด เพื่อไม่ให้ regex วิ่งข้ามประโยค
@@ -300,15 +344,36 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   // ระยะความปลอดภัย (Safety Freeboard Margin)
   const safetyMargin = effectiveBarrier - outerRoadWaterDepth;
 
-  const isCanalHigh = isCanalOverflow || canalWaterElevation >= -0.15 || status === 'WATCH' || status === 'CRITICAL' || /หนุน|ล้น|สูง|ริมฟุตบาท/i.test(report.drainageCondition || '');
+  const isCanalHigh = isCanalOverflow || (canalWaterElevation !== null && canalWaterElevation >= -0.15) || status === 'WATCH' || status === 'CRITICAL' || /หนุน|ล้น|สูง|ริมฟุตบาท/i.test(report.drainageCondition || '');
   const flapValve = isCanalHigh ? 'CLOSED' : 'OPEN';
   const pumpStatus = (isCanalOverflow || outerRoadWaterDepth > 0 || status === 'CRITICAL') ? 'ACTIVE' : (isCanalHigh ? 'STANDBY' : 'READY');
 
+  const sumpRimVsInnerDiff = typeof project?.sumpRimVsInnerDiff === 'number' && !isNaN(project.sumpRimVsInnerDiff)
+    ? project.sumpRimVsInnerDiff
+    : 0.00;
+
+  const sumpRimVsOuterDiff = typeof project?.sumpRimVsOuterDiff === 'number' && !isNaN(project.sumpRimVsOuterDiff)
+    ? project.sumpRimVsOuterDiff
+    : (typeof project?.asBuiltElevationDiff === 'number' ? (project.asBuiltElevationDiff + sumpRimVsInnerDiff) : 0.80);
+
+  const sumpWaterElevationVsOuter = (outfallSumpWaterVsRimCm !== null)
+    ? Number((sumpRimVsOuterDiff + (outfallSumpWaterVsRimCm / 100)).toFixed(2))
+    : null;
+
+  const publicDrainWaterElevation = (publicDrainWaterVsOuterCm !== null)
+    ? Number((publicDrainWaterVsOuterCm / 100).toFixed(2))
+    : null;
+
+  const isBackwaterHazard = (sumpWaterElevationVsOuter !== null) && (
+    (canalWaterElevation !== null && canalWaterElevation > sumpWaterElevationVsOuter) ||
+    (publicDrainWaterElevation !== null && publicDrainWaterElevation > sumpWaterElevationVsOuter)
+  );
+
   return {
     hasFieldReport,
-    canalWaterElevation: Number(canalWaterElevation.toFixed(2)),
-    canalBelowOuter: Math.round(canalBelowOuter),
-    canalBelowInner: Math.round(canalBelowInner),
+    canalWaterElevation: canalWaterElevation !== null ? Number(canalWaterElevation.toFixed(2)) : null,
+    canalBelowOuter: canalBelowOuter !== null ? Math.round(canalBelowOuter) : null,
+    canalBelowInner: canalBelowInner !== null ? Math.round(canalBelowInner) : null,
     canalStatusText,
     canalSource,
     isCanalOverflow,
@@ -324,13 +389,22 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
     outerRoadConditionText,
     innerSource,
     asBuiltElevationDiff: typeof project?.asBuiltElevationDiff === 'number' ? project.asBuiltElevationDiff : 0.80,
+    sumpRimVsInnerDiff,
+    sumpRimVsOuterDiff,
+    outfallSumpWaterVsRimCm,
+    outfallSumpConditionText,
+    sumpWaterElevationVsOuter,
+    isBackwaterHazard,
+    publicDrainWaterVsOuterCm,
+    publicDrainConditionText,
+    publicDrainWaterElevation,
     asBuiltBenchmarkMSL: project?.asBuiltBenchmarkMSL || null,
     asBuiltNotes: project?.asBuiltNotes || null,
     hasFloodwall,
     floodwallHeightDiff,
     floodwallElevation,
     outerElevation: 0,  // เกณฑ์อ้างอิงถนนภายนอก (0 ซม.)
-    canalElevation: Number(canalWaterElevation.toFixed(2)),
+    canalElevation: canalWaterElevation !== null ? Number(canalWaterElevation.toFixed(2)) : null,
     flapValve,
     pumpStatus
   };
@@ -567,10 +641,10 @@ export function generateFloodMapHtml({
 
       <!-- Action Buttons -->
       <div class="flex items-center gap-1.5 sm:gap-2">
-        <a href="/api/flood-report?mode=asbuilt" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 transition-colors shadow-sm" title="จัดการระดับความสูงตามแบบก่อสร้างจริง As-Built">
+        <a href="/api/flood-report?mode=asbuilt" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 transition-colors shadow-sm" title="จัดการเกณฑ์ระดับความสูงอ้างอิงโครงการ">
           <span>📐</span>
-          <span class="hidden sm:inline">จัดการ As-Built</span>
-          <span class="sm:hidden">As-Built</span>
+          <span class="hidden sm:inline">เกณฑ์ระดับโครงการ</span>
+          <span class="sm:hidden">ระดับโครงการ</span>
         </a>
 
         <a href="/api/flood-report?mode=executive" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-lh-gold/20 hover:bg-lh-gold/30 text-lh-gold border border-lh-gold/40 transition-colors shadow-sm" title="เปิดหน้ารายงานสรุปผู้บริหาร">
@@ -757,7 +831,7 @@ export function generateFloodMapHtml({
             <span>⚪ ยังไม่มีการส่งรายงานตรวจเช็คหน้างานในรอบนี้</span>
           </div>
           <p class="text-[10px] text-slate-500 leading-relaxed">
-            ยังไม่มีเจ้าหน้าที่โครงการส่งผลสำรวจจริง ข้อมูลที่แสดงประเมินจากโทรมาตรสถานีน้ำใกล้เคียงและแบบก่อสร้างจริง (As-Built)
+            ยังไม่มีเจ้าหน้าที่โครงการส่งผลสำรวจจริง ข้อมูลที่แสดงประเมินจากโทรมาตรสถานีน้ำใกล้เคียงและเกณฑ์ระดับความสูงอ้างอิงโครงการ
           </p>
         </div>
 
@@ -797,6 +871,8 @@ export function generateFloodMapHtml({
             <span id="dz-status-tag" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700">Two-Zone Analysis</span>
           </div>
           <div><strong class="text-slate-400">สภาพคลอง/ทางน้ำ:</strong> <span id="field-canal" class="text-white">-</span></div>
+          <div id="field-sump-row" style="display: none;"><strong class="text-slate-400">🕳️ บ่อพักหลัง ปตร.:</strong> <span id="field-sump-water" class="text-sky-300 font-semibold">-</span></div>
+          <div id="field-drain-row" style="display: none;"><strong class="text-slate-400">🚰 ท่อระบายน้ำสาธารณะ:</strong> <span id="field-drain-water" class="text-sky-300 font-semibold">-</span></div>
           <div><strong class="text-slate-400">สถานะเครื่องสูบน้ำ:</strong> <span id="field-pumps" class="text-white">-</span></div>
         </div>
 
@@ -993,7 +1069,7 @@ export function generateFloodMapHtml({
           <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800">
             <div class="flex items-center justify-between">
               <span class="text-slate-400 block text-[10px]">ระดับน้ำคลองเทียบถนนใน</span>
-              <span id="cs-source-tag" class="text-[9px] text-sky-400 font-semibold">📐 As-Built</span>
+              <span id="cs-source-tag" class="text-[9px] text-sky-400 font-semibold">📐 เกณฑ์อ้างอิง</span>
             </div>
             <span id="cs-canal-inner" class="font-bold text-emerald-400 text-sm">ต่ำกว่า 120 ซม.</span>
             <span id="cs-canal-inner-sub" class="text-[9px] text-slate-400 block">ปลอดภัยสูง (ถมดินยก +0.80 ม.)</span>
@@ -1099,27 +1175,32 @@ export function generateFloodMapHtml({
       </div>
 
       <!-- ========================================== -->
-      <!-- 📐 หมวด 4: ข้อมูลวิศวกรรม As-Built & แนวคันกั้นน้ำ (LH Engineering Resilience) -->
-      <!-- แหล่งข้อมูล: แบบก่อสร้างจริง Land & Houses & การสำรวจหมุดระดับ -->
+      <!-- 📐 หมวด 4: เกณฑ์ระดับความสูงอ้างอิงโครงการ & แนวคันกั้นน้ำ (LH Engineering Resilience) -->
+      <!-- แหล่งข้อมูล: เกณฑ์ระดับวิศวกรรม Land & Houses & การสำรวจหมุดระดับ -->
       <!-- ========================================== -->
       <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-amber-900/50 space-y-2.5 shadow-md">
         <div class="flex items-center justify-between">
           <div class="space-y-0.5">
             <h3 class="font-bold text-white text-xs flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full bg-lh-gold"></span>
-              <span>หมวด 4: ข้อมูลวิศวกรรม As-Built & แนวคันกั้นน้ำ</span>
+              <span>หมวด 4: เกณฑ์ระดับความสูงอ้างอิงโครงการ & แนวคันกั้นน้ำ</span>
             </h3>
-            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: แบบก่อสร้างจริง Land & Houses & การสำรวจหมุดระดับ</p>
+            <p class="text-[9px] text-slate-400">แหล่งข้อมูล: เกณฑ์ระดับวิศวกรรม Land & Houses & การสำรวจหมุดระดับ</p>
           </div>
-          <span id="cs-asbuilt-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">📐 As-Built: +0.80 ม.</span>
+          <span id="cs-asbuilt-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">📐 เกณฑ์อ้างอิง: +0.80 ม.</span>
         </div>
 
         <!-- Engineering Elevation Specs Grid -->
         <div class="grid grid-cols-2 gap-2 text-[11px]">
           <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
-            <span class="text-slate-400 block text-[10px]">🏡 ถนนในโครงการ (As-Built)</span>
+            <span class="text-slate-400 block text-[10px]">🏡 ถนนในโครงการ (เกณฑ์อ้างอิง)</span>
             <div id="spec-inner-elev" class="font-bold text-emerald-400 text-xs">+0.80 ม.</div>
             <span class="text-[9px] text-slate-500 block">ยกสูงเหนือถนนภายนอก</span>
+          </div>
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
+            <span class="text-slate-400 block text-[10px]">🕳️ ปากบ่อพักหลัง ปตร.</span>
+            <div id="spec-sump-rim-elev" class="font-bold text-sky-400 text-xs">เสมอถนนใน (0.00 ม.)</div>
+            <span id="spec-sump-rim-outer" class="text-[9px] text-slate-500 block">เทียบถนนนอก +0.80 ม.</span>
           </div>
           <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
             <span class="text-slate-400 block text-[10px]">🛡️ สันเนินทางเข้า / ป้อม รปภ.</span>
@@ -1131,10 +1212,12 @@ export function generateFloodMapHtml({
             <div id="spec-floodwall" class="font-bold text-sky-400 text-xs">ไม่มีแนวเขื่อน</div>
             <span class="text-[9px] text-slate-500 block">กำแพงกันน้ำล้นคลอง</span>
           </div>
-          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-0.5">
-            <span class="text-slate-400 block text-[10px]">📏 ระยะปลอดภัย (Freeboard)</span>
-            <div id="spec-freeboard" class="font-bold text-emerald-400 text-xs">+80 ซม.</div>
-            <span class="text-[9px] text-slate-500 block">ความสูงเหนือผิวน้ำภายนอก</span>
+          <div class="col-span-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <span class="text-slate-400 block text-[10px]">📏 ระยะปลอดภัยถนนในโครงการ (Freeboard)</span>
+              <span class="text-[9px] text-slate-500 block">ความสูงถนนในเหนือผิวน้ำภายนอก</span>
+            </div>
+            <div id="spec-freeboard" class="font-bold text-emerald-400 text-sm">+80 ซม.</div>
           </div>
         </div>
 
@@ -1154,10 +1237,10 @@ export function generateFloodMapHtml({
           </p>
         </div>
 
-        <!-- Shortcut to As-Built Elevation Manager -->
+        <!-- Shortcut to Project Elevation Benchmark Manager -->
         <div class="pt-1">
-          <a id="btn-asbuilt-mgr" href="/api/flood-report?mode=asbuilt" target="_blank" class="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 transition-all font-semibold text-xs shadow-xs" title="เปิดระบบบันทึกและปรับปรุงค่าระดับวิศวกรรม As-Built">
-            <span>📐 เปิดระบบจัดการระดับวิศวกรรม As-Built Manager ↗</span>
+          <a id="btn-asbuilt-mgr" href="/api/flood-report?mode=asbuilt" target="_blank" class="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700 transition-all font-semibold text-xs shadow-xs" title="เปิดระบบบันทึกและจัดการเกณฑ์ระดับความสูงโครงการ">
+            <span>📐 เปิดระบบจัดการเกณฑ์ระดับความสูงโครงการ ↗</span>
           </a>
         </div>
       </div>
@@ -1573,7 +1656,7 @@ export function generateFloodMapHtml({
             const crestMeters = (hydro.crestElevation / 100).toFixed(2);
             dzSynthesisText.innerHTML = '<span class="text-amber-300 font-semibold">⚠️ ถนนซอย/ทางเข้าหน้าโครงการมีน้ำท่วมขัง ' + outerDepth + ' ซม.' + depthLabel + '</span> แต่ <span class="text-emerald-400 font-bold">มีสันเนินทางเข้า/ป้อม รปภ. สูง +' + crestMeters + ' ม.</span> (ถนนในยก +' + elevMeters + ' ม.' + sandbagNote + ') ทำหน้าที่เป็นคันกั้นน้ำบ่าภายนอกอย่างสมบูรณ์ บานพับ Flap Valve ปิดกันน้ำย้อน สัญจรในโครงการแห้ง 100%';
           } else {
-            dzSynthesisText.innerHTML = '<span class="text-amber-300 font-semibold">⚠️ ถนนซอย/ทางเข้าหน้าโครงการมีน้ำท่วมขัง ' + outerDepth + ' ซม.' + depthLabel + '</span> แต่ <span class="text-emerald-400 font-bold">ถนนภายในโครงการยกพื้นสูงกว่าระดับน้ำภายนอก +' + safetyMargin + ' ซม.</span> (As-Built ยกสูง +' + elevMeters + ' ม.' + sandbagNote + ') ทำให้น้ำภายนอกไม่สามารถไหลเข้าโครงการได้ บานพับ Flap Valve ปิดกันน้ำย้อน สัญจรในโครงการแห้ง 100%';
+            dzSynthesisText.innerHTML = '<span class="text-amber-300 font-semibold">⚠️ ถนนซอย/ทางเข้าหน้าโครงการมีน้ำท่วมขัง ' + outerDepth + ' ซม.' + depthLabel + '</span> แต่ <span class="text-emerald-400 font-bold">ถนนภายในโครงการยกพื้นสูงกว่าระดับน้ำภายนอก +' + safetyMargin + ' ซม.</span> (ถมยกพื้นสูงกว่าถนนนอก +' + elevMeters + ' ม.' + sandbagNote + ') ทำให้น้ำภายนอกไม่สามารถไหลเข้าโครงการได้ บานพับ Flap Valve ปิดกันน้ำย้อน สัญจรในโครงการแห้ง 100%';
           }
           if (dzStatusTag) {
             dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
@@ -1588,28 +1671,32 @@ export function generateFloodMapHtml({
           }
         } else if (hasReport) {
           const crestInfo = hydro.hasEntranceCrest ? (' พร้อมสันเนินทางเข้า +' + (hydro.crestElevation / 100).toFixed(2) + ' ม.') : '';
-          dzSynthesisText.innerHTML = '<span class="text-emerald-400 font-semibold">🟢 สภาพปกติทั้งสองโซน:</span> ถนนหน้าโครงการและถนนเมนภายในแห้งสนิท สัญจรได้คล่องตัว ระดับยกพื้นตามแบบ As-Built +' + elevMeters + ' ม.' + crestInfo + ' รองรับสถานการณ์ได้ปลอดภัย';
+          dzSynthesisText.innerHTML = '<span class="text-emerald-400 font-semibold">🟢 สภาพปกติทั้งสองโซน:</span> ถนนหน้าโครงการและถนนเมนภายในแห้งสนิท สัญจรได้คล่องตัว ระดับยกพื้นโครงการสูงกว่าถนนนอก +' + elevMeters + ' ม.' + crestInfo + ' รองรับสถานการณ์ได้ปลอดภัย';
           if (dzStatusTag) {
             dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
             dzStatusTag.innerText = 'สภาวะปกติ';
           }
         } else {
           const crestInfo = hydro.hasEntranceCrest ? (' และมีสันเนินทางเข้า +' + (hydro.crestElevation / 100).toFixed(2) + ' ม.') : '';
-          dzSynthesisText.innerHTML = '<span class="text-slate-400">⚪ รอข้อมูลตรวจเช็คสภาพผิวถนนหน้าโครงการจากภาคสนาม</span> โดยโครงการได้ถมดินยกพื้นสูง +' + elevMeters + ' ม. (As-Built)' + crestInfo + ' ตามเกณฑ์ป้องกันน้ำท่วมของแลนด์ แอนด์ เฮ้าส์';
+          dzSynthesisText.innerHTML = '<span class="text-slate-400">⚪ รอข้อมูลตรวจเช็คสภาพผิวถนนหน้าโครงการจากภาคสนาม</span> โดยโครงการได้ถมดินยกพื้นสูง +' + elevMeters + ' ม. (เกณฑ์อ้างอิง)' + crestInfo + ' ตามเกณฑ์ป้องกันน้ำท่วมของแลนด์ แอนด์ เฮ้าส์';
           if (dzStatusTag) {
             dzStatusTag.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/50 text-slate-300 border border-slate-600/50';
             dzStatusTag.innerText = 'รอข้อมูลภาคสนาม';
           }
         }
+
+        if (hydro.isBackwaterHazard) {
+          dzSynthesisText.innerHTML += '<div class="mt-1.5 pt-1 border-t border-slate-800 text-rose-300 font-semibold flex items-center gap-1 text-[10px]"><span>⚠️</span><span>ตรวจพบความเสี่ยงน้ำย้อน (Backwater Hazard): ระดับน้ำภายนอกสูงกว่าระดับน้ำในบ่อพัก ตรวจสอบบาน Flap Valve ให้ปิดสนิทและเดินปั๊มสูบระบาย</span></div>';
+        }
       }
 
-      // Update As-Built Badge in Cross-Section Header
+      // Update Elevation Benchmark Badge in Cross-Section Header
       const asbuiltBadge = document.getElementById('cs-asbuilt-badge');
       if (asbuiltBadge) {
         const crestBadgeText = hydro.hasEntranceCrest && hydro.crestElevation ? (' (สันเนิน +' + (hydro.crestElevation / 100).toFixed(2) + ' ม.)') : '';
         if (hydro.innerSource === 'AS_BUILT') {
           asbuiltBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30';
-          asbuiltBadge.innerText = '📐 As-Built: ' + elevSign + elevMeters + ' ม.' + (p.asBuiltBenchmarkMSL ? ' (' + p.asBuiltBenchmarkMSL + ')' : '') + crestBadgeText;
+          asbuiltBadge.innerText = '📐 เกณฑ์อ้างอิง: ' + elevSign + elevMeters + ' ม.' + (p.asBuiltBenchmarkMSL ? ' (' + p.asBuiltBenchmarkMSL + ')' : '') + crestBadgeText;
         } else if (hydro.innerSource === 'FIELD_MEASURED') {
           asbuiltBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
           asbuiltBadge.innerText = '📏 ตรวจวัดจริง: ' + elevSign + elevMeters + ' ม.' + crestBadgeText;
@@ -1626,7 +1713,7 @@ export function generateFloodMapHtml({
 
       const sourceTag = document.getElementById('cs-source-tag');
       if (sourceTag) {
-        sourceTag.innerText = hydro.innerSource === 'AS_BUILT' ? '📐 As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? '📏 วัดจริง' : '⚙️ มาตรฐาน');
+        sourceTag.innerText = hydro.innerSource === 'AS_BUILT' ? '📐 เกณฑ์อ้างอิง' : (hydro.innerSource === 'FIELD_MEASURED' ? '📏 วัดจริง' : '⚙️ มาตรฐาน');
         sourceTag.className = hydro.innerSource === 'AS_BUILT' ? 'text-[9px] text-sky-400 font-semibold' : (hydro.innerSource === 'FIELD_MEASURED' ? 'text-[9px] text-emerald-400 font-semibold' : 'text-[9px] text-slate-400');
       }
 
@@ -1779,6 +1866,10 @@ export function generateFloodMapHtml({
         if (fieldDataBox) fieldDataBox.classList.add('hidden');
         if (photosSection) photosSection.classList.add('hidden');
         document.getElementById('field-updated-at').innerText = 'ยังไม่มีข้อมูลตรวจจริงรอบนี้';
+        const sumpRow = document.getElementById('field-sump-row');
+        if (sumpRow) sumpRow.style.display = 'none';
+        const drainRow = document.getElementById('field-drain-row');
+        if (drainRow) drainRow.style.display = 'none';
       } else {
         if (fieldEmptyBox) fieldEmptyBox.classList.add('hidden');
         if (fieldDataBox) fieldDataBox.classList.remove('hidden');
@@ -1787,6 +1878,29 @@ export function generateFloodMapHtml({
         document.getElementById('field-water').innerText = p.waterLevel || '-';
         document.getElementById('field-canal').innerText = p.drainageCondition || '-';
         document.getElementById('field-pumps').innerText = p.pumpsRunning || '-';
+
+        // บ่อพักหลัง ปตร. และท่อระบายน้ำสาธารณะ (แสดงเฉพาะเมื่อมีรายงานจริง ห้ามแสดงถ้าไม่มี)
+        const sumpRow = document.getElementById('field-sump-row');
+        const sumpVal = document.getElementById('field-sump-water');
+        if (sumpRow && sumpVal) {
+          if (hydro.outfallSumpWaterVsRimCm !== null) {
+            sumpVal.innerText = hydro.outfallSumpConditionText || (hydro.outfallSumpWaterVsRimCm < 0 ? ('ต่ำกว่าขอบบ่อ ' + Math.abs(hydro.outfallSumpWaterVsRimCm) + ' ซม.') : ('ล้นขอบบ่อ +' + hydro.outfallSumpWaterVsRimCm + ' ซม.'));
+            sumpRow.style.display = 'block';
+          } else {
+            sumpRow.style.display = 'none';
+          }
+        }
+
+        const drainRow = document.getElementById('field-drain-row');
+        const drainVal = document.getElementById('field-drain-water');
+        if (drainRow && drainVal) {
+          if (hydro.publicDrainWaterVsOuterCm !== null) {
+            drainVal.innerText = hydro.publicDrainConditionText || (hydro.publicDrainWaterVsOuterCm < 0 ? ('ต่ำกว่าถนนนอก ' + Math.abs(hydro.publicDrainWaterVsOuterCm) + ' ซม.') : ('เอ่อล้นถนนนอก +' + hydro.publicDrainWaterVsOuterCm + ' ซม.'));
+            drainRow.style.display = 'block';
+          } else {
+            drainRow.style.display = 'none';
+          }
+        }
       }
 
       // Photos Section
@@ -1817,18 +1931,29 @@ export function generateFloodMapHtml({
           '• พื้นที่: ' + (p.area || '-'),
           '• สถานะ: ' + stLabel,
           '• ถนนหน้าโครงการ: ' + outerStatus,
-          '• ถนนในโครงการ: ' + innerStatus + ' (As-Built ยก +' + elevMeters + ' ม.)',
+          '• ถนนในโครงการ: ' + innerStatus + ' (ถมยก +' + elevMeters + ' ม.)',
           '• โทรมาตร: ' + ((p.liveWater && p.liveWater.stationName) ? p.liveWater.stationName : (p.stationName || '-')),
           '🔗 ตรวจสอบสดบนแผนที่: https://lh-taskflow.vercel.app/api/flood-report?focus=' + p.code
         ];
         btnLine.href = 'https://line.me/R/share?text=' + encodeURIComponent(lineParts.join(String.fromCharCode(10)));
       }
 
-      // Populate Pillar 4: As-Built Engineering Specs
+      // Populate Pillar 4: Project Elevation Benchmark Specs
       const specInner = document.getElementById('spec-inner-elev');
       if (specInner) {
-        const srcText = hydro.innerSource === 'AS_BUILT' ? 'As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? 'วัดจริง' : 'มาตรฐาน');
+        const srcText = hydro.innerSource === 'AS_BUILT' ? 'เกณฑ์อ้างอิง' : (hydro.innerSource === 'FIELD_MEASURED' ? 'วัดจริง' : 'มาตรฐาน');
         specInner.innerText = elevSign + elevMeters + ' ม. (' + srcText + ')';
+      }
+      const specSumpRim = document.getElementById('spec-sump-rim-elev');
+      const specSumpRimOuter = document.getElementById('spec-sump-rim-outer');
+      if (specSumpRim) {
+        const rimDiff = hydro.sumpRimVsInnerDiff != null ? hydro.sumpRimVsInnerDiff : 0.00;
+        const rimOuter = hydro.sumpRimVsOuterDiff != null ? hydro.sumpRimVsOuterDiff : (Number(elevMeters) + rimDiff);
+        const rimDiffText = rimDiff === 0 ? 'เสมอถนนใน (0.00 ม.)' : (rimDiff < 0 ? ('ต่ำกว่าถนนใน ' + rimDiff.toFixed(2) + ' ม.') : ('สูงกว่าถนนใน +' + rimDiff.toFixed(2) + ' ม.'));
+        specSumpRim.innerText = rimDiffText;
+        if (specSumpRimOuter) {
+          specSumpRimOuter.innerText = 'เทียบถนนนอก ' + (rimOuter >= 0 ? '+' : '') + rimOuter.toFixed(2) + ' ม.';
+        }
       }
       const specCrest = document.getElementById('spec-crest-elev');
       if (specCrest) {
@@ -2095,7 +2220,7 @@ export function generateFloodMapHtml({
         }
       }
 
-      const innerSrcBadge = hydro.innerSource === 'AS_BUILT' ? 'As-Built' : (hydro.innerSource === 'FIELD_MEASURED' ? 'ตรวจวัด' : 'มาตรฐาน');
+      const innerSrcBadge = hydro.innerSource === 'AS_BUILT' ? 'เกณฑ์อ้างอิง' : (hydro.innerSource === 'FIELD_MEASURED' ? 'ตรวจวัด' : 'มาตรฐาน');
       const crestSubBadge = hydro.hasEntranceCrest && hydro.crestElevation ? (' | เนิน +' + (hydro.crestElevation / 100).toFixed(2) + 'ม.') : '';
       const innerStatusTxt = innerDepth > 0 ? ('น้ำขัง ' + innerDepth + ' ซม.') : ('แห้ง 100% (' + innerSrcBadge + crestSubBadge + ')');
       const svgInnerTxt = document.getElementById('svg-inner-txt');
@@ -2108,7 +2233,11 @@ export function generateFloodMapHtml({
       const canalOuterElem = document.getElementById('cs-canal-outer');
       const canalOuterSub = document.getElementById('cs-canal-outer-sub');
       if (canalOuterElem) {
-        if (hasFloodwall) {
+        if (!isSimulated && hydro.canalWaterElevation === null) {
+          canalOuterElem.innerText = 'รอข้อมูลสำรวจคลอง';
+          canalOuterElem.className = 'font-bold text-slate-400 text-sm';
+          if (canalOuterSub) canalOuterSub.innerText = 'ไม่มีข้อมูลระดับคลองหรือโทรมาตรในจุดนี้';
+        } else if (hasFloodwall) {
           if (canalElevationM > floodwallLimitM) {
             const overWallCm = Math.round((canalElevationM - floodwallLimitM) * 100);
             canalOuterElem.innerText = 'ล้นข้ามเขื่อน +' + overWallCm + ' ซม. ⚠️';
@@ -2147,12 +2276,19 @@ export function generateFloodMapHtml({
       const marginCm = Math.round(marginM * 100);
 
       if (canalInnerElem) {
-        if (marginCm > 0) {
+        if (!isSimulated && hydro.canalWaterElevation === null) {
+          canalInnerElem.innerText = 'รอข้อมูลสำรวจคลอง';
+          canalInnerElem.className = 'font-bold text-slate-400 text-sm';
+          if (canalInnerSub) {
+            const crestNote = hydro.hasEntranceCrest && hydro.crestElevation ? (' • เนิน รปภ. +' + (hydro.crestElevation / 100).toFixed(2) + ' ม.') : '';
+            canalInnerSub.innerText = 'ระดับถนนในโครงการยกสูง ' + elevSign + elevMeters + ' ม.' + crestNote;
+          }
+        } else if (marginCm > 0) {
           canalInnerElem.innerText = 'ต่ำกว่า ' + marginCm + ' ซม.';
           canalInnerElem.className = 'font-bold text-sm ' + (marginCm >= 50 ? 'text-emerald-400' : (marginCm >= 20 ? 'text-amber-400' : 'text-rose-400'));
           if (canalInnerSub) {
             const crestNote = hydro.hasEntranceCrest && hydro.crestElevation ? (' • เนิน รปภ. +' + (hydro.crestElevation / 100).toFixed(2) + ' ม.') : '';
-            canalInnerSub.innerText = (marginCm >= 50 ? '🛡️ ระยะปลอดภัยสูง' : '⚠️ ระยะเผื่อความปลอดภัยต่ำ') + ' (As-Built ยก ' + elevSign + elevMeters + ' ม.' + crestNote + ')';
+            canalInnerSub.innerText = (marginCm >= 50 ? '🛡️ ระยะปลอดภัยสูง' : '⚠️ ระยะเผื่อความปลอดภัยต่ำ') + ' (ยกระดับถนนใน ' + elevSign + elevMeters + ' ม.' + crestNote + ')';
           }
         } else {
           const overInnerCm = Math.abs(marginCm);
@@ -2162,7 +2298,7 @@ export function generateFloodMapHtml({
             if (hydro.hasEntranceCrest && hydro.crestElevation && canalElevationM < (hydro.crestElevation / 100)) {
               canalInnerSub.innerText = '⚠️ น้ำคลองสูงกว่าถนนใน แต่มีสันเนิน รปภ. +' + (hydro.crestElevation / 100).toFixed(2) + ' ม. ป้องกันน้ำบ่าเข้า';
             } else {
-              canalInnerSub.innerText = '🚨 น้ำเอ่อล้นระดับถนน As-Built (' + elevSign + elevMeters + ' ม.)!';
+              canalInnerSub.innerText = '🚨 น้ำเอ่อล้นระดับถนนโครงการ (' + elevSign + elevMeters + ' ม.)!';
             }
           }
         }
