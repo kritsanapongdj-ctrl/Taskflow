@@ -484,7 +484,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         const mslVal = p.asBuiltBenchmarkMSL || '';
         const notesVal = p.asBuiltNotes || '';
 
-        card.innerHTML = `
+        card.innerHTML = \`
           <div class="flex flex-col lg:flex-row items-stretch lg:items-start justify-between gap-3">
             
             <!-- Left: Project Info -->
@@ -675,7 +675,7 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
             </div>
 
           </div>
-        `;
+        \`;
 
         container.appendChild(card);
       });
