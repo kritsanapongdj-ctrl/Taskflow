@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, doc, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 export default function SettingsTab({
   setUnlk,
@@ -128,10 +128,33 @@ export default function SettingsTab({
   };
 
   useEffect(() => {
-    if (setUnlk) {
-      fetchReports();
-    }
-  }, [setUnlk, activeTab]);
+    if (!setUnlk || !getColRef) return;
+
+    setLoadingReports(true);
+    const unsubReports = onSnapshot(getColRef('flood_reports'), (snap) => {
+      const list = [];
+      snap.forEach((d) => {
+        list.push({ ...d.data(), id: d.id });
+      });
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setFloodReports(list);
+      setLoadingReports(false);
+    }, (err) => {
+      console.error('Realtime flood reports error:', err);
+      setLoadingReports(false);
+    });
+
+    const unsubDrafts = onSnapshot(getColRef('flood_drafts'), (snap) => {
+      setDraftCount(snap.size);
+    }, (err) => {
+      console.error('Realtime flood drafts error:', err);
+    });
+
+    return () => {
+      unsubReports();
+      unsubDrafts();
+    };
+  }, [setUnlk, getColRef, activeTab]);
 
   const confirmDeleteReport = async () => {
     if (!selectedReportForDelete) return;
