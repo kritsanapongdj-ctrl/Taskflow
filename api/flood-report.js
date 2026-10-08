@@ -12,7 +12,14 @@ import {
   getTidalStatus, 
   getTmdWeatherWarning 
 } from './_services/thaiWaterService.js';
-import { getAsBuiltOverrides, saveAsBuiltOverrides, generateAsBuiltManagerHtml, validateAdminPin } from './_services/asBuiltService.js';
+import { 
+  getAsBuiltOverrides, 
+  saveAsBuiltOverrides, 
+  generateAsBuiltManagerHtml, 
+  validateAdminPin,
+  autoPopulateAllProjectsMSL,
+  autoCalibrateProjectFromField
+} from './_services/asBuiltService.js';
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyB6KvZWr8b2dXHxysIqXwk-SsdiuVNYv94",
@@ -1075,8 +1082,13 @@ async function handleAsBuiltManager(req, res) {
       entranceCrestDiff: overrides[p.code]?.entranceCrestDiff !== undefined ? overrides[p.code].entranceCrestDiff : (p.entranceCrestDiff ?? null),
       hasFloodwall: overrides[p.code]?.hasFloodwall !== undefined ? Boolean(overrides[p.code].hasFloodwall) : Boolean(p.hasFloodwall),
       floodwallHeightDiff: overrides[p.code]?.floodwallHeightDiff !== undefined ? overrides[p.code].floodwallHeightDiff : (p.floodwallHeightDiff ?? (p.hasFloodwall ? 0.40 : null)),
+      outerRoadBenchmarkMSL: overrides[p.code]?.outerRoadBenchmarkMSL ?? p.outerRoadBenchmarkMSL ?? null,
+      innerRoadBenchmarkMSL: overrides[p.code]?.innerRoadBenchmarkMSL ?? p.innerRoadBenchmarkMSL ?? null,
       asBuiltBenchmarkMSL: overrides[p.code]?.asBuiltBenchmarkMSL ?? p.asBuiltBenchmarkMSL ?? null,
-      asBuiltNotes: overrides[p.code]?.asBuiltNotes ?? p.asBuiltNotes ?? null
+      asBuiltNotes: overrides[p.code]?.asBuiltNotes ?? p.asBuiltNotes ?? null,
+      lastCalibratedFrom: overrides[p.code]?.lastCalibratedFrom ?? null,
+      lastCalibratedAt: overrides[p.code]?.lastCalibratedAt ?? null,
+      calibrationDetail: overrides[p.code]?.calibrationDetail ?? null
     }));
 
     const html = generateAsBuiltManagerHtml({ projectsData, overrides });
@@ -1107,8 +1119,22 @@ async function handleSaveAsBuilt(req, res) {
       return res.status(200).json({ success: true, message: 'ยืนยันสิทธิ์ผู้ดูแลระบบสำเร็จ' });
     }
 
+    // ⚡ Auto-Populate ระดับ ม.รทก. จากสถานีโทรมาตรสดของภาครัฐให้ครบทั้ง 34 โครงการ
+    if (body?.action === 'auto_populate_msl') {
+      const result = await autoPopulateAllProjectsMSL(adminPin);
+      floodMapCache = { html: null, expiresAt: 0 };
+      return res.status(200).json(result);
+    }
+
+    // 🎯 ปรับเทียบจากรายงานหน้างานล่าสุด (Smart Auto-Calibration จากรายงานไลน์)
+    if (body?.action === 'auto_calibrate_field') {
+      const result = await autoCalibrateProjectFromField(body?.projectCode, adminPin);
+      floodMapCache = { html: null, expiresAt: 0 };
+      return res.status(200).json(result);
+    }
+
     const result = await saveAsBuiltOverrides(body, adminPin);
-    // เคลียร์แคชหน้าแผนที่ เพื่อให้แผนที่แสดงผลค่าระดับน้ำและ As-Built ใหม่ทันที
+    // เคลียร์แคชหน้าแผนที่ เพื่อให้แผนที่แสดงผลค่าระดับน้ำและเกณฑ์ใหม่ทันที
     floodMapCache = { html: null, expiresAt: 0 };
     return res.status(200).json(result);
   } catch (err) {

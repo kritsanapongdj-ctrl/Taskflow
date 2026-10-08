@@ -8,7 +8,7 @@ import {
   analyzeWaterLevelFromPhotos,
   analyzeFloodReportWithGemini
 } from '../_services/geminiService.js';
-import { getAsBuiltOverrides } from '../_services/asBuiltService.js';
+import { getAsBuiltOverrides, autoCalibrateFromFieldNotes } from '../_services/asBuiltService.js';
 
 // รวมรายงาน สรุปผลด้วย AI และส่งกลับให้ Admin ในแชทส่วนตัว
 export async function compileAndSendFloodReport({ userId, replyToken, host, proto, prefetchedPhotosSnap }) {
@@ -167,6 +167,16 @@ export async function compileAndSendFloodReport({ userId, replyToken, host, prot
       generatedAtThai,
       createdAt: Date.now()
     });
+
+    // 🎯 Smart Auto-Calibration จากรายงานหน้างานจริง: ปรับเทียบ Baseline ระดับถนนของโครงการอัตโนมัติ
+    if (weather?.liveWater && weather.liveWater.waterLevelMSL != null && draft.notes) {
+      autoCalibrateFromFieldNotes({
+        projectCode: project.code,
+        notes: draft.notes,
+        liveWater: weather.liveWater,
+        asBuiltElevationDiff: project.asBuiltElevationDiff
+      }).catch(err => console.warn('[Auto-Calibrate Notice]', err.message));
+    }
 
     // บันทึกภาพลง Subcollection แบบขนาน (จำกัดไม่เกิน 10 ภาพ ตามมาตรฐาน Land & Houses)
     await Promise.all(finalPhotos.map((p, i) =>

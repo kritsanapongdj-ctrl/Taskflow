@@ -1,5 +1,6 @@
-import { db, doc, getDoc, setDoc, ensureAuth } from './firebase.js';
+import { db, doc, getDoc, setDoc, ensureAuth, collection, getDocs } from './firebase.js';
 import { FLOOD_PROJECTS } from './projectsConfig.js';
+import { fetchLiveWaterStations, getNearestWaterStation, haversineDistance } from './thaiWaterService.js';
 
 const SETTINGS_DOC_PATH = ['artifacts', 'default-app-id', 'public', 'data', 'flood_settings', 'as_built_elevations'];
 
@@ -54,6 +55,8 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
       const crestDiff = updates.entranceCrestDiff !== undefined && updates.entranceCrestDiff !== '' && updates.entranceCrestDiff !== null ? parseFloat(updates.entranceCrestDiff) : null;
       const hasFloodwall = updates.hasFloodwall !== undefined ? Boolean(updates.hasFloodwall === true || updates.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
       const floodwallDiff = updates.floodwallHeightDiff !== undefined && updates.floodwallHeightDiff !== '' && updates.floodwallHeightDiff !== null ? parseFloat(updates.floodwallHeightDiff) : null;
+      const outerRoadMSL = updates.outerRoadBenchmarkMSL !== undefined && updates.outerRoadBenchmarkMSL !== '' && updates.outerRoadBenchmarkMSL !== null ? parseFloat(updates.outerRoadBenchmarkMSL) : null;
+      const innerRoadMSL = updates.innerRoadBenchmarkMSL !== undefined && updates.innerRoadBenchmarkMSL !== '' && updates.innerRoadBenchmarkMSL !== null ? parseFloat(updates.innerRoadBenchmarkMSL) : null;
       
       const safeDiff = !isNaN(diff) ? diff : 0.80;
       const safeSumpInner = (sumpInner !== null && !isNaN(sumpInner)) ? sumpInner : 0.00;
@@ -66,8 +69,13 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
         entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
         hasFloodwall,
         floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
+        outerRoadBenchmarkMSL: (outerRoadMSL !== null && !isNaN(outerRoadMSL)) ? outerRoadMSL : null,
+        innerRoadBenchmarkMSL: (innerRoadMSL !== null && !isNaN(innerRoadMSL)) ? innerRoadMSL : null,
         asBuiltBenchmarkMSL: (updates.asBuiltBenchmarkMSL || '').trim() || null,
         asBuiltNotes: (updates.asBuiltNotes || '').trim() || null,
+        lastCalibratedFrom: updates.lastCalibratedFrom || null,
+        lastCalibratedAt: updates.lastCalibratedAt || null,
+        calibrationDetail: updates.calibrationDetail || null,
         updatedAt: nowIso
       };
     } else if (typeof updates === 'object') {
@@ -79,6 +87,8 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
           const crestDiff = val.entranceCrestDiff !== undefined && val.entranceCrestDiff !== '' && val.entranceCrestDiff !== null ? parseFloat(val.entranceCrestDiff) : null;
           const hasFloodwall = val.hasFloodwall !== undefined ? Boolean(val.hasFloodwall === true || val.hasFloodwall === 'true') : (FLOOD_PROJECTS[code]?.hasFloodwall || false);
           const floodwallDiff = val.floodwallHeightDiff !== undefined && val.floodwallHeightDiff !== '' && val.floodwallHeightDiff !== null ? parseFloat(val.floodwallHeightDiff) : null;
+          const outerRoadMSL = val.outerRoadBenchmarkMSL !== undefined && val.outerRoadBenchmarkMSL !== '' && val.outerRoadBenchmarkMSL !== null ? parseFloat(val.outerRoadBenchmarkMSL) : null;
+          const innerRoadMSL = val.innerRoadBenchmarkMSL !== undefined && val.innerRoadBenchmarkMSL !== '' && val.innerRoadBenchmarkMSL !== null ? parseFloat(val.innerRoadBenchmarkMSL) : null;
           
           const safeDiff = !isNaN(diff) ? diff : 0.80;
           const safeSumpInner = (sumpInner !== null && !isNaN(sumpInner)) ? sumpInner : 0.00;
@@ -91,8 +101,13 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
             entranceCrestDiff: (crestDiff !== null && !isNaN(crestDiff)) ? crestDiff : null,
             hasFloodwall,
             floodwallHeightDiff: (floodwallDiff !== null && !isNaN(floodwallDiff)) ? floodwallDiff : (hasFloodwall ? 0.40 : null),
+            outerRoadBenchmarkMSL: (outerRoadMSL !== null && !isNaN(outerRoadMSL)) ? outerRoadMSL : null,
+            innerRoadBenchmarkMSL: (innerRoadMSL !== null && !isNaN(innerRoadMSL)) ? innerRoadMSL : null,
             asBuiltBenchmarkMSL: (val.asBuiltBenchmarkMSL || '').trim() || null,
             asBuiltNotes: (val.asBuiltNotes || '').trim() || null,
+            lastCalibratedFrom: val.lastCalibratedFrom || null,
+            lastCalibratedAt: val.lastCalibratedAt || null,
+            calibrationDetail: val.calibrationDetail || null,
             updatedAt: nowIso
           };
         }
@@ -107,6 +122,187 @@ export async function saveAsBuiltOverrides(updates, adminPin) {
     console.error('Error saving as_built_elevations to Firestore:', err);
     throw err;
   }
+}
+
+/**
+ * Auto-Populate ระดับ ม.รทก. (MSL) จากสถานีโทรมาตรสดของภาครัฐให้ครบทุก 34 โครงการ
+ */
+export async function autoPopulateAllProjectsMSL(adminPin = null) {
+  if (adminPin !== null && !validateAdminPin(adminPin)) {
+    const err = new Error('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง (Invalid Admin PIN)');
+    err.status = 401;
+    throw err;
+  }
+
+  try {
+    await ensureAuth();
+    const ref = doc(db, ...SETTINGS_DOC_PATH);
+    const stations = await fetchLiveWaterStations();
+    const nowIso = new Date().toISOString();
+    const payload = {};
+
+    for (const [code, p] of Object.entries(FLOOD_PROJECTS)) {
+      const st = await getNearestWaterStation(p.lat, p.lon, p.preferredStationCodes);
+      let bankMSL = st?.minBankMSL || (st?.waterLevelMSL != null && st?.bankDiff != null ? Number((st.waterLevelMSL + st.bankDiff).toFixed(2)) : null);
+      if (bankMSL == null && stations.length > 0) {
+        for (const s of stations) {
+          if (!s.isWatergate && s.bankMSL != null) {
+            const d = haversineDistance(p.lat, p.lon, s.lat, s.lon);
+            if (d < 15) {
+              bankMSL = s.bankMSL;
+              break;
+            }
+          }
+        }
+      }
+
+      const outerMSL = bankMSL != null ? Number(bankMSL.toFixed(2)) : 2.00;
+      const elevDiff = typeof p.asBuiltElevationDiff === 'number' ? p.asBuiltElevationDiff : 0.80;
+      const innerMSL = Number((outerMSL + elevDiff).toFixed(2));
+
+      payload[code] = {
+        asBuiltElevationDiff: elevDiff,
+        sumpRimVsInnerDiff: p.sumpRimVsInnerDiff ?? 0.00,
+        sumpRimVsOuterDiff: p.sumpRimVsOuterDiff ?? Number((elevDiff + (p.sumpRimVsInnerDiff ?? 0)).toFixed(2)),
+        entranceCrestDiff: p.entranceCrestDiff ?? null,
+        hasFloodwall: Boolean(p.hasFloodwall),
+        floodwallHeightDiff: p.floodwallHeightDiff ?? (p.hasFloodwall ? 0.40 : null),
+        outerRoadBenchmarkMSL: outerMSL,
+        innerRoadBenchmarkMSL: innerMSL,
+        asBuiltBenchmarkMSL: `+${innerMSL.toFixed(2)} ม.รทก.`,
+        asBuiltNotes: p.asBuiltNotes || null,
+        lastCalibratedFrom: 'AUTO_STATION',
+        lastCalibratedAt: nowIso,
+        calibrationDetail: `Auto-Populate จากตลิ่งสถานี ${st?.stationCode || ''} (${st?.stationName || ''})`,
+        updatedAt: nowIso
+      };
+    }
+
+    if (Object.keys(payload).length > 0) {
+      await setDoc(ref, payload, { merge: true });
+    }
+
+    return { success: true, count: Object.keys(payload).length, updatedAt: nowIso, populated: payload };
+  } catch (err) {
+    console.error('Error auto-populating projects MSL:', err);
+    throw err;
+  }
+}
+
+/**
+ * ปรับเทียบระดับถนนโครงการอัตโนมัติจากบันทึกรายงานหน้างานจริง (Smart Field Auto-Calibration)
+ */
+export async function autoCalibrateFromFieldNotes({ projectCode, notes, liveWater, asBuiltElevationDiff = 0.80 }) {
+  if (!projectCode || !notes || !liveWater || liveWater.waterLevelMSL == null) return null;
+
+  const canalSearchText = (notes || '')
+    .replace(/(?:ถนนใน(?:โครงการ)?|พื้นโครงการ|ระดับถนนใน(?:โครงการ)?)[^\n\r]*/gi, '')
+    .replace(/\([^)]*(?:บ่อบำบัด|ปากบ่อ|บ่อพัก|บ่อหน่วง|บ่อสูบ|ขอบบ่อ)[^)]*\)/gi, '')
+    .replace(/(?:ระดับน้ำใน(?:บ่อสูบ|บ่อพัก|บ่อหน่วง)|บ่อสูบ|บ่อพัก|บ่อหน่วง)[^\n\r]*(?:ต่ำกว่าขอบบ่อ|สูงกว่าขอบบ่อ|จากขอบบ่อ)[^\n\r]*/gi, '');
+
+  const canalBelowMatch = canalSearchText.match(/(?:ต่ำกว่า|ต่ำจาก|ลดลงจาก)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n]*?[-+]?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/-\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:จากผิวถนน|จากถนนนอก|จากตลิ่ง|จากถนน)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง|น้ำในคลอง)[^0-9\n]*?ต่ำกว่า(?:ระดับ)?\s*(?:ผิวถนน|ถนน|ตลิ่ง)[^\d\n]*?[-+]?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/ต่ำกว่า(?:ระดับ)?\s*(?:ผิวถนน|ถนน|ตลิ่ง)[^\d\n]*?[-+]?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i);
+
+  const canalAboveMatch = canalSearchText.match(/(?:สูงกว่า|เสมอระดับ)(?:ระดับ)?\s*(?:ผิวถนน|ถนนหน้าโครงการ|ถนนนอก|ถนน|ตลิ่ง)[^\d\n]*?[+]?(\d+(?:\.\d+)?)\s*(?:cm|ซม|ม\.?)/i) ||
+                          canalSearchText.match(/\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)\s*(?:สูงกว่า|เสมอระดับผิวถนน|เสมอผิวถนน|เสมอถนน|เหนือถนน)/i) ||
+                          canalSearchText.match(/(?:คลอง|ระดับน้ำในคลอง)[^0-9\n]*?\+\s*(\d+(?:\.\d+)?)\s*(?:cm|ซม)/i);
+
+  let depthMeters = null;
+  let detailDesc = '';
+
+  if (canalBelowMatch) {
+    let parsedCm = parseFloat(canalBelowMatch[1]);
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(canalBelowMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(canalBelowMatch[0])) parsedCm *= 100;
+    depthMeters = parsedCm / 100; // ค่าเป็นบวกเพราะน้ำต่ำกว่าถนน
+    detailDesc = `น้ำต่ำกว่าถนนนอก ${Math.round(parsedCm)} ซม.`;
+  } else if (canalAboveMatch) {
+    let parsedCm = parseFloat(canalAboveMatch[1]);
+    const isMeter = /(?:\d+\s*(?:ม\.|เมตร|\.m|m)(?!\s*(?:ซม|cm)))/i.test(canalAboveMatch[0]);
+    if (isMeter && !/(?:cm|ซม|เซน)/i.test(canalAboveMatch[0])) parsedCm *= 100;
+    depthMeters = -(parsedCm / 100); // ค่าติดลบเพราะน้ำสูงกว่าถนน
+    detailDesc = `น้ำล้นสูงกว่าถนนนอก +${Math.round(parsedCm)} ซม.`;
+  }
+
+  if (depthMeters === null) return null;
+
+  const outerRoadMSL = Number((liveWater.waterLevelMSL + depthMeters).toFixed(2));
+  const innerRoadMSL = Number((outerRoadMSL + (asBuiltElevationDiff || 0.80)).toFixed(2));
+  const nowIso = new Date().toISOString();
+
+  await ensureAuth();
+  const ref = doc(db, ...SETTINGS_DOC_PATH);
+  const updatePayload = {
+    [projectCode]: {
+      outerRoadBenchmarkMSL: outerRoadMSL,
+      innerRoadBenchmarkMSL: innerRoadMSL,
+      asBuiltBenchmarkMSL: `+${innerRoadMSL.toFixed(2)} ม.รทก.`,
+      lastCalibratedFrom: 'FIELD_REPORT',
+      lastCalibratedAt: nowIso,
+      calibrationDetail: `Auto-Calibrated จากรายงานหน้างาน: ${detailDesc} (สถานี ${liveWater.stationCode || ''} = ${liveWater.waterLevelMSL} ม.รทก.)`,
+      updatedAt: nowIso
+    }
+  };
+
+  await setDoc(ref, updatePayload, { merge: true });
+  return {
+    success: true,
+    projectCode,
+    outerRoadBenchmarkMSL: outerRoadMSL,
+    innerRoadBenchmarkMSL: innerRoadMSL,
+    asBuiltBenchmarkMSL: `+${innerRoadMSL.toFixed(2)} ม.รทก.`,
+    detail: detailDesc
+  };
+}
+
+/**
+ * ปรับเทียบระดับโครงการจากรายงานล่าสุดในระบบ โดยระบุ Admin PIN
+ */
+export async function autoCalibrateProjectFromField(projectCode, adminPin) {
+  if (!validateAdminPin(adminPin)) {
+    const err = new Error('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง (Invalid Admin PIN)');
+    err.status = 401;
+    throw err;
+  }
+
+  const p = FLOOD_PROJECTS[projectCode];
+  if (!p) throw new Error(`ไม่พบโครงการรหัส ${projectCode}`);
+
+  await ensureAuth();
+  const reportsSnap = await getDocs(collection(db, 'artifacts', 'default-app-id', 'public', 'data', 'flood_reports'));
+  let latestReport = null;
+  reportsSnap.forEach(d => {
+    const data = d.data();
+    if (data.projectCode === projectCode) {
+      if (!latestReport || (data.createdAt || 0) > (latestReport.createdAt || 0)) {
+        latestReport = data;
+      }
+    }
+  });
+
+  if (!latestReport || !latestReport.notes) {
+    throw new Error(`ไม่พบบันทึกรายงานหน้างานล่าสุดของโครงการ ${projectCode} สำหรับปรับเทียบ`);
+  }
+
+  const liveWater = await getNearestWaterStation(p.lat, p.lon, p.preferredStationCodes);
+  if (!liveWater || liveWater.waterLevelMSL == null) {
+    throw new Error(`สถานีโทรมาตรประจำโครงการ ${projectCode} ไม่มีค่าระดับน้ำทะเลปานกลาง (MSL) ในขณะนี้`);
+  }
+
+  const result = await autoCalibrateFromFieldNotes({
+    projectCode,
+    notes: latestReport.notes,
+    liveWater,
+    asBuiltElevationDiff: p.asBuiltElevationDiff
+  });
+
+  if (!result) {
+    throw new Error(`รายงานล่าสุดของโครงการ ${projectCode} ไม่ได้ระบุระยะผิวน้ำเทียบกับถนนนอก จึงไม่สามารถปรับเทียบได้`);
+  }
+
+  return result;
 }
 
 /**
@@ -250,14 +446,21 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         </div>
       </div>
 
-      <!-- Zone Pills -->
-      <div class="flex flex-wrap items-center gap-1.5 text-xs" id="zone-pills">
-        <button onclick="setZoneFilter('all')" class="zone-pill active px-3 py-1 rounded-lg font-semibold bg-lh-gold text-slate-950 transition-colors" data-zone="all">ทั้งหมด (30)</button>
-        <button onclick="setZoneFilter('rangsit')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="rangsit">รังสิต / ปทุมธานี</button>
-        <button onclick="setZoneFilter('bangna')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="bangna">บางนา / สมุทรปราการ</button>
-        <button onclick="setZoneFilter('nonthaburi')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="nonthaburi">นนทบุรี / บางใหญ่ / ราชพฤกษ์</button>
-        <button onclick="setZoneFilter('ayutthaya')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="ayutthaya">อยุธยา</button>
-        <button onclick="setZoneFilter('east')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="east">รามอินทรา / กรุงเทพฯ ตะวันออก</button>
+      <!-- Zone Pills & Global Actions -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+        <div class="flex flex-wrap items-center gap-1.5 text-xs" id="zone-pills">
+          <button onclick="setZoneFilter('all')" class="zone-pill active px-3 py-1 rounded-lg font-semibold bg-lh-gold text-slate-950 transition-colors" data-zone="all">ทั้งหมด (34)</button>
+          <button onclick="setZoneFilter('rangsit')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="rangsit">รังสิต / ปทุมธานี</button>
+          <button onclick="setZoneFilter('bangna')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="bangna">บางนา / สมุทรปราการ</button>
+          <button onclick="setZoneFilter('nonthaburi')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="nonthaburi">นนทบุรี / บางใหญ่ / ราชพฤกษ์</button>
+          <button onclick="setZoneFilter('ayutthaya')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="ayutthaya">อยุธยา</button>
+          <button onclick="setZoneFilter('east')" class="zone-pill px-3 py-1 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors" data-zone="east">รามอินทรา / กรุงเทพฯ ตะวันออก</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="handleAutoPopulateMSL()" id="btn-auto-populate" class="px-3 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+            <span>⚡ Auto-Populate ม.รทก. ทุกโครงการ (สสน./ชป.)</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -326,8 +529,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           if (ov.entranceCrestDiff != null) p.entranceCrestDiff = ov.entranceCrestDiff;
           if (ov.hasFloodwall !== undefined) p.hasFloodwall = Boolean(ov.hasFloodwall);
           if (ov.floodwallHeightDiff !== undefined) p.floodwallHeightDiff = ov.floodwallHeightDiff;
+          if (ov.outerRoadBenchmarkMSL != null) p.outerRoadBenchmarkMSL = ov.outerRoadBenchmarkMSL;
+          if (ov.innerRoadBenchmarkMSL != null) p.innerRoadBenchmarkMSL = ov.innerRoadBenchmarkMSL;
           if (ov.asBuiltBenchmarkMSL != null) p.asBuiltBenchmarkMSL = ov.asBuiltBenchmarkMSL;
           if (ov.asBuiltNotes != null) p.asBuiltNotes = ov.asBuiltNotes;
+          if (ov.lastCalibratedFrom != null) p.lastCalibratedFrom = ov.lastCalibratedFrom;
+          if (ov.lastCalibratedAt != null) p.lastCalibratedAt = ov.lastCalibratedAt;
+          if (ov.calibrationDetail != null) p.calibrationDetail = ov.calibrationDetail;
         }
       });
       updateStats();
@@ -481,16 +689,23 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         const sumpOuterVal = (p.sumpRimVsOuterDiff !== undefined && p.sumpRimVsOuterDiff !== null) ? Number(p.sumpRimVsOuterDiff).toFixed(2) : ((p.asBuiltElevationDiff != null ? p.asBuiltElevationDiff : 0.80) + (p.sumpRimVsInnerDiff != null ? p.sumpRimVsInnerDiff : 0.00)).toFixed(2);
         const crestVal = p.entranceCrestDiff != null ? p.entranceCrestDiff.toFixed(2) : '';
         const floodwallVal = p.hasFloodwall && p.floodwallHeightDiff != null ? p.floodwallHeightDiff.toFixed(2) : (p.hasFloodwall ? '0.40' : '');
+        const outerMslVal = (p.outerRoadBenchmarkMSL != null) ? p.outerRoadBenchmarkMSL.toFixed(2) : '';
         const mslVal = p.asBuiltBenchmarkMSL || '';
         const notesVal = p.asBuiltNotes || '';
+        const calibBadge = p.lastCalibratedFrom === 'FIELD_REPORT' 
+          ? \`<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium" title="\${p.calibrationDetail || 'ปรับเทียบจากรายงานหน้างาน'}">🟢 หน้างาน</span>\`
+          : (p.lastCalibratedFrom === 'AUTO_STATION'
+            ? \`<span class="px-1.5 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 font-medium" title="\${p.calibrationDetail || 'ดึงจากสถานีโทรมาตร'}">🔵 โทรมาตร</span>\`
+            : '');
 
         card.innerHTML = \`
           <div class="flex flex-col lg:flex-row items-stretch lg:items-start justify-between gap-3">
             
             <!-- Left: Project Info -->
             <div class="lg:w-2/12 space-y-1 shrink-0">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-sky-400 border border-slate-700/80">\${p.code}</span>
+                \${calibBadge}
                 <h3 class="text-sm font-bold text-white tracking-tight truncate">\${p.name}</h3>
               </div>
               <p class="text-[11px] text-slate-400 flex items-center gap-1">
@@ -633,19 +848,33 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
                 </div>
               </div>
 
-              <!-- Field 6: MSL Benchmark -->
+              <!-- Field 6: MSL Benchmarks (ถนนนอก & ถนนใน ม.รทก.) -->
               <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1">
                 <label class="text-[10px] text-slate-400 font-semibold block flex items-center justify-between">
-                  <span>ระดับอ้างอิง รทก.</span>
-                  <span class="text-[9px] text-slate-500">ม.รทก.</span>
+                  <span>ระดับถนน ม.รทก.</span>
+                  <span class="text-[9px] text-sky-400">นอก / ใน</span>
                 </label>
-                <input type="text" 
-                  id="input-msl-\${p.code}" 
-                  value="\${mslVal}" 
-                  placeholder="เช่น +1.90 ม.รทก."
-                  oninput="handleFieldChange('\${p.code}', 'asBuiltBenchmarkMSL', this.value)"
-                  class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-lh-gold">
-                <span class="text-[9px] text-slate-500 block truncate">เทียบระดับน้ำทะเล</span>
+                <div class="space-y-1">
+                  <div class="flex items-center gap-1">
+                    <span class="text-[9px] text-slate-400 w-7 shrink-0">นอก:</span>
+                    <input type="number" step="0.01" min="-5.00" max="25.00" 
+                      id="input-outer-msl-\${p.code}" 
+                      value="\${outerMslVal}" 
+                      placeholder="1.85"
+                      oninput="handleFieldChange('\${p.code}', 'outerRoadBenchmarkMSL', this.value)"
+                      class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-1.5 py-0.5 text-xs font-mono text-sky-300 focus:outline-none focus:border-lh-gold">
+                    <span class="text-[9px] text-slate-500">ม.</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-[9px] text-slate-400 w-7 shrink-0">ใน:</span>
+                    <input type="text" 
+                      id="input-msl-\${p.code}" 
+                      value="\${mslVal}" 
+                      placeholder="+2.65 ม.รทก."
+                      oninput="handleFieldChange('\${p.code}', 'asBuiltBenchmarkMSL', this.value)"
+                      class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-1.5 py-0.5 text-xs font-mono text-emerald-400 focus:outline-none focus:border-lh-gold">
+                  </div>
+                </div>
               </div>
 
               <!-- Field 7: Notes / Drawing No. -->
@@ -665,8 +894,11 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
             </div>
 
             <!-- Right: Actions -->
-            <div class="flex items-center gap-2 shrink-0 pt-1 lg:pt-0">
-              <button onclick="saveProjectRow('\${p.code}')" id="btn-save-\${p.code}" class="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold \${isDirty ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'} transition-all shadow-sm">
+            <div class="flex items-center gap-1.5 shrink-0 pt-1 lg:pt-0">
+              <button onclick="handleAutoCalibrateProject('\${p.code}')" id="btn-calib-\${p.code}" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 transition-colors" title="ปรับเทียบจากรายงานหน้างานล่าสุด (Smart Auto-Calibration)">
+                🎯
+              </button>
+              <button onclick="saveProjectRow('\${p.code}')" id="btn-save-\${p.code}" class="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold \${isDirty ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'} transition-all shadow-sm">
                 <span>\${isDirty ? '💾 บันทึก' : '✓ เรียบร้อย'}</span>
               </button>
               <a href="/api/flood-report?mode=map&focus=\${p.code}&_t=\${Date.now()}" target="_blank" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors" title="ดูภาพจำลองบนแผนที่ (ข้อมูลสด)">
@@ -786,6 +1018,23 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
         p.sumpRimVsOuterDiff = Number((p[field] + sumpInner).toFixed(2));
         const outerInput = document.getElementById('input-sump-outer-' + code);
         if (outerInput) outerInput.value = p.sumpRimVsOuterDiff.toFixed(2);
+        // Auto sync innerRoadBenchmarkMSL if outerRoadBenchmarkMSL is set
+        if (p.outerRoadBenchmarkMSL != null) {
+          p.innerRoadBenchmarkMSL = Number((p.outerRoadBenchmarkMSL + p[field]).toFixed(2));
+          p.asBuiltBenchmarkMSL = '+' + p.innerRoadBenchmarkMSL.toFixed(2) + ' ม.รทก.';
+          const mslInput = document.getElementById('input-msl-' + code);
+          if (mslInput) mslInput.value = p.asBuiltBenchmarkMSL;
+        }
+      } else if (field === 'outerRoadBenchmarkMSL') {
+        const num = parseFloat(rawValue);
+        p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : null;
+        if (p[field] !== null) {
+          const innerElev = (typeof p.asBuiltElevationDiff === 'number') ? p.asBuiltElevationDiff : 0.80;
+          p.innerRoadBenchmarkMSL = Number((p[field] + innerElev).toFixed(2));
+          p.asBuiltBenchmarkMSL = '+' + p.innerRoadBenchmarkMSL.toFixed(2) + ' ม.รทก.';
+          const mslInput = document.getElementById('input-msl-' + code);
+          if (mslInput) mslInput.value = p.asBuiltBenchmarkMSL;
+        }
       } else if (field === 'sumpRimVsInnerDiff') {
         const num = parseFloat(rawValue);
         p[field] = (!isNaN(num) && rawValue !== '' && rawValue !== null) ? num : 0.00;
@@ -857,8 +1106,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           entranceCrestDiff: p.entranceCrestDiff,
           hasFloodwall: Boolean(p.hasFloodwall),
           floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
+          outerRoadBenchmarkMSL: p.outerRoadBenchmarkMSL,
+          innerRoadBenchmarkMSL: p.innerRoadBenchmarkMSL,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
+          lastCalibratedFrom: p.lastCalibratedFrom,
+          lastCalibratedAt: p.lastCalibratedAt,
+          calibrationDetail: p.calibrationDetail,
           adminPin: pin
         };
 
@@ -888,8 +1142,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
           entranceCrestDiff: p.entranceCrestDiff,
           hasFloodwall: Boolean(p.hasFloodwall),
           floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
+          outerRoadBenchmarkMSL: p.outerRoadBenchmarkMSL,
+          innerRoadBenchmarkMSL: p.innerRoadBenchmarkMSL,
           asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
           asBuiltNotes: p.asBuiltNotes,
+          lastCalibratedFrom: p.lastCalibratedFrom,
+          lastCalibratedAt: p.lastCalibratedAt,
+          calibrationDetail: p.calibrationDetail,
           updatedAt: data.updatedAt || new Date().toISOString()
         };
 
@@ -952,8 +1211,13 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
               entranceCrestDiff: p.entranceCrestDiff,
               hasFloodwall: Boolean(p.hasFloodwall),
               floodwallHeightDiff: p.hasFloodwall ? (typeof p.floodwallHeightDiff === 'number' ? p.floodwallHeightDiff : 0.40) : null,
+              outerRoadBenchmarkMSL: p.outerRoadBenchmarkMSL,
+              innerRoadBenchmarkMSL: p.innerRoadBenchmarkMSL,
               asBuiltBenchmarkMSL: p.asBuiltBenchmarkMSL,
-              asBuiltNotes: p.asBuiltNotes
+              asBuiltNotes: p.asBuiltNotes,
+              lastCalibratedFrom: p.lastCalibratedFrom,
+              lastCalibratedAt: p.lastCalibratedAt,
+              calibrationDetail: p.calibrationDetail
             };
           }
         });
@@ -994,6 +1258,108 @@ export function generateAsBuiltManagerHtml({ projectsData = [], overrides = {} }
       } finally {
         btn.innerText = '💾 บันทึกทั้งหมด (' + dirtyProjects.size + ')';
         btn.disabled = false;
+      }
+    }
+
+    async function handleAutoPopulateMSL() {
+      const pin = getAdminPin();
+      if (!pin) {
+        checkAuth();
+        return;
+      }
+
+      if (!confirm('ยืนยันรัน Auto-Populate ระดับ ม.รทก. จากสถานีโทรมาตรสด สสน./กรมชลประทาน สำหรับทั้ง 34 โครงการหรือไม่?')) {
+        return;
+      }
+
+      const btn = document.getElementById('btn-auto-populate');
+      if (btn) {
+        btn.innerHTML = '<span>⏳ กำลังประมวลผล สสน./ชป...</span>';
+        btn.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/flood-report?mode=asbuilt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
+          body: JSON.stringify({ action: 'auto_populate_msl', adminPin: pin })
+        });
+
+        if (res.status === 401) {
+          lockManager();
+          alert('สิทธิ์การเป็น Admin หมดอายุ หรือรหัสผ่านไม่ถูกต้อง');
+          return;
+        }
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        alert(data.message || 'Auto-Populate ระดับ ม.รทก. เรียบร้อยแล้ว');
+        window.location.reload();
+      } catch (err) {
+        console.error('Auto populate error:', err);
+        alert('เกิดข้อผิดพลาดในการรัน Auto-Populate: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.innerHTML = '<span>⚡ Auto-Populate ม.รทก. ทุกโครงการ (สสน./ชป.)</span>';
+          btn.disabled = false;
+        }
+      }
+    }
+
+    async function handleAutoCalibrateProject(code) {
+      const pin = getAdminPin();
+      if (!pin) {
+        checkAuth();
+        return;
+      }
+
+      const btn = document.getElementById('btn-calib-' + code);
+      if (btn) {
+        btn.innerText = '⏳';
+        btn.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/flood-report?mode=asbuilt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
+          body: JSON.stringify({
+            action: 'auto_calibrate_field',
+            projectCode: code,
+            adminPin: pin
+          })
+        });
+
+        if (res.status === 401) {
+          lockManager();
+          alert('สิทธิ์การเป็น Admin หมดอายุ หรือรหัสผ่านไม่ถูกต้อง');
+          return;
+        }
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (data.calibrated) {
+          showToast('🎯 ปรับเทียบ ' + code + ' สำเร็จ: ถนนนอก ' + data.outerRoadMSL.toFixed(2) + ' ม.รทก.');
+          setTimeout(() => { window.location.reload(); }, 1200);
+        } else {
+          alert('ไม่พบข้อมูลระดับน้ำเทียบถนนนอกในรายงานหน้างานล่าสุดของ ' + code + ': ' + (data.reason || 'กรุณาตรวจสอบข้อความรายงาน'));
+        }
+      } catch (err) {
+        console.error('Auto calibrate error:', err);
+        alert('เกิดข้อผิดพลาดในการปรับเทียบ: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.innerText = '🎯';
+          btn.disabled = false;
+        }
       }
     }
 

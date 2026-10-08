@@ -25,12 +25,32 @@ export function calculateHydrologicalLevels(report = {}, project = {}, liveWater
   const floodwallElevation = hasFloodwall ? Math.round(floodwallHeightDiff * 100) : null;
 
   // 1. ตรวจสอบระดับน้ำจากโทรมาตรสด (ThaiWater / สสน. / กรมชลประทาน)
-  if (liveWater && (liveWater.bankDiff != null || liveWater.isOverflow)) {
+  if (liveWater && (liveWater.bankDiff != null || liveWater.isOverflow || liveWater.waterLevelMSL != null)) {
     const rawDiffM = Math.abs(liveWater.bankDiff != null ? Number(liveWater.bankDiff) : 0);
     const diffCm = Math.round(rawDiffM * 100);
-    isCanalOverflow = Boolean(liveWater.isOverflow || (liveWater.bankStatusText || '').includes('ล้น'));
+    const hasExplicitLow = (liveWater.bankStatusText || '').includes('ต่ำกว่า') || (liveWater.bankStatusText || '').includes('ต่ำจาก');
+    isCanalOverflow = !hasExplicitLow && Boolean(liveWater.isOverflow || (liveWater.bankStatusText || '').includes('ล้น'));
     
-    if (isCanalOverflow) {
+    // 📐 การคำนวณแบบแม่นยำระดับ ม.รทก. (Absolute MSL Benchmark)
+    // หากโครงการมีระดับถนนนอก (outerRoadBenchmarkMSL) และสถานีมี waterLevelMSL:
+    const outerRoadMSL = typeof project?.outerRoadBenchmarkMSL === 'number' && !isNaN(project.outerRoadBenchmarkMSL)
+      ? project.outerRoadBenchmarkMSL
+      : (typeof project?.outerRoadMSL === 'number' && !isNaN(project.outerRoadMSL) ? project.outerRoadMSL : null);
+
+    if (outerRoadMSL != null && liveWater.waterLevelMSL != null) {
+      const mslDiff = Number((liveWater.waterLevelMSL - outerRoadMSL).toFixed(2));
+      canalWaterElevation = mslDiff; // ผิวน้ำเทียบระดับถนนนอก (ม.) เช่น -0.52 ม. หรือ +0.10 ม.
+      canalBelowOuter = -Math.round(mslDiff * 100); // ซม. (ค่าบวก = ต่ำกว่าถนน, ค่าลบ = ล้นถนน)
+      isCanalOverflow = mslDiff > 0;
+      if (isCanalOverflow) {
+        canalStatusText = `ล้นถนนนอก ${Math.abs(canalBelowOuter)} ซม. ⚠️ (ระดับ ${liveWater.waterLevelMSL.toFixed(2)} ม.รทก.)`;
+      } else {
+        const distBelow = Math.abs(canalBelowOuter);
+        canalStatusText = distBelow <= 20
+          ? `หนุนสูง (ต่ำกว่าถนน ${distBelow} ซม. / ${liveWater.waterLevelMSL.toFixed(2)} ม.รทก.)`
+          : `ในเกณฑ์ (ต่ำกว่าถนน ${distBelow} ซม. / ${liveWater.waterLevelMSL.toFixed(2)} ม.รทก.)`;
+      }
+    } else if (isCanalOverflow) {
       canalWaterElevation = +(rawDiffM); // ผิวน้ำล้นสูงกว่าตลิ่ง เช่น +0.02ม. หรือ +0.46ม.
       canalBelowOuter = -diffCm; // ติดลบ แปลว่าสูงกว่าระดับถนน/ตลิ่ง
       canalStatusText = `ล้นตลิ่ง ${diffCm} ซม. ⚠️`;

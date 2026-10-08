@@ -101,10 +101,22 @@ export async function fetchLiveWaterStations() {
         const code = s.station?.tele_station_oldcode || s.station?.tele_station_name?.en || String(s.id || '');
         const name = s.station?.tele_station_name?.th || 'สถานีตรวจวัดน้ำ';
         const rawDiff = s.diff_wl_bank != null ? Number(s.diff_wl_bank) : null;
-        const isOverflow = (s.diff_wl_bank_text || '').includes('ล้น') || (s.situation_level >= 4);
+        
+        // ⚠️ กฎชลประทาน: ระดับ 5 เท่านั้นคือน้ำล้นตลิ่ง (Level 4 คือวิกฤติตลิ่ง แต่ผิวน้ำยังอยู่ต่ำกว่าตลิ่ง)
+        // และหากข้อความระบุชัดว่า 'ต่ำกว่า' จะต้องไม่เป็นล้นตลิ่งเด็ดขาด
+        const bankText = s.diff_wl_bank_text || '';
+        const hasExplicitBelow = bankText.includes('ต่ำกว่า') || bankText.includes('ต่ำจาก');
+        const isOverflow = !hasExplicitBelow && (bankText.includes('ล้น') || (s.situation_level >= 5));
+        
         const sit = getSituationLabel(s.situation_level);
         const dt = s.waterlevel_datetime || 'ล่าสุด';
         const fresh = assessFreshness(dt);
+
+        const minBank = s.station?.min_bank != null ? Number(s.station.min_bank) : (s.station?.right_bank != null ? Number(s.station.right_bank) : null);
+        const leftBank = s.station?.left_bank != null ? Number(s.station.left_bank) : null;
+        const rightBank = s.station?.right_bank != null ? Number(s.station.right_bank) : null;
+        const wlMsl = s.waterlevel_msl ? Number(s.waterlevel_msl) : (s.waterlevel_m ? Number(s.waterlevel_m) : null);
+        const computedBankMSL = minBank ?? (wlMsl != null && rawDiff != null ? Number((wlMsl + rawDiff).toFixed(2)) : null);
 
         unifiedStations.push({
           isWatergate: false,
@@ -116,11 +128,15 @@ export async function fetchLiveWaterStations() {
           district: s.geocode?.amphoe_name?.th || '',
           lat: slat,
           lon: slon,
-          waterLevelMSL: s.waterlevel_msl ? Number(s.waterlevel_msl) : (s.waterlevel_m ? Number(s.waterlevel_m) : null),
+          waterLevelMSL: wlMsl,
           bankDiff: rawDiff,
+          bankMSL: computedBankMSL,
+          minBankMSL: minBank,
+          leftBankMSL: leftBank,
+          rightBankMSL: rightBank,
           discharge: s.discharge != null ? Number(s.discharge) : null,
           flowRate: s.flow_rate != null ? Number(s.flow_rate) : null,
-          bankStatusText: s.diff_wl_bank_text || (isOverflow ? 'ล้นตลิ่ง' : 'ต่ำกว่าตลิ่ง'),
+          bankStatusText: bankText || (isOverflow ? 'ล้นตลิ่ง (ม.)' : 'ต่ำกว่าตลิ่ง (ม.)'),
           isOverflow,
           situationLevel: s.situation_level ?? 1,
           situationText: sit.text,
