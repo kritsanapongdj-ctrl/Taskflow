@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SimplePieChart from '../components/charts/SimplePieChart';
+import { getTaskOverdueInfo } from '../utils/overdueHelper';
 
 const REQUESTER_PALETTE = {
   'SVC': '#0f2e4a',
@@ -19,6 +20,7 @@ export default function DashboardTab({
   checkStaffMatch,
   chkOvdTimeAware,
   onOpenOverdueModal,
+  sets = {},
   Icon
 }) {
   const tS = getTStr();
@@ -51,10 +53,10 @@ export default function DashboardTab({
     return s <= mEnd && e >= mStart;
   });
 
-  const isOverdue = (t) =>
-    t.overdueStatus === 'เกินกำหนด' ||
-    t.overdueStatus === 'ออกใบงานช้า' ||
-    chkOvdTimeAware(t, tS);
+  const isOverdue = (t) => {
+    const info = getTaskOverdueInfo(t, tS, sets);
+    return info.isOverdue;
+  };
 
   const isCurrentMonth = tS.startsWith(gFilt.month);
   const ovMap = new Map();
@@ -64,34 +66,28 @@ export default function DashboardTab({
   }
   const ov = Array.from(ovMap.values());
 
+  const activeOvdCount = ov.filter((t) => !t.status?.startsWith('จบงาน')).length;
+  const completedLateCount = ov.filter((t) => t.status?.startsWith('จบงาน')).length;
+
   const getChartData = (arr) => [
     {
       name: 'จบงาน(ในกำหนด)',
       value: arr.filter(
-        (t) =>
-          t.status?.startsWith('จบงาน') &&
-          !(t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') &&
-          !chkOvdTimeAware(t, getTStr())
+        (t) => t.status?.startsWith('จบงาน') && !getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
       color: THEME.success
     },
     {
       name: 'ดำเนินการ',
       value: arr.filter(
-        (t) =>
-          !t.status?.startsWith('จบงาน') &&
-          !(t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') &&
-          !chkOvdTimeAware(t, getTStr())
+        (t) => !t.status?.startsWith('จบงาน') && !getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
       color: THEME.secondary
     },
     {
       name: 'ล่าช้า/เกินกำหนด',
       value: arr.filter(
-        (t) =>
-          t.overdueStatus === 'เกินกำหนด' ||
-          t.overdueStatus === 'ออกใบงานช้า' ||
-          chkOvdTimeAware(t, getTStr())
+        (t) => getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
       color: THEME.danger
     }
@@ -141,7 +137,10 @@ export default function DashboardTab({
       accent: 'border-red-500 hover:border-red-600',
       iconBg: 'bg-red-50 text-red-500',
       clk: true,
-      sub: 'ต้องติดตามเร่งด่วน'
+      sub:
+        ov.length > 0
+          ? `ค้างส่งมอบ ${activeOvdCount} | ปิดงานช้า ${completedLateCount}`
+          : 'ไม่มีงานล่าช้า'
     }
   ];
 

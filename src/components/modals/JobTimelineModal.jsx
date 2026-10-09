@@ -1,4 +1,5 @@
 import React from 'react';
+import { getTaskOverdueInfo } from '../../utils/overdueHelper';
 
 // Helper แปลงวันเวลาเป็นรูปแบบภาษาไทย
 const formatDateTimeThai = (isoString) => {
@@ -28,114 +29,141 @@ const formatDateThai = (ds) => {
 export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
   if (!isOpen || !task) return null;
 
+  const today = new Date().toISOString().split('T')[0];
+  const overdueInfo = getTaskOverdueInfo(task, today);
+
   // รวบรวมหรือสังเคราะห์ Timeline Events (รองรับทั้งงานใหม่และงานเก่า)
   const getDisplayTimeline = () => {
+    let events = [];
     if (Array.isArray(task.timeline) && task.timeline.length > 0) {
-      return [...task.timeline].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    }
-
-    // Fallback: สังเคราะห์เหตุการณ์สำหรับงานเดิมในระบบที่ยังไม่มีฟิลด์ timeline
-    const events = [];
-
-    // 1. เริ่มงาน / สร้างงาน
-    if (task.startDate || task.receivedDate) {
-      events.push({
-        id: 'ev-create',
-        timestamp: task.receivedDate ? `${task.receivedDate}T08:30:00+07:00` : `${task.startDate}T08:30:00+07:00`,
-        action: 'CREATED',
-        title: 'สร้างและเริ่มภารกิจ',
-        status: 'อยู่ระหว่างดำเนินการ',
-        note: `กำหนดเริ่ม: ${formatDateThai(task.startDate)} | กำหนดส่งมอบ: ${formatDateThai(task.endDate)}`,
-        actor: task.requester || 'ผู้ประสานงาน'
-      });
-    }
-
-    // 2. เคยเลื่อนวันเริ่ม
-    if (task.startPostponeReason || task.previousStartDate) {
-      events.push({
-        id: 'ev-postpone-start',
-        timestamp: task.startPostponedAt || `${task.startDate}T09:00:00+07:00`,
-        action: 'POSTPONE_START',
-        title: 'เลื่อนวันเริ่มงาน',
-        status: 'เลื่อนวันเริ่ม',
-        reason: task.startPostponeReason || 'เลื่อนตามข้อตกลงหน้างาน',
-        note: task.previousStartDate ? `วันที่เริ่มเดิม: ${formatDateThai(task.previousStartDate)} ➔ เริ่มใหม่: ${formatDateThai(task.startDate)}` : ''
-      });
-    }
-
-    // 3. เคยติดปัญหา/รออะไหล่
-    if (task.issueReason) {
-      events.push({
-        id: 'ev-issue',
-        timestamp: task.issueReportedAt || `${task.startDate}T11:00:00+07:00`,
-        action: 'ISSUE_HOLD',
-        title: '⚠️ ติดปัญหา / รออะไหล่',
-        status: 'ติดปัญหา/รออะไหล่',
-        reason: task.issueReason,
-        actor: 'ช่างเทคนิคหน้างาน'
-      });
-
-      // ถ้างานนี้เปลี่ยนสถานะไปแล้ว แสดงว่าได้รับการแก้ไข/ดำเนินการต่อแล้ว
-      if (task.status !== 'ติดปัญหา/รออะไหล่' && task.status !== 'รออะไหล่/ติดปัญหา') {
+      events = [...task.timeline].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    } else {
+      // Fallback: สังเคราะห์เหตุการณ์สำหรับงานเดิมในระบบที่ยังไม่มีฟิลด์ timeline
+      // 1. เริ่มงาน / สร้างงาน
+      if (task.startDate || task.receivedDate) {
         events.push({
-          id: 'ev-resumed',
-          timestamp: task.completedDate ? `${task.completedDate}T09:00:00+07:00` : `${task.endDate}T09:00:00+07:00`,
-          action: 'RESUMED',
-          title: '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ',
+          id: 'ev-create',
+          timestamp: task.receivedDate ? `${task.receivedDate}T08:30:00+07:00` : `${task.startDate}T08:30:00+07:00`,
+          action: 'CREATED',
+          title: 'สร้างและเริ่มภารกิจ',
           status: 'อยู่ระหว่างดำเนินการ',
-          note: 'อะไหล่มาถึงแล้ว และเข้าปฏิบัติงานต่อจนสำเร็จ'
+          note: `กำหนดเริ่ม: ${formatDateThai(task.startDate)} | กำหนดส่งมอบ: ${formatDateThai(task.endDate)}`,
+          actor: task.requester || 'ผู้ประสานงาน'
+        });
+      }
+
+      // 2. เคยเลื่อนวันเริ่ม
+      if (task.startPostponeReason || task.previousStartDate) {
+        events.push({
+          id: 'ev-postpone-start',
+          timestamp: task.startPostponedAt || `${task.startDate}T09:00:00+07:00`,
+          action: 'POSTPONE_START',
+          title: 'เลื่อนวันเริ่มงาน',
+          status: 'เลื่อนวันเริ่ม',
+          reason: task.startPostponeReason || 'เลื่อนตามข้อตกลงหน้างาน',
+          note: task.previousStartDate ? `วันที่เริ่มเดิม: ${formatDateThai(task.previousStartDate)} ➔ เริ่มใหม่: ${formatDateThai(task.startDate)}` : ''
+        });
+      }
+
+      // 3. เคยติดปัญหา/รออะไหล่
+      if (task.issueReason) {
+        events.push({
+          id: 'ev-issue',
+          timestamp: task.issueReportedAt || `${task.startDate}T11:00:00+07:00`,
+          action: 'ISSUE_HOLD',
+          title: '⚠️ ติดปัญหา / รออะไหล่',
+          status: 'ติดปัญหา/รออะไหล่',
+          reason: task.issueReason,
+          actor: 'ช่างเทคนิคหน้างาน'
+        });
+
+        // ถ้างานนี้เปลี่ยนสถานะไปแล้ว แสดงว่าได้รับการแก้ไข/ดำเนินการต่อแล้ว
+        if (task.status !== 'ติดปัญหา/รออะไหล่' && task.status !== 'รออะไหล่/ติดปัญหา') {
+          events.push({
+            id: 'ev-resumed',
+            timestamp: task.completedDate ? `${task.completedDate}T09:00:00+07:00` : `${task.endDate}T09:00:00+07:00`,
+            action: 'RESUMED',
+            title: '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ',
+            status: 'อยู่ระหว่างดำเนินการ',
+            note: 'อะไหล่มาถึงแล้ว และเข้าปฏิบัติงานต่อจนสำเร็จ'
+          });
+        }
+      }
+
+      // 4. เคยเลื่อนวันจบ
+      if (task.postponeReason || task.previousEndDate) {
+        events.push({
+          id: 'ev-postpone-end',
+          timestamp: task.postponedAt || `${task.endDate}T10:00:00+07:00`,
+          action: 'POSTPONE_END',
+          title: 'ขอเลื่อนวันจบงาน',
+          status: 'เลื่อนวันจบ',
+          reason: task.postponeReason,
+          note: task.previousEndDate ? `กำหนดเดิม: ${formatDateThai(task.previousEndDate)} ➔ ขอเลื่อนเป็น: ${formatDateThai(task.endDate)}` : ''
+        });
+      }
+
+      // 5. ปิดจบงาน
+      if (task.status?.startsWith('จบงาน')) {
+        const isWaitWo = task.status === 'จบงาน(รอใบงาน)' || !task.workOrderNo;
+        events.push({
+          id: 'ev-complete',
+          timestamp: task.completedDate ? `${task.completedDate}T16:00:00+07:00` : `${task.endDate}T16:00:00+07:00`,
+          action: isWaitWo ? 'COMPLETED_PENDING_WO' : 'COMPLETED',
+          title: isWaitWo ? '📋 จบงานหน้างาน (รอใบงาน)' : '✅ ปิดจบงานสมบูรณ์',
+          status: task.status,
+          note: task.overdueReason ? `สาเหตุที่จบงานช้า: ${task.overdueReason}` : 'ปฏิบัติงานเสร็จสิ้นตามมาตรฐาน',
+          reason: task.overdueReason || ''
+        });
+      }
+
+      // 6. ออกใบงาน
+      if (task.workOrderNo) {
+        events.push({
+          id: 'ev-wo',
+          timestamp: task.completedDate ? `${task.completedDate}T17:00:00+07:00` : `${task.endDate}T17:00:00+07:00`,
+          action: 'WO_ATTACHED',
+          title: '🧾 บันทึกเลขที่ใบงาน (WO)',
+          status: 'จบงาน',
+          note: `เลขที่ใบงาน: ${task.workOrderNo}`
+        });
+      }
+
+      // 7. ถ้ายกเลิก
+      if (task.status === 'ยกเลิก') {
+        events.push({
+          id: 'ev-cancel',
+          timestamp: task.completedDate ? `${task.completedDate}T12:00:00+07:00` : `${task.endDate}T12:00:00+07:00`,
+          action: 'CANCELLED',
+          title: '❌ ยกเลิกงาน',
+          status: 'ยกเลิก',
+          reason: task.cancelReason || 'ไม่ระบุเหตุผล'
         });
       }
     }
 
-    // 4. เคยเลื่อนวันจบ
-    if (task.postponeReason || task.previousEndDate) {
-      events.push({
-        id: 'ev-postpone-end',
-        timestamp: task.postponedAt || `${task.endDate}T10:00:00+07:00`,
-        action: 'POSTPONE_END',
-        title: 'ขอเลื่อนวันจบงาน',
-        status: 'เลื่อนวันจบ',
-        reason: task.postponeReason,
-        note: task.previousEndDate ? `กำหนดเดิม: ${formatDateThai(task.previousEndDate)} ➔ ขอเลื่อนเป็น: ${formatDateThai(task.endDate)}` : ''
-      });
+    // 🌟 ตกแต่งเหตุการณ์กรณีเป็นงานที่ปิดช้า หรือค้างเกินกำหนด
+    if (overdueInfo.isCompletedLate) {
+      const compEv = events.find((e) => e.action === 'COMPLETED' || e.action === 'COMPLETED_PENDING_WO');
+      if (compEv) {
+        compEv.title = `⏱️ ปิดจบงาน (ล่าช้ากว่ากำหนด ${overdueInfo.daysLate} วัน)`;
+        compEv.action = 'COMPLETED_LATE';
+        if (task.overdueReason && !compEv.reason) compEv.reason = task.overdueReason;
+        if (!compEv.note || compEv.note.includes('เสร็จสิ้นตามมาตรฐาน')) {
+          compEv.note = `กำหนดส่งเดิม: ${formatDateThai(task.endDate)} ➔ ปิดงานจริง: ${formatDateThai(task.completedDate)} (ช้ากว่ากำหนด ${overdueInfo.daysLate} วัน)`;
+        }
+      }
     }
 
-    // 5. ปิดจบงาน
-    if (task.status?.startsWith('จบงาน')) {
-      const isWaitWo = task.status === 'จบงาน(รอใบงาน)' || !task.workOrderNo;
+    if (overdueInfo.isActiveOverdue) {
       events.push({
-        id: 'ev-complete',
-        timestamp: task.completedDate ? `${task.completedDate}T16:00:00+07:00` : `${task.endDate}T16:00:00+07:00`,
-        action: isWaitWo ? 'COMPLETED_PENDING_WO' : 'COMPLETED',
-        title: isWaitWo ? '📋 จบงานหน้างาน (รอใบงาน)' : '✅ ปิดจบงานสมบูรณ์',
-        status: task.status,
-        note: task.overdueReason ? `สาเหตุที่จบงานช้า: ${task.overdueReason}` : 'ปฏิบัติงานเสร็จสิ้นตามมาตรฐาน',
+        id: 'ev-active-overdue',
+        timestamp: `${today}T17:30:00+07:00`,
+        action: 'CURRENT_OVERDUE',
+        title: `⚠️ สถานะปัจจุบัน: ค้างเกินกำหนดส่งมอบ (${overdueInfo.daysLate > 0 ? overdueInfo.daysLate + ' วัน' : 'เลยเวลา 17:30 น.'})`,
+        status: 'เกินกำหนด',
+        note: `ภารกิจยังไม่เสร็จสิ้น และเลยกำหนดส่งมอบที่วางไว้เมื่อ ${formatDateThai(task.endDate)}`,
         reason: task.overdueReason || ''
-      });
-    }
-
-    // 6. ออกใบงาน
-    if (task.workOrderNo) {
-      events.push({
-        id: 'ev-wo',
-        timestamp: task.completedDate ? `${task.completedDate}T17:00:00+07:00` : `${task.endDate}T17:00:00+07:00`,
-        action: 'WO_ATTACHED',
-        title: '🧾 บันทึกเลขที่ใบงาน (WO)',
-        status: 'จบงาน',
-        note: `เลขที่ใบงาน: ${task.workOrderNo}`
-      });
-    }
-
-    // 7. ถ้ายกเลิก
-    if (task.status === 'ยกเลิก') {
-      events.push({
-        id: 'ev-cancel',
-        timestamp: task.completedDate ? `${task.completedDate}T12:00:00+07:00` : `${task.endDate}T12:00:00+07:00`,
-        action: 'CANCELLED',
-        title: '❌ ยกเลิกงาน',
-        status: 'ยกเลิก',
-        reason: task.cancelReason || 'ไม่ระบุเหตุผล'
       });
     }
 
@@ -162,6 +190,10 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
         return { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' };
       case 'COMPLETED_PENDING_WO':
         return { dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' };
+      case 'COMPLETED_LATE':
+        return { dot: 'bg-amber-500', text: 'text-amber-800', bg: 'bg-amber-50', border: 'border-amber-300' };
+      case 'CURRENT_OVERDUE':
+        return { dot: 'bg-rose-600 animate-pulse', text: 'text-rose-800', bg: 'bg-rose-50', border: 'border-rose-300' };
       case 'COMPLETED':
       case 'WO_ATTACHED':
         return { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' };
@@ -224,6 +256,43 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
               <span>🧾 WO: <strong className="text-blue-700">{task.workOrderNo}</strong></span>
             )}
           </div>
+
+          {/* Overdue / SLA Alert Banner if applicable */}
+          {overdueInfo.isOverdue && (
+            <div className={`p-2.5 rounded-xl border flex items-start gap-2 text-xs mt-2 ${
+              overdueInfo.type === 'ACTIVE_OVERDUE'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : overdueInfo.type === 'COMPLETED_LATE'
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-purple-50 border-purple-200 text-purple-900'
+            }`}>
+              <span className="text-base shrink-0 mt-0.5">
+                {overdueInfo.type === 'ACTIVE_OVERDUE' ? '⚠️' : overdueInfo.type === 'COMPLETED_LATE' ? '⏱️' : '🧾'}
+              </span>
+              <div className="space-y-0.5 flex-1 min-w-0">
+                <div className="font-bold flex items-center justify-between">
+                  <span>
+                    {overdueInfo.type === 'ACTIVE_OVERDUE'
+                      ? `งานนี้ค้างเกินกำหนดส่งมอบ (${overdueInfo.daysLate > 0 ? overdueInfo.daysLate + ' วัน' : 'เลยเวลา 17:30 น.'})`
+                      : overdueInfo.type === 'COMPLETED_LATE'
+                      ? `งานนี้มีประวัติปิดงานล่าช้ากว่ากำหนด ${overdueInfo.daysLate} วัน`
+                      : 'งานนี้ออกใบงานล่าช้ากว่ากำหนด (>3 วัน)'}
+                  </span>
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-white/70 border border-current font-bold">
+                    SLA Alert
+                  </span>
+                </div>
+                <div className="text-[11px] opacity-90">
+                  {overdueInfo.fullDetail}
+                </div>
+                {task.overdueReason && (
+                  <div className="text-[11px] font-medium pt-0.5 text-slate-700 bg-white/70 p-1.5 rounded mt-1 border border-black/5">
+                    <strong>สาเหตุที่ช้า:</strong> {task.overdueReason}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Timeline Scrollable Content */}
@@ -298,14 +367,23 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
 
         {/* Footer Summary */}
         <div className="bg-slate-50 p-3.5 border-t shrink-0 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            {hasHoldHistory ? (
-              <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-1 rounded-lg border border-rose-200 text-[11px] font-bold">
-                ⚠️ งานนี้มีประวัติเคยรออะไหล่ / ติดปัญหา
+          <div className="flex items-center gap-2 flex-wrap">
+            {overdueInfo.isOverdue ? (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-bold ${
+                overdueInfo.type === 'ACTIVE_OVERDUE'
+                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                  : 'bg-amber-100 text-amber-900 border-amber-300'
+              }`}>
+                {overdueInfo.type === 'ACTIVE_OVERDUE' ? '🔴' : '🟠'} {overdueInfo.label}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-200 text-[11px] font-medium">
-                ✅ ปฏิบัติงานต่อเนื่อง ไม่มีประวัติติดปัญหา
+              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-200 text-[11px] font-bold">
+                ✅ ปิดงานตรงเวลา (ในเกณฑ์ SLA)
+              </span>
+            )}
+            {hasHoldHistory && (
+              <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-1 rounded-lg border border-rose-200 text-[11px] font-bold">
+                ⚠️ เคยรออะไหล่/ติดปัญหา
               </span>
             )}
           </div>

@@ -155,6 +155,7 @@ export default function App() {
   const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' });
   const [showChangelog, setShowChangelog] = useState(false);
   const [timelineTask, setTimelineTask] = useState(null);
+  const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [showMoreMobileMenu, setShowMoreMobileMenu] = useState(false);
 
   useEffect(() => {
@@ -1282,6 +1283,7 @@ export default function App() {
                     checkStaffMatch={checkStaffMatch}
                     chkOvdTimeAware={chkOvdTimeAware}
                     onOpenOverdueModal={(ov) => setOPop({ isOpen: true, tasks: ov })}
+                    sets={sets}
                     Icon={Icon}
                   />
                 )}
@@ -1301,6 +1303,9 @@ export default function App() {
                     initSt={initSt}
                     deleteTask={deleteTask}
                     onOpenTimeline={(task) => setTimelineTask(task)}
+                    highlightTaskId={highlightTaskId}
+                    setHighlightTaskId={setHighlightTaskId}
+                    sets={sets}
                     Icon={Icon}
                   />
                 )}
@@ -1594,10 +1599,15 @@ export default function App() {
                 currentMonth={gFilt.month}
                 onManageTask={(t) => {
                   setOPop({ isOpen: false, tasks: [] });
-                  setGilt({ ...gFilt, date: t.endDate });
+                  const targetDate = t.endDate || getTStr();
+                  setGilt({ ...gFilt, date: targetDate });
+                  setHighlightTaskId(t.id);
                   setTab('daily');
                 }}
+                onOpenTimeline={(task) => setTimelineTask(task)}
                 fDate={fDate}
+                getTStr={getTStr}
+                sets={sets}
                 Icon={Icon}
               />
             )}
