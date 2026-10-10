@@ -15,11 +15,17 @@ const Icon = ({ name, ...props }) => {
   return <LucideIcon {...props} />;
 };
 
-export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}, archetypesData }) {
+export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}, archetypesData, initialViewMode = 'rpg' }) {
   const [loading, setLoading] = useState(false);
   const [diagnostic, setDiagnostic] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [viewMode, setViewMode] = useState('rpg'); // 'rpg' | 'corporate'
+  const [viewMode, setViewMode] = useState(initialViewMode); // 'rpg' | 'corporate'
+
+  useEffect(() => {
+    if (isOpen) {
+      setViewMode(initialViewMode);
+    }
+  }, [isOpen, initialViewMode]);
 
   useEffect(() => {
     if (!isOpen || !staff) {

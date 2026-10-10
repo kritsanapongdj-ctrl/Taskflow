@@ -22,7 +22,10 @@ import {
   UNIVERSAL_BASELINE,
   ROLE_TARGET_PROFILES,
   getRoleTargetProfile,
-  DATA_ANCHOR_GUIDE
+  DATA_ANCHOR_GUIDE,
+  getStatDisplay,
+  getCorporateArchetypePersona,
+  generateHeuristicTalentDiagnostic
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -48,6 +51,7 @@ export default function TeamStatusTab({
   const [assessMode, setAssessMode] = useState(false);
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
   const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
+  const [talentViewMode, setTalentViewMode] = useState('rpg'); // 'rpg' | 'corporate'
   const [staffReportModalOpen, setStaffReportModalOpen] = useState(false);
   const [aiAdvisorModalOpen, setAiAdvisorModalOpen] = useState(false);
   const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
@@ -165,12 +169,29 @@ export default function TeamStatusTab({
       };
       const flavorText = flavorMap[prefixText] || '';
 
+      const isCorporate = talentViewMode === 'corporate';
+      const heuristic = generateHeuristicTalentDiagnostic(u, sets, archetypesData) || {};
+      const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(archetypeKey, enTitle);
+      const corporateTierName = heuristic?.corporateTierName || (
+        archAnalysis.competencyTier?.level === 4
+          ? 'Tier 4: Benchmark Role Model (ระดับต้นแบบองค์กร)'
+          : archAnalysis.competencyTier?.level === 3
+          ? 'Tier 3: Advanced Professional (ระดับชำนาญการเฉพาะทาง)'
+          : archAnalysis.competencyTier?.level === 2
+          ? 'Tier 2: Standard Competent (ระดับมาตรฐานการทำงาน)'
+          : 'Tier 1: Developing Associate (ระดับพัฒนาสมรรถนะ)'
+      );
+
+      const displayTitle = isCorporate ? corporatePersona.title : enTitle;
+      const displaySubStyle = isCorporate ? corporatePersona.thai : (thTitle ? `${thTitle} ${flavorText ? `(${flavorText})` : ''}` : '');
+      const displayTierBadge = isCorporate ? corporateTierName : `${archAnalysis.competencyTier?.name} (${archAnalysis.competencyTier?.thai || ''})`;
+
       const bottomDescText = (
         <span className="flex flex-col gap-2 mt-2 bg-stone-900/60 p-2.5 rounded-lg border border-stone-800/80">
           {/* Tier & Assessment Badge */}
           <div className="flex items-center justify-between gap-2 pb-1 border-b border-stone-800/60">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${archAnalysis.competencyTier?.badgeColor || 'text-sky-300 bg-sky-950/60 border-sky-800'}`}>
-              {archAnalysis.competencyTier?.name} ({archAnalysis.competencyTier?.thai})
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isCorporate ? 'text-sky-300 bg-sky-950/80 border-sky-700' : (archAnalysis.competencyTier?.badgeColor || 'text-sky-300 bg-sky-950/60 border-sky-800')}`}>
+              {displayTierBadge}
             </span>
             <button
               type="button"
@@ -182,10 +203,44 @@ export default function TeamStatusTab({
             </button>
           </div>
 
+          {/* กล่องข้อความสีฟ้า: BARS Behavioral Rubric Spotlight จาก rubrics.json */}
+          {heuristic?.primaryBarsStrength && (
+            <div className="p-3 rounded-lg bg-sky-950/70 border border-sky-400/80 text-sky-100 shadow-[0_0_20px_rgba(14,165,233,0.25)] flex flex-col gap-2 my-1">
+              <div className="flex items-center justify-between text-[11px] pb-1 border-b border-sky-800/80">
+                <span className="font-bold text-sky-300 flex items-center gap-1.5">
+                  <Icon name="award" size={14} className="text-sky-400 shrink-0" />
+                  <span>
+                    พฤติกรรมเชิงประจักษ์จริง (BARS Level {heuristic.primaryBarsStrength.level}): {isCorporate ? heuristic.primaryBarsStrength.corporateName : heuristic.primaryBarsStrength.statName}
+                  </span>
+                </span>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-sky-900/90 text-sky-200 border border-sky-600 font-mono shrink-0">
+                  rubrics.json
+                </span>
+              </div>
+              <div className="text-[10px] font-bold text-sky-300">
+                หมวด: 「{heuristic.primaryBarsStrength.criterionLabel}」
+              </div>
+              <p className="text-[11px] text-sky-100 italic leading-relaxed bg-sky-900/40 p-2.5 rounded-md border border-sky-700/50">
+                "{heuristic.primaryBarsStrength.behaviorText}"
+              </p>
+              {heuristic.primaryBarsNextMilestone?.behaviorText && (
+                <div className="pt-1.5 border-t border-sky-800/70 flex items-start gap-1.5 text-[10px] text-sky-200">
+                  <span className="text-amber-300 font-bold shrink-0 flex items-center gap-1">
+                    <Icon name="target" size={13} className="text-amber-400" />
+                    เป้าหมายถัดไป (Level {heuristic.primaryBarsNextMilestone.targetLevel}):
+                  </span>
+                  <span className="leading-snug text-slate-200">
+                    "{heuristic.primaryBarsNextMilestone.behaviorText}"
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Dynamic Strengths / Baseline Status */}
           <span className="flex items-start text-xs leading-relaxed">
             <span className={`${archAnalysis.dynamicStrengthColor || 'text-emerald-400'} font-bold mr-1 shrink-0`}>
-              {archAnalysis.dynamicStrengthLabel || 'จุดเด่นของสายอาชีพ:'}
+              {isCorporate ? 'สมรรถนะเด่นที่ผ่านการพิสูจน์:' : (archAnalysis.dynamicStrengthLabel || 'จุดเด่นของสายอาชีพ:')}
             </span>
             <span className="text-stone-300">{archAnalysis.dynamicStrength || archObj.strengths}</span>
           </span>
@@ -194,7 +249,7 @@ export default function TeamStatusTab({
           {archAnalysis.dynamicWeakness && (
             <span className="flex items-start text-xs leading-relaxed">
               <span className={`font-bold mr-1 shrink-0 ${archAnalysis.weaknessColor || 'text-amber-400'}`}>
-                {archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:'}
+                {isCorporate ? 'แผนพัฒนาสมรรถนะ:' : (archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:')}
               </span>
               <span className="text-stone-300">{archAnalysis.dynamicWeakness}</span>
             </span>
@@ -257,7 +312,35 @@ export default function TeamStatusTab({
            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
            <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
-              <div className="absolute top-4 right-4 z-20 flex gap-2">
+              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 max-w-[85%]">
+                  {/* Dual View Mode Toggle [🎮 RPG] / [💼 Corporate] */}
+                  <div className="flex items-center bg-slate-950/90 p-0.5 rounded-full border border-white/20 text-[10px] shadow-lg backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setTalentViewMode('rpg')}
+                      className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
+                        talentViewMode === 'rpg'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="มุมมองแบบเกมจำลองศักยภาพ (RPG View)"
+                    >
+                      <span>🎮 RPG</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTalentViewMode('corporate')}
+                      className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
+                        talentViewMode === 'corporate'
+                          ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="มุมมองสมรรถนะองค์กรเชิงวิชาชีพ (Corporate Competency View)"
+                    >
+                      <span>💼 Corporate</span>
+                    </button>
+                  </div>
+
                   <button 
                     type="button" 
                     onClick={() => setAiAdvisorModalOpen(true)} 
@@ -304,22 +387,23 @@ export default function TeamStatusTab({
                   <div className="flex flex-col">
                     <h5 className="text-[#bca374] text-[10px] sm:text-xs lg:text-sm font-bold tracking-[0.2em] uppercase mb-1 drop-shadow-md flex flex-wrap items-center gap-2">
                        <span>{role?.name || 'ไม่ระบุสายอาชีพ'}</span>
-                       {prefixText && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[9px] border border-[#bca374]/30">{prefixText}</span>}
+                       {prefixText && !isCorporate && <span className="bg-[#bca374]/20 text-[#e6d0a7] px-2 py-0.5 rounded text-[9px] border border-[#bca374]/30">{prefixText}</span>}
+                       {isCorporate && <span className="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded text-[9px] border border-sky-400/30">Corporate Competency</span>}
                     </h5>
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: '0 4px 20px rgba(188,163,116,0.3)'}}>
-                       {enTitle}
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight drop-shadow-lg" style={{textShadow: isCorporate ? '0 4px 20px rgba(56,189,248,0.3)' : '0 4px 20px rgba(188,163,116,0.3)'}}>
+                       {displayTitle}
                     </h1>
                   </div>
                 </div>
-                <div className="mb-4 lg:mb-5 border-l-4 border-[#bca374] pl-3">
+                <div className={`mb-4 lg:mb-5 border-l-4 ${isCorporate ? 'border-sky-400' : 'border-[#bca374]'} pl-3`}>
                   <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1 lg:mb-2">
                      "{styleDesc}"
                   </p>
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-[#bca374] leading-relaxed font-bold mb-1">
-                     อัตลักษณ์ศักยภาพ: <span className="text-[#e6d0a7]">{identityText}</span>
+                     {isCorporate ? 'บทบาทสมรรถนะองค์กร:' : 'อัตลักษณ์ศักยภาพ:'} <span className="text-[#e6d0a7]">{isCorporate ? corporatePersona.title : identityText}</span>
                   </p>
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-0.5">
-                     สไตล์: <span className="text-[#e6d0a7]">{thTitle}</span> {flavorText && <span className="text-[9px] text-slate-500 font-normal ml-1">({flavorText})</span>}
+                     {isCorporate ? 'กลุ่มสมรรถนะ:' : 'สไตล์:'} <span className="text-[#e6d0a7]">{displaySubStyle}</span>
                   </p>
                   <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
                      {bottomDescText}
@@ -328,23 +412,30 @@ export default function TeamStatusTab({
                 
                 <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-2 lg:gap-y-3 mb-4 lg:mb-5">
                    {[
-                     { l: 'STR', val: statsObj.str, c: 'from-rose-600 to-rose-400' },
-                     { l: 'AGI', val: statsObj.agi, c: 'from-emerald-600 to-emerald-400' },
-                     { l: 'DEX', val: statsObj.dex, c: 'from-amber-600 to-amber-400' },
-                     { l: 'INT', val: statsObj.int, c: 'from-blue-600 to-blue-400' },
-                     { l: 'CON', val: statsObj.con, c: 'from-orange-600 to-orange-400' },
-                     { l: 'SEN', val: statsObj.sen, c: 'from-purple-600 to-purple-400' }
-                   ].map(s => (
-                     <div key={s.l} className="flex flex-col">
-                        <div className="flex justify-between items-end mb-1">
-                           <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-slate-400 tracking-wider">{s.l}</span>
-                           <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-white">{s.val}</span>
-                        </div>
-                        <div className="w-full h-1 lg:h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                           <div className={`h-full bg-gradient-to-r ${s.c} rounded-full`} style={{width: `${(s.val/10)*100}%`, boxShadow: '0 0 10px currentColor'}}></div>
-                        </div>
-                     </div>
-                   ))}
+                     { k: 'str', c: 'from-rose-600 to-rose-400' },
+                     { k: 'agi', c: 'from-emerald-600 to-emerald-400' },
+                     { k: 'dex', c: 'from-amber-600 to-amber-400' },
+                     { k: 'int', c: 'from-blue-600 to-blue-400' },
+                     { k: 'con', c: 'from-orange-600 to-orange-400' },
+                     { k: 'sen', c: 'from-purple-600 to-purple-400' }
+                   ].map(s => {
+                     const val = statsObj[s.k];
+                     const disp = getStatDisplay(s.k, talentViewMode);
+                     const labelText = isCorporate ? `${disp.code} (${disp.thai})` : `${disp.label} (${disp.thai})`;
+                     return (
+                       <div key={s.k} className="flex flex-col" title={`${disp.name}: ${disp.desc}`}>
+                          <div className="flex justify-between items-end mb-1">
+                             <span className="text-[9px] sm:text-[10px] font-bold text-slate-300 tracking-wider truncate mr-1" title={disp.desc}>
+                               {labelText}
+                             </span>
+                             <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-white shrink-0">{val}</span>
+                          </div>
+                          <div className="w-full h-1 lg:h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                             <div className={`h-full bg-gradient-to-r ${s.c} rounded-full`} style={{width: `${(val/10)*100}%`, boxShadow: '0 0 10px currentColor'}}></div>
+                          </div>
+                       </div>
+                     );
+                   })}
                 </div>
 
                 {/* The Outer Layer Performance Intelligence */}
@@ -620,12 +711,74 @@ export default function TeamStatusTab({
       } = analysis;
 
       const profile = roleProfile || getRoleTargetProfile(role || u.classId || u.potentialIdentity);
+      const isCorporate = talentViewMode === 'corporate';
+      const heuristic = generateHeuristicTalentDiagnostic(u, sets, archetypesData) || {};
+      const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(analysis.archetypeKey, mainStyle);
 
       return (
         <div className="mt-6 pt-4 w-full text-left relative z-10 font-sans">
-          <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center mb-3">
-            <Icon name="user" size={16} className="mr-2 text-[#bca374]" /> วิเคราะห์ศักยภาพ & เกณฑ์มาตรฐานตำแหน่ง (Talent & Benchmark)
-          </h4>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center">
+              <Icon name="user" size={16} className="mr-2 text-[#bca374]" />
+              {isCorporate 
+                ? 'วิเคราะห์สมรรถนะองค์กร & เกณฑ์มาตรฐานตำแหน่ง (Corporate Competency & Benchmark)'
+                : 'วิเคราะห์ศักยภาพ & เกณฑ์มาตรฐานตำแหน่ง (Talent & Benchmark)'}
+            </h4>
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setTalentViewMode('rpg')}
+                className={`px-2 py-0.5 rounded font-bold transition ${talentViewMode === 'rpg' ? 'bg-[#bca374] text-white shadow-xs' : 'text-slate-500'}`}
+              >
+                🎮 RPG
+              </button>
+              <button
+                type="button"
+                onClick={() => setTalentViewMode('corporate')}
+                className={`px-2 py-0.5 rounded font-bold transition ${talentViewMode === 'corporate' ? 'bg-[#0f2e4a] text-white shadow-xs' : 'text-slate-500'}`}
+              >
+                💼 Corporate
+              </button>
+            </div>
+          </div>
+
+          {/* กล่องข้อความสีฟ้า: BARS Behavioral Rubric Spotlight Box */}
+          {heuristic?.primaryBarsStrength && (
+            <div className="mb-3.5 p-3.5 rounded-xl bg-gradient-to-r from-sky-50 via-sky-50/70 to-blue-50/50 border border-sky-300 shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-sky-200">
+                <div className="flex items-center gap-1.5">
+                  <span className="p-1 rounded-md bg-sky-600 text-white">
+                    <Icon name="award" size={13} />
+                  </span>
+                  <span className="font-bold text-xs text-sky-950">
+                    หลักฐานพฤติกรรมเชิงประจักษ์จริง (BARS Level {heuristic.primaryBarsStrength.level}): {isCorporate ? heuristic.primaryBarsStrength.corporateName : heuristic.primaryBarsStrength.statName}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300 font-mono">
+                  rubrics.json
+                </span>
+              </div>
+              
+              <div className="text-[11px] font-bold text-sky-900 mb-1">
+                ▶ เกณฑ์การประเมินย่อย: 「{heuristic.primaryBarsStrength.criterionLabel}」
+              </div>
+              <div className="p-2.5 rounded-lg bg-white/90 border border-sky-200 text-slate-700 text-xs leading-relaxed italic shadow-2xs mb-2">
+                "{heuristic.primaryBarsStrength.behaviorText}"
+              </div>
+
+              {heuristic.primaryBarsNextMilestone?.behaviorText && (
+                <div className="p-2 rounded-lg bg-sky-100/60 border border-sky-200/80 flex items-start gap-2 text-[11px]">
+                  <span className="text-amber-800 font-bold shrink-0 flex items-center gap-1">
+                    <Icon name="target" size={13} className="text-amber-600" />
+                    เป้าหมายการยกระดับถัดไป (Level {heuristic.primaryBarsNextMilestone.targetLevel}):
+                  </span>
+                  <span className="text-slate-700 leading-snug">
+                    ด้าน「{heuristic.primaryBarsNextMilestone.criterionLabel}」— "{heuristic.primaryBarsNextMilestone.behaviorText}"
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Role Target Profile Card */}
           <div className="mb-3.5 p-3 rounded-xl bg-gradient-to-r from-slate-50 via-sky-50/30 to-blue-50/20 border border-sky-200/80 shadow-xs">
@@ -644,9 +797,10 @@ export default function TeamStatusTab({
               {profile.description}
             </p>
             <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-              <span className="font-bold text-slate-600 mr-1">สเตตัสเป้าหมาย:</span>
+              <span className="font-bold text-slate-600 mr-1">{isCorporate ? 'สมรรถนะเป้าหมาย:' : 'สเตตัสเป้าหมาย:'}</span>
               {Object.entries(profile.targetStats).map(([k, v]) => {
                 const isCore = profile.coreFocus.includes(k);
+                const disp = getStatDisplay(k, talentViewMode);
                 return (
                   <span 
                     key={k} 
@@ -655,8 +809,9 @@ export default function TeamStatusTab({
                         ? 'bg-sky-100 text-sky-800 border-sky-300' 
                         : 'bg-white text-slate-600 border-slate-200'
                     }`}
+                    title={disp.desc}
                   >
-                    {k.toUpperCase()}: {v} {isCore && '★'}
+                    {disp.code}: {v} {isCore && '★'}
                   </span>
                 );
               })}
@@ -666,8 +821,8 @@ export default function TeamStatusTab({
           
           {/* Work Style Tendency */}
           <div className="mb-4 text-[12px] p-3 rounded-xl bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-xs relative z-10">
-             <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ แนวโน้มการทำงาน (Work Style Tendency):</strong>
-             <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{mainStyle}</span>
+             <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ {isCorporate ? 'บทบาทและแนวโน้มการทำงาน (Corporate Role Profile):' : 'แนวโน้มการทำงาน (Work Style Tendency):'}</strong>
+             <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{isCorporate ? corporatePersona.title : mainStyle}</span>
              <span className="block text-slate-600 leading-relaxed ml-3">{styleDesc}</span>
           </div>
 
@@ -676,17 +831,18 @@ export default function TeamStatusTab({
             <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 relative overflow-hidden">
               <strong className="text-emerald-800 text-[13px] flex items-center mb-2">
                 <Icon name="trendingUp" size={14} className="mr-1.5 text-emerald-600"/> 
-                จุดเด่นประจำตัว (Signature Strengths ≥ 7)
+                {isCorporate ? 'สมรรถนะโดดเด่นประจำตัว (Signature Strengths ≥ 7)' : 'จุดเด่นประจำตัว (Signature Strengths ≥ 7)'}
               </strong>
               {signatureStrengths.length > 0 ? (
                 <ul className="text-[12px] text-slate-700 space-y-2 relative z-10 pl-2 border-l-2 border-emerald-300 ml-1">
                   {signatureStrengths.map(s => {
                     const isCore = profile.coreFocus.includes(s.key);
+                    const disp = getStatDisplay(s.key, talentViewMode);
                     return (
                       <li key={s.key} className="py-1">
                         <div className="flex items-center justify-between mb-0.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-[#0f2e4a]">{s.name} ({s.key.toUpperCase()})</span>
+                            <span className="font-bold text-[#0f2e4a]">{isCorporate ? disp.name : s.name} ({disp.code})</span>
                             {isCore && (
                               <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
                                 ★ แกนหลักตำแหน่ง
@@ -720,11 +876,14 @@ export default function TeamStatusTab({
                   <span className="text-[10px] text-slate-400 font-normal">พร้อมปฏิบัติงานตามมาตรฐาน</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {standardPass.map(s => (
-                    <span key={s.key} className="text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium">
-                      <strong>{s.key.toUpperCase()}</strong>: {s.val}/10
-                    </span>
-                  ))}
+                  {standardPass.map(s => {
+                    const disp = getStatDisplay(s.key, talentViewMode);
+                    return (
+                      <span key={s.key} className="text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium" title={disp.desc}>
+                        <strong>{disp.code}</strong>: {s.val}/10
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -733,35 +892,38 @@ export default function TeamStatusTab({
             <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 relative overflow-hidden mt-1">
               <strong className="text-amber-900 text-[13px] flex items-center mb-2">
                 <Icon name="alertCircle" size={14} className="mr-1.5 text-amber-600"/> 
-                จุดที่ควรพิจารณาและสนับสนุน (Developmental Considerations ≤ 4)
+                {isCorporate ? 'สมรรถนะที่ควรพิจารณาและสนับสนุน (Developmental Considerations ≤ 4)' : 'จุดที่ควรพิจารณาและสนับสนุน (Developmental Considerations ≤ 4)'}
               </strong>
               {considerations.length > 0 ? (
                 <ul className="space-y-3 relative z-10 pl-2 border-l-2 border-amber-300 ml-1">
-                  {considerations.map(s => (
-                    <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-amber-100 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <strong className="text-[#0f2e4a]">{s.name} ({s.key.toUpperCase()})</strong>
-                          <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border ${
-                            s.isCore 
-                              ? 'bg-rose-100 text-rose-800 border-rose-200' 
-                              : 'bg-sky-100 text-sky-800 border-sky-200'
-                          }`}>
-                            {s.roleStatus}
+                  {considerations.map(s => {
+                    const disp = getStatDisplay(s.key, talentViewMode);
+                    return (
+                      <li key={s.key} className="text-slate-700 text-[12px] pb-2 border-b border-amber-100 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <strong className="text-[#0f2e4a]">{isCorporate ? disp.name : s.name} ({disp.code})</strong>
+                            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border ${
+                              s.isCore 
+                                ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                                : 'bg-sky-100 text-sky-800 border-sky-200'
+                            }`}>
+                              {s.roleStatus}
+                            </span>
+                          </div>
+                          <span className="font-bold text-amber-700">
+                             {s.val}/10 <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.val)})</span>
                           </span>
                         </div>
-                        <span className="font-bold text-amber-700">
-                           {s.val}/10 <span className="text-slate-400 font-normal ml-1 text-[10px]">({getStatLevelText(s.val)})</span>
-                        </span>
-                      </div>
-                      <div className="text-slate-600 leading-snug mb-1">
-                        ▶ {getRubricText(s.key, s.val)}
-                      </div>
-                      <div className="text-[10.5px] text-amber-900 font-medium bg-white/80 p-1.5 rounded-lg border border-amber-200/60 inline-block mt-0.5">
-                         💡 <strong>แนวทางสนับสนุน:</strong> {s.advice}
-                      </div>
-                    </li>
-                  ))}
+                        <div className="text-slate-600 leading-snug mb-1">
+                          ▶ {getRubricText(s.key, s.val)}
+                        </div>
+                        <div className="text-[10.5px] text-amber-900 font-medium bg-white/80 p-1.5 rounded-lg border border-amber-200/60 inline-block mt-0.5">
+                           💡 <strong>แนวทางสนับสนุน:</strong> {s.advice}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <div className="text-[11px] text-emerald-700 font-medium relative z-10 ml-2">
@@ -1249,6 +1411,7 @@ export default function TeamStatusTab({
           staff={teamForm?.id ? teamForm : selTeam}
           sets={sets}
           archetypesData={archetypesData}
+          initialViewMode={talentViewMode}
         />
         <TeamCalibrationModal
           isOpen={calibrationModalOpen}
