@@ -102,6 +102,13 @@ export const STAT_DEFINITIONS = {
     thai: 'พลังขับเคลื่อนและการตัดสินใจ',
     group: 'The Heavy Lifters', 
     desc: 'พลังขับเคลื่อนและการตัดสินใจ (Core Execution, Problem Solving & Supervision)', 
+    corporate: {
+      code: 'EXEC',
+      name: 'Core Execution & Decisiveness',
+      thai: 'การขับเคลื่อนงานหลักและการตัดสินใจ',
+      group: 'Strategic Execution',
+      desc: 'ความสามารถในการผลักดันงานสำคัญให้สำเร็จตามเป้าหมาย การตัดสินใจแก้ปัญหาเฉพาะหน้า และการกำกับดูแลผู้ปฏิบัติงาน'
+    },
     categories: [
       { name: 'พลังในการขับเคลื่อนงานหลัก (Core Execution)' },
       { name: 'การตัดสินใจแก้ปัญหาเฉพาะหน้า (Problem Solving & Decision Making)' },
@@ -115,6 +122,13 @@ export const STAT_DEFINITIONS = {
     thai: 'ความรวดเร็วและการปรับตัว',
     group: 'The Precision Engine', 
     desc: 'ความรวดเร็วและการปรับตัว (Responsiveness, Adaptability & Field Agility)', 
+    corporate: {
+      code: 'AGIL',
+      name: 'Operational Agility & Responsiveness',
+      thai: 'ความคล่องตัวและการตอบสนองต่อปัญหา',
+      group: 'Operational Agility',
+      desc: 'ความเร็วในการตอบสนองต่อคำขอ การปรับตัวรับมือความเปลี่ยนแปลง และความฉับไวในการเข้าถึงพื้นที่หน้างาน'
+    },
     categories: [
       { name: 'ความรวดเร็วในการตอบสนอง (Responsiveness)' },
       { name: 'การปรับตัวรับมือความเปลี่ยนแปลง (Adaptability)' },
@@ -128,6 +142,13 @@ export const STAT_DEFINITIONS = {
     thai: 'ความแม่นยำและมาตรฐานคุณภาพ',
     group: 'The Precision Engine', 
     desc: 'ความแม่นยำและมาตรฐานคุณภาพ (Data Accuracy, Time Management & Quality Control)', 
+    corporate: {
+      code: 'PREC',
+      name: 'Precision & Quality Excellence',
+      thai: 'ความแม่นยำและการควบคุมคุณภาพ',
+      group: 'Quality Excellence',
+      desc: 'ความถูกต้องแม่นยำของข้อมูลเอกสาร การบริหารเวลา และการตรวจสอบมาตรฐานความประณีตของผลงาน'
+    },
     categories: [
       { name: 'ความถูกต้องแม่นยำของข้อมูลและเอกสาร (Data Accuracy & Document)' },
       { name: 'การบริหารเวลา (Time Management)' },
@@ -141,6 +162,13 @@ export const STAT_DEFINITIONS = {
     thai: 'ระบบเทคโนโลยีและการจัดการ',
     group: 'The Mastermind', 
     desc: 'ระบบเทคโนโลยีและการจัดการ (Basic Tools, Workflow Optimization & Advanced Automation)', 
+    corporate: {
+      code: 'SYST',
+      name: 'Systems & Workflow Optimization',
+      thai: 'ระบบงานและการคิดเชิงระบบ',
+      group: 'Systems & Optimization',
+      desc: 'ความเชี่ยวชาญการใช้เครื่องมือดิจิทัล Taskflow การออกแบบกระบวนการทำงานให้มีประสิทธิภาพ และการวิเคราะห์ข้อมูล'
+    },
     categories: [
       { name: 'การใช้เครื่องมือและระบบพื้นฐาน (Basic Tool Proficiency)' },
       { name: 'การออกแบบระบบและกระบวนการทำงาน (Workflow Optimization)' },
@@ -154,6 +182,13 @@ export const STAT_DEFINITIONS = {
     thai: 'ความทรหดและการควบคุมอารมณ์',
     group: 'The Heavy Lifters', 
     desc: 'ความทรหดและการควบคุมอารมณ์ (Stress Tolerance, Stamina & Grit)', 
+    corporate: {
+      code: 'RESL',
+      name: 'Resilience & Stress Tolerance',
+      thai: 'ความทรหดและวุฒิภาวะทางอารมณ์',
+      group: 'Personal Mastery',
+      desc: 'ความอดทนต่อสภาวะกดดัน ความต่อเนื่องและวินัยในงาน Routine และความมุ่งมั่นไม่ยอมแพ้ต่องานยาก'
+    },
     categories: [
       { name: 'ความอดทนต่อสภาวะกดดัน (Stress Tolerance)' },
       { name: 'ความรับผิดชอบต่องานยืดเยื้อ (Stamina in Protracted Tasks)' },
@@ -167,12 +202,93 @@ export const STAT_DEFINITIONS = {
     thai: 'การเจรจาและความเข้าใจผู้คน',
     group: 'The Empathizers', 
     desc: 'การเจรจาและความเข้าใจผู้คน (Emotional Control, Empathy & Communication)', 
+    corporate: {
+      code: 'EMPA',
+      name: 'Stakeholder Empathy & Communication',
+      thai: 'การเข้าใจผู้มีส่วนได้ส่วนเสียและการสื่อสาร',
+      group: 'Relationship & Influence',
+      desc: 'การควบคุมอารมณ์และบุคลิกภาพ จิตวิทยาบริการ ความเข้าใจมุมมองลูกบ้าน และศิลปะการเจรจาประสานงานเพื่อลดข้อขัดแย้ง'
+    },
     categories: [
       { name: 'การควบคุมอารมณ์และบุคลิกภาพ (Emotional Control)' },
       { name: 'ความเข้าใจผู้คนและการบริการ (Empathy & Perspective Taking)' },
       { name: 'ศิลปะการสื่อสารและเจรจา (Communication & Conflict Resolution)' }
     ]
   }
+};
+
+export const getStatDisplay = (statKey, viewMode = 'rpg') => {
+  const k = (statKey || '').toLowerCase();
+  const def = STAT_DEFINITIONS[k] || {
+    key: k,
+    label: k.toUpperCase(),
+    name: k.toUpperCase(),
+    thai: k.toUpperCase(),
+    group: 'General'
+  };
+
+  if (viewMode === 'corporate' && def.corporate) {
+    return {
+      key: k,
+      code: def.corporate.code,
+      label: def.corporate.code,
+      name: def.corporate.name,
+      thai: def.corporate.thai,
+      group: def.corporate.group,
+      desc: def.corporate.desc || def.desc
+    };
+  }
+
+  return {
+    key: k,
+    code: def.label,
+    label: def.label,
+    name: def.name,
+    thai: def.thai,
+    group: def.group,
+    desc: def.desc
+  };
+};
+
+export const getCorporateArchetypePersona = (archetypeKey, mainStyle) => {
+  const map = {
+    'uniform_1': { title: 'Critical Risk Profile', thai: 'กลุ่มความเสี่ยงวิกฤต' },
+    'uniform_2': { title: 'Underperforming Associate', thai: 'กลุ่มต้องฟื้นฟูผลงานเร่งด่วน' },
+    'uniform_3': { title: 'Developing Operator', thai: 'ผู้ปฏิบัติการในระยะดูแลใกล้ชิด' },
+    'uniform_4': { title: 'Developing Support', thai: 'ผู้ปฏิบัติการสนับสนุนขั้นต้น' },
+    'uniform_5': { title: 'Standard All-Rounder', thai: 'ผู้ปฏิบัติการมาตรฐานรอบด้าน' },
+    'uniform_6': { title: 'Proficient Generalist', thai: 'ผู้ชำนาญการรอบด้าน' },
+    'uniform_7': { title: 'Senior Operational Lead', thai: 'ผู้นำปฏิบัติการอาวุโส' },
+    'uniform_8': { title: 'Master Specialist', thai: 'ผู้เชี่ยวชาญพิเศษระดับสูง' },
+    'uniform_9': { title: 'Strategic Systems Lead', thai: 'ผู้นำเชิงกลยุทธ์และระบบ' },
+    'uniform_10': { title: 'Organizational Benchmark', thai: 'ต้นแบบระดับองค์กร' },
+    'polarized_prodigy': { title: 'High-Impact Specialist (Blindspot Gap)', thai: 'ผู้เชี่ยวชาญเฉพาะทางที่ต้องการทีมหนุน' },
+    'generalist': { title: 'Cross-Functional Generalist', thai: 'ผู้ปฏิบัติการรอบด้าน' },
+    'trainee': { title: 'Developing Associate', thai: 'ผู้ปฏิบัติการในระยะสร้างสมรรถนะ' },
+  };
+
+  if (map[archetypeKey]) return map[archetypeKey];
+
+  if (/commander|enforcer|berserker|juggernaut/i.test(mainStyle || '')) {
+    return { title: 'Operational Execution Lead', thai: 'ผู้นำการขับเคลื่อนหน้างานและการตัดสินใจ' };
+  }
+  if (/vanguard|scout|striker/i.test(mainStyle || '')) {
+    return { title: 'Agile Response Specialist', thai: 'ผู้เชี่ยวชาญความคล่องตัวและการแก้ปัญหาฉับไว' };
+  }
+  if (/craftsman|inspector|technician|sniper/i.test(mainStyle || '')) {
+    return { title: 'Quality & Technical Specialist', thai: 'ผู้เชี่ยวชาญมาตรฐานคุณภาพและความแม่นยำ' };
+  }
+  if (/architect|mastermind|engineer|tactician/i.test(mainStyle || '')) {
+    return { title: 'Systems & Workflow Architect', thai: 'สถาปนิกผู้วางระบบและเทคโนโลยี' };
+  }
+  if (/guardian|paladin|sentinel|bulwark/i.test(mainStyle || '')) {
+    return { title: 'Resilient Service Guardian', thai: 'ผู้พิทักษ์เสถียรภาพและคุณภาพบริการ' };
+  }
+  if (/diplomat|empathizer|mediator|sage/i.test(mainStyle || '')) {
+    return { title: 'Stakeholder Relationship Lead', thai: 'ผู้นำการสื่อสารและการประสานงานผู้มีส่วนได้ส่วนเสีย' };
+  }
+
+  return { title: mainStyle || 'Operational Professional', thai: 'บุคลากรสายปฏิบัติการ' };
 };
 
 export const getStatLevelText = (val) => {
@@ -671,43 +787,55 @@ export const calculateRoleFit = (statsObj, roleProfile) => {
 };
 
 export const analyzeSubCriteria = (staff, rubrics = rubricsData) => {
-  const innerScores = staff?.innerScores || staff?.subScores;
-  if (!innerScores || typeof innerScores !== 'object') return null;
+  let innerScores = staff?.innerScores || staff?.subScores;
+  if (!innerScores || typeof innerScores !== 'object') {
+    innerScores = {};
+    STAT_KEYS.forEach(k => {
+      const v = Math.min(Math.max(Math.round(Number(staff?.[k]) || 5), 1), 10);
+      innerScores[k] = [v, v, v];
+    });
+  }
   
   const subInsights = [];
   STAT_KEYS.forEach(k => {
-    const list = innerScores[k];
-    if (Array.isArray(list) && list.length === 3) {
-      const minVal = Math.min(...list);
-      const maxVal = Math.max(...list);
-      const diff = maxVal - minVal;
-      
-      const statRubrics = rubrics[k] || [];
-      const minIdx = list.indexOf(minVal);
-      const maxIdx = list.indexOf(maxVal);
-      
-      const minCriterion = statRubrics[minIdx];
-      const maxCriterion = statRubrics[maxIdx];
-      
-      const minLevelDesc = minCriterion?.levels?.[String(minVal)] || '';
-      const minNextLevelDesc = minCriterion?.levels?.[String(Math.min(minVal + 1, 10))] || '';
-      const maxLevelDesc = maxCriterion?.levels?.[String(maxVal)] || '';
-      
-      subInsights.push({
-        statKey: k,
-        statName: STAT_DEFINITIONS[k]?.name || k.toUpperCase(),
-        scores: list,
-        minVal,
-        maxVal,
-        variance: diff,
-        hasVariance: diff >= 2,
-        lowestCriterionLabel: minCriterion?.label || `เกณฑ์ย่อยที่ ${minIdx + 1}`,
-        highestCriterionLabel: maxCriterion?.label || `เกณฑ์ย่อยที่ ${maxIdx + 1}`,
-        currentBehaviorText: minLevelDesc,
-        nextGrowthBehaviorText: minNextLevelDesc,
-        strengthBehaviorText: maxLevelDesc
-      });
+    let list = innerScores[k];
+    if (!Array.isArray(list) || list.length !== 3) {
+      const v = Math.min(Math.max(Math.round(Number(staff?.[k]) || 5), 1), 10);
+      list = [v, v, v];
     }
+    const minVal = Math.min(...list);
+    const maxVal = Math.max(...list);
+    const diff = maxVal - minVal;
+    
+    const statRubrics = rubrics[k] || [];
+    const minIdx = list.indexOf(minVal);
+    const maxIdx = list.lastIndexOf(maxVal);
+    
+    const minCriterion = statRubrics[minIdx] || statRubrics[0];
+    const maxCriterion = statRubrics[maxIdx] || statRubrics[0];
+    
+    const minLevelDesc = minCriterion?.levels?.[String(minVal)] || '';
+    const minNextLevelDesc = minCriterion?.levels?.[String(Math.min(minVal + 1, 10))] || '';
+    const maxLevelDesc = maxCriterion?.levels?.[String(maxVal)] || '';
+
+    const corpDef = STAT_DEFINITIONS[k]?.corporate;
+    
+    subInsights.push({
+      statKey: k,
+      statName: STAT_DEFINITIONS[k]?.name || k.toUpperCase(),
+      corporateName: corpDef?.name || k.toUpperCase(),
+      corporateThai: corpDef?.thai || '',
+      scores: list,
+      minVal,
+      maxVal,
+      variance: diff,
+      hasVariance: diff >= 2,
+      lowestCriterionLabel: minCriterion?.label || `เกณฑ์ย่อยที่ ${minIdx + 1}`,
+      highestCriterionLabel: maxCriterion?.label || `เกณฑ์ย่อยที่ ${maxIdx + 1}`,
+      currentBehaviorText: minLevelDesc,
+      nextGrowthBehaviorText: minNextLevelDesc,
+      strengthBehaviorText: maxLevelDesc
+    });
   });
   
   return subInsights;
@@ -726,7 +854,9 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
     considerations, 
     roleFitPct = 100, 
     statInteractions = [], 
-    subInsights = null 
+    subInsights = null,
+    archetypeKey = 'generalist',
+    mainStyle = 'Specialist'
   } = analysis;
 
   const statsObj = {
@@ -743,6 +873,16 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
   const staffName = staff.name || 'พนักงาน';
   const roleName = roleProfile.name || 'เจ้าหน้าที่ปฏิบัติการ';
 
+  // Corporate Persona & Tier translation
+  const corporatePersona = getCorporateArchetypePersona(archetypeKey, mainStyle);
+  const corporateTierName = competencyTier.level === 4
+    ? 'Tier 4: Benchmark Role Model (ระดับต้นแบบองค์กร)'
+    : competencyTier.level === 3
+    ? 'Tier 3: Advanced Professional (ระดับชำนาญการเฉพาะทาง)'
+    : competencyTier.level === 2
+    ? 'Tier 2: Standard Competent (ระดับมาตรฐานการทำงาน)'
+    : 'Tier 1: Developing Associate (ระดับพัฒนาสมรรถนะ)';
+
   // 1. Overall Verdict (Personalized with Role-Fit & Primary Work Style)
   let overallVerdict = '';
   if (competencyTier.level === 4) {
@@ -757,20 +897,45 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
 
   // 2. Verified Strengths (Anchored with Sub-criteria rubric if available)
   let verifiedStrengths = dynamicStrength;
+  let primaryBarsStrength = null;
   if (subInsights && subInsights.length > 0) {
     const highestSub = [...subInsights].sort((a, b) => b.maxVal - a.maxVal)[0];
-    if (highestSub && highestSub.maxVal >= 6 && highestSub.strengthBehaviorText) {
-      verifiedStrengths += `\n▶ พฤติกรรมเด่นเชิงประจักษ์: ${highestSub.statName} ในด้าน「${highestSub.highestCriterionLabel}」— ${highestSub.strengthBehaviorText}`;
+    if (highestSub && highestSub.strengthBehaviorText) {
+      primaryBarsStrength = {
+        statName: highestSub.statName,
+        corporateName: highestSub.corporateName,
+        criterionLabel: highestSub.highestCriterionLabel,
+        level: highestSub.maxVal,
+        behaviorText: highestSub.strengthBehaviorText
+      };
+      if (highestSub.maxVal >= 6) {
+        verifiedStrengths += `\n▶ พฤติกรรมเด่นเชิงประจักษ์ (BARS Level ${highestSub.maxVal}): ด้าน「${highestSub.highestCriterionLabel}」\n"${highestSub.strengthBehaviorText}"`;
+      }
     }
   }
 
-  // 3. Operational Risks (Combined with Interaction rules & Outer Can-Do/Will-Do gap)
+  // 3. Operational Risks (Combined with Interaction rules & Lowest Sub-criterion BARS)
   const riskLines = [];
+  let primaryBarsDevelopment = null;
+  if (subInsights && subInsights.length > 0) {
+    const lowestSub = [...subInsights].sort((a, b) => a.minVal - b.minVal)[0];
+    if (lowestSub && lowestSub.currentBehaviorText && lowestSub.minVal <= 5) {
+      primaryBarsDevelopment = {
+        statName: lowestSub.statName,
+        corporateName: lowestSub.corporateName,
+        criterionLabel: lowestSub.lowestCriterionLabel,
+        level: lowestSub.minVal,
+        behaviorText: lowestSub.currentBehaviorText
+      };
+      riskLines.push(`• จุดที่ต้องการการสนับสนุนเชิงพฤติกรรม (BARS Level ${lowestSub.minVal}): ด้าน「${lowestSub.lowestCriterionLabel}」\n"${lowestSub.currentBehaviorText}"`);
+    }
+  }
+
   if (considerations.length > 0) {
     considerations.forEach(c => {
       riskLines.push(`• ${c.name} (${c.val}/10): ${c.advice}`);
     });
-  } else {
+  } else if (!primaryBarsDevelopment) {
     riskLines.push('• สเตตัสหลักทุกด้านผ่านเกณฑ์มาตรฐานองค์กร (≥ 5/10)');
   }
 
@@ -813,12 +978,21 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
     coachingQuestions.push(`ในการปฏิบัติงานสัปดาห์ที่ผ่านมา มีเคสหรือปัญหาใดที่ทำให้รู้สึกว่าต้องใช้ทักษะพิเศษในการแก้ไขมากที่สุด?`);
   }
 
-  // 6. Next Growth Milestone (Anchored with Next-Level Rubric Text)
+  // 6. Next Growth Milestone (Explicit BARS N+1 text)
   let nextGrowthMilestone = '';
+  let primaryBarsNextMilestone = null;
   if (subInsights && subInsights.length > 0) {
-    const targetSub = subInsights.find(s => s.minVal <= 5) || subInsights[0];
+    const targetSub = subInsights.find(s => s.minVal <= 5) || [...subInsights].sort((a, b) => a.minVal - b.minVal)[0];
     if (targetSub && targetSub.nextGrowthBehaviorText) {
-      nextGrowthMilestone = `ยกระดับทักษะ ${targetSub.statName} ในหัวข้อ「${targetSub.lowestCriterionLabel}」จากระดับ ${targetSub.minVal} สู่เป้าหมายถัดไป: "${targetSub.nextGrowthBehaviorText}" ภายใน 30-60 วัน`;
+      const targetLvl = Math.min(targetSub.minVal + 1, 10);
+      primaryBarsNextMilestone = {
+        statName: targetSub.statName,
+        corporateName: targetSub.corporateName,
+        criterionLabel: targetSub.lowestCriterionLabel,
+        targetLevel: targetLvl,
+        behaviorText: targetSub.nextGrowthBehaviorText
+      };
+      nextGrowthMilestone = `ยกระดับทักษะ ${targetSub.statName} (${targetSub.corporateName}) ในด้าน「${targetSub.lowestCriterionLabel}」จากระดับ ${targetSub.minVal} สู่เป้าหมายถัดไป (Level ${targetLvl}):\n"${targetSub.nextGrowthBehaviorText}" (ภายใน 30-60 วัน)`;
     }
   }
 
@@ -835,6 +1009,7 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
   return {
     overallVerdict,
     competencyTier: `${competencyTier.name} (${competencyTier.thai})`,
+    corporateTierName,
     tierLevel: competencyTier.level,
     roleFitPct,
     verifiedStrengths,
@@ -842,6 +1017,13 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
     managerActionPlan,
     coachingQuestions,
     nextGrowthMilestone,
+    primaryBarsStrength,
+    primaryBarsDevelopment,
+    primaryBarsNextMilestone,
+    subInsights,
+    corporatePersona,
+    mainStyle,
+    archetypeKey,
     source: 'engine',
     isOuterAssessed: outerAnalysis?.isAssessed || false
   };
