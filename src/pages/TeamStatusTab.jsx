@@ -396,18 +396,15 @@ export default function TeamStatusTab({
                   </div>
                 </div>
                 <div className={`mb-4 lg:mb-5 border-l-4 ${isCorporate ? 'border-sky-400' : 'border-[#bca374]'} pl-3`}>
-                  <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1 lg:mb-2">
+                  <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1.5 lg:mb-2 leading-relaxed">
                      "{styleDesc}"
                   </p>
-                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-[#bca374] leading-relaxed font-bold mb-1">
-                     {isCorporate ? 'บทบาทสมรรถนะองค์กร:' : 'อัตลักษณ์ศักยภาพ:'} <span className="text-[#e6d0a7]">{isCorporate ? corporatePersona.title : identityText}</span>
+                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-1">
+                     {isCorporate ? 'กลุ่มสมรรถนะเชิงวิชาชีพ:' : 'สไตล์และแนวทางการทำงาน:'} <span className={isCorporate ? 'text-sky-300 font-bold' : 'text-[#e6d0a7] font-bold'}>{displaySubStyle}</span>
                   </p>
-                  <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-0.5">
-                     {isCorporate ? 'กลุ่มสมรรถนะ:' : 'สไตล์:'} <span className="text-[#e6d0a7]">{displaySubStyle}</span>
-                  </p>
-                  <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
+                  <div className="text-[9px] sm:text-[10px] lg:text-[11px] text-slate-300 leading-relaxed drop-shadow-md">
                      {bottomDescText}
-                  </p>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-2 lg:gap-y-3 mb-4 lg:mb-5">

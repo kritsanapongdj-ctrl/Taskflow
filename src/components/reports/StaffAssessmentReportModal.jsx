@@ -248,9 +248,9 @@ export default function StaffAssessmentReportModal({
                   <div className="text-[10.5px] font-black text-indigo-900 mt-1 leading-tight break-words">
                     {enTitle}
                   </div>
-                  {identityBadgeText && (
-                    <span className="inline-block text-[8.5px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 mt-1.5 leading-tight break-words">
-                      {identityBadgeText}
+                  {archAnalysis.competencyTier && (
+                    <span className={`inline-block text-[8.5px] font-bold px-2 py-0.5 rounded border mt-1.5 leading-tight break-words ${archAnalysis.competencyTier.badgeColor || 'bg-sky-50 text-sky-900 border-sky-200'}`}>
+                      {archAnalysis.competencyTier.name} ({archAnalysis.competencyTier.thai})
                     </span>
                   )}
                 </div>
