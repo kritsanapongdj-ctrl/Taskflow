@@ -121,7 +121,36 @@ body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
   transform: translateY(-2px) scale(1.01);
 }
 .snap-spring:active {
-  transform: translateY(0px) scale(0.98);
+  transform: translateY(0px) scale(0.97);
+}
+
+/* Tactile Press Interaction for Buttons & Tabs */
+.tactile-press {
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1), box-shadow 0.15s ease;
+}
+.tactile-press:hover {
+  transform: translateY(-1px);
+}
+.tactile-press:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Tactile Select dropdown focus */
+.tactile-select {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.tactile-select:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 46, 74, 0.08);
+}
+
+/* Subtle Tactile Card Elevation */
+.tactile-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.tactile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(15, 46, 74, 0.08);
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

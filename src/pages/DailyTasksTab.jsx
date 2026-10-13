@@ -209,19 +209,19 @@ export default function DailyTasksTab({
             <div
               key={t.id}
               id={`task-card-${t.id}`}
-              className={`bg-white rounded-2xl shadow-sm border p-4 space-y-3 transition-all duration-300 ${
+              className={`bg-white rounded-3xl p-4 sm:p-5 space-y-3 transition-all duration-200 border tactile-card ${
                 isHighlighted
                   ? 'ring-4 ring-[#bca374] bg-[#bca374]/10 border-[#bca374] shadow-lg animate-pulse'
                   : info.isOverdue
-                  ? `${info.borderClass} ${info.bgHighlightClass} border-slate-200/90`
-                  : 'border-slate-200/80 hover:border-slate-300'
+                  ? `${info.borderClass} ${info.bgHighlightClass} border-slate-200/90 shadow-xs`
+                  : 'border-slate-200/85 hover:border-slate-300 shadow-xs'
               }`}
             >
               {/* Project & Status Header */}
               <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <h3 className="font-bold text-[#bca374] text-base leading-snug break-words">
+                    <h3 className="font-bold text-[#bca374] text-base leading-snug break-words font-display tracking-tight">
                       {getStdProj(t.project)}
                     </h3>
                     {info.isOverdue && (
@@ -236,7 +236,7 @@ export default function DailyTasksTab({
                     </span>
                   )}
                 </div>
-                {getStatusBadge(t.status)}
+                <div>{getStatusBadge(t.status)}</div>
               </div>
 
               {/* Task Details */}
@@ -244,12 +244,12 @@ export default function DailyTasksTab({
                 <div className="text-sm font-semibold text-slate-800 leading-relaxed break-words">
                   {t.details}
                 </div>
-                <div className="text-[11px] text-slate-400 mt-2 flex flex-wrap gap-1.5 items-center">
-                  <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono text-[10px]">
+                <div className="text-[11px] text-slate-400 mt-2 flex flex-wrap gap-1.5 items-center font-tech">
+                  <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px]">
                     {t.id}
                   </span>
                   {t.requester && (
-                    <span className="text-slate-500">
+                    <span className="text-slate-500 font-sans">
                       ผู้แจ้ง: {t.requester}
                     </span>
                   )}
@@ -262,7 +262,7 @@ export default function DailyTasksTab({
                     <button
                       type="button"
                       onClick={() => onOpenTimeline(t)}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer snap-spring font-sans"
                       title="ดูประวัติไทม์ไลน์ของงานนี้"
                     >
                       <Icon name="clock" size={11} className="text-[#0f2e4a]" />
@@ -273,25 +273,25 @@ export default function DailyTasksTab({
 
                 {/* Sub-reason banners */}
                 {info.reason && (
-                  <div className="mt-2 text-xs text-amber-900 bg-amber-100/70 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-start gap-1.5">
+                  <div className="mt-2 text-xs text-amber-900 bg-amber-100/70 px-2.5 py-1.5 rounded-xl border border-amber-200/80 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">💬 สาเหตุที่ช้า:</span>
                     <span className="break-words font-medium">{info.reason}</span>
                   </div>
                 )}
                 {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
-                  <div className="mt-2 text-xs text-sky-700 bg-sky-50/90 px-2.5 py-1.5 rounded-lg border border-sky-200 flex items-start gap-1.5">
+                  <div className="mt-2 text-xs text-sky-700 bg-sky-50/90 px-2.5 py-1.5 rounded-xl border border-sky-200 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">📅 เหตุผลเลื่อนวันเริ่ม:</span>
                     <span className="break-words font-medium">{t.startPostponeReason}</span>
                   </div>
                 )}
                 {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
-                  <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-lg border border-rose-200 flex items-start gap-1.5">
+                  <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-xl border border-rose-200 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
                     <span className="break-words font-medium">{t.issueReason}</span>
                   </div>
                 )}
                 {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
-                  <div className="mt-2 text-xs text-amber-800 bg-amber-50/90 px-2.5 py-1.5 rounded-lg border border-amber-200 flex items-start justify-between gap-1.5">
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50/90 px-2.5 py-1.5 rounded-xl border border-amber-200 flex items-start justify-between gap-1.5">
                     <div className="flex items-start gap-1.5">
                       <span className="font-bold shrink-0">⚠️ ประวัติรออะไหล่:</span>
                       <span className="break-words font-medium">{t.issueReason}</span>
@@ -308,7 +308,7 @@ export default function DailyTasksTab({
                   </div>
                 )}
                 {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
-                  <div className="mt-2 text-xs text-indigo-700 bg-indigo-50/90 px-2.5 py-1.5 rounded-lg border border-indigo-200 flex items-start gap-1.5">
+                  <div className="mt-2 text-xs text-indigo-700 bg-indigo-50/90 px-2.5 py-1.5 rounded-xl border border-indigo-200 flex items-start gap-1.5">
                     <span className="font-bold shrink-0">📅 เหตุผลเลื่อน:</span>
                     <span className="break-words font-medium">{t.postponeReason}</span>
                   </div>
@@ -316,35 +316,35 @@ export default function DailyTasksTab({
               </div>
 
               {/* Duration & Overdue Status */}
-              <div className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-600 border border-slate-100">
+              <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between text-xs text-slate-600 border border-slate-200/60 font-tech">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Icon name="calendar" size={14} className="text-slate-400 shrink-0" />
+                  <Icon name="calendar" size={14} className="text-[#bca374] shrink-0" />
                   <span>
-                    เริ่ม: <strong className="text-slate-700">{fDate(t.startDate)}</strong>
+                    เริ่ม: <strong className="text-slate-800 whitespace-nowrap">{fDate(t.startDate)}</strong>
                   </span>
-                  <span>—</span>
+                  <span className="text-slate-300">—</span>
                   <span>
                     จบ:{' '}
                     <strong
-                      className={
+                      className={`whitespace-nowrap ${
                         info.type === 'ACTIVE_OVERDUE'
                           ? 'text-rose-600 font-bold'
                           : info.type === 'COMPLETED_LATE'
                           ? 'text-amber-700 font-bold'
-                          : 'text-slate-700'
-                      }
+                          : 'text-slate-800'
+                      }`}
                     >
                       {fDate(t.endDate)}
                     </strong>
                   </span>
                   {t.completedDate && (
-                    <span className="text-[11px] text-emerald-700">
-                      (ปิดจริง: <strong>{fDate(t.completedDate)}</strong>)
+                    <span className="text-[11px] text-emerald-700 font-medium whitespace-nowrap">
+                      (ปิด: <strong>{fDate(t.completedDate)}</strong>)
                     </span>
                   )}
                 </div>
                 {info.isOverdue && (
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${info.badgeClass}`}>
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 font-sans ${info.badgeClass}`}>
                     {info.label}
                   </span>
                 )}
@@ -356,7 +356,7 @@ export default function DailyTasksTab({
                   <select
                     value={currentSelectVal}
                     onChange={(e) => initSt(t.id, e.target.value)}
-                    className="w-full h-11 px-3 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 bg-white focus:border-[#0f2e4a] focus:ring-1 focus:ring-[#0f2e4a] outline-none shadow-2xs"
+                    className="w-full h-11 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 outline-none shadow-2xs transition-all tactile-select"
                   >
                     <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
                     <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
@@ -372,7 +372,7 @@ export default function DailyTasksTab({
                 <button
                   type="button"
                   onClick={() => handleEdit(t)}
-                  className="w-11 h-11 border border-slate-300 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-50 transition active:scale-95"
+                  className="w-11 h-11 border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-100 hover:text-[#0f2e4a] transition-all snap-spring cursor-pointer shadow-2xs"
                   title="แก้ไขงาน"
                 >
                   <Icon name="edit2" size={16} />
@@ -380,7 +380,7 @@ export default function DailyTasksTab({
                 <button
                   type="button"
                   onClick={() => deleteTask(t)}
-                  className="w-11 h-11 border border-rose-200 rounded-xl flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition active:scale-95"
+                  className="w-11 h-11 border border-rose-200 rounded-xl flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition-all snap-spring cursor-pointer shadow-2xs"
                   title="ลบงาน"
                 >
                   <Icon name="trash" size={16} />
@@ -548,50 +548,50 @@ export default function DailyTasksTab({
                       )}
                     </td>
                     <td className="p-4 text-center align-top">
-                    <div className="flex justify-center items-center gap-1.5">
-                      <select
-                        value={currentSelectVal}
-                        onChange={(e) => initSt(t.id, e.target.value)}
-                        className="border rounded text-xs p-1.5 outline-none bg-gray-50 hover:bg-white font-medium focus:border-[#0f2e4a]"
-                      >
-                        <option value="รอดำเนินการ">รอดำเนินการ</option>
-                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                        <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
-                        <option value="เลื่อนวันเริ่ม">เลื่อนวันเริ่ม</option>
-                        <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
-                        <option value="จบงาน">จบงาน</option>
-                        {t.status === 'จบงาน(รอใบงาน)' && (
-                          <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
+                      <div className="flex justify-center items-center gap-1.5">
+                        <select
+                          value={currentSelectVal}
+                          onChange={(e) => initSt(t.id, e.target.value)}
+                          className="border border-slate-200 rounded-lg text-xs p-1.5 outline-none bg-slate-50 hover:bg-white font-medium focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 transition-all cursor-pointer shadow-2xs tactile-select"
+                        >
+                          <option value="รอดำเนินการ">รอดำเนินการ</option>
+                          <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                          <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
+                          <option value="เลื่อนวันเริ่ม">เลื่อนวันเริ่ม</option>
+                          <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
+                          <option value="จบงาน">จบงาน</option>
+                          {t.status === 'จบงาน(รอใบงาน)' && (
+                            <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
+                          )}
+                        </select>
+                        {onOpenTimeline && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenTimeline(t)}
+                            className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
+                            title="ดูประวัติไทม์ไลน์งาน"
+                          >
+                            <Icon name="clock" size={14} />
+                          </button>
                         )}
-                      </select>
-                      {onOpenTimeline && (
                         <button
                           type="button"
-                          onClick={() => onOpenTimeline(t)}
-                          className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-gray-100 rounded hover:bg-gray-200 transition cursor-pointer"
-                          title="ดูประวัติไทม์ไลน์งาน"
+                          onClick={() => handleEdit(t)}
+                          className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
+                          title="แก้ไขงาน"
                         >
-                          <Icon name="clock" size={14} />
+                          <Icon name="edit2" size={14} />
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(t)}
-                        className="text-gray-500 hover:text-[#0f2e4a] p-1.5 bg-gray-100 rounded hover:bg-gray-200 transition"
-                        title="แก้ไขงาน"
-                      >
-                        <Icon name="edit2" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteTask(t)}
-                        className="text-red-400 hover:text-red-600 p-1.5 bg-red-50 rounded hover:bg-red-100 transition"
-                        title="ลบงาน"
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
-                    </div>
-                  </td>
+                        <button
+                          type="button"
+                          onClick={() => deleteTask(t)}
+                          className="text-rose-500 hover:text-rose-700 p-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
+                          title="ลบงาน"
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                      </div>
+                    </td>
                 </tr>
               );
             })}

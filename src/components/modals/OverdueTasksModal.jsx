@@ -58,39 +58,41 @@ export default function OverdueTasksModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-[#0f2e4a] p-4 text-white flex justify-between items-center shrink-0 border-b border-white/10">
+        <div className="bg-[#0f2e4a] blueprint-grid-dark p-4 text-white flex justify-between items-center shrink-0 border-b-2 border-[#bca374]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
               <Icon name="alertTriangle" size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-base leading-tight flex items-center gap-2">
-                <span>งานล่าช้า/เกินกำหนด</span>
-                <span className="text-xs font-normal text-slate-300">
-                  (ประจำเดือน {currentMonth})
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base leading-tight font-display tracking-tight text-white flex items-center gap-2">
+                  งานล่าช้า/เกินกำหนด SLA
+                </h3>
+                <span className="stamp-badge text-[10px] text-[#bca374] border-[#bca374]">
+                  SLA AUDIT
                 </span>
-              </h3>
-              <p className="text-[11px] text-slate-300">
-                รวม {tasks.length} ภารกิจ (ค้างส่งมอบ {activeOverdueCount} | ปิดงานช้า {completedLateCount})
+              </div>
+              <p className="text-[11px] text-slate-300 font-tech mt-0.5">
+                ประจำเดือน {currentMonth} | รวม {tasks.length} ภารกิจ (ค้าง {activeOverdueCount} | ปิดช้า {completedLateCount})
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer snap-spring"
           >
             <Icon name="x" size={18} />
           </button>
         </div>
 
         {/* Filter Pills & Quick Search Bar */}
-        <div className="bg-slate-50 p-3 border-b space-y-2 shrink-0">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <div className="bg-slate-50 p-3 border-b border-slate-200/80 space-y-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-display">
             <button
               type="button"
               onClick={() => setFilterType('ALL')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer snap-spring ${
                 filterType === 'ALL'
                   ? 'bg-[#0f2e4a] text-white shadow-xs'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
@@ -101,28 +103,28 @@ export default function OverdueTasksModal({
             <button
               type="button"
               onClick={() => setFilterType('ACTIVE_OVERDUE')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1 snap-spring ${
                 filterType === 'ACTIVE_OVERDUE'
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
               }`}
             >
               <span>🔴 ค้างเกินกำหนด</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-tech">
                 {activeOverdueCount}
               </span>
             </button>
             <button
               type="button"
               onClick={() => setFilterType('COMPLETED_LATE')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1 snap-spring ${
                 filterType === 'COMPLETED_LATE'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-white text-amber-800 border border-amber-200 hover:bg-amber-50'
               }`}
             >
               <span>🟠 ปิดงานช้า</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-tech">
                 {completedLateCount}
               </span>
             </button>
@@ -130,14 +132,14 @@ export default function OverdueTasksModal({
               <button
                 type="button"
                 onClick={() => setFilterType('LATE_WO')}
-                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1 snap-spring ${
                   filterType === 'LATE_WO'
                     ? 'bg-purple-600 text-white shadow-xs'
                     : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
                 }`}
               >
                 <span>🟡 รอใบงานช้า</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-tech">
                   {lateWoCount}
                 </span>
               </button>
@@ -180,12 +182,12 @@ export default function OverdueTasksModal({
               return (
                 <div
                   key={t.id}
-                  className={`pt-2.5 first:pt-0 p-3 rounded-xl border transition-all ${
+                  className={`pt-2.5 first:pt-0 p-3.5 rounded-2xl border transition-all tactile-card ${
                     info.type === 'ACTIVE_OVERDUE'
-                      ? 'border-rose-200 bg-rose-50/30 hover:border-rose-300'
+                      ? 'border-rose-200 bg-rose-50/40 hover:border-rose-400'
                       : info.type === 'COMPLETED_LATE'
-                      ? 'border-amber-200 bg-amber-50/20 hover:border-amber-300'
-                      : 'border-purple-200 bg-purple-50/20 hover:border-purple-300'
+                      ? 'border-amber-200 bg-amber-50/30 hover:border-amber-400'
+                      : 'border-purple-200 bg-purple-50/30 hover:border-purple-400'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -264,12 +266,12 @@ export default function OverdueTasksModal({
                     </div>
 
                     {/* Actions Column */}
-                    <div className="flex sm:flex-col items-center sm:items-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
+                    <div className="flex sm:flex-col items-center sm:items-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 font-display">
                       {onOpenTimeline && (
                         <button
                           type="button"
                           onClick={() => onOpenTimeline(t)}
-                          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
+                          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer snap-spring"
                           title="ดูประวัติไทม์ไลน์บันทึกงานนี้"
                         >
                           <Icon name="clock" size={12} className="text-[#0f2e4a]" />
@@ -279,7 +281,7 @@ export default function OverdueTasksModal({
                       <button
                         type="button"
                         onClick={() => onManageTask(t)}
-                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-2xs transition cursor-pointer ${
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold shadow-2xs transition cursor-pointer snap-spring ${
                           info.type === 'ACTIVE_OVERDUE'
                             ? 'bg-rose-600 hover:bg-rose-700 text-white'
                             : 'bg-[#0f2e4a] hover:bg-[#1a3f63] text-white'
@@ -305,9 +307,9 @@ export default function OverdueTasksModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold font-display rounded-xl text-xs transition cursor-pointer snap-spring"
           >
-            ปิด
+            ปิดหน้าต่าง
           </button>
         </div>
       </div>

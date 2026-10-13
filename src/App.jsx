@@ -1119,20 +1119,60 @@ export default function App() {
               </div>
               <span className="w-1.5 h-1.5 rounded-full bg-[#bca374] animate-pulse" title="System Online"></span>
             </div>
-            <nav className="p-4 space-y-1 flex-1">
-              {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'simulation',l:'กิลด์ (Simulation)', icon:'swords'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
-                <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-all ${tab===x.i?'bg-[#bca374] text-stone-950 font-display tracking-wide shadow-sm':'hover:bg-white/10 text-white/80 hover:text-white'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
-              ))}
+            <nav className="p-4 space-y-1.5 flex-1">
+              {[
+                { i: 'dashboard', l: 'แดชบอร์ด', icon: 'layoutDashboard' },
+                { i: 'simulation', l: 'กิลด์ (Simulation)', icon: 'swords' },
+                { i: 'daily', l: 'งานรายวัน', icon: 'listTodo' },
+                { i: 'monthly', l: 'ปฏิทิน', icon: 'calendar' },
+                { i: 'kanban', l: 'ส่งเบิก', icon: 'fileText' },
+                { i: 'inform', l: 'แจ้งเปิดงาน', icon: 'bell' },
+                { i: 'team', l: 'สถานะทีม', icon: 'users' },
+                { i: 'settings', l: 'ตั้งค่า', icon: 'settings' }
+              ].map((x) => {
+                const isActive = tab === x.i;
+                return (
+                  <button
+                    type="button"
+                    key={x.i}
+                    onClick={() => {
+                      setTab(x.i);
+                      if (x.i !== 'settings') setSetUnlk(false);
+                    }}
+                    className={`w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all relative overflow-hidden group cursor-pointer tactile-press ${
+                      isActive
+                        ? 'bg-[#bca374] text-stone-950 font-display tracking-wide shadow-md shadow-amber-950/20 translate-x-1'
+                        : 'text-white/80 hover:text-white hover:bg-white/10 hover:translate-x-1 font-body'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon
+                        name={x.icon}
+                        size={17}
+                        className={isActive ? 'text-stone-950' : 'text-[#bca374] group-hover:scale-110 transition-transform'}
+                      />
+                      <span>{x.l}</span>
+                    </div>
+                    {isActive && (
+                      <span className="w-1.5 h-3.5 bg-stone-950/40 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
               <div className="pt-3 mt-3 border-t border-white/10">
                 <a
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full text-left flex items-center px-4 py-2.5 rounded-lg text-xs font-bold font-display tracking-wide text-sky-300 hover:bg-sky-500/20 border border-sky-400/30 transition-colors"
+                  className="w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold font-display tracking-wide text-sky-200 hover:text-white bg-sky-950/40 hover:bg-sky-500/20 border border-sky-400/30 hover:border-sky-300 transition-all hover:translate-x-1 group shadow-xs tactile-press"
                   title="เปิดแผนที่สถานการณ์น้ำท่วมและระบายน้ำ 30 โครงการ Real-time"
                 >
-                  <Icon name="map" size={16} className="mr-2 text-sky-400"/>
-                  แผนที่น้ำ Real-time
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                    <Icon name="map" size={16} className="text-sky-300 group-hover:scale-110 transition-transform"/>
+                    <span>แผนที่น้ำ Real-time</span>
+                  </div>
+                  <span className="text-[10px] text-sky-300/80 font-tech">LIVE</span>
                 </a>
               </div>
             </nav>
@@ -1233,43 +1273,80 @@ export default function App() {
               };
 
               return (
-                <div className="bg-white border-b px-3 md:px-6 py-2 md:py-3 flex overflow-x-auto md:flex-wrap gap-2 md:gap-2.5 items-center text-sm shadow-xs z-10 sticky top-14 hide-scrollbar">
-                  <span className="font-bold text-gray-500 mr-0.5 flex items-center text-xs shrink-0">
-                    <Icon name="filter" size={14} className="mr-1 text-[#bca374]"/> ตัวกรอง:
-                  </span>
+                <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 md:px-6 py-2.5 md:py-3 flex overflow-x-auto md:flex-wrap gap-2 md:gap-3 items-center text-sm shadow-xs z-10 sticky top-14 hide-scrollbar">
+                  <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs font-display font-bold text-[#0f2e4a]">
+                    <Icon name="filter" size={13} className="text-[#bca374]"/>
+                    <span className="uppercase tracking-wider">ตัวกรอง</span>
+                  </div>
                   
                   {tab !== 'daily' ? (
-                    <input type="month" value={gFilt.month} onChange={e=>setGilt({...gFilt, month: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold shrink-0 cursor-pointer" title="เลือกเดือน" />
+                    <input
+                      type="month"
+                      value={gFilt.month}
+                      onChange={e=>setGilt({...gFilt, month: e.target.value})}
+                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      title="เลือกเดือน"
+                    />
                   ) : (
-                    <input type="date" value={gFilt.date} onChange={e=>setGilt({...gFilt, date: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold shrink-0 cursor-pointer" title="เลือกวันที่" />
+                    <input
+                      type="date"
+                      value={gFilt.date}
+                      onChange={e=>setGilt({...gFilt, date: e.target.value})}
+                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      title="เลือกวันที่"
+                    />
                   )}
 
                   {/* 1. เจ้าหน้าที่ */}
-                  <select value={gFilt.staffName} onChange={e=>handleStaffFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-[#0f2e4a] shrink-0 cursor-pointer" title="กรองตามเจ้าหน้าที่">
-                    <option value="ทั้งหมด">ทุกเจ้าหน้าที่</option>
+                  <select
+                    value={gFilt.staffName}
+                    onChange={e=>handleStaffFilterChange(e.target.value)}
+                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    title="กรองตามเจ้าหน้าที่"
+                  >
+                    <option value="ทั้งหมด">👤 ทุกเจ้าหน้าที่</option>
                     {allStaffNames.map(n=><option key={n}>{n}</option>)}
                   </select>
 
                   {/* 2. พื้นที่ (สัมพันธ์กับเจ้าหน้าที่) */}
-                  <select value={gFilt.area} onChange={e=>handleAreaFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700 shrink-0 cursor-pointer" title="กรองตามพื้นที่">
-                    <option value="ทั้งหมด">ทุกพื้นที่</option>
+                  <select
+                    value={gFilt.area}
+                    onChange={e=>handleAreaFilterChange(e.target.value)}
+                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    title="กรองตามพื้นที่"
+                  >
+                    <option value="ทั้งหมด">📍 ทุกพื้นที่</option>
                     {availableAreas.map(a=><option key={a}>{a}</option>)}
                   </select>
 
                   {/* 3. โครงการ (สัมพันธ์กับเจ้าหน้าที่และพื้นที่) */}
-                  <select value={gFilt.project} onChange={e=>handleProjectFilterChange(e.target.value)} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700 max-w-[180px] truncate shrink-0 cursor-pointer" title="กรองตามโครงการ">
-                    <option value="ทั้งหมด">ทุกโครงการ</option>
+                  <select
+                    value={gFilt.project}
+                    onChange={e=>handleProjectFilterChange(e.target.value)}
+                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 max-w-[190px] truncate shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    title="กรองตามโครงการ"
+                  >
+                    <option value="ทั้งหมด">🏡 ทุกโครงการ</option>
                     {availableProjects.map(p=><option key={p}>{getProjName(p)}</option>)}
                   </select>
 
                   {/* 4. ผู้แจ้ง (Requirement 1) */}
-                  <select value={gFilt.requester || 'ทั้งหมด'} onChange={e=>setGilt({...gFilt, requester: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-amber-50/70 border-amber-200 text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer" title="กรองตามผู้แจ้ง">
-                    <option value="ทั้งหมด">ทุกผู้แจ้ง</option>
+                  <select
+                    value={gFilt.requester || 'ทั้งหมด'}
+                    onChange={e=>setGilt({...gFilt, requester: e.target.value})}
+                    className="border border-amber-200 hover:border-amber-300 focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-amber-50/70 hover:bg-amber-50 text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    title="กรองตามผู้แจ้ง"
+                  >
+                    <option value="ทั้งหมด">🏷️ ทุกผู้แจ้ง</option>
                     {allRequesters.map(r=><option key={r}>{r}</option>)}
                   </select>
 
                   {tab === 'inform' && iTab === 'manage' && (
-                    <select value={gFilt.status} onChange={e=>setGilt({...gFilt, status: e.target.value})} className="border rounded-lg px-2.5 py-1.5 outline-none bg-gray-50 text-xs font-semibold text-gray-700 shrink-0 cursor-pointer">
+                    <select
+                      value={gFilt.status}
+                      onChange={e=>setGilt({...gFilt, status: e.target.value})}
+                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    >
                       <option value="ทั้งหมด">ทุกสถานะ</option>
                       <option value="รอดำเนินการ">รอดำเนินการ</option>
                       <option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option>
@@ -1439,15 +1516,15 @@ export default function App() {
                     setShowMoreMobileMenu(false);
                     if (x.i !== 'settings') setSetUnlk(false);
                   }}
-                  className="flex-1 flex flex-col items-center justify-center py-1.5 h-14 transition-all duration-200 active:scale-95 cursor-pointer"
+                  className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
                 >
-                  <div className={`flex items-center justify-center w-10 h-7 rounded-full transition-all ${
-                    isActive ? 'bg-[#bca374]/25 text-[#0f2e4a]' : 'text-slate-400'
+                  <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-[#0f2e4a] text-[#bca374] shadow-sm ring-1 ring-[#bca374]/50' : 'text-slate-400 hover:text-slate-600'
                   }`}>
-                    <Icon name={x.icon} size={20} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+                    <Icon name={x.icon} size={18} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
                   </div>
-                  <span className={`text-[11px] font-bold mt-0.5 tracking-tight ${
-                    isActive ? 'text-[#0f2e4a]' : 'text-slate-500'
+                  <span className={`text-[10px] mt-1 tracking-tight font-display ${
+                    isActive ? 'text-[#0f2e4a] font-bold' : 'text-slate-500 font-medium'
                   }`}>
                     {x.l}
                   </span>
@@ -1462,15 +1539,15 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setShowMoreMobileMenu(!showMoreMobileMenu)}
-                  className="flex-1 flex flex-col items-center justify-center py-1.5 h-14 transition-all duration-200 active:scale-95 cursor-pointer"
+                  className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
                 >
-                  <div className={`flex items-center justify-center w-10 h-7 rounded-full transition-all ${
-                    isMoreActive ? 'bg-[#0f2e4a] text-[#bca374]' : 'text-slate-400'
+                  <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
+                    isMoreActive ? 'bg-[#0f2e4a] text-[#bca374] shadow-sm ring-1 ring-[#bca374]/50' : 'text-slate-400 hover:text-slate-600'
                   }`}>
-                    <Icon name={showMoreMobileMenu ? "x" : "grid"} size={20} className={isMoreActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+                    <Icon name={showMoreMobileMenu ? "x" : "grid"} size={18} className={isMoreActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
                   </div>
-                  <span className={`text-[11px] font-bold mt-0.5 tracking-tight ${
-                    isMoreActive ? 'text-[#0f2e4a]' : 'text-slate-500'
+                  <span className={`text-[10px] mt-1 tracking-tight font-display ${
+                    isMoreActive ? 'text-[#0f2e4a] font-bold' : 'text-slate-500 font-medium'
                   }`}>
                     {['simulation', 'monthly', 'team', 'settings'].includes(tab)
                       ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
