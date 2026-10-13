@@ -2,11 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
-* { font-family: 'Prompt', sans-serif; }
+body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .animate-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Architectural & Craft Typography */
+.font-display {
+  font-family: 'Chakra Petch', 'Outfit', 'Prompt', sans-serif !important;
+}
+.font-numeric {
+  font-family: 'Outfit', 'Chakra Petch', 'Prompt', sans-serif !important;
+}
+.font-tech {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+.font-body {
+  font-family: 'Prompt', sans-serif !important;
+}
+
+/* Subtle Blueprint & Paper Textures */
+.blueprint-grid {
+  background-image: 
+    linear-gradient(rgba(15, 46, 74, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 46, 74, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.blueprint-grid-subtle {
+  background-image: 
+    radial-gradient(circle, rgba(188, 163, 116, 0.15) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.blueprint-grid-dark {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Stamp & Craft Accents */
+.stamp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: 'Chakra Petch', sans-serif !important;
+  letter-spacing: 0.04em;
+  border-width: 1.5px;
+  border-style: dashed;
+  transform: rotate(-1.5deg);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.stamp-badge:hover {
+  transform: rotate(0deg) scale(1.03);
+}
+
+/* Architectural Drafting Registration Marks */
+.drafting-corner {
+  position: relative;
+}
+.drafting-corner::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid #bca374;
+  border-left: 2px solid #bca374;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.drafting-corner::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 2px solid #bca374;
+  border-right: 2px solid #bca374;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Sightline Divider */
+.sightline-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sightline-divider::before,
+.sightline-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(188, 163, 116, 0.35), transparent);
+}
+
+/* Hand-Drawn Underline Highlight */
+.craft-underline {
+  background-image: linear-gradient(120deg, rgba(188, 163, 116, 0.22) 0%, rgba(188, 163, 116, 0.22) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 38%;
+  background-position: 0 88%;
+}
+
+/* Bespoke Micro-Spring Interaction */
+.snap-spring {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+}
+.snap-spring:hover {
+  transform: translateY(-2px) scale(1.01);
+}
+.snap-spring:active {
+  transform: translateY(0px) scale(0.98);
+}
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }

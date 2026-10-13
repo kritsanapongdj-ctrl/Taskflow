@@ -67,8 +67,7 @@ const getDocRef = (colName, docId) => {
 // --- สไตล์และฟอนต์ (Global Styles) ---
 const GlobalStyles = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-    * { font-family: 'Prompt', sans-serif; }
+    body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .animate-in { animation: fadeIn 0.2s ease-out forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -1113,18 +1112,23 @@ export default function App() {
       )}
       <div className="w-full min-h-screen">
         <div id="app-main" className="flex h-screen overflow-hidden text-slate-800 print:hidden">
-          <aside className="w-64 bg-[#0f2e4a] text-white hidden md:flex flex-col shadow-xl z-20">
-            <div className="p-6 border-b border-white/10"><div className="text-xl font-bold text-[#bca374]">LH <span className="font-light text-white">TaskFlow</span></div></div>
+          <aside className="w-64 bg-[#0f2e4a] blueprint-grid-dark text-white hidden md:flex flex-col shadow-xl z-20 relative border-r border-[#bca374]/20">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div className="text-xl font-bold font-display tracking-wider text-[#bca374]">
+                LH <span className="font-light text-white font-body tracking-normal">TaskFlow</span>
+              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#bca374] animate-pulse" title="System Online"></span>
+            </div>
             <nav className="p-4 space-y-1 flex-1">
               {[{i:'dashboard',l:'แดชบอร์ด', icon:'layoutDashboard'},{i:'simulation',l:'กิลด์ (Simulation)', icon:'swords'},{i:'daily',l:'งานรายวัน', icon:'listTodo'},{i:'monthly',l:'ปฏิทิน', icon:'calendar'},{i:'kanban',l:'ส่งเบิก', icon:'fileText'},{i:'inform',l:'แจ้งเปิดงาน', icon:'bell'},{i:'team',l:'สถานะทีม', icon:'users'},{i:'settings',l:'ตั้งค่า', icon:'settings'}].map(x=>(
-                <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-colors ${tab===x.i?'bg-[#bca374]':'hover:bg-white/10'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
+                <button type="button" key={x.i} onClick={()=>{setTab(x.i);if(x.i!=='settings')setSetUnlk(false);}} className={`w-full text-left flex items-center px-4 py-3 rounded-lg text-xs font-bold transition-all ${tab===x.i?'bg-[#bca374] text-stone-950 font-display tracking-wide shadow-sm':'hover:bg-white/10 text-white/80 hover:text-white'}`}><Icon name={x.icon} size={16} className="mr-2"/>{x.l}</button>
               ))}
               <div className="pt-3 mt-3 border-t border-white/10">
                 <a
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full text-left flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-sky-300 hover:bg-sky-500/20 border border-sky-400/30 transition-colors"
+                  className="w-full text-left flex items-center px-4 py-2.5 rounded-lg text-xs font-bold font-display tracking-wide text-sky-300 hover:bg-sky-500/20 border border-sky-400/30 transition-colors"
                   title="เปิดแผนที่สถานการณ์น้ำท่วมและระบายน้ำ 30 โครงการ Real-time"
                 >
                   <Icon name="map" size={16} className="mr-2 text-sky-400"/>
@@ -1133,10 +1137,13 @@ export default function App() {
               </div>
             </nav>
           </aside>
-          <main className="flex-1 flex flex-col min-w-0 bg-[#f4f6f8] relative">
-            <header className="bg-white h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-sm">
+          <main className="flex-1 flex flex-col min-w-0 bg-[#f8f9fa] blueprint-grid relative">
+            <header className="bg-white/95 backdrop-blur-xs h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-xs border-b border-slate-200/80">
               <div className="flex items-center gap-2.5">
-                <div className="font-bold text-[#0f2e4a] text-sm md:text-base">WORK CENTER</div>
+                <div className="font-bold font-display text-[#0f2e4a] text-sm md:text-base tracking-wide flex items-center gap-1.5">
+                  <span className="w-1.5 h-3.5 bg-[#bca374] rounded-xs inline-block"></span>
+                  WORK CENTER
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowChangelog(true)}
