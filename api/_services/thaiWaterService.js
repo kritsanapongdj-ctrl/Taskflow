@@ -204,7 +204,28 @@ export async function fetchLiveWaterStations() {
     }
 
     if (unifiedStations.length > 0) {
-      stationsCache = unifiedStations;
+      // 3. กำจัดข้อมูลซ้ำซ้อน (Deduplication) และเลือกเรคคอร์ดที่สดใหม่ที่สุด/สมบูรณ์ที่สุด
+      const scoreEntry = (s) => {
+        let score = 0;
+        if (s.freshness === 'LIVE') score += 100;
+        else if (s.freshness === 'DELAYED') score += 50;
+        if (s.waterLevelMSL != null) score += 20;
+        if (s.bankDiff != null) score += 10;
+        if (!s.isWatergate) score += 5; // ลำดับความสำคัญแรกให้สถานีวัดระดับน้ำลำน้ำ
+        return score;
+      };
+
+      const dedupMap = new Map();
+      for (const s of unifiedStations) {
+        const code = (s.stationCode || '').trim().toLowerCase();
+        if (!code) continue;
+        const existing = dedupMap.get(code);
+        if (!existing || scoreEntry(s) > scoreEntry(existing)) {
+          dedupMap.set(code, s);
+        }
+      }
+
+      stationsCache = Array.from(dedupMap.values());
       cacheTimestamp = now;
       return stationsCache;
     }
