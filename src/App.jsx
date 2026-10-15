@@ -119,7 +119,7 @@ export default function App() {
   const [informs, setInforms] = useState([]);
   const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24, staffClasses: [], staffStats: [] });
   
-  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffName: 'ทั้งหมด', requester: 'ทั้งหมด' });
+  const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffRole: 'ทั้งหมด', staffName: 'ทั้งหมด', requester: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
   const [teamUnlk, setTeamUnlk] = useState(false);
   const [pwd, setPwd] = useState('');
@@ -476,35 +476,92 @@ export default function App() {
     return found ? getProjName(found) : String(raw).split('|')[0].trim();
   };
 
-  const checkStaffMatch = (taskProj, staffNameFilter) => {
-    if (staffNameFilter === 'ทั้งหมด') return true;
-    const stdProj = getStdProj(taskProj);
-    const cleanStdProj = stdProj.trim().toLowerCase();
-    
-    // Check staffStats first
-    const staffInStats = (sets.staffStats || []).find(s => (s.name || '').trim() === staffNameFilter);
+  const getStaffAssignedProjectsList = (staffName) => {
+    if (!staffName || staffName === 'ทั้งหมด') return [];
+    const clean = staffName.trim().toLowerCase();
+
+    // 1. Check staffStats first
+    const staffInStats = (sets.staffStats || []).find(s => (s.name || '').trim().toLowerCase() === clean);
     if (staffInStats && Array.isArray(staffInStats.assignedProjects) && staffInStats.assignedProjects.length > 0) {
-      if (staffInStats.assignedProjects.includes('ทั้งหมด') || staffInStats.assignedProjects.includes('ทุกโครงการ')) return true;
-      if (staffInStats.assignedProjects.some(p => {
-        const cp = p.trim().toLowerCase();
-        return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
-      })) {
-        return true;
-      }
+      return staffInStats.assignedProjects;
     }
 
-    // Check emails entries
-    const staffEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0] || '').trim() === staffNameFilter);
-    if (staffEntries.length > 0) {
-      for (const e of staffEntries) {
-        const projs = (e.split('|')[1] || '').split(',').map(p => p.trim());
-        if (projs.includes('ทั้งหมด') || projs.includes('ทุกโครงการ') || projs.some(p => {
-          const cp = p.toLowerCase();
-          return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
-        })) return true;
+    // 2. Check emails entries
+    const staffEntries = (sets.emails || []).filter(e => {
+      const parts = e.split('|');
+      const eName = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
+      return eName === clean;
+    });
+    return staffEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
+  };
+
+  const getStaffRole = (staffName) => {
+    if (!staffName || staffName === 'ทั้งหมด') return { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' };
+    const clean = staffName.trim().toLowerCase();
+
+    const staffInStats = (sets.staffStats || []).find(s => (s.name || '').trim().toLowerCase() === clean);
+    if (staffInStats) {
+      const classObj = (sets.staffClasses || []).find(c => c.id === staffInStats.classId);
+      const className = (classObj ? classObj.name : '').trim();
+      const rawRole = (className || staffInStats.role || staffInStats.classId || '').toLowerCase();
+
+      if (rawRole.includes('admin') || rawRole.includes('ธุรการ') || rawRole.includes('ประสาน')) {
+        return { key: 'admin', label: '📑 ธุรการบริการ (Admin)' };
       }
+      if (rawRole.includes('foreman') || rawRole.includes('โฟร์แมน') || rawRole.includes('ผู้ควบคุม')) {
+        return { key: 'foreman', label: '📋 ผู้ควบคุมงาน (Foreman)' };
+      }
+      if (rawRole.includes('supervisor') || rawRole.includes('ผู้จัดการ') || rawRole.includes('บริหาร')) {
+        return { key: 'supervisor', label: '🛡️ เจ้าหน้าที่บริหารโครงการ (Supervisor)' };
+      }
+      if (rawRole.includes('ช่าง') || rawRole.includes('บริการ') || rawRole.includes('officer') || rawRole.includes('เจ้าหน้าที่')) {
+        return { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' };
+      }
+      if (className) {
+        return { key: classObj.id, label: `💼 ${className.replace(/ช่างบริการ|ช่าง/g, 'เจ้าหน้าที่บริการฯ')}` };
+      }
+      return { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' };
     }
-    return false;
+
+    return { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' };
+  };
+
+  const checkStaffMatch = (taskProj, staffNameFilter = 'ทั้งหมด', staffRoleFilter = 'ทั้งหมด') => {
+    const sName = staffNameFilter || 'ทั้งหมด';
+    const sRole = (staffRoleFilter && staffRoleFilter !== 'ทั้งหมด')
+      ? staffRoleFilter
+      : (sName === gFilt.staffName ? (gFilt.staffRole || 'ทั้งหมด') : 'ทั้งหมด');
+
+    if (sName === 'ทั้งหมด' && sRole === 'ทั้งหมด') return true;
+    const stdProj = getStdProj(taskProj);
+    const cleanStdProj = stdProj.trim().toLowerCase();
+
+    // 1. If staffName is specifically chosen
+    if (sName !== 'ทั้งหมด') {
+      const sProjs = getStaffAssignedProjectsList(sName);
+      if (sProjs.includes('ทั้งหมด') || sProjs.includes('ทุกโครงการ')) return true;
+      return sProjs.some(p => {
+        const cp = p.trim().toLowerCase();
+        return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+      });
+    }
+
+    // 2. If staffName is 'ทั้งหมด' but staffRole is specifically chosen
+    if (sRole !== 'ทั้งหมด') {
+      const matchingStaff = allStaffNames.filter(name => getStaffRole(name).key === sRole);
+      if (matchingStaff.length === 0) return false;
+
+      return matchingStaff.some(name => {
+        const sProjs = getStaffAssignedProjectsList(name);
+        if (sProjs.includes('ทั้งหมด') || sProjs.includes('ทุกโครงการ')) return true;
+        return sProjs.some(p => {
+          const cp = p.trim().toLowerCase();
+          return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+        });
+      });
+    }
+
+    return true;
   };
 
   const getStaffForTask = (task) => {
@@ -512,39 +569,100 @@ export default function App() {
     const stdProj = getStdProj(task.project);
     const cleanStdProj = stdProj.trim().toLowerCase();
 
-    // Check staffStats first
-    const staffFromStats = (sets.staffStats || []).find(s => {
-      if (Array.isArray(s.assignedProjects) && s.assignedProjects.length > 0) {
-        return s.assignedProjects.includes('ทั้งหมด') || s.assignedProjects.includes('ทุกโครงการ') || s.assignedProjects.some(p => {
+    // 1. Find service officer specifically assigned to this project (not 'ทั้งหมด')
+    const specificOfficer = (sets.staffStats || []).find(s => {
+      const r = getStaffRole(s.name);
+      if (r.key === 'officer' && Array.isArray(s.assignedProjects) && s.assignedProjects.length > 0) {
+        return s.assignedProjects.some(p => {
           const cp = p.trim().toLowerCase();
-          return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+          return cp !== 'ทั้งหมด' && cp !== 'ทุกโครงการ' && (cleanStdProj.includes(cp) || cp.includes(cleanStdProj));
         });
       }
       return false;
     });
-    if (staffFromStats) return staffFromStats.name;
+    if (specificOfficer) return specificOfficer.name;
 
-    const staffEntry = (sets.emails || []).find(e => {
-      const projs = (e.split('|')[1] || '').split(',').map(p => p.trim());
-      return projs.includes('ทั้งหมด') || projs.includes('ทุกโครงการ') || projs.some(p => {
-        const cp = p.toLowerCase();
-        return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
-      });
+    // 2. Check sets.emails for specific project match
+    const specificEmail = (sets.emails || []).find(e => {
+      const projs = (e.split('|')[1] || '').split(',').map(p => p.trim().toLowerCase());
+      return projs.some(p => p !== 'ทั้งหมด' && p !== 'ทุกโครงการ' && (cleanStdProj.includes(p) || p.includes(cleanStdProj)));
     });
-    if (staffEntry) {
-      return staffEntry.split('|')[2] || staffEntry.split('|')[0].split('@')[0];
+    if (specificEmail) {
+      return specificEmail.split('|')[2] || specificEmail.split('|')[0].split('@')[0];
     }
+
+    // 3. Fallback to any staff assigned to this project
+    const anySpecificStaff = (sets.staffStats || []).find(s => {
+      if (Array.isArray(s.assignedProjects) && s.assignedProjects.length > 0) {
+        return s.assignedProjects.some(p => {
+          const cp = p.trim().toLowerCase();
+          return cp !== 'ทั้งหมด' && cp !== 'ทุกโครงการ' && (cleanStdProj.includes(cp) || cp.includes(cleanStdProj));
+        });
+      }
+      return false;
+    });
+    if (anySpecificStaff) return anySpecificStaff.name;
+
     return '';
   };
 
   const allStaffNames = useMemo(() => {
-    const fromEmails = (sets.emails || []).map(e => {
+    const fromEmails = (sets.emails || []).flatMap(e => {
       const parts = e.split('|');
-      return (parts[2] || parts[0].split('@')[0] || '').trim();
+      const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
     });
-    const fromStats = (sets.staffStats || []).map(s => (s.name || '').trim());
+    const fromStats = (sets.staffStats || []).flatMap(s => {
+      const rawName = (s.name || '').trim();
+      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+    });
     return Array.from(new Set([...fromEmails, ...fromStats])).filter(Boolean).sort((a, b) => a.localeCompare('th'));
   }, [sets.emails, sets.staffStats]);
+
+  const availableRoles = useMemo(() => {
+    const rolesMap = new Map();
+    allStaffNames.forEach(name => {
+      const role = getStaffRole(name);
+      if (!rolesMap.has(role.key)) {
+        rolesMap.set(role.key, role.label);
+      }
+    });
+
+    const standardOrder = [
+      { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' },
+      { key: 'foreman', label: '📋 ผู้ควบคุมงาน (Foreman)' },
+      { key: 'admin', label: '📑 ธุรการบริการ (Admin)' },
+      { key: 'supervisor', label: '🛡️ เจ้าหน้าที่บริหารโครงการ (Supervisor)' }
+    ];
+
+    const result = [];
+    standardOrder.forEach(std => {
+      if (rolesMap.has(std.key)) {
+        result.push({ key: std.key, label: std.label });
+        rolesMap.delete(std.key);
+      }
+    });
+
+    rolesMap.forEach((label, key) => {
+      result.push({ key, label });
+    });
+
+    if (result.length === 0) {
+      return [
+        { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' },
+        { key: 'foreman', label: '📋 ผู้ควบคุมงาน (Foreman)' },
+        { key: 'admin', label: '📑 ธุรการบริการ (Admin)' }
+      ];
+    }
+    return result;
+  }, [allStaffNames, sets.staffStats, sets.staffClasses]);
+
+  const availableStaffNames = useMemo(() => {
+    if (!gFilt.staffRole || gFilt.staffRole === 'ทั้งหมด') {
+      return allStaffNames;
+    }
+    return allStaffNames.filter(name => getStaffRole(name).key === gFilt.staffRole);
+  }, [allStaffNames, gFilt.staffRole, sets.staffStats, sets.staffClasses]);
 
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
@@ -1462,41 +1580,88 @@ export default function App() {
               </div>
             </header>
             {tab !== 'settings' && (() => {
-              // Cascading filter calculations for staff -> area -> project
-              const staffEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === gFilt.staffName);
-              const staffProjs = staffEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
-              const staffHasAll = staffProjs.includes('ทั้งหมด');
+              // Projects scoped by staff selection or role selection
+              let scopedProjs = null;
+              if (gFilt.staffName !== 'ทั้งหมด') {
+                const sProjs = getStaffAssignedProjectsList(gFilt.staffName);
+                if (!sProjs.includes('ทั้งหมด') && !sProjs.includes('ทุกโครงการ')) {
+                  scopedProjs = sProjs;
+                }
+              } else if (gFilt.staffRole && gFilt.staffRole !== 'ทั้งหมด') {
+                const matchingStaff = availableStaffNames;
+                const allRoleProjs = matchingStaff.flatMap(name => getStaffAssignedProjectsList(name));
+                if (!allRoleProjs.includes('ทั้งหมด') && !allRoleProjs.includes('ทุกโครงการ') && allRoleProjs.length > 0) {
+                  scopedProjs = Array.from(new Set(allRoleProjs));
+                }
+              }
 
-              const staffFilteredProjects = (gFilt.staffName === 'ทั้งหมด' || staffHasAll)
-                ? (sets.projects || [])
-                : (sets.projects || []).filter(p => staffProjs.includes(getProjName(p)));
+              const staffFilteredProjects = scopedProjs
+                ? (sets.projects || []).filter(p => scopedProjs.includes(getProjName(p)))
+                : (sets.projects || []);
 
-              const availableAreas = (gFilt.staffName === 'ทั้งหมด' || staffHasAll)
-                ? (sets.areas || [])
-                : Array.from(new Set(staffFilteredProjects.map(p => getProjArea(p)).filter(Boolean)));
+              const availableAreas = scopedProjs
+                ? Array.from(new Set(staffFilteredProjects.map(p => getProjArea(p)).filter(Boolean)))
+                : (sets.areas || []);
 
               const availableProjects = staffFilteredProjects.filter(p => gFilt.area === 'ทั้งหมด' || getProjArea(p) === gFilt.area);
 
               const allRequesters = REQ_TYPES;
 
-              const handleStaffFilterChange = (newStaff) => {
-                let newArea = gFilt.area;
-                let newProject = gFilt.project;
-                if (newStaff !== 'ทั้งหมด') {
-                  const sEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === newStaff);
-                  const sProjs = sEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
-                  const sHasAll = sProjs.includes('ทั้งหมด');
-                  if (!sHasAll) {
-                    if (newProject !== 'ทั้งหมด' && !sProjs.includes(newProject)) {
-                      newProject = 'ทั้งหมด';
-                    }
-                    const allowedAreas = (sets.projects || []).filter(p => sProjs.includes(getProjName(p))).map(p => getProjArea(p));
-                    if (newArea !== 'ทั้งหมด' && !allowedAreas.includes(newArea)) {
-                      newArea = 'ทั้งหมด';
+              const applyStaffRoleCascade = (roleVal, staffVal, curArea, curProject) => {
+                let newArea = curArea;
+                let newProject = curProject;
+
+                let allowedProjects = null;
+                if (staffVal !== 'ทั้งหมด') {
+                  const sProjs = getStaffAssignedProjectsList(staffVal);
+                  if (!sProjs.includes('ทั้งหมด') && !sProjs.includes('ทุกโครงการ')) {
+                    allowedProjects = sProjs;
+                  }
+                } else if (roleVal !== 'ทั้งหมด') {
+                  const matchingStaff = allStaffNames.filter(name => getStaffRole(name).key === roleVal);
+                  const allRoleProjs = matchingStaff.flatMap(name => getStaffAssignedProjectsList(name));
+                  if (!allRoleProjs.includes('ทั้งหมด') && !allRoleProjs.includes('ทุกโครงการ') && allRoleProjs.length > 0) {
+                    allowedProjects = Array.from(new Set(allRoleProjs));
+                  }
+                }
+
+                if (allowedProjects) {
+                  if (newProject !== 'ทั้งหมด' && !allowedProjects.includes(newProject)) {
+                    newProject = 'ทั้งหมด';
+                  }
+                  const allowedAreas = (sets.projects || [])
+                    .filter(p => allowedProjects.includes(getProjName(p)))
+                    .map(p => getProjArea(p))
+                    .filter(Boolean);
+                  if (newArea !== 'ทั้งหมด' && !allowedAreas.includes(newArea)) {
+                    newArea = 'ทั้งหมด';
+                  }
+                }
+
+                setGilt(prev => ({
+                  ...prev,
+                  staffRole: roleVal,
+                  staffName: staffVal,
+                  area: newArea,
+                  project: newProject
+                }));
+              };
+
+              const handleRoleFilterChange = (newRole) => {
+                let newStaff = gFilt.staffName;
+                if (newRole !== 'ทั้งหมด') {
+                  if (newStaff !== 'ทั้งหมด') {
+                    const curRole = getStaffRole(newStaff);
+                    if (curRole.key !== newRole) {
+                      newStaff = 'ทั้งหมด';
                     }
                   }
                 }
-                setGilt(prev => ({ ...prev, staffName: newStaff, area: newArea, project: newProject }));
+                applyStaffRoleCascade(newRole, newStaff, gFilt.area, gFilt.project);
+              };
+
+              const handleStaffFilterChange = (newStaff) => {
+                applyStaffRoleCascade(gFilt.staffRole || 'ทั้งหมด', newStaff, gFilt.area, gFilt.project);
               };
 
               const handleAreaFilterChange = (newArea) => {
@@ -1547,15 +1712,40 @@ export default function App() {
                     />
                   )}
 
-                  {/* 1. เจ้าหน้าที่ */}
+                  {/* 1. ตำแหน่ง / สายงาน */}
+                  <select
+                    value={gFilt.staffRole || 'ทั้งหมด'}
+                    onChange={e=>handleRoleFilterChange(e.target.value)}
+                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    title="กรองตามตำแหน่ง/สายงาน"
+                  >
+                    <option value="ทั้งหมด">👥 ทุกสายงาน</option>
+                    {availableRoles.map(r=><option key={r.key} value={r.key}>{r.label}</option>)}
+                  </select>
+
+                  {/* 2. เจ้าหน้าที่ */}
                   <select
                     value={gFilt.staffName}
                     onChange={e=>handleStaffFilterChange(e.target.value)}
                     className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
                     title="กรองตามเจ้าหน้าที่"
                   >
-                    <option value="ทั้งหมด">👤 ทุกเจ้าหน้าที่</option>
-                    {allStaffNames.map(n=><option key={n}>{n}</option>)}
+                    <option value="ทั้งหมด">
+                      👤 ทุกเจ้าหน้าที่{gFilt.staffRole && gFilt.staffRole !== 'ทั้งหมด' ? ` (${availableRoles.find(r=>r.key===gFilt.staffRole)?.label.replace(/^[^\s]+\s*/, '') || ''})` : ''}
+                    </option>
+                    {gFilt.staffRole === 'ทั้งหมด' ? (
+                      availableRoles.map(role => {
+                        const roleStaff = allStaffNames.filter(n => getStaffRole(n).key === role.key);
+                        if (roleStaff.length === 0) return null;
+                        return (
+                          <optgroup key={role.key} label={role.label}>
+                            {roleStaff.map(n => <option key={n} value={n}>{n}</option>)}
+                          </optgroup>
+                        );
+                      })
+                    ) : (
+                      availableStaffNames.map(n => <option key={n} value={n}>{n}</option>)
+                    )}
                   </select>
 
                   {/* 2. พื้นที่ (สัมพันธ์กับเจ้าหน้าที่) */}

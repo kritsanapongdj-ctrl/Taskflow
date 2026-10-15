@@ -1221,13 +1221,20 @@ export default function SettingsTab({
                 >
                   <option value="ทั้งหมด">ทั้งหมด</option>
                   {Array.from(
-                    new Set(
-                      (sets.emails || []).map(
-                        (e) => e.split('|')[2] || e.split('|')[0].split('@')[0]
-                      )
-                    )
+                    new Set([
+                      ...(sets.emails || []).flatMap(e => {
+                        const parts = e.split('|');
+                        const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+                        return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+                      }),
+                      ...(sets.staffStats || []).flatMap(s => {
+                        const rawName = (s.name || '').trim();
+                        return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+                      })
+                    ])
                   )
                     .filter(Boolean)
+                    .sort((a, b) => a.localeCompare('th'))
                     .map((n) => (
                       <option key={n} value={n}>
                         {n}
