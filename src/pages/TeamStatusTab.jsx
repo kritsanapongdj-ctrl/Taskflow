@@ -573,9 +573,9 @@ export default function TeamStatusTab({
                SUB-TAB 1: CHARACTER & PERFORMANCE (HERO STAGE + ANALYSIS SUITE)
                ========================================================================= */}
            {activeSubTab === 'performance' && (
-              <div className="flex-1 w-full overflow-y-auto custom-scrollbar flex flex-col md:flex-row relative z-10">
+              <div className="flex-1 w-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative z-10 min-h-0 custom-scrollbar">
                  {/* Left Column (Scrollable Intelligence Suite) */}
-                 <div className="w-full md:w-[58%] p-5 lg:p-7 border-r border-white/10 space-y-5 text-left">
+                 <div className="w-full md:w-[58%] lg:w-[60%] md:h-full md:overflow-y-auto custom-scrollbar p-5 lg:p-7 border-b md:border-b-0 md:border-r border-white/10 space-y-5 text-left min-h-0">
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
@@ -920,8 +920,8 @@ export default function TeamStatusTab({
               {renderAnalysis()}
            </div>
 
-           {/* Right Column: Sticky Full-Figure Hero Stage */}
-           <div className="w-full md:w-[42%] md:sticky md:top-0 self-start md:h-[calc(100vh-140px)] min-h-[460px] flex items-center justify-center relative overflow-hidden bg-radial from-slate-900/50 to-transparent">
+           {/* Right Column: Hero Stage (Stationary & Always Centered) */}
+           <div className="w-full md:w-[42%] lg:w-[40%] md:h-full min-h-[380px] md:min-h-0 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-slate-900/90 via-[#0a0f1d] to-[#08080c] shrink-0">
               {/* View Mode Switcher for Hero Stage */}
               <div className="absolute top-3 z-30 flex items-center bg-slate-950/80 p-1 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
                  <button
@@ -958,9 +958,9 @@ export default function TeamStatusTab({
 
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
               
-              <div className="relative z-10 w-full h-full flex items-center justify-center p-4 lg:p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
+              <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4 lg:p-6 pt-16 animate-in fade-in slide-in-from-right-8 duration-700 min-h-0 overflow-hidden select-none">
                 {cinematicViewMode === 'ninebox' ? (
-                  <div className="w-full flex flex-col items-center justify-center max-w-[340px] bg-slate-900/90 p-4 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
+                  <div className="w-full flex flex-col items-center justify-center max-w-[340px] max-h-[90%] overflow-y-auto custom-scrollbar bg-slate-900/90 p-4 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
                     <div className="w-full flex justify-between items-center mb-2">
                       <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider flex items-center gap-1">
                         <Icon name="grid" size={13} /> MCKINSEY 9-BOX MATRIX
@@ -1041,7 +1041,7 @@ export default function TeamStatusTab({
                     </div>
                   </div>
                 ) : cinematicViewMode === 'spider' ? (
-                  <div className="w-full flex flex-col items-center justify-center max-w-[320px] bg-slate-900/85 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
+                  <div className="w-full flex flex-col items-center justify-center max-w-[320px] max-h-[90%] overflow-y-auto custom-scrollbar bg-slate-900/85 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
                     <div className="w-full flex justify-between items-center mb-2">
                       <span className="text-[10px] uppercase font-bold text-[#bca374] tracking-wider flex items-center">
                         <Icon name="swords" size={14} className="mr-1.5" /> SPIDER PERFORMANCE MAP
@@ -1094,19 +1094,19 @@ export default function TeamStatusTab({
                   </div>
                 ) : (
                   u.image ? (
-                    <div className="relative w-full h-full flex flex-col items-center justify-end pb-3 group">
+                    <div className="relative w-full h-full flex flex-col items-center justify-center py-2 group min-h-0">
                       {/* Ambient Golden Stage Pedestal Glow */}
-                      <div className="absolute bottom-4 w-3/4 h-12 bg-[#bca374]/20 blur-2xl rounded-full pointer-events-none"></div>
-                      <div className="absolute bottom-2 w-2/3 h-1.5 bg-gradient-to-r from-transparent via-[#bca374]/60 to-transparent rounded-full shadow-[0_0_20px_rgba(188,163,116,0.8)] pointer-events-none"></div>
+                      <div className="absolute bottom-6 w-3/4 max-w-[280px] h-10 bg-[#bca374]/25 blur-xl rounded-full pointer-events-none"></div>
+                      <div className="absolute bottom-4 w-2/3 max-w-[240px] h-1 bg-gradient-to-r from-transparent via-[#bca374]/80 to-transparent rounded-full shadow-[0_0_20px_rgba(188,163,116,0.9)] pointer-events-none"></div>
                       
                       <img
                         src={u.image}
-                        className="max-w-[95%] max-h-[85vh] object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] drop-shadow-[0_0_25px_rgba(188,163,116,0.25)] transition-transform duration-500 hover:scale-105 relative z-10 select-none"
+                        className="max-w-[90%] max-h-[82%] object-contain filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.85)] drop-shadow-[0_0_25px_rgba(188,163,116,0.3)] transition-transform duration-500 hover:scale-105 relative z-10 select-none"
                         alt={u.name}
                       />
                     </div>
                   ) : (
-                    <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="w-56 h-56 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                       <Icon name="user" size={64} className="text-slate-600" />
                     </div>
                   )
