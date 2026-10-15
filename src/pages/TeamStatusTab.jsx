@@ -366,9 +366,11 @@ export default function TeamStatusTab({
                }}
             />
         <div key={u.id || 'new'} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative flex flex-col rounded-xl overflow-hidden shadow-2xl h-full min-h-[450px]">
-           {/* Ambient Background Lights */}
-           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
-           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[160px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
+           {/* Ambient Background Glow (Behind Content) */}
+           <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
+              <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-[#bca374]/5 rounded-full blur-[140px]"></div>
+              <div className="absolute top-1/2 -left-32 w-[500px] h-[500px] bg-indigo-900/10 rounded-full blur-[140px]"></div>
+           </div>
 
            {/* =========================================================================
                EXECUTIVE COMMAND HEADER (TOP NAVIGATION & CONTROLS)
@@ -568,7 +570,7 @@ export default function TeamStatusTab({
                SUB-TAB 1: CHARACTER & PERFORMANCE (HERO STAGE + ANALYSIS SUITE)
                ========================================================================= */}
            {activeSubTab === 'performance' && (
-              <div className="flex-1 w-full overflow-y-auto custom-scrollbar flex flex-col md:flex-row relative">
+              <div className="flex-1 w-full overflow-y-auto custom-scrollbar flex flex-col md:flex-row relative z-10">
                  {/* Left Column (Scrollable Intelligence Suite) */}
                  <div className="w-full md:w-[58%] p-5 lg:p-7 border-r border-white/10 space-y-5 text-left">
 
@@ -1124,7 +1126,7 @@ export default function TeamStatusTab({
          const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
 
          return (
-            <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left">
+            <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left relative z-10">
                {/* Officer Exemption Notice or Role Telemetry Status */}
                {telemetry.isExempt ? (
                   <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border border-amber-400/40 flex items-start gap-3 shadow-sm">
@@ -1448,7 +1450,7 @@ export default function TeamStatusTab({
           SUB-TAB 3: TEAM ROSTER & SETTINGS
           ========================================================================= */}
       {activeSubTab === 'settings' && (
-         <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left">
+         <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left relative z-10">
             {/* Header Title */}
             <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-sm">
                <div>
@@ -1485,9 +1487,9 @@ export default function TeamStatusTab({
             {/* 2-Column Responsive Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                {/* Left: Complete Profile Editing Form */}
-               <div className="lg:col-span-7 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-5 text-slate-800">
+               <div className="lg:col-span-7 bg-slate-900/90 rounded-2xl p-5 sm:p-6 border border-white/10 shadow-sm space-y-5 text-white">
                   {/* Avatar & Photo Upload */}
-                  <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-slate-100">
+                  <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-white/10">
                      <div className="relative group shrink-0">
                         <div className="w-24 h-24 rounded-full border-[3px] border-[#bca374] shadow-[0_0_20px_rgba(188,163,116,0.25)] overflow-hidden bg-[#0f2e4a] flex items-center justify-center relative z-10">
                            {teamForm.image ? (
@@ -1502,15 +1504,15 @@ export default function TeamStatusTab({
                         </label>
                      </div>
                      <div className="text-center sm:text-left">
-                        <h4 className="font-bold text-sm text-[#0f2e4a]">รูปประจำตัวพนักงาน</h4>
-                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        <h4 className="font-bold text-sm text-white">รูปประจำตัวพนักงาน</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
                            อัปโหลดภาพถ่ายตัวเต็มหรือครึ่งตัว ระบบรองรับการครอบตัดและปรับขนาดอัตโนมัติ
                         </p>
                         {teamForm.image && (
                            <button
                               type="button"
                               onClick={() => setTeamForm({ ...teamForm, image: '' })}
-                              className="text-[10px] text-rose-600 hover:underline mt-1 inline-block"
+                              className="text-[10px] text-rose-400 hover:underline mt-1 inline-block"
                            >
                               ลบรูปภาพ
                            </button>
@@ -1521,57 +1523,57 @@ export default function TeamStatusTab({
                   {/* Name & Class Form Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div>
-                        <label className="text-xs font-bold text-slate-600 mb-1 block">ชื่อ - นามสกุล</label>
+                        <label className="text-xs font-bold text-slate-300 mb-1 block">ชื่อ - นามสกุล</label>
                         <input
                            type="text"
-                           className="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] outline-none transition"
+                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3.5 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition placeholder-slate-500"
                            placeholder="ชื่อพนักงาน..."
                            value={teamForm.name || ''}
                            onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
                         />
                      </div>
                      <div>
-                        <label className="text-xs font-bold text-slate-600 mb-1 block">คลาส (สายอาชีพ)</label>
+                        <label className="text-xs font-bold text-slate-300 mb-1 block">คลาส (สายอาชีพ)</label>
                         <select
-                           className="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:ring-2 focus:ring-[#bca374] outline-none transition bg-white"
+                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3.5 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition"
                            value={teamForm.classId || ''}
                            onChange={e => setTeamForm({ ...teamForm, classId: e.target.value })}
                         >
-                           <option value="">-- ไม่ระบุ --</option>
+                           <option value="" className="bg-slate-900 text-slate-300">-- ไม่ระบุ --</option>
                            {(sets.staffClasses || []).map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
+                              <option key={c.id} value={c.id} className="bg-slate-900 text-white">{c.name}</option>
                            ))}
                         </select>
                      </div>
                   </div>
 
                   {/* 6 Inner Stats */}
-                  <div className="pt-3 border-t border-slate-100">
+                  <div className="pt-3 border-t border-white/10">
                      <div className="flex justify-between items-center mb-3">
-                        <label className="text-xs font-bold text-slate-700">สเตตัสศักยภาพ 6 มิติ (Inner Stats - HOW)</label>
+                        <label className="text-xs font-bold text-slate-200">สเตตัสศักยภาพ 6 มิติ (Inner Stats - HOW)</label>
                         <span className="text-[10px] text-slate-400">เกณฑ์ 1 - 10 คะแนน</span>
                      </div>
 
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {[
-                           { k: 'str', l: 'STR', f: 'พลังขับเคลื่อน & ตัดสินใจ', c: 'text-rose-600', bg: 'bg-rose-50', b: 'border-rose-200' },
-                           { k: 'agi', l: 'AGI', f: 'ความรวดเร็ว & การปรับตัว', c: 'text-emerald-600', bg: 'bg-emerald-50', b: 'border-emerald-200' },
-                           { k: 'dex', l: 'DEX', f: 'ความแม่นยำ & คุณภาพ', c: 'text-amber-600', bg: 'bg-amber-50', b: 'border-amber-200' },
-                           { k: 'int', l: 'INT', f: 'ระบบเทคโนโลยี & จัดการ', c: 'text-blue-600', bg: 'bg-blue-50', b: 'border-blue-200' },
-                           { k: 'con', l: 'CON', f: 'ความทรหด & คุมอารมณ์', c: 'text-orange-600', bg: 'bg-orange-50', b: 'border-orange-200' },
-                           { k: 'sen', l: 'SEN', f: 'การเจรจา & เข้าใจผู้คน', c: 'text-purple-600', bg: 'bg-purple-50', b: 'border-purple-200' }
+                           { k: 'str', l: 'STR', f: 'พลังขับเคลื่อน & ตัดสินใจ', c: 'text-rose-400', bg: 'bg-rose-950/30', b: 'border-rose-500/30' },
+                           { k: 'agi', l: 'AGI', f: 'ความรวดเร็ว & การปรับตัว', c: 'text-emerald-400', bg: 'bg-emerald-950/30', b: 'border-emerald-500/30' },
+                           { k: 'dex', l: 'DEX', f: 'ความแม่นยำ & คุณภาพ', c: 'text-amber-400', bg: 'bg-amber-950/30', b: 'border-amber-500/30' },
+                           { k: 'int', l: 'INT', f: 'ระบบเทคโนโลยี & จัดการ', c: 'text-sky-400', bg: 'bg-sky-950/30', b: 'border-sky-500/30' },
+                           { k: 'con', l: 'CON', f: 'ความทรหด & คุมอารมณ์', c: 'text-orange-400', bg: 'bg-orange-950/30', b: 'border-orange-500/30' },
+                           { k: 'sen', l: 'SEN', f: 'การเจรจา & เข้าใจผู้คน', c: 'text-purple-400', bg: 'bg-purple-950/30', b: 'border-purple-500/30' }
                         ].map(s => (
                            <div key={s.k} className={`p-2.5 rounded-xl border ${s.b} ${s.bg} flex items-center justify-between gap-2 shadow-2xs`}>
                               <div className="flex flex-col">
                                  <span className={`text-xs font-black ${s.c}`}>{s.l}</span>
-                                 <span className="text-[9px] font-bold text-slate-500">{s.f}</span>
+                                 <span className="text-[9px] font-bold text-slate-400">{s.f}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                  <input
                                     type="range"
                                     min="1"
                                     max="10"
-                                    className="w-16 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                    className="w-16 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#bca374]"
                                     value={Number(teamForm[s.k]) || 5}
                                     onChange={e => setTeamForm({ ...teamForm, [s.k]: Number(e.target.value) || 1 })}
                                  />
@@ -1579,7 +1581,7 @@ export default function TeamStatusTab({
                                     type="number"
                                     min="1"
                                     max="10"
-                                    className={`w-9 text-center text-sm font-black bg-white rounded border border-slate-300 py-0.5 outline-none ${s.c}`}
+                                    className={`w-9 text-center text-sm font-black bg-slate-950 rounded border border-white/20 py-0.5 outline-none ${s.c}`}
                                     value={Number(teamForm[s.k]) || 5}
                                     onChange={e => setTeamForm({ ...teamForm, [s.k]: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })}
                                  />
@@ -1590,11 +1592,11 @@ export default function TeamStatusTab({
                   </div>
 
                   {/* Save & Action Buttons */}
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-2.5">
+                  <div className="pt-4 border-t border-white/10 flex flex-wrap gap-2.5">
                      <button
                         type="button"
                         onClick={saveTeam}
-                        className="flex-1 bg-[#0f2e4a] hover:bg-[#1a3f63] text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                      >
                         <Icon name="save" size={15} />
                         <span>บันทึกข้อมูลพนักงาน</span>
@@ -1607,7 +1609,7 @@ export default function TeamStatusTab({
                               setTeamForm({ ...selTeam });
                               setActiveSubTab('performance');
                            }}
-                           className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition"
+                           className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 hover:text-white transition border border-white/10"
                         >
                            ยกเลิก
                         </button>
@@ -1632,7 +1634,7 @@ export default function TeamStatusTab({
                                  setActiveSubTab('performance');
                               }
                            }}
-                           className="p-2.5 rounded-xl bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 transition"
+                           className="p-2.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition"
                            title="ลบพนักงาน"
                         >
                            <Icon name="trash" size={16} />
