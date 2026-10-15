@@ -58,7 +58,8 @@ export default function TeamStatusTab({
   getProjName: propGetProjName = null,
   isSupervisor = false,
   supervisorSession = null,
-  onOpenSupervisorModal = null
+  onOpenSupervisorModal = null,
+  initialFocusMode = false
 }) {
   const getProjName = propGetProjName || ((str) => str ? String(str).split('|')[0] : '');
   const [subTabProjSearch, setSubTabProjSearch] = useState('');
@@ -72,8 +73,40 @@ export default function TeamStatusTab({
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('performance'); // 'performance' | 'field_logs' | 'settings'
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
 
-  if (!teamUnlk && !isSupervisor) {
+  // Escape key exits Focus Mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFocusMode) {
+        setIsFocusMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFocusMode]);
+
+  // Deep link URL param effect
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('fullscreen') === 'true') {
+        setIsFocusMode(true);
+        if (setTeamUnlk) setTeamUnlk(true);
+      }
+      const paramStaffId = params.get('staffId');
+      if (paramStaffId) {
+        const found = (sets.staffStats || []).find(s => String(s.id) === String(paramStaffId));
+        if (found) {
+          setSelTeam(found);
+          const assigned = (found.assignedProjects && found.assignedProjects.length > 0) ? found.assignedProjects : getStaffAssignedProjects(found, sets);
+          setTeamForm({ ...found, assignedProjects: assigned, email: found.email || '' });
+        }
+      }
+    }
+  }, [sets.staffStats, setTeamUnlk]);
+
+  if (!teamUnlk && !isSupervisor && !isFocusMode) {
     return (
       <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center max-w-md mx-auto mt-12 animate-in zoom-in-95">
         <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-inner">
@@ -113,6 +146,42 @@ export default function TeamStatusTab({
 
     const sList = sets.staffStats || [];
     const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
+
+    // Auto-select first staff member if in Focus Mode with none selected
+    useEffect(() => {
+      if (isFocusMode && (!selTeam && !teamForm.name && !teamForm.id) && sList.length > 0) {
+        const firstStaff = sList[0];
+        setSelTeam(firstStaff);
+        const assigned = (firstStaff.assignedProjects && firstStaff.assignedProjects.length > 0)
+          ? firstStaff.assignedProjects
+          : getStaffAssignedProjects(firstStaff, sets);
+        setTeamForm({ ...firstStaff, assignedProjects: assigned, email: firstStaff.email || '' });
+      }
+    }, [isFocusMode, sList, selTeam, teamForm]);
+
+    const currentStaffIndex = sList.findIndex(s => String(s.id) === String(teamForm.id || selTeam?.id));
+    const prevStaffMember = currentStaffIndex > 0 ? sList[currentStaffIndex - 1] : sList[sList.length - 1];
+    const nextStaffMember = currentStaffIndex >= 0 && currentStaffIndex < sList.length - 1 ? sList[currentStaffIndex + 1] : sList[0];
+
+    const handleSelectStaff = (targetStaff) => {
+      if (!targetStaff) return;
+      setSelTeam(targetStaff);
+      const assigned = (targetStaff.assignedProjects && targetStaff.assignedProjects.length > 0)
+        ? targetStaff.assignedProjects
+        : getStaffAssignedProjects(targetStaff, sets);
+      setTeamForm({ ...targetStaff, assignedProjects: assigned, email: targetStaff.email || '' });
+    };
+
+    const handleOpenInNewTab = (customStaffId = null) => {
+      const staffId = customStaffId || teamForm.id || selTeam?.id || '';
+      if (typeof window !== 'undefined') {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('tab', 'team');
+        if (staffId) currentUrl.searchParams.set('staffId', staffId);
+        currentUrl.searchParams.set('fullscreen', 'true');
+        window.open(currentUrl.toString(), '_blank');
+      }
+    };
     
     const handleImageUpload = (e) => {
       const file = e.target.files[0];
@@ -368,7 +437,7 @@ export default function TeamStatusTab({
                   alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
                }}
             />
-        <div key={u.id || 'new'} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative flex flex-col rounded-xl overflow-hidden shadow-2xl h-full min-h-[450px]">
+        <div key={u.id || 'new'} className={`animate-fade-in-up flex-1 w-full bg-[#08080c] relative flex flex-col ${isFocusMode ? 'rounded-none h-screen' : 'rounded-xl h-full'} overflow-hidden shadow-2xl min-h-[450px]`}>
            {/* Ambient Background Glow (Behind Content) */}
            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
               <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-[#bca374]/5 rounded-full blur-[140px]"></div>
@@ -379,8 +448,56 @@ export default function TeamStatusTab({
                EXECUTIVE COMMAND HEADER (TOP NAVIGATION & CONTROLS)
                ========================================================================= */}
            <div className="bg-[#0b101b] border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-white z-20">
-              {/* Left: Staff Identity Pill */}
+              {/* Left: Staff Identity Pill & Focus Mode Controls */}
               <div className="flex items-center gap-2.5 min-w-0">
+                 {isFocusMode && (
+                    <button
+                       type="button"
+                       onClick={() => setIsFocusMode(false)}
+                       className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white border border-white/20 transition flex items-center gap-1.5 text-xs font-bold shrink-0 shadow-xs"
+                       title="ย่อกลับสู่หน้าจอปกติ (หรือกดปุ่ม Esc)"
+                    >
+                       <Icon name="arrowLeft" size={13} className="text-amber-400" />
+                       <span className="hidden sm:inline">ย่อหน้าจอ</span>
+                       <kbd className="hidden lg:inline px-1 py-0.2 rounded bg-black/40 text-[9px] text-slate-400 font-mono">ESC</kbd>
+                    </button>
+                 )}
+
+                 {isFocusMode && sList.length > 0 && (
+                    <div className="flex items-center gap-0.5 bg-slate-900/90 border border-white/15 rounded-lg p-0.5 shrink-0 shadow-inner">
+                       <button
+                          type="button"
+                          onClick={() => handleSelectStaff(prevStaffMember)}
+                          className="p-1 hover:bg-white/10 rounded text-slate-300 hover:text-white transition"
+                          title={`ก่อนหน้า: ${prevStaffMember?.name || ''}`}
+                       >
+                          <Icon name="chevronLeft" size={15} />
+                       </button>
+                       <select
+                          value={teamForm.id || selTeam?.id || ''}
+                          onChange={(e) => {
+                             const target = sList.find(s => String(s.id) === String(e.target.value));
+                             if (target) handleSelectStaff(target);
+                          }}
+                          className="bg-transparent text-xs text-amber-200 font-bold px-1.5 py-1 focus:outline-none cursor-pointer max-w-[110px] sm:max-w-[150px] truncate"
+                       >
+                          {sList.map(s => (
+                             <option key={s.id} value={s.id} className="bg-slate-900 text-white">
+                                {s.name} ({classMap[s.classId]?.name || 'ทั่วไป'})
+                             </option>
+                          ))}
+                       </select>
+                       <button
+                          type="button"
+                          onClick={() => handleSelectStaff(nextStaffMember)}
+                          className="p-1 hover:bg-white/10 rounded text-slate-300 hover:text-white transition"
+                          title={`ถัดไป: ${nextStaffMember?.name || ''}`}
+                       >
+                          <Icon name="chevronRight" size={15} />
+                       </button>
+                    </div>
+                 )}
+
                  <div className="w-9 h-9 rounded-full border border-[#bca374] overflow-hidden bg-[#0f2e4a] flex items-center justify-center shrink-0 shadow-xs">
                     {u.image ? (
                        <img src={u.image} className="w-full h-full object-cover" alt={u.name} />
@@ -477,6 +594,32 @@ export default function TeamStatusTab({
                        <span>💼 Corporate</span>
                     </button>
                  </div>
+
+                 {/* Fullscreen Theater Toggle Button */}
+                 <button
+                    type="button"
+                    onClick={() => setIsFocusMode(!isFocusMode)}
+                    className={`px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition border ${
+                       isFocusMode
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 hover:bg-amber-500/30'
+                          : 'bg-white/10 text-white border-white/20 hover:bg-white/20 shadow-xs'
+                    }`}
+                    title={isFocusMode ? "ย่อหน้าจอสู่มุมมองปกติ (Esc)" : "ขยายห้องตัดสินเต็มจอ (Focus Theater Mode)"}
+                 >
+                    <Icon name={isFocusMode ? "minimize2" : "maximize2"} size={13} className="text-amber-400" />
+                    <span className="hidden md:inline">{isFocusMode ? "ย่อหน้าจอ" : "ห้องตัดสินเต็มจอ"}</span>
+                 </button>
+
+                 {/* Open in New Tab Button */}
+                 <button
+                    type="button"
+                    onClick={() => handleOpenInNewTab()}
+                    className="px-2.5 py-1.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/30 hover:bg-sky-500/30 font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
+                    title="เปิดห้องตัดสินนี้ในหน้าต่างเว็บใหม่ (New Window / Tab) สำหรับเปิดเทียบ 2 หน้าจอ"
+                 >
+                    <Icon name="externalLink" size={13} className="text-sky-300" />
+                    <span className="hidden md:inline">เปิดแท็บใหม่</span>
+                 </button>
 
                  {/* Supervisor Status Button */}
                  <button
@@ -575,7 +718,7 @@ export default function TeamStatusTab({
            {activeSubTab === 'performance' && (
               <div className="flex-1 w-full flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative z-10 min-h-0 custom-scrollbar">
                  {/* Left Column (Scrollable Intelligence Suite) */}
-                 <div className="w-full md:w-[58%] lg:w-[60%] md:h-full md:overflow-y-auto custom-scrollbar p-5 lg:p-7 border-b md:border-b-0 md:border-r border-white/10 space-y-5 text-left min-h-0">
+                 <div className={`w-full ${isFocusMode ? 'md:w-[62%] lg:w-[64%] 2xl:w-[66%] p-6 lg:p-8 space-y-6' : 'md:w-[58%] lg:w-[60%] p-5 lg:p-7 space-y-5'} md:h-full md:overflow-y-auto custom-scrollbar border-b md:border-b-0 md:border-r border-white/10 text-left min-h-0`}>
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
@@ -921,7 +1064,7 @@ export default function TeamStatusTab({
            </div>
 
            {/* Right Column: Hero Stage (Stationary & Always Centered) */}
-           <div className="w-full md:w-[42%] lg:w-[40%] md:h-full min-h-[380px] md:min-h-0 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-slate-900/90 via-[#0a0f1d] to-[#08080c] shrink-0">
+           <div className={`w-full ${isFocusMode ? 'md:w-[38%] lg:w-[36%] 2xl:w-[34%]' : 'md:w-[42%] lg:w-[40%]'} md:h-full min-h-[380px] md:min-h-0 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-slate-900/90 via-[#0a0f1d] to-[#08080c] shrink-0`}>
               {/* View Mode Switcher for Hero Stage */}
               <div className="absolute top-3 z-30 flex items-center bg-slate-950/80 p-1 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
                  <button
@@ -1129,7 +1272,7 @@ export default function TeamStatusTab({
          const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
 
          return (
-            <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left relative z-10">
+            <div className={`flex-1 w-full overflow-y-auto custom-scrollbar ${isFocusMode ? 'p-6 lg:p-10 max-w-7xl mx-auto' : 'p-5 lg:p-7'} space-y-6 text-left relative z-10`}>
                {/* Officer Exemption Notice or Role Telemetry Status */}
                {telemetry.isExempt ? (
                   <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border border-amber-400/40 flex items-start gap-3 shadow-sm">
@@ -1453,7 +1596,7 @@ export default function TeamStatusTab({
           SUB-TAB 3: TEAM ROSTER & SETTINGS
           ========================================================================= */}
       {activeSubTab === 'settings' && (
-         <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left relative z-10">
+         <div className={`flex-1 w-full overflow-y-auto custom-scrollbar ${isFocusMode ? 'p-6 lg:p-10 max-w-7xl mx-auto' : 'p-5 lg:p-7'} space-y-6 text-left relative z-10`}>
             {/* Header Title */}
             <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-sm">
                <div>
@@ -2792,6 +2935,7 @@ function renderAnalysis() {
                >
                  <Icon name="sliders" size={11} className="mr-1 text-amber-400" /> ตรวจสอบทีม
                </button>
+               <button type="button" onClick={() => { if (!selTeam && !teamForm.id && sList.length > 0) handleSelectStaff(sList[0]); setIsFocusMode(true); }} title="เปิดห้องตัดสินเต็มจอ (Focus Theater Mode)" className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-[11px] px-2 py-1 rounded flex items-center transition shadow-xs font-bold cursor-pointer"><Icon name="maximize2" size={11} className="mr-1 text-amber-200" /> ห้องตัดสิน</button>
                <label className="bg-indigo-600 text-white text-[11px] px-2 py-1 rounded hover:bg-indigo-700 cursor-pointer flex items-center transition shadow-sm">
                  <Icon name="upload" size={12} className="mr-1" /> Excel
                  <input 
@@ -2839,13 +2983,19 @@ function renderAnalysis() {
                   <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
                   <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{getArchetypeIdentity(s) || s.potentialIdentity}</div>
                 </div>
+                {selTeam?.id === s.id && (
+                  <div className="flex items-center gap-1 ml-1" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" onClick={() => { handleSelectStaff(s); setIsFocusMode(true); }} title="เปิดห้องตัดสินเต็มจอ (Focus Mode)" className="p-1 rounded bg-white/20 hover:bg-white/30 text-amber-300 transition"><Icon name="maximize2" size={11} /></button>
+                    <button type="button" onClick={() => handleOpenInNewTab(s.id)} title="เปิดในแท็บใหม่" className="p-1 rounded bg-white/20 hover:bg-white/30 text-sky-200 transition"><Icon name="externalLink" size={11} /></button>
+                  </div>
+                )}
               </div>
             ))}
             {sList.length === 0 && <div className="text-center text-xs text-gray-400 p-4">ยังไม่มีรายชื่อทีมงาน<br/>กด "+ เพิ่ม" เพื่อสร้างใหม่</div>}
           </div>
         </div>
 
-        <div className="flex-1 bg-white border rounded-xl shadow-sm flex flex-col h-auto md:h-full overflow-hidden">
+        <div className={`bg-white border flex flex-col transition-all duration-300 ${isFocusMode ? 'fixed inset-0 z-50 w-screen h-screen m-0 rounded-none border-0 bg-[#070b14] overflow-hidden' : 'flex-1 rounded-xl shadow-sm h-auto md:h-full overflow-hidden'}`}>
           {(!selTeam && !teamForm.name && !teamForm.id) ? (
              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-10">
                <Icon name="users" size={64} className="mb-4 opacity-50" />

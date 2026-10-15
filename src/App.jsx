@@ -111,7 +111,11 @@ const parseTimeForInput = (timeStr) => { if (!timeStr) return "17:30"; const m =
 const downloadCSV = (data, filename) => { if(!data || !data.length) return alert('ไม่มีข้อมูล'); const keys = Array.from(new Set(data.flatMap(Object.keys))); const csv = [ keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]||'').replace(/"/g, '""')}"`).join(',')) ].join('\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
 
 export default function App() {
-  const [tab, setTab] = useState('dashboard');
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialTab = urlParams?.get('tab') || 'dashboard';
+  const initialFullscreen = urlParams?.get('fullscreen') === 'true';
+
+  const [tab, setTab] = useState(initialTab);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   
@@ -121,7 +125,7 @@ export default function App() {
   
   const [gFilt, setGilt] = useState({ area: 'ทั้งหมด', project: 'ทั้งหมด', month: getMStr(), status: 'ทั้งหมด', date: getTStr(), staffRole: 'ทั้งหมด', staffName: 'ทั้งหมด', requester: 'ทั้งหมด' });
   const [setUnlk, setSetUnlk] = useState(false);
-  const [teamUnlk, setTeamUnlk] = useState(false);
+  const [teamUnlk, setTeamUnlk] = useState(initialFullscreen || false);
   const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
@@ -1901,6 +1905,7 @@ export default function App() {
                     isSupervisor={isSupervisor}
                     supervisorSession={supervisorSession}
                     onOpenSupervisorModal={() => setSupervisorAuthModalOpen(true)}
+                    initialFocusMode={initialFullscreen}
                   />
                 )}
                 {tab === 'settings' && (
