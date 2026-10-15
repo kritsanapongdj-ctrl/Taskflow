@@ -2010,21 +2010,60 @@ export const getStaffRoleType = (staff, sets = {}) => {
 };
 
 /**
- * Returns the list of assigned project names for a staff member based on sets.emails.
+ * Returns the list of assigned project names for a staff member.
+ * Checks:
+ * 1. staff.assignedProjects / staff.projects directly on the staff object
+ * 2. sets.staffStats for matching staff member
+ * 3. sets.emails (format: email|proj1,proj2|name) with exact & substring matching
  */
-export const getStaffAssignedProjects = (staffName, sets = {}) => {
-  if (!staffName || !sets?.emails) return [];
-  const cleanTargetName = staffName.trim().toLowerCase();
-  const entries = (sets.emails || []).filter(e => {
-    const parts = e.split('|');
-    const nameInEntry = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
-    return nameInEntry === cleanTargetName;
+export const getStaffAssignedProjects = (staffOrName, sets = {}) => {
+  if (!staffOrName) return [];
+
+  // 1. Direct object inspection (staff.assignedProjects or staff.projects)
+  if (typeof staffOrName === 'object') {
+    if (Array.isArray(staffOrName.assignedProjects) && staffOrName.assignedProjects.length > 0) {
+      return staffOrName.assignedProjects;
+    }
+    if (Array.isArray(staffOrName.projects) && staffOrName.projects.length > 0) {
+      return staffOrName.projects;
+    }
+  }
+
+  const staffName = (typeof staffOrName === 'string' ? staffOrName : (staffOrName.name || '')).trim();
+  if (!staffName) return [];
+  const cleanTargetName = staffName.toLowerCase();
+
+  // 2. Check sets.staffStats
+  const staffInStats = (sets?.staffStats || []).find(s => {
+    if (typeof staffOrName === 'object' && staffOrName.id && String(s.id) === String(staffOrName.id)) return true;
+    return (s.name || '').trim().toLowerCase() === cleanTargetName;
   });
-  const projects = entries.flatMap(e => {
-    const projStr = e.split('|')[1] || '';
-    return projStr.split(',').map(p => p.trim());
-  }).filter(Boolean);
-  return Array.from(new Set(projects));
+  if (staffInStats) {
+    if (Array.isArray(staffInStats.assignedProjects) && staffInStats.assignedProjects.length > 0) {
+      return staffInStats.assignedProjects;
+    }
+    if (Array.isArray(staffInStats.projects) && staffInStats.projects.length > 0) {
+      return staffInStats.projects;
+    }
+  }
+
+  // 3. Check sets.emails (existing format: email|proj1,proj2|name)
+  if (sets?.emails) {
+    const entries = (sets.emails || []).filter(e => {
+      const parts = e.split('|');
+      const nameInEntry = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
+      return nameInEntry === cleanTargetName || (nameInEntry && (cleanTargetName.includes(nameInEntry) || nameInEntry.includes(cleanTargetName)));
+    });
+    const projects = entries.flatMap(e => {
+      const projStr = e.split('|')[1] || '';
+      return projStr.split(',').map(p => p.trim());
+    }).filter(Boolean);
+    if (projects.length > 0) {
+      return Array.from(new Set(projects));
+    }
+  }
+
+  return [];
 };
 
 /**
@@ -2059,8 +2098,8 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   const roleType = getStaffRoleType(staff, sets);
   const staffName = staff.name.trim();
-  const assignedProjects = getStaffAssignedProjects(staffName, sets);
-  const hasAllProjects = assignedProjects.includes('ทั้งหมด');
+  const assignedProjects = getStaffAssignedProjects(staff, sets);
+  const hasAllProjects = assignedProjects.includes('ทั้งหมด') || assignedProjects.includes('ทุกโครงการ');
 
   // 1. Officer Role: Strictly EXEMPT from TaskFlow operational task metric penalties
   if (roleType === 'officer') {
@@ -2096,7 +2135,11 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     if (isDirectStaffMatch) return true;
     if (hasAllProjects) return true;
     if (assignedProjects.length > 0 && t.project) {
-      return assignedProjects.some(p => t.project.includes(p) || p.includes(t.project));
+      const cleanTaskProj = t.project.trim().toLowerCase();
+      return assignedProjects.some(p => {
+        const cleanP = p.trim().toLowerCase();
+        return cleanTaskProj.includes(cleanP) || cleanP.includes(cleanTaskProj);
+      });
     }
     return false;
   });

@@ -125,7 +125,7 @@ export default function App() {
   const [pwd, setPwd] = useState('');
   const [sInp, setSInp] = useState({ jobTypes: '', locations: '', areas: '', projects: '', projArea: '', slas: '', slaDays: '', classId: '', className: '', cStr: 5, cAgi: 5, cDex: 5, cInt: 5, cCon: 5, cSen: 5 });
   
-  const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5, cx: null, tech: null, sla: null, crisis: null, resource: null, innovation: null });
+  const [teamForm, setTeamForm] = useState({ id: '', name: '', classId: '', image: '', assignedProjects: [], email: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5, cx: null, tech: null, sla: null, crisis: null, resource: null, innovation: null });
   const [selTeam, setSelTeam] = useState(null);
   const [cropModal, setCropModal] = useState({ isOpen: false, imageSrc: null, crop: { x: 0, y: 0 }, zoom: 1, croppedAreaPixels: null });
   const onCropComplete = (croppedArea, croppedAreaPixels) => {
@@ -479,11 +479,30 @@ export default function App() {
   const checkStaffMatch = (taskProj, staffNameFilter) => {
     if (staffNameFilter === 'ทั้งหมด') return true;
     const stdProj = getStdProj(taskProj);
-    const staffEntries = (sets.emails||[]).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0]) === staffNameFilter);
-    if (staffEntries.length === 0) return false;
-    for (const e of staffEntries) {
-      const projs = (e.split('|')[1] || '').split(',');
-      if (projs.includes('ทั้งหมด') || projs.includes(stdProj)) return true;
+    const cleanStdProj = stdProj.trim().toLowerCase();
+    
+    // Check staffStats first
+    const staffInStats = (sets.staffStats || []).find(s => (s.name || '').trim() === staffNameFilter);
+    if (staffInStats && Array.isArray(staffInStats.assignedProjects) && staffInStats.assignedProjects.length > 0) {
+      if (staffInStats.assignedProjects.includes('ทั้งหมด') || staffInStats.assignedProjects.includes('ทุกโครงการ')) return true;
+      if (staffInStats.assignedProjects.some(p => {
+        const cp = p.trim().toLowerCase();
+        return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+      })) {
+        return true;
+      }
+    }
+
+    // Check emails entries
+    const staffEntries = (sets.emails || []).filter(e => (e.split('|')[2] || e.split('|')[0].split('@')[0] || '').trim() === staffNameFilter);
+    if (staffEntries.length > 0) {
+      for (const e of staffEntries) {
+        const projs = (e.split('|')[1] || '').split(',').map(p => p.trim());
+        if (projs.includes('ทั้งหมด') || projs.includes('ทุกโครงการ') || projs.some(p => {
+          const cp = p.toLowerCase();
+          return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+        })) return true;
+      }
     }
     return false;
   };
@@ -491,9 +510,26 @@ export default function App() {
   const getStaffForTask = (task) => {
     if (!task) return '';
     const stdProj = getStdProj(task.project);
+    const cleanStdProj = stdProj.trim().toLowerCase();
+
+    // Check staffStats first
+    const staffFromStats = (sets.staffStats || []).find(s => {
+      if (Array.isArray(s.assignedProjects) && s.assignedProjects.length > 0) {
+        return s.assignedProjects.includes('ทั้งหมด') || s.assignedProjects.includes('ทุกโครงการ') || s.assignedProjects.some(p => {
+          const cp = p.trim().toLowerCase();
+          return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+        });
+      }
+      return false;
+    });
+    if (staffFromStats) return staffFromStats.name;
+
     const staffEntry = (sets.emails || []).find(e => {
       const projs = (e.split('|')[1] || '').split(',').map(p => p.trim());
-      return projs.includes('ทั้งหมด') || projs.includes(stdProj);
+      return projs.includes('ทั้งหมด') || projs.includes('ทุกโครงการ') || projs.some(p => {
+        const cp = p.toLowerCase();
+        return cleanStdProj.includes(cp) || cp.includes(cleanStdProj);
+      });
     });
     if (staffEntry) {
       return staffEntry.split('|')[2] || staffEntry.split('|')[0].split('@')[0];
@@ -501,12 +537,14 @@ export default function App() {
     return '';
   };
 
-  const allStaffNames = useMemo(() => Array.from(new Set(
-    (sets.emails || []).map(e => {
+  const allStaffNames = useMemo(() => {
+    const fromEmails = (sets.emails || []).map(e => {
       const parts = e.split('|');
       return (parts[2] || parts[0].split('@')[0] || '').trim();
-    })
-  )).filter(Boolean).sort((a, b) => a.localeCompare('th')), [sets.emails]);
+    });
+    const fromStats = (sets.staffStats || []).map(s => (s.name || '').trim());
+    return Array.from(new Set([...fromEmails, ...fromStats])).filter(Boolean).sort((a, b) => a.localeCompare('th'));
+  }, [sets.emails, sets.staffStats]);
 
   const runMigration = async () => {
     const confirmCode = prompt('⚠️ พิมพ์ "MIGRATE" เพื่อดูดข้อมูลจาก Google Sheets เข้าสู่ Firebase');
@@ -1092,14 +1130,17 @@ export default function App() {
   };
 
   const addEmailMappingV2 = () => {
-    const em = (emForm.email || '').trim().toLowerCase();
+    let em = (emForm.email || '').trim().toLowerCase();
+    let staffName = (emForm.name || '').trim();
+    if (!em && staffName) {
+      em = `${encodeURIComponent(staffName.replace(/\s+/g, '.'))}@lh.co.th`.toLowerCase();
+    }
     if (!em || !em.includes('@')) return alert('กรุณากรอกอีเมลให้ถูกต้อง');
     if (!emForm.selectedProjs || emForm.selectedProjs.length === 0) return alert('กรุณาเลือกโครงการอย่างน้อย 1 โครงการ (หรือเลือก "ทั้งหมด")');
     
     let nEms = [...(sets.emails || [])];
     const idx = nEms.findIndex(x => x.toLowerCase().startsWith(em + '|'));
     
-    let staffName = (emForm.name || '').trim();
     if (!staffName && idx > -1) {
         staffName = nEms[idx].split('|')[2] || '';
     }
@@ -1111,7 +1152,14 @@ export default function App() {
     if (idx > -1) { nEms[idx] = fullStr; } 
     else { nEms.push(fullStr); }
     
-    const newSets = { ...sets, emails: nEms };
+    // Also sync to staffStats if staff member with matching name exists
+    let ns = [...(sets.staffStats || [])];
+    const sIdx = ns.findIndex(x => (x.name || '').trim().toLowerCase() === staffName.toLowerCase());
+    if (sIdx > -1) {
+      ns[sIdx] = { ...ns[sIdx], assignedProjects: [...emForm.selectedProjs], email: em };
+    }
+
+    const newSets = { ...sets, emails: nEms, staffStats: ns };
     setSets(newSets); 
     saveD('settings', newSets); 
     setEmForm({ name: '', email: '', selectedProjs: [] });
@@ -1189,7 +1237,11 @@ export default function App() {
   const saveTeam = () => {
     if (!teamForm.name) return alert('กรุณาระบุชื่อพนักงาน');
     let ns = [...(sets.staffStats || [])];
-    let targetForm = { ...teamForm };
+    let targetForm = { 
+      ...teamForm,
+      assignedProjects: teamForm.assignedProjects || [],
+      email: (teamForm.email || '').trim()
+    };
     if (!targetForm.id) {
       targetForm.id = Date.now().toString();
       ns.push(targetForm);
@@ -1198,12 +1250,39 @@ export default function App() {
       if (idx > -1) ns[idx] = { ...targetForm };
       else ns.push(targetForm);
     }
-    const newSets = { ...sets, staffStats: ns };
+
+    // Auto-sync with sets.emails
+    let nEms = [...(sets.emails || [])];
+    const staffName = (targetForm.name || '').trim();
+    const cleanStaffName = staffName.toLowerCase();
+    const targetEmail = (targetForm.email || '').trim().toLowerCase();
+    const projs = targetForm.assignedProjects || [];
+
+    const emIdx = nEms.findIndex(e => {
+      const parts = e.split('|');
+      const eName = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
+      const eMail = parts[0].trim().toLowerCase();
+      if (targetEmail && eMail === targetEmail) return true;
+      return eName === cleanStaffName;
+    });
+
+    if (emIdx > -1) {
+      const parts = nEms[emIdx].split('|');
+      const currentEmail = targetEmail || parts[0];
+      const projsStr = projs.join(',');
+      nEms[emIdx] = `${currentEmail}|${projsStr}|${staffName}`;
+    } else if (projs.length > 0 || targetEmail) {
+      const generatedEmail = targetEmail || `${encodeURIComponent(staffName.replace(/\s+/g, '.'))}@lh.co.th`.toLowerCase();
+      nEms.push(`${generatedEmail}|${projs.join(',')}|${staffName}`);
+    }
+
+    const newSets = { ...sets, staffStats: ns, emails: nEms };
     setSets(newSets);
     saveD('settings', newSets);
     setTeamForm(targetForm);
     setSelTeam(targetForm);
     setTeamEditMode(false);
+    alert('บันทึกข้อมูลพนักงานและขอบเขตโครงการเรียบร้อยแล้ว');
   };
 
   const deleteTask = async (t) => {
@@ -1628,6 +1707,7 @@ export default function App() {
                     saveTeam={saveTeam}
                     Icon={Icon}
                     tasks={tasks}
+                    getProjName={getProjName}
                     isSupervisor={isSupervisor}
                     supervisorSession={supervisorSession}
                     onOpenSupervisorModal={() => setSupervisorAuthModalOpen(true)}

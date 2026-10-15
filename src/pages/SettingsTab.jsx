@@ -883,24 +883,43 @@ export default function SettingsTab({
                 <div className="space-y-3.5 text-xs">
                   <div>
                     <label className="font-bold text-gray-700 block mb-1">
-                      ชื่อ-นามสกุล เจ้าหน้าที่
+                      ชื่อ-นามสกุล เจ้าหน้าที่ (เลือกจากทีมหรือพิมพ์ใหม่)
                     </label>
                     <input
                       type="text"
-                      placeholder="เช่น สมชาย ใจดี หรือชื่อเล่น..."
+                      list="staff-name-suggestions"
+                      placeholder="เช่น สมชาย ใจดี หรือเลือกจากรายชื่อทีม..."
                       className="border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs w-full bg-gray-50 focus:bg-white focus:border-[#bca374] outline-none transition"
                       value={emForm.name || ''}
-                      onChange={(e) => setEmForm({ ...emForm, name: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const matchedStaff = (sets.staffStats || []).find(s => s.name === val);
+                        if (matchedStaff) {
+                          setEmForm({
+                            ...emForm,
+                            name: val,
+                            email: emForm.email || matchedStaff.email || '',
+                            selectedProjs: emForm.selectedProjs.length > 0 ? emForm.selectedProjs : (matchedStaff.assignedProjects || [])
+                          });
+                        } else {
+                          setEmForm({ ...emForm, name: val });
+                        }
+                      }}
                     />
+                    <datalist id="staff-name-suggestions">
+                      {(sets.staffStats || []).map(s => (
+                        <option key={s.id || s.name} value={s.name} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div>
                     <label className="font-bold text-gray-700 block mb-1">
-                      อีเมลผู้รับแจ้งเตือน (@lh.co.th) <span className="text-rose-500">*</span>
+                      อีเมลผู้รับแจ้งเตือน (@lh.co.th) <span className="text-gray-400 font-normal">(ไม่บังคับ - เว้นว่างได้)</span>
                     </label>
                     <input
                       type="email"
-                      placeholder="username@lh.co.th"
+                      placeholder="username@lh.co.th (หากเว้นว่างระบบจะสร้างให้อัตโนมัติ)"
                       className="border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs w-full bg-gray-50 focus:bg-white focus:border-[#bca374] outline-none transition"
                       value={emForm.email || ''}
                       onChange={(e) => setEmForm({ ...emForm, email: e.target.value })}

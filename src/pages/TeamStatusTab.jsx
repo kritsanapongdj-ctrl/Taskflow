@@ -55,10 +55,13 @@ export default function TeamStatusTab({
   Icon,
   setAlert: _setAlert,
   tasks = [],
+  getProjName: propGetProjName = null,
   isSupervisor = false,
   supervisorSession = null,
   onOpenSupervisorModal = null
 }) {
+  const getProjName = propGetProjName || ((str) => str ? String(str).split('|')[0] : '');
+  const [subTabProjSearch, setSubTabProjSearch] = useState('');
   const [assessMode, setAssessMode] = useState(false);
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
   const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
@@ -1520,13 +1523,13 @@ export default function TeamStatusTab({
                      </div>
                   </div>
 
-                  {/* Name & Class Form Fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Name, Class & Email Form Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                      <div>
                         <label className="text-xs font-bold text-slate-300 mb-1 block">ชื่อ - นามสกุล</label>
                         <input
                            type="text"
-                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3.5 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition placeholder-slate-500"
+                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition placeholder-slate-500"
                            placeholder="ชื่อพนักงาน..."
                            value={teamForm.name || ''}
                            onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
@@ -1535,7 +1538,7 @@ export default function TeamStatusTab({
                      <div>
                         <label className="text-xs font-bold text-slate-300 mb-1 block">คลาส (สายอาชีพ)</label>
                         <select
-                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3.5 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition"
+                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition"
                            value={teamForm.classId || ''}
                            onChange={e => setTeamForm({ ...teamForm, classId: e.target.value })}
                         >
@@ -1545,6 +1548,125 @@ export default function TeamStatusTab({
                            ))}
                         </select>
                      </div>
+                     <div>
+                        <label className="text-xs font-bold text-slate-300 mb-1 block">
+                           อีเมล <span className="text-slate-500 font-normal">(@lh.co.th)</span>
+                        </label>
+                        <input
+                           type="email"
+                           className="w-full border border-white/15 bg-slate-950/80 rounded-lg px-3 py-2 text-sm font-bold text-white focus:ring-2 focus:ring-[#bca374] outline-none transition placeholder-slate-500"
+                           placeholder="username@lh.co.th"
+                           value={teamForm.email || ''}
+                           onChange={e => setTeamForm({ ...teamForm, email: e.target.value })}
+                        />
+                     </div>
+                  </div>
+
+                  {/* Assigned Projects Scope Section */}
+                  <div className="pt-4 border-t border-white/10 space-y-3">
+                     <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                           <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <Icon name="mapPin" size={14} className="text-[#bca374]" />
+                              <span>โครงการที่รับผิดชอบ (Assigned Projects Scope)</span>
+                           </label>
+                           <p className="text-[10px] text-slate-400 mt-0.5">
+                              ผูกโยงสถิติงานภาคสนาม อัตรา SLA และรอบเบิกจ่ายสำหรับ Foreman และ Admin
+                           </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <button
+                              type="button"
+                              onClick={() => {
+                                 const current = teamForm.assignedProjects || [];
+                                 if (current.includes('ทั้งหมด')) {
+                                    setTeamForm({ ...teamForm, assignedProjects: [] });
+                                 } else {
+                                    setTeamForm({ ...teamForm, assignedProjects: ['ทั้งหมด'] });
+                                 }
+                              }}
+                              className={`px-3 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 cursor-pointer ${
+                                 (teamForm.assignedProjects || []).includes('ทั้งหมด')
+                                    ? 'bg-amber-500/25 text-amber-300 border-amber-400/50 shadow-sm'
+                                    : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                              }`}
+                           >
+                              <span>🌟 ทุกโครงการ (ทั้งหมด)</span>
+                           </button>
+                           {(teamForm.assignedProjects || []).length > 0 && !(teamForm.assignedProjects || []).includes('ทั้งหมด') && (
+                              <button
+                                 type="button"
+                                 onClick={() => setTeamForm({ ...teamForm, assignedProjects: [] })}
+                                 className="px-2 py-1 rounded-lg text-[10px] text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition cursor-pointer"
+                              >
+                                 ล้างการเลือก
+                              </button>
+                           )}
+                        </div>
+                     </div>
+
+                     {/* Current Scope Status Banner */}
+                     <div className="px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="text-slate-400 text-[11px]">สถานะขอบเขตงาน:</span>
+                        <div className="font-bold">
+                           {(teamForm.assignedProjects || []).includes('ทั้งหมด') ? (
+                              <span className="text-amber-300 flex items-center gap-1">
+                                 🌟 ดูแลและผูกโยงทุกโครงการในระบบ (ทั้งหมด)
+                              </span>
+                           ) : (teamForm.assignedProjects || []).length > 0 ? (
+                              <span className="text-[#e6d0a7]">
+                                 ผูกโยงแล้ว {(teamForm.assignedProjects || []).length} โครงการ: {(teamForm.assignedProjects || []).join(', ')}
+                              </span>
+                           ) : (
+                              <span className="text-rose-400 italic flex items-center gap-1">
+                                 ⚠️ ยังไม่ได้ระบุโครงการ (สถิติงานภาคสนามและ SLA จะเป็น 0)
+                              </span>
+                           )}
+                        </div>
+                     </div>
+
+                     {/* Project Selector Chips with Fast Search */}
+                     {!(teamForm.assignedProjects || []).includes('ทั้งหมด') && (
+                        <div className="space-y-2">
+                           <input
+                              type="text"
+                              placeholder="พิมพ์ค้นหาโครงการเพื่อเลือก..."
+                              className="w-full bg-slate-950/80 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-[#bca374] transition"
+                              value={subTabProjSearch}
+                              onChange={e => setSubTabProjSearch(e.target.value)}
+                           />
+                           <div className="max-h-48 overflow-y-auto custom-scrollbar p-2.5 rounded-xl bg-slate-950/60 border border-white/10 flex flex-wrap gap-1.5">
+                              {(sets.projects || [])
+                                 .map(p => getProjName(p))
+                                 .filter(pName => pName && pName.toLowerCase().includes(subTabProjSearch.toLowerCase()))
+                                 .map(pName => {
+                                    const isSelected = (teamForm.assignedProjects || []).includes(pName);
+                                    return (
+                                       <button
+                                          key={pName}
+                                          type="button"
+                                          onClick={() => {
+                                             const cur = (teamForm.assignedProjects || []).filter(x => x !== 'ทั้งหมด');
+                                             const next = isSelected ? cur.filter(x => x !== pName) : [...cur, pName];
+                                             setTeamForm({ ...teamForm, assignedProjects: next });
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 cursor-pointer ${
+                                             isSelected
+                                                ? 'bg-[#bca374]/25 border-[#bca374] text-amber-200 shadow-xs'
+                                                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                                          }`}
+                                       >
+                                          <span>{isSelected ? '✓' : '+'}</span>
+                                          <span>{pName}</span>
+                                       </button>
+                                    );
+                                 })}
+                              {(sets.projects || []).length === 0 && (
+                                 <span className="text-slate-500 text-xs p-2">ไม่มีรายชื่อโครงการในระบบ (กรุณาเพิ่มโครงการที่แท็บตั้งค่า)</span>
+                              )}
+                           </div>
+                        </div>
+                     )}
                   </div>
 
                   {/* 6 Inner Stats */}
@@ -2695,7 +2817,7 @@ function renderAnalysis() {
                      return;
                    }
                    setSelTeam({isNew: true}); 
-                   setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});
+                   setTeamForm({id:'', name:'', classId:'', image:'', assignedProjects: [], email: '', str:5, agi:5, dex:5, int:5, con:5, sen:5});
                    setActiveSubTab('settings');
                  }} 
                  className="bg-[#bca374] text-white text-[11px] px-2 py-1 rounded hover:bg-[#a38a5b] transition shadow-sm cursor-pointer"
@@ -2706,7 +2828,11 @@ function renderAnalysis() {
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
             {sList.map(s => (
-              <div key={s.id} onClick={()=>{setSelTeam(s); setTeamForm({...s});}} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
+              <div key={s.id} onClick={() => {
+                setSelTeam(s);
+                const assigned = (s.assignedProjects && s.assignedProjects.length > 0) ? s.assignedProjects : getStaffAssignedProjects(s, sets);
+                setTeamForm({ ...s, assignedProjects: assigned, email: s.email || '' });
+              }} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
                 {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{(s?.name || '').substring(0,2)}</div>}
                 <div className="truncate flex-1">
                   <div className="font-bold text-sm truncate">{s.name}</div>
@@ -2753,7 +2879,8 @@ function renderAnalysis() {
           archetypesData={archetypesData}
           onSelectStaff={(staff) => {
             setSelTeam(staff);
-            setTeamForm({ ...staff });
+            const assigned = (staff.assignedProjects && staff.assignedProjects.length > 0) ? staff.assignedProjects : getStaffAssignedProjects(staff, sets);
+            setTeamForm({ ...staff, assignedProjects: assigned, email: staff.email || '' });
           }}
         />
         <DiscrepancyAuditModal
