@@ -5,6 +5,7 @@ import { initializeFirestore, getFirestore, collection, doc, setDoc, onSnapshot,
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import TaskFormModal from './components/modals/TaskFormModal.jsx';
 import StatusChangeModal from './components/modals/StatusChangeModal.jsx';
+import SupervisorAuthModal from './components/modals/SupervisorAuthModal.jsx';
 import DashboardTab from './pages/DashboardTab.jsx';
 import DailyTasksTab from './pages/DailyTasksTab.jsx';
 import PrintReport from './components/reports/PrintReport.jsx';
@@ -156,6 +157,66 @@ export default function App() {
   const [timelineTask, setTimelineTask] = useState(null);
   const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [showMoreMobileMenu, setShowMoreMobileMenu] = useState(false);
+
+  // --- Supervisor Mode State & Forensic Handshake (RBAC) ---
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [supervisorSession, setSupervisorSession] = useState(null);
+  const [supervisorAuthModalOpen, setSupervisorAuthModalOpen] = useState(false);
+
+  // 15-Minute Inactivity Auto-Logout for Supervisor Mode
+  useEffect(() => {
+    if (!isSupervisor) return;
+
+    const resetInactivity = () => {
+      setSupervisorSession(prev => prev ? ({ ...prev, lastActive: Date.now() }) : null);
+    };
+
+    const checkInterval = setInterval(() => {
+      if (supervisorSession?.lastActive && (Date.now() - supervisorSession.lastActive > 15 * 60 * 1000)) {
+        setIsSupervisor(false);
+        setSupervisorSession(null);
+        alert('⏰ เซสชันผู้ดูแลหมดอายุเนื่องจากไม่มีการใช้งานเกิน 15 นาที ระบบสลับกลับสู่โหมดผู้ใช้งานทั่วไปแล้ว');
+      }
+    }, 30000);
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetInactivity, { passive: true }));
+
+    return () => {
+      clearInterval(checkInterval);
+      events.forEach(e => window.removeEventListener(e, resetInactivity));
+    };
+  }, [isSupervisor, supervisorSession?.lastActive]);
+
+  const handleSupervisorAuthenticated = ({ supervisorName, coords, authenticatedAt }) => {
+    setIsSupervisor(true);
+    setTeamUnlk(true);
+    const session = {
+      supervisorName,
+      coords,
+      authenticatedAt,
+      lastActive: Date.now()
+    };
+    setSupervisorSession(session);
+
+    try {
+      const auditLog = {
+        event: 'SUPERVISOR_HANDSHAKE',
+        supervisorName,
+        coords,
+        authenticatedAt,
+        userAgent: navigator.userAgent
+      };
+      saveD('audit', auditLog);
+    } catch (e) {
+      console.warn('Failed to save audit log:', e);
+    }
+  };
+
+  const handleExitSupervisor = () => {
+    setIsSupervisor(false);
+    setSupervisorSession(null);
+  };
 
   useEffect(() => {
     try {
@@ -628,6 +689,18 @@ export default function App() {
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
       const defaultOverdueReason = t.overdueReason || (isOvd && t.issueReason ? `ล่าช้าเนื่องจากรออะไหล่/ติดปัญหา: ${t.issueReason}` : '');
+      
+      let isLateWO = false;
+      let lateWODays = 0;
+      if (t.status === 'จบงาน(รอใบงาน)' && t.completedDate) {
+        const cDate = new Date(t.completedDate).getTime();
+        const nDate = new Date(getTStr()).getTime();
+        lateWODays = Math.floor((nDate - cDate) / (1000 * 3600 * 24));
+        if (lateWODays > 3) {
+          isLateWO = true;
+        }
+      }
+
       setSMod({
         isOpen: true,
         taskId: id,
@@ -639,6 +712,10 @@ export default function App() {
         forceWO: t.status === 'จบงาน(รอใบงาน)',
         isOverdue: isOvd,
         overdueReason: defaultOverdueReason,
+        isLateWO,
+        lateWODays,
+        lateWOReason: '',
+        lateWOResponsibleRole: 'foreman',
         postponeDate: t.endDate,
         postponeStartDate: t.startDate || getTStr(),
         recordedBy: defaultRecorder,
@@ -693,6 +770,23 @@ export default function App() {
         postponeDate: t.endDate || getTStr(),
         postponeStartDate: t.startDate,
         recordedBy: defaultRecorder,
+        isCustomStaff: false
+      });
+    } else if (val === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') {
+      setSMod({
+        isOpen: true,
+        taskId: id,
+        type: 'penalty_spare_part',
+        targetStatus: 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)',
+        reason: '',
+        workOrderNo: '',
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: t.endDate || getTStr(),
+        postponeStartDate: t.startDate,
+        recordedBy: supervisorSession?.supervisorName || defaultRecorder,
         isCustomStaff: false
       });
     } else if (val === 'ยกเลิก') {
@@ -816,6 +910,37 @@ export default function App() {
                 actor: recorder
             });
         }
+        else if(sMod.type === 'penalty_spare_part') {
+            nT.status = 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)';
+            nT.penaltyRevokeSla = true;
+            nT.penaltyAudit = {
+                supervisorName: supervisorSession?.supervisorName || recorder,
+                coords: supervisorSession?.coords || null,
+                reason: sMod.reason || '',
+                timestamp: nowIso
+            };
+            nT.emailAlert = {
+                action: '🚨 ตรวจพบผิดเงื่อนไขรออะไหล่ (ตัดคะแนนวินัย)',
+                reason: sMod.reason || '',
+                emails: targetEmails,
+                project: t.project,
+                details: `โครงการ: ${t.project}\nชื่องาน: ${t.details}\nผู้สั่งการลงโทษ: ${supervisorSession?.supervisorName || recorder}\nสาเหตุ/หลักฐาน: ${sMod.reason}\nพิกัด GPS: ${supervisorSession?.coords?.lat?.toFixed(5) || '-'}, ${supervisorSession?.coords?.lng?.toFixed(5) || '-'}`
+            };
+            timeline.push({
+                timestamp: nowIso,
+                action: 'PENALTY_REVOKE_SLA',
+                title: '🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนนวินัย)',
+                fromStatus: t.status,
+                toStatus: 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)',
+                reason: sMod.reason || '',
+                actor: supervisorSession?.supervisorName || recorder,
+                securityAudit: supervisorSession?.coords ? {
+                    lat: supervisorSession.coords.lat,
+                    lng: supervisorSession.coords.lng,
+                    accuracy: supervisorSession.coords.accuracy
+                } : null
+            });
+        }
         else if(sMod.type === 'postpone') { 
             // ข้อกำหนด 1.2: เลื่อนวันจบ จะเด้ง Pop up ให้ระบุสาเหตุที่เลื่อน ยืนยันอีกครั้ง เมื่อกดยืนยัน ระบบจะส่งเมล์แจ้งผู้ดูแลให้ทราบ
             nT.status = 'เลื่อนวันจบ'; 
@@ -870,16 +995,24 @@ export default function App() {
                     const cDate = new Date(t.completedDate).getTime();
                     const nDate = new Date(getTStr()).getTime();
                     const daysDiff = (nDate - cDate) / (1000 * 3600 * 24);
-                    if (daysDiff > 3) {
+                    const isLate = daysDiff > 3 || sMod.isLateWO;
+                    if (isLate) {
                         nT.lateWorkOrder = true;
+                        nT.woAttribution = {
+                            responsibleRole: sMod.lateWOResponsibleRole || 'foreman',
+                            reason: sMod.lateWOReason || sMod.reason || 'ออกใบงานช้าเกิน 3 วัน',
+                            recordedBy: recorder,
+                            timestamp: nowIso
+                        };
                     }
+                    const roleLabel = sMod.lateWOResponsibleRole === 'foreman' ? 'Foreman' : sMod.lateWOResponsibleRole === 'admin' ? 'Admin' : sMod.lateWOResponsibleRole === 'waived' ? 'ยกเว้น' : 'รับผิดชอบร่วม';
                     timeline.push({
                         timestamp: nowIso,
                         action: 'WO_ATTACHED',
                         title: '🧾 บันทึกเลขที่ใบงาน (WO)',
                         fromStatus: t.status,
                         toStatus: 'จบงาน',
-                        note: `บันทึกเลขที่ใบงาน: ${cleanWo}`,
+                        note: `บันทึกเลขที่ใบงาน: ${cleanWo}${isLate ? ` (เปิดใบงานล่าช้า ${Math.floor(daysDiff)} วัน | ผู้รับผิดชอบ: ${roleLabel})` : ''}`,
                         actor: recorder
                     });
                 } else {
@@ -1202,14 +1335,52 @@ export default function App() {
                   <Icon name="map" size={12} className="text-sky-600" /> แผนที่น้ำ Real-time
                 </a>
               </div>
-              <button
-                type="button"
-                onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
-                className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a] transition cursor-pointer"
-                title="รีเฟรชข้อมูล"
-              >
-                {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Supervisor Mode Toggle */}
+                {isSupervisor ? (
+                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/15 via-amber-600/15 to-amber-700/15 border border-amber-400/50 px-2.5 sm:px-3 py-1 rounded-full shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[11px] sm:text-xs font-bold text-amber-900 flex items-center gap-1">
+                      <Icon name="shieldCheck" size={14} className="text-amber-600" />
+                      <span className="hidden sm:inline">ผู้ดูแล:</span>
+                      <strong className="text-[#0f2e4a]">{supervisorSession?.supervisorName}</strong>
+                    </span>
+                    {supervisorSession?.coords && (
+                      <span className="hidden md:inline text-[9px] text-amber-800 font-mono bg-amber-100/80 px-1.5 py-0.2 rounded border border-amber-300" title={`พิกัด: ${supervisorSession.coords.lat?.toFixed(5)}, ${supervisorSession.coords.lng?.toFixed(5)}`}>
+                        📍 GPS
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleExitSupervisor}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-bold ml-1 hover:underline cursor-pointer"
+                      title="ออกจากโหมดผู้ดูแล กลับสู่โหมดผู้ใช้งานทั่วไป"
+                    >
+                      ออก
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSupervisorAuthModalOpen(true)}
+                    className="text-[11px] font-bold text-slate-700 hover:text-[#0f2e4a] bg-slate-100 hover:bg-slate-200 border border-slate-300 active:scale-95 px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    title="สลับเข้าสู่โหมดผู้ดูแล (ต้องการ PIN และพิกัด GPS)"
+                  >
+                    <Icon name="shield" size={13} className="text-slate-500" />
+                    <span>ผู้ใช้งาน</span>
+                    <span className="text-[9px] text-[#bca374] font-semibold">⇄ ผู้ดูแล</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
+                  className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a] transition cursor-pointer"
+                  title="รีเฟรชข้อมูล"
+                >
+                  {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
+                </button>
+              </div>
             </header>
             {tab !== 'settings' && (() => {
               // Cascading filter calculations for staff -> area -> project
@@ -1391,6 +1562,7 @@ export default function App() {
                     setHighlightTaskId={setHighlightTaskId}
                     sets={sets}
                     Icon={Icon}
+                    isSupervisor={isSupervisor}
                   />
                 )}
                 {tab === 'monthly' && (
@@ -1455,6 +1627,10 @@ export default function App() {
                     setCropModal={setCropModal}
                     saveTeam={saveTeam}
                     Icon={Icon}
+                    tasks={tasks}
+                    isSupervisor={isSupervisor}
+                    supervisorSession={supervisorSession}
+                    onOpenSupervisorModal={() => setSupervisorAuthModalOpen(true)}
                   />
                 )}
                 {tab === 'settings' && (
@@ -1756,6 +1932,16 @@ export default function App() {
               getTStr={getTStr}
               staffList={allStaffNames}
               task={tasks.find(x => String(x.id) === String(sMod.taskId))}
+              isSupervisor={isSupervisor}
+              supervisorSession={supervisorSession}
+            />
+
+            <SupervisorAuthModal
+              isOpen={supervisorAuthModalOpen}
+              onClose={() => setSupervisorAuthModalOpen(false)}
+              onAuthenticated={handleSupervisorAuthenticated}
+              authorizedStaff={allStaffNames}
+              Icon={Icon}
             />
 
             {infView && (

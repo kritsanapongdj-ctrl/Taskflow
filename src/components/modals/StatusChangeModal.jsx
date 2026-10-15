@@ -8,13 +8,18 @@ export default function StatusChangeModal({
   setSMod,
   getTStr,
   staffList = [],
-  task = null
+  task = null,
+  isSupervisor = false,
+  supervisorSession = null
 }) {
   if (!isOpen) return null;
 
   const handleConfirmClick = () => {
     if (!sMod.recordedBy?.trim()) {
       return alert('กรุณาเลือกหรือระบุชื่อผู้บันทึก');
+    }
+    if (sMod.type === 'penalty_spare_part' && !sMod.reason?.trim()) {
+      return alert('กรุณาระบุหลักฐานหรือเหตุผลที่ตรวจพบว่าผิดเงื่อนไขรออะไหล่ (เช่น ตรวจพบอะไหล่ส่งถึงหน้างานแล้ว แต่งานไม่มีความคืบหน้า)');
     }
     if (sMod.type === 'cancel' && !sMod.reason?.trim()) {
       return alert('กรุณาระบุเหตุผลในการยกเลิกงาน');
@@ -32,6 +37,9 @@ export default function StatusChangeModal({
     if (sMod.type === 'complete') {
       if (sMod.isOverdue && !sMod.overdueReason?.trim()) {
         return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
+      }
+      if (sMod.isLateWO && !sMod.noWO && !sMod.lateWOReason?.trim()) {
+        return alert('กรุณาระบุสาเหตุที่เปิดใบงานล่าช้ากว่ากำหนดเกิน 3 วัน');
       }
       if (!sMod.noWO && !sMod.workOrderNo?.trim()) {
         return alert('กรุณาระบุเลขที่ใบงาน (เช่น LH-123-1234567) หรือ ติ๊กเลือก "ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน" ด้านล่าง');
@@ -55,7 +63,9 @@ export default function StatusChangeModal({
         {/* Header Title */}
         <h3
           className={`font-bold text-lg mb-2 flex items-center gap-1.5 ${
-            sMod.type === 'cancel'
+            sMod.type === 'penalty_spare_part'
+              ? 'text-rose-700'
+              : sMod.type === 'cancel'
               ? 'text-red-500'
               : sMod.type === 'postpone_start'
               ? 'text-sky-600'
@@ -70,7 +80,9 @@ export default function StatusChangeModal({
               : 'text-green-600'
           }`}
         >
-          {sMod.type === 'cancel'
+          {sMod.type === 'penalty_spare_part'
+            ? '🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนนวินัย)'
+            : sMod.type === 'cancel'
             ? '❌ ยกเลิกงาน'
             : sMod.type === 'postpone_start'
             ? '📅 เลื่อนวันเริ่มงาน'
@@ -186,6 +198,39 @@ export default function StatusChangeModal({
             </div>
           )}
 
+          {sMod.type === 'penalty_spare_part' && (
+            <div className="space-y-3">
+              <div className="p-3 bg-rose-50 border-2 border-rose-300 rounded-xl text-rose-900 text-xs leading-relaxed">
+                <div className="flex items-center gap-1.5 font-bold text-rose-950 mb-1">
+                  <span>🚨</span>
+                  <span>คำสั่งลงโทษทางวินัยโดยผู้ดูแล (Supervisor Disciplinary Action):</span>
+                </div>
+                <p className="mb-2">
+                  การเปลี่ยนเป็นสถานะนี้จะล็อกตราประทับทางวินัยถาวรในระบบ Audit Trail และนำไปตัดคะแนน SLA และวินัยหน้างานของ Foreman 100% โดยอัตโนมัติ
+                </p>
+                {supervisorSession?.coords && (
+                  <div className="bg-white/80 p-2 rounded-lg border border-rose-200 text-[10.5px] font-mono text-rose-800 space-y-0.5">
+                    <div>📍 <strong>พิกัดผู้สั่งการ:</strong> {supervisorSession.coords.lat?.toFixed(5)}, {supervisorSession.coords.lng?.toFixed(5)} (±{Math.round(supervisorSession.coords.accuracy || 0)} ม.)</div>
+                    <div>🛡️ <strong>ผู้ดูแลที่ลงนาม:</strong> {supervisorSession.supervisorName || sMod.recordedBy}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-bold text-rose-700">
+                  หลักฐานและข้อเท็จจริงที่ตรวจพบ (บังคับระบุ) *
+                </label>
+                <textarea
+                  rows="3"
+                  className="w-full border-2 border-rose-300 rounded-lg p-2.5 text-sm resize-none bg-rose-50/50 focus:bg-white focus:border-rose-500 outline-none"
+                  placeholder="ระบุข้อเท็จจริง เช่น ตรวจพบของ/อะไหล่ส่งถึงไซต์งานแล้ว แต่งานไม่มีความคืบหน้า..."
+                  value={sMod.reason}
+                  onChange={(e) => setSMod({ ...sMod, reason: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
           {sMod.type === 'issue' && (
             <div className="space-y-2.5">
               <div>
@@ -270,6 +315,99 @@ export default function StatusChangeModal({
                   />
                 </div>
               )}
+              {sMod.isLateWO && !sMod.noWO && (
+                <div className="p-3 bg-amber-50/90 border-2 border-amber-300 rounded-xl space-y-2.5 animate-fadeIn">
+                  <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
+                    <span>⚠️</span>
+                    <span>เปิดใบงานล่าช้ากว่ากำหนด ({sMod.lateWODays || '>3'} วัน นับจากวันจบงานหน้างาน)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    เนื่องจากเปิดใบงานช้าเกิน 3 วัน SLA ระบบต้องบันทึกสาเหตุและกำหนดผู้รับผิดชอบตามเกณฑ์ RACI เพื่อใช้ประเมินศักยภาพ:
+                  </p>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      เลือกหมวดหมู่สาเหตุความล่าช้า:
+                    </label>
+                    <select
+                      className="w-full border border-amber-300 rounded-lg p-2 text-xs bg-white text-slate-800 outline-none"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'boq') {
+                          setSMod({
+                            ...sMod,
+                            lateWOReason: 'รอ BOQ / รายการราคา / ถอดแบบจากช่างหรือโฟร์แมน',
+                            lateWOResponsibleRole: 'foreman'
+                          });
+                        } else if (val === 'admin_delay') {
+                          setSMod({
+                            ...sMod,
+                            lateWOReason: 'แอดมินออกเลขล่าช้า / ติดคิวระบบเอกสารโครงการ',
+                            lateWOResponsibleRole: 'admin'
+                          });
+                        } else if (val === 'customer_wait') {
+                          setSMod({
+                            ...sMod,
+                            lateWOReason: 'รอนัดหมายหรือข้อมูลเพิ่มเติมจากลูกค้า/นิติบุคคล',
+                            lateWOResponsibleRole: 'waived'
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">-- เลือกสาเหตุมาตรฐาน --</option>
+                      <option value="boq">🛠️ รอ BOQ / ราคา / สเปกจากช่าง (รับผิดชอบ: Foreman)</option>
+                      <option value="admin_delay">📋 แอดมินออกเลขช้า / ติดคิวเอกสาร (รับผิดชอบ: Admin)</option>
+                      <option value="customer_wait">🛡️ รอนิติ/ลูกค้าแจ้งข้อมูล (เหตุสุดวิสัย: ยกเว้น)</option>
+                      <option value="other">✏️ อื่นๆ (ระบุเองด้านล่าง)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                      ระบุคำชี้แจง / เหตุผลความล่าช้า (บังคับ) *
+                    </label>
+                    <textarea
+                      rows="2"
+                      className="w-full border border-amber-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-amber-500 outline-none"
+                      placeholder="ระบุสาเหตุ เช่น รอช่างสรุปราคา BOQ, หรือ แอดมินติดงานปิดงวด..."
+                      value={sMod.lateWOReason || ''}
+                      onChange={(e) => setSMod({ ...sMod, lateWOReason: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
+                      ผู้รับผิดชอบหลักในการหักคะแนน RACI:
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {[
+                        { id: 'foreman', label: '🛠️ Foreman', desc: 'ช่าง/BOQ' },
+                        { id: 'admin', label: '📋 Admin', desc: 'ธุรการ/ออกเลข' },
+                        { id: 'shared', label: '🤝 ร่วมกัน (50/50)', desc: 'สองฝ่าย' },
+                        { id: 'waived', label: '🛡️ ยกเว้น', desc: 'เหตุสุดวิสัย' }
+                      ].map((item) => {
+                        const isSelected = (sMod.lateWOResponsibleRole || 'foreman') === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setSMod({ ...sMod, lateWOResponsibleRole: item.id })}
+                            className={`p-1.5 rounded-lg border text-center transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-600 text-white border-amber-700 font-bold shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-50 text-[10.5px]'
+                            }`}
+                          >
+                            <span className="block text-[11px] leading-tight">{item.label}</span>
+                            <span className="block text-[9px] opacity-80">{item.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-green-700">
                   เลขที่ใบงาน (บังคับ: อักษร 2 ตัว-เลข 3 ตัว-เลข 7 ตัว) *

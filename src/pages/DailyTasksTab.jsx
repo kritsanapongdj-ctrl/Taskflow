@@ -16,7 +16,8 @@ export default function DailyTasksTab({
   highlightTaskId = null,
   setHighlightTaskId,
   sets = {},
-  Icon
+  Icon,
+  isSupervisor = false
 }) {
   const [onlyOverdueFilter, setOnlyOverdueFilter] = useState(false);
   const tD = gFilt.date;
@@ -105,6 +106,14 @@ export default function DailyTasksTab({
         <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
           ติดปัญหา/รออะไหล่
+        </span>
+      );
+    }
+    if (status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') {
+      return (
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shrink-0 animate-pulse" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+          🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)
         </span>
       );
     }
@@ -285,9 +294,34 @@ export default function DailyTasksTab({
                   </div>
                 )}
                 {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
-                  <div className="mt-2 text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-xl border border-rose-200 flex items-start gap-1.5">
-                    <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
-                    <span className="break-words font-medium">{t.issueReason}</span>
+                  <div className="space-y-1.5 mt-2">
+                    <div className="text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-xl border border-rose-200 flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
+                      <span className="break-words font-medium">{t.issueReason}</span>
+                    </div>
+                    {(() => {
+                      const repTime = t.issueReportedAt || t.startDate;
+                      if (!repTime) return null;
+                      const waitDays = Math.floor((Date.now() - new Date(repTime).getTime()) / (1000 * 3600 * 24));
+                      if (waitDays <= 45) return null;
+                      return (
+                        <div className="p-2 rounded-xl bg-rose-100 border border-rose-300 text-rose-900 text-[11px] font-bold flex items-center justify-between gap-1.5 animate-pulse">
+                          <div className="flex items-center gap-1.5">
+                            <span>🚨</span>
+                            <span>รออะไหล่เกินเพดาน 45 วัน ({waitDays} วัน)</span>
+                          </div>
+                          {isSupervisor && (
+                            <button
+                              type="button"
+                              onClick={() => initSt(t.id, 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)')}
+                              className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded text-[10px] font-bold shadow-xs cursor-pointer snap-spring shrink-0"
+                            >
+                              ลงโทษตัดคะแนน
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
@@ -361,6 +395,9 @@ export default function DailyTasksTab({
                     <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
                     <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
                     <option value="รออะไหล่/ติดปัญหา">⚠️ รออะไหล่/ติดปัญหา</option>
+                    {(isSupervisor || t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') && (
+                      <option value="ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)">🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)</option>
+                    )}
                     <option value="เลื่อนวันเริ่ม">📅 เลื่อนวันเริ่ม</option>
                     <option value="เลื่อนวันจบ">📅 เลื่อนวันจบ</option>
                     <option value="จบงาน">✅ จบงาน</option>
@@ -484,9 +521,34 @@ export default function DailyTasksTab({
                         </div>
                       )}
                       {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
-                        <div className="mt-1.5 text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
-                          <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
-                          <span className="truncate">{t.issueReason}</span>
+                        <div className="space-y-1 mt-1.5">
+                          <div className="text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
+                            <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
+                            <span className="truncate">{t.issueReason}</span>
+                          </div>
+                          {(() => {
+                            const repTime = t.issueReportedAt || t.startDate;
+                            if (!repTime) return null;
+                            const waitDays = Math.floor((Date.now() - new Date(repTime).getTime()) / (1000 * 3600 * 24));
+                            if (waitDays <= 45) return null;
+                            return (
+                              <div className="p-1.5 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 text-[10.5px] font-bold flex items-center justify-between gap-2 animate-pulse">
+                                <div className="flex items-center gap-1">
+                                  <span>🚨</span>
+                                  <span>รออะไหล่เกิน 45 วัน ({waitDays} วัน)</span>
+                                </div>
+                                {isSupervisor && (
+                                  <button
+                                    type="button"
+                                    onClick={() => initSt(t.id, 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)')}
+                                    className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded text-[9.5px] font-bold shadow-xs cursor-pointer snap-spring shrink-0"
+                                  >
+                                    ลงโทษตัดคะแนน
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                       {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
@@ -557,6 +619,9 @@ export default function DailyTasksTab({
                           <option value="รอดำเนินการ">รอดำเนินการ</option>
                           <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
                           <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
+                          {(isSupervisor || t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') && (
+                            <option value="ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)">🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)</option>
+                          )}
                           <option value="เลื่อนวันเริ่ม">เลื่อนวันเริ่ม</option>
                           <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
                           <option value="จบงาน">จบงาน</option>

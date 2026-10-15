@@ -66,31 +66,23 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
       // Initialize outer layer
       const initOuter = {};
       const initCustomized = {};
-      const currentInner = {
-        str: Math.round(initInner.str.reduce((a, b) => a + b, 0) / 3),
-        agi: Math.round(initInner.agi.reduce((a, b) => a + b, 0) / 3),
-        dex: Math.round(initInner.dex.reduce((a, b) => a + b, 0) / 3),
-        int: Math.round(initInner.int.reduce((a, b) => a + b, 0) / 3),
-        con: Math.round(initInner.con.reduce((a, b) => a + b, 0) / 3),
-        sen: Math.round(initInner.sen.reduce((a, b) => a + b, 0) / 3)
-      };
 
       OUTER_KEYS.forEach(k => {
-        const autoVal = getBaselineOuter(k, currentInner);
         if (staff[k] !== undefined && staff[k] !== null) {
           initOuter[k] = Number(staff[k]);
           initCustomized[k] = (staff.outerCustomized && staff.outerCustomized[k] !== undefined)
             ? !!staff.outerCustomized[k]
-            : Number(staff[k]) !== autoVal;
+            : true;
         } else {
-          initOuter[k] = autoVal;
+          initOuter[k] = 5; // Neutral baseline standard 5 for input slider
           initCustomized[k] = false;
         }
       });
 
       const isAlreadyAssessed = Boolean(
         staff.outerAssessed === true || 
-        (staff.outerCustomized && typeof staff.outerCustomized === 'object' && Object.values(staff.outerCustomized).some(Boolean))
+        (staff.outerCustomized && typeof staff.outerCustomized === 'object' && Object.values(staff.outerCustomized).some(Boolean)) ||
+        (staff.cx !== undefined && staff.cx !== null)
       );
       setOuterAssessed(isAlreadyAssessed);
 
@@ -114,29 +106,7 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
       [statId]: updatedStatList
     };
     setInnerScores(newScores);
-
-    const getListAvg = (list) => {
-      if (!list || list.length === 0) return 5;
-      return Math.round(list.reduce((a, b) => a + b, 0) / list.length);
-    };
-
-    // Update un-customized outer scores according to updated inner averages
-    const updatedInnerStats = {
-      str: statId === 'str' ? getListAvg(updatedStatList) : getListAvg(newScores.str),
-      agi: statId === 'agi' ? getListAvg(updatedStatList) : getListAvg(newScores.agi),
-      dex: statId === 'dex' ? getListAvg(updatedStatList) : getListAvg(newScores.dex),
-      int: statId === 'int' ? getListAvg(updatedStatList) : getListAvg(newScores.int),
-      con: statId === 'con' ? getListAvg(updatedStatList) : getListAvg(newScores.con),
-      sen: statId === 'sen' ? getListAvg(updatedStatList) : getListAvg(newScores.sen)
-    };
-
-    const newOuter = { ...outerScores };
-    OUTER_KEYS.forEach(k => {
-      if (!outerCustomized[k]) {
-        newOuter[k] = getBaselineOuter(k, updatedInnerStats);
-      }
-    });
-    setOuterScores(newOuter);
+    // Decoupled: Changing HOW stats does NOT alter WHAT field performance scores!
   };
 
   const handleOuterScoreChange = (outerKey, value) => {
@@ -147,20 +117,33 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   };
 
   const resetOuterToBaseline = (outerKey) => {
-    const baseVal = getBaselineOuter(outerKey);
-    setOuterScores(prev => ({ ...prev, [outerKey]: baseVal }));
-    setOuterCustomized(prev => ({ ...prev, [outerKey]: false }));
+    setOuterScores(prev => ({ ...prev, [outerKey]: 5 }));
+    setOuterCustomized(prev => ({ ...prev, [outerKey]: true }));
+    setOuterAssessed(true);
   };
 
   const resetAllOuterToBaseline = () => {
     const newOuter = {};
     const newCustomized = {};
     OUTER_KEYS.forEach(k => {
-      newOuter[k] = getBaselineOuter(k);
+      newOuter[k] = 5;
+      newCustomized[k] = true;
+    });
+    setOuterScores(newOuter);
+    setOuterCustomized(newCustomized);
+    setOuterAssessed(true);
+  };
+
+  const clearAllOuterAssessment = () => {
+    const newOuter = {};
+    const newCustomized = {};
+    OUTER_KEYS.forEach(k => {
+      newOuter[k] = 5;
       newCustomized[k] = false;
     });
     setOuterScores(newOuter);
     setOuterCustomized(newCustomized);
+    setOuterAssessed(false);
   };
 
   const currentInnerStatsObj = {

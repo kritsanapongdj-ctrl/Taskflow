@@ -1222,21 +1222,19 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
   const con = Number(statsObj.con) || Number(u.con) || 5;
   const sen = Number(statsObj.sen) || Number(u.sen) || 5;
 
-  const autoValues = {
-    cx: Math.round((con + sen) / 2),
-    tech: Math.round((int + dex) / 2),
-    sla: Math.round((agi + dex) / 2),
-    crisis: Math.round((str + con) / 2),
-    resource: Math.round((str + sen) / 2),
-    innovation: Math.round((int + sen) / 2)
+  const avgInner = (str + agi + dex + int + con + sen) / 6;
+
+  const getGridLevel = (score) => {
+    if (score >= 6.8) return 'high';
+    if (score >= 4.5) return 'med';
+    return 'low';
   };
 
-  const avgInner = (str + agi + dex + int + con + sen) / 6;
+  const howLevel = getGridLevel(avgInner);
 
   if (!isAssessed) {
     return {
       isAssessed: false,
-      autoValues,
       actualValues: {
         cx: null,
         tech: null,
@@ -1249,20 +1247,24 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
       avgOuter: null,
       gap: null,
       alignmentKey: 'unassessed',
-      alignmentTitle: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน',
-      alignmentDesc: 'พนักงานได้รับการประเมินเฉพาะสเตตัสศักยภาพตั้งต้น (HOW) ยังไม่ได้บันทึกผลการประเมิน 6 แกนสมรรถนะหน้างาน (WHAT)',
+      alignmentTitle: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน (WHAT)',
+      alignmentDesc: 'พนักงานได้รับการประเมินเฉพาะสเตตัสศักยภาพตั้งต้น (HOW) ยังไม่ได้บันทึกผลการประเมิน 6 แกนสมรรถนะหน้างานจริง (WHAT)',
       alignmentBadge: 'bg-slate-100 text-slate-600 border-slate-300',
       coachingAdvice: 'เข้าเมนูประเมินเพื่อกำหนดสมรรถนะ 6 แกนหน้างานจริง ช่วยวัดผลสัมฤทธิ์เทียบกับศักยภาพตั้งต้น',
       performanceDna: {
-        title: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน',
+        title: 'ยังไม่ได้รับการประเมินสมรรถนะหน้างาน (WHAT)',
         tag: 'รอการประเมิน 6 แกน',
-        desc: 'ยังไม่มีข้อมูลผลสัมฤทธิ์ 6 แกนสมรรถนะหน้างานจริง (Customer Experience, Technical Expertise, Ops & SLA, Crisis Resolution, Resource Control, Innovation & PM)'
+        desc: 'ยังไม่มีข้อมูลผลสัมฤทธิ์ 6 แกนสมรรถนะหน้างานจริง กรุณาประเมินภาคสนามเพื่อสังเคราะห์ Performance DNA และ 9-Box Grid อย่างสมบูรณ์'
       },
       topOuter: [],
       talentGrid: {
-        title: '⏳ รอการประเมินผลงานหน้างาน (WHAT)',
-        desc: 'ต้องประเมินสมรรถนะ 6 แกนก่อน จึงจะสามารถจัดวางใน 9-Box Operational Talent Grid ได้อย่างแม่นยำ',
-        badge: 'bg-slate-100 text-slate-700 border-slate-300',
+        key: `${howLevel}_unassessed`,
+        howLevel,
+        whatLevel: null,
+        isAssessed: false,
+        title: '⏳ รอผลการประเมินผลงานหน้างาน (WHAT)',
+        desc: `ประเมินศักยภาพตั้งต้นแล้ว (HOW: ${avgInner.toFixed(1)}/10 อยู่ในระดับ ${howLevel === 'high' ? 'ศักยภาพสูง' : howLevel === 'med' ? 'ศักยภาพปานกลาง' : 'ศักยภาพพื้นฐาน'}) รอผลประเมิน 6 แกนหน้างานเพื่อระบุช่องใน 9-Box`,
+        badge: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
         action: 'เปิดเมนูประเมินเพื่อบันทึกผลสัมฤทธิ์ 6 แกนหน้างานจริง'
       },
       riskAlerts: [],
@@ -1272,13 +1274,23 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
     };
   }
 
+  // Pure decoupled WHAT assessment values: Explicit field scores with 5 as neutral baseline
   const actualValues = {
-    cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : autoValues.cx,
-    tech: (u.tech !== null && u.tech !== undefined) ? Number(u.tech) : autoValues.tech,
-    sla: (u.sla !== null && u.sla !== undefined) ? Number(u.sla) : autoValues.sla,
-    crisis: (u.crisis !== null && u.crisis !== undefined) ? Number(u.crisis) : autoValues.crisis,
-    resource: (u.resource !== null && u.resource !== undefined) ? Number(u.resource) : autoValues.resource,
-    innovation: (u.innovation !== null && u.innovation !== undefined) ? Number(u.innovation) : autoValues.innovation
+    cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : 5,
+    tech: (u.tech !== null && u.tech !== undefined) ? Number(u.tech) : 5,
+    sla: (u.sla !== null && u.sla !== undefined) ? Number(u.sla) : 5,
+    crisis: (u.crisis !== null && u.crisis !== undefined) ? Number(u.crisis) : 5,
+    resource: (u.resource !== null && u.resource !== undefined) ? Number(u.resource) : 5,
+    innovation: (u.innovation !== null && u.innovation !== undefined) ? Number(u.innovation) : 5
+  };
+
+  const autoValues = {
+    cx: Math.round((con + sen) / 2),
+    tech: Math.round((int + dex) / 2),
+    sla: Math.round((agi + dex) / 2),
+    crisis: Math.round((str + con) / 2),
+    resource: Math.round((str + sen) / 2),
+    innovation: Math.round((int + sen) / 2)
   };
 
   const outerMeta = [
@@ -1452,12 +1464,6 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
   }
 
   // 9-Box Operational Talent Grid (HOW Potential vs WHAT Performance)
-  const getGridLevel = (score) => {
-    if (score >= 6.8) return 'high';
-    if (score >= 4.5) return 'med';
-    return 'low';
-  };
-  const howLevel = getGridLevel(avgInner);
   const whatLevel = getGridLevel(avgOuter);
 
   const talentGridMatrix = {
@@ -1517,7 +1523,13 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
     }
   };
 
-  const talentGrid = talentGridMatrix[`${howLevel}_${whatLevel}`] || talentGridMatrix['med_med'];
+  const talentGrid = {
+    key: `${howLevel}_${whatLevel}`,
+    howLevel,
+    whatLevel,
+    isAssessed: true,
+    ...(talentGridMatrix[`${howLevel}_${whatLevel}`] || talentGridMatrix['med_med'])
+  };
 
   // 4-Point Operational Risk Engine (Role-Smart Filter)
   const riskAlerts = [];
@@ -1706,4 +1718,769 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
     pairingRecommendation
   };
 };
+
+/**
+ * Full 3x3 McKinsey 9-Box Talent Matrix Definitions
+ * Y-Axis = Potential / Agility (HOW: Core Stats) -> High, Med, Low
+ * X-Axis = Performance / Field Execution (WHAT: Outer Layer) -> Low, Med, High
+ */
+export const NINE_BOX_DEFINITIONS = [
+  // Row 0: High Potential (HOW: High >= 6.8)
+  {
+    code: 'high_low',
+    howLevel: 'high',
+    whatLevel: 'low',
+    row: 0,
+    col: 0,
+    title: 'Under-Leveraged Talent',
+    thai: 'ช้างเผือกที่ยังไม่ได้ปล่อยของ',
+    category: 'High Potential / Low Performance',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+    colorHex: '#f59e0b',
+    desc: 'มีศักยภาพแฝงสูงมากแต่ผลงานจริงยังไม่ออก อาจหมดไฟ (Burnout) หรือติดขัดอุปสรรคหน้างาน',
+    action: 'พูดคุย 1-on-1 ทันทีเพื่อค้นหาสาเหตุ มอบหมายงานให้ตรงจุด และปลดล็อกอุปสรรค'
+  },
+  {
+    code: 'high_med',
+    howLevel: 'high',
+    whatLevel: 'med',
+    row: 0,
+    col: 1,
+    title: 'High-Potential Core',
+    thai: 'ดาวเด่นรอการขัดเกลา',
+    category: 'High Potential / Moderate Performance',
+    badgeClass: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+    colorHex: '#6366f1',
+    desc: 'มีศักยภาพพื้นฐานสูงมาก ผลงานอยู่ในเกณฑ์มาตรฐาน พร้อมทะลุขีดจำกัดสู่ระดับยอดเยี่ยม',
+    action: 'เพิ่มความท้าทาย มอบหมายเคสวิกฤตหรือเคสยากเพื่อให้ได้ปล่อยของและสร้างผลงานเชิงประจักษ์'
+  },
+  {
+    code: 'high_high',
+    howLevel: 'high',
+    whatLevel: 'high',
+    row: 0,
+    col: 2,
+    title: 'Star Leader',
+    thai: 'เสาหลักผู้ขับเคลื่อนโครงการ',
+    category: 'High Potential / High Performance',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    colorHex: '#10b981',
+    desc: 'ศักยภาพสูงและผลงานจริงยอดเยี่ยมรอบด้าน เป็นเสาหลักที่ไว้ใจได้สูงสุดในการดูแลหมู่บ้าน',
+    action: 'มอบหมายเป็นหัวหน้าชุดซ่อมบำรุง / มอบหมายเคส VIP หรือโครงการปรับปรุงสาธารณูปโภคใหญ่ เตรียมสืบทอดตำแหน่ง'
+  },
+
+  // Row 1: Medium Potential (HOW: Med 4.5 - 6.7)
+  {
+    code: 'med_low',
+    howLevel: 'med',
+    whatLevel: 'low',
+    row: 1,
+    col: 0,
+    title: 'Inconsistent Performer',
+    thai: 'ผลงานแกว่ง ต้องกระตุ้น',
+    category: 'Medium Potential / Low Performance',
+    badgeClass: 'bg-orange-100 text-orange-900 border-orange-300',
+    colorHex: '#f97316',
+    desc: 'มีพื้นฐานพอใช้แต่ผลงานหน้างานยังไม่สม่ำเสมอ ขาดความต่อเนื่องในการส่งมอบงานให้ได้ตามมาตรฐาน',
+    action: 'กำหนด Check-point ถี่ขึ้น ติดตามการปิดใบงานรายวัน และทบทวนขั้นตอนระเบียบปฏิบัติงาน'
+  },
+  {
+    code: 'med_med',
+    howLevel: 'med',
+    whatLevel: 'med',
+    row: 1,
+    col: 1,
+    title: 'Dependable Pillar',
+    thai: 'ฟันเฟืองหลักที่มั่นคง',
+    category: 'Medium Potential / Moderate Performance',
+    badgeClass: 'bg-blue-100 text-blue-900 border-blue-300',
+    colorHex: '#3b82f6',
+    desc: 'ผลงานและศักยภาพสอดคล้องกันตามมาตรฐาน เป็นกำลังหลักที่พึ่งพาได้ในงานประจำวัน',
+    action: 'รักษาระดับมาตรฐาน และค้นหาความถนัดเฉพาะทาง 1-2 ด้าน เพื่อสร้างจุดเด่นเฉพาะตัว'
+  },
+  {
+    code: 'med_high',
+    howLevel: 'med',
+    whatLevel: 'high',
+    row: 1,
+    col: 2,
+    title: 'High-Discipline Achiever',
+    thai: 'นักสู้ผู้ทุ่มเทด้วยวินัยสูง',
+    category: 'Medium Potential / High Performance',
+    badgeClass: 'bg-teal-100 text-teal-900 border-teal-300',
+    colorHex: '#14b8a6',
+    desc: 'ผลงานหน้างานโดดเด่นแซงศักยภาพคำนวณ ขยัน มีวินัยสูง และทุ่มเทเพื่อโครงการอย่างแท้จริง',
+    action: 'ชื่นชมและถอดบทเรียนการทำงาน (Best Practice) ส่งเสริมให้เรียนรู้ทักษะเทคนิคเชิงลึกเพิ่มเติม'
+  },
+
+  // Row 2: Low Potential (HOW: Low < 4.5)
+  {
+    code: 'low_low',
+    howLevel: 'low',
+    whatLevel: 'low',
+    row: 2,
+    col: 0,
+    title: 'Urgent OJT Required',
+    thai: 'ต้องเข้าโปรแกรมฟื้นฟูเร่งด่วน',
+    category: 'Low Potential / Low Performance',
+    badgeClass: 'bg-rose-100 text-rose-900 border-rose-300',
+    colorHex: '#ef4444',
+    desc: 'ทั้งศักยภาพและผลงานต่ำกว่าเกณฑ์ปฏิบัติงาน เป็นจุดเสี่ยงของทีมที่ต้องได้รับการดูแลใกล้ชิด',
+    action: 'จัดพี่เลี้ยงประกบ 1:1 ห้ามทำงานเดี่ยว เข้าแผนพัฒนาทักษะหน้างาน (OJT) ประเมินผลทุก 15 วัน'
+  },
+  {
+    code: 'low_med',
+    howLevel: 'low',
+    whatLevel: 'med',
+    row: 2,
+    col: 1,
+    title: 'Steady Operator',
+    thai: 'ผู้ปฏิบัติงานมาตรฐาน',
+    category: 'Low Potential / Moderate Performance',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    colorHex: '#64748b',
+    desc: 'ทำงานตามหน้าที่และคำสั่งได้ครบถ้วน แต่อาจยังต้องการคำแนะนำในเคสที่ไม่คุ้นเคย',
+    action: 'กำหนดเช็คลิสต์การตรวจงานให้ชัดเจน และจัดคู่หูกับช่างอาวุโสในงานซับซ้อน'
+  },
+  {
+    code: 'low_high',
+    howLevel: 'low',
+    whatLevel: 'high',
+    row: 2,
+    col: 2,
+    title: 'Field Hero',
+    thai: 'ยอดฝีมือหน้างานตัวจริง',
+    category: 'Low Potential / High Performance',
+    badgeClass: 'bg-cyan-100 text-cyan-900 border-cyan-300',
+    colorHex: '#06b6d4',
+    desc: 'แม้มิติการประเมินพื้นฐานจะยังต่ำ แต่ผลลัพธ์หน้างานจริงแก้ปัญหาได้ดีเยี่ยม ไว้วางใจได้',
+    action: 'เสริมความรู้เชิงทฤษฎีและการใช้ระบบดิจิทัล เพื่อลดความเหนื่อยล้าในการใช้แรงกายเพียงอย่างเดียว'
+  }
+];
+
+/**
+ * Calculates Strategic Business Risk Index based on TaskFlow telemetry and field competency scores.
+ */
+export const calculateBusinessRiskIndex = (staff, telemetry = {}, outerSummary = {}) => {
+  const roleProfile = getRoleTargetProfile(staff?.role || staff?.class || staff?.classId);
+  const isOfficer = roleProfile.key === 'officer';
+
+  // 1. SLA Speed & Overdue Risk
+  let slaLevel = 'low';
+  let slaReason = 'ไม่มีสถิติงวดงานล่าช้า รักษามาตรฐาน SLA ได้ดี';
+  if (!isOfficer && telemetry) {
+    const late = telemetry.lateTasksCount || 0;
+    const missed = telemetry.totalViolations || 0;
+    if (late >= 3 || missed >= 4) {
+      slaLevel = 'high';
+      slaReason = `พบงานปิดช้า/หลุด SLA สะสม ${missed} รายการ เสี่ยงต่อความพึงพอใจโครงการ`;
+    } else if (late >= 1 || missed >= 1) {
+      slaLevel = 'moderate';
+      slaReason = `พบงานหลุด SLA ${missed} รายการ อยู่ในระดับที่ต้องเฝ้าระวัง`;
+    }
+  }
+
+  // 2. Quality & Defect Risk
+  let qualityLevel = 'low';
+  let qualityReason = 'มาตรฐานงานซ่อมประณีต ควบคุมคุณภาพได้ตามเกณฑ์';
+  const dexVal = Number(staff?.dex) || 5;
+  const techVal = outerSummary?.actualValues?.tech;
+  if (dexVal <= 4 || (techVal !== null && techVal !== undefined && techVal <= 4)) {
+    qualityLevel = 'high';
+    qualityReason = 'คะแนน DEX หรือ TECH ต่ำกว่าเกณฑ์มาตรฐาน เสี่ยงเกิดงานซ่อมซ้ำ (Recurring Defect)';
+  } else if (dexVal <= 5) {
+    qualityLevel = 'moderate';
+    qualityReason = 'ความแม่นยำอยู่ในระดับเกณฑ์ขั้นต่ำ ควรตรวจทานงานซ้ำก่อนส่งมอบ';
+  }
+
+  // 3. Fiscal & Governance Risk
+  let fiscalLevel = 'low';
+  let fiscalReason = 'ควบคุมขั้นตอนงบประมาณ ใบงาน และคลังอะไหล่ได้โปร่งใส';
+  const resourceVal = outerSummary?.actualValues?.resource;
+  const staleCount = telemetry?.staleTasksCount || 0;
+  const lateWOCount = telemetry?.lateWOCount || 0;
+  if (staleCount > 0 || lateWOCount >= 2 || (resourceVal !== null && resourceVal !== undefined && resourceVal <= 4)) {
+    fiscalLevel = 'high';
+    fiscalReason = `พบงานค้างเกิน 30 วัน หรือใบงานออกช้าสะสม ${lateWOCount + staleCount} รายการ เสี่ยงงบประมาณและการตรวจสอบ`;
+  } else if (lateWOCount >= 1 || (resourceVal !== null && resourceVal !== undefined && resourceVal <= 5)) {
+    fiscalLevel = 'moderate';
+    fiscalReason = 'มีประวัติออกใบงานล่าช้าเล็กน้อย อยู่ระหว่างการติดตามการออกเอกสาร';
+  }
+
+  // Composite Risk Score
+  const riskWeights = { low: 1, moderate: 4, high: 8 };
+  const compositeScore = Math.round((riskWeights[slaLevel] + riskWeights[qualityLevel] + riskWeights[fiscalLevel]) / 3);
+  let overallLevel = 'low';
+  let overallBadge = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+  let overallTitle = 'ระดับความเสี่ยงต่ำ (Low Risk)';
+  if (compositeScore >= 6) {
+    overallLevel = 'high';
+    overallBadge = 'bg-rose-50 text-rose-700 border-rose-300';
+    overallTitle = 'ระดับความเสี่ยงสูง (High Operational Risk)';
+  } else if (compositeScore >= 3) {
+    overallLevel = 'moderate';
+    overallBadge = 'bg-amber-50 text-amber-700 border-amber-300';
+    overallTitle = 'ระดับความเสี่ยงปานกลาง (Moderate Risk)';
+  }
+
+  return {
+    overallLevel,
+    overallBadge,
+    overallTitle,
+    compositeScore,
+    slaRisk: { level: slaLevel, reason: slaReason },
+    qualityRisk: { level: qualityLevel, reason: qualityReason },
+    fiscalRisk: { level: fiscalLevel, reason: fiscalReason }
+  };
+};
+
+/**
+ * Calculates Succession Readiness Index for career progression (Foreman/Admin -> Lead/Senior).
+ */
+export const calculateSuccessionReadiness = (staff, archAnalysis = {}, outerSummary = {}) => {
+  const roleFit = archAnalysis?.roleFitPct || 70;
+  const rawObj = archAnalysis?.rawStats || {};
+  const rawList = Object.values(rawObj);
+  const avgInner = rawList.length > 0 ? (rawList.reduce((a, b) => a + b, 0) / rawList.length) : 5;
+  const avgOuter = outerSummary?.isAssessed && outerSummary?.avgOuter !== null ? outerSummary.avgOuter : null;
+
+  let score = 0;
+  if (avgOuter !== null) {
+    score = Math.round((roleFit * 0.4) + (avgInner * 3) + (avgOuter * 3));
+  } else {
+    score = Math.round((roleFit * 0.6) + (avgInner * 3.5));
+    score = Math.min(score, 75); // Cap until WHAT is evaluated
+  }
+  score = Math.min(Math.max(score, 10), 98);
+
+  let readinessLevel = 'developing';
+  let statusTitle = 'Developing (กำลังพัฒนาศักยภาพ)';
+  let statusThai = 'ต้องการเวลาพัฒนา 2-3 ปี';
+  let badgeClass = 'bg-amber-50 text-amber-800 border-amber-300';
+  let timeHorizon = '2-3 ปี';
+  let keyMilestones = [
+    'ยกระดับสเตตัสหลักในตำแหน่งปัจจุบันให้ได้เกณฑ์มาตรฐาน ≥ 6/10',
+    'ประเมินสมรรถนะหน้างาน 6 แกน (WHAT) ให้ครบถ้วน'
+  ];
+
+  if (score >= 85) {
+    readinessLevel = 'ready_now';
+    statusTitle = 'Ready Now (พร้อมเลื่อนขั้นทันที)';
+    statusThai = 'มีความพร้อมเป็นผู้นำทีม / พี่เลี้ยงอาวุโส';
+    badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-300';
+    timeHorizon = '3 - 6 เดือน';
+    keyMilestones = [
+      'มอบหมายบทบาทผู้ช่วยหัวหน้างาน หรือ Lead ในโครงการใหญ่',
+      'ทำหน้าที่เป็นพี่เลี้ยง (Mentor) ถ่ายทอด Best Practice แก่พนักงานใหม่',
+      'เข้าร่วมประชุมวิเคราะห์งบประมาณและวางแผน PM ประจำปี'
+    ];
+  } else if (score >= 70) {
+    readinessLevel = 'ready_medium';
+    statusTitle = 'Ready in 1-2 Years (พร้อมใน 1-2 ปี)';
+    statusThai = 'ดาวเด่นสายปฏิบัติการ อยู่ระหว่างเก็บเกี่ยวประสบการณ์';
+    badgeClass = 'bg-blue-50 text-blue-800 border-blue-300';
+    timeHorizon = '1 - 2 ปี';
+    keyMilestones = [
+      'ขยายขอบเขตการตัดสินใจหน้างานในเคสที่มีความซับซ้อน',
+      'พัฒนาทักษะการเจรจากับลูกบ้านและการบริหารผู้รับเหมาเพิ่มเติม',
+      'รักษาระดับผลงาน SLA และลดอัตรางานซ่อมซ้ำต่อเนื่อง'
+    ];
+  }
+
+  return {
+    score,
+    readinessLevel,
+    statusTitle,
+    statusThai,
+    badgeClass,
+    timeHorizon,
+    keyMilestones,
+    isProvisional: avgOuter === null
+  };
+};
+
+/**
+ * Returns the normalized role type ('foreman' | 'admin' | 'officer') for a staff member.
+ */
+export const getStaffRoleType = (staff, sets = {}) => {
+  if (!staff) return 'officer';
+  const classObj = (sets?.staffClasses || []).find(c => c.id === staff.classId);
+  const target = getRoleTargetProfile(classObj || staff.role || staff.classId || staff.name);
+  return target.key; // 'admin' | 'foreman' | 'officer'
+};
+
+/**
+ * Returns the list of assigned project names for a staff member based on sets.emails.
+ */
+export const getStaffAssignedProjects = (staffName, sets = {}) => {
+  if (!staffName || !sets?.emails) return [];
+  const cleanTargetName = staffName.trim().toLowerCase();
+  const entries = (sets.emails || []).filter(e => {
+    const parts = e.split('|');
+    const nameInEntry = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
+    return nameInEntry === cleanTargetName;
+  });
+  const projects = entries.flatMap(e => {
+    const projStr = e.split('|')[1] || '';
+    return projStr.split(',').map(p => p.trim());
+  }).filter(Boolean);
+  return Array.from(new Set(projects));
+};
+
+/**
+ * Aggregates live TaskFlow operational telemetry for a staff member based on RACI rules.
+ * Strictly separates:
+ * - Officer: EXEMPT from operational task metric penalties (governance role).
+ * - Foreman: Field execution, SLA speed, retroactive postponements, BOQ delivery, parts integrity.
+ * - Admin: Work order creation speed (3-day SLA), system integrity, 15th cut-off billing discipline.
+ */
+export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
+  if (!staff || !staff.name) {
+    return {
+      isExempt: false,
+      roleType: 'unknown',
+      roleTitle: 'ไม่ระบุสายอาชีพ',
+      roleBadge: 'ไม่ระบุสายอาชีพ',
+      badgeClass: 'bg-slate-100 text-slate-600 border-slate-300',
+      assignedProjects: [],
+      totalTasks: 0,
+      completedTasks: 0,
+      slaRate: 100,
+      penalties: [],
+      alerts: []
+    };
+  }
+
+  const roleType = getStaffRoleType(staff, sets);
+  const staffName = staff.name.trim();
+  const assignedProjects = getStaffAssignedProjects(staffName, sets);
+  const hasAllProjects = assignedProjects.includes('ทั้งหมด');
+
+  // 1. Officer Role: Strictly EXEMPT from TaskFlow operational task metric penalties
+  if (roleType === 'officer') {
+    return {
+      isExempt: true,
+      roleType: 'officer',
+      roleTitle: 'เจ้าหน้าที่บริหารโครงการ (LH Officer)',
+      roleBadge: '🛡️ เจ้าหน้าที่บริหารโครงการ (LH Officer) — ได้รับการยกเว้นจากการนำสถิติ TaskFlow มาคิดคะแนน',
+      badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-400/40',
+      reason: 'เจ้าหน้าที่บริหารโครงการ / ผจก. LH มีบทบาทเป็นผู้กำกับดูแล (Supervisor & Approver) จึงไม่ถูกตัดคะแนนจาก SLA หน้างาน',
+      assignedProjects,
+      totalTasks: 0,
+      completedTasks: 0,
+      activeTasks: 0,
+      slaRate: 100,
+      penalties: [],
+      alerts: [
+        {
+          type: 'info',
+          title: 'ผู้ประเมินและกำกับดูแล (Evaluator Role)',
+          desc: 'บุคลากรนี้มีสถานะเป็นผู้กำกับดูแลโครงการ คะแนนศักยภาพมาจากแบบประเมินผู้บริหาร ไม่นำสถิติ SLA รายงานมาหักคะแนน'
+        }
+      ]
+    };
+  }
+
+  // 2. Filter tasks within the staff member's operational scope
+  const scopedTasks = tasks.filter(t => {
+    if (!t) return false;
+    const taskStaff = (t.staffName || '').trim().toLowerCase();
+    const isDirectStaffMatch = taskStaff && taskStaff === staffName.toLowerCase();
+    
+    if (isDirectStaffMatch) return true;
+    if (hasAllProjects) return true;
+    if (assignedProjects.length > 0 && t.project) {
+      return assignedProjects.some(p => t.project.includes(p) || p.includes(t.project));
+    }
+    return false;
+  });
+
+  const totalAssigned = scopedTasks.length;
+  const completedTasks = scopedTasks.filter(t => t.status === 'จบงาน' || t.status === 'จบงาน(รอใบงาน)');
+  const activeTasks = scopedTasks.filter(t => t.status === 'รอดำเนินการ' || t.status === 'กำลังดำเนินการ');
+  const issueTasks = scopedTasks.filter(t => t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา');
+  const canceledTasks = scopedTasks.filter(t => t.status === 'ยกเลิก');
+
+  // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue
+  const activeOverdue = scopedTasks.filter(t => t.overdueStatus === 'เกินกำหนด' && t.status !== 'จบงาน' && t.status !== 'ยกเลิก');
+  const lateCompleted = completedTasks.filter(t => {
+    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
+    if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
+    return false;
+  });
+  const onTimeCompleted = completedTasks.length - lateCompleted.length;
+  const slaRate = completedTasks.length > 0 ? Math.round((Math.max(0, onTimeCompleted) / completedTasks.length) * 100) : 100;
+
+  // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม)
+  const retroactiveStartPostpones = scopedTasks.filter(t => {
+    if (t.status === 'เลื่อนวันเริ่ม' && t.startPostponedAt && t.previousStartDate) {
+      return new Date(t.startPostponedAt) > new Date(t.previousStartDate);
+    }
+    return false;
+  });
+
+  // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน)
+  const retroactiveEndPostpones = scopedTasks.filter(t => {
+    if (t.postponedAt && t.previousEndDate) {
+      const diffMs = new Date(t.postponedAt).getTime() - new Date(t.previousEndDate).getTime();
+      return diffMs >= 86400000; // >= 1 day
+    }
+    return false;
+  });
+
+  // Helper to determine attribution with precedence:
+  // 1. Explicit supervisor audit resolution (slaAuditResolution)
+  // 2. Explicit WO attribution recorded upon completion (woAttribution)
+  // 3. Automated heuristic fallback
+  const getTaskAttribution = (t, defaultType = 'unassigned') => {
+    if (t.slaAuditResolution && t.slaAuditResolution.responsibleRole) {
+      return {
+        role: t.slaAuditResolution.responsibleRole, // 'foreman' | 'admin' | 'shared' | 'waived'
+        reason: t.slaAuditResolution.reason || '',
+        by: t.slaAuditResolution.supervisorName || 'ผู้ดูแล',
+        timestamp: t.slaAuditResolution.timestamp,
+        coords: t.slaAuditResolution.coords,
+        isExplicit: true
+      };
+    }
+    if (t.woAttribution && t.woAttribution.responsibleRole) {
+      return {
+        role: t.woAttribution.responsibleRole,
+        reason: t.woAttribution.reason || '',
+        by: t.woAttribution.recordedBy || 'ระบบ',
+        timestamp: t.woAttribution.timestamp,
+        isExplicit: true
+      };
+    }
+    // Heuristic fallback for late WO
+    const text = `${t.overdueReason || ''} ${t.issueReason || ''}`.toLowerCase();
+    if (text.includes('boq') || text.includes('ราคา') || text.includes('สเปก') || text.includes('เสนอราคา')) {
+      return { role: 'foreman', reason: 'ตรวจพบสาเหตุระบุเกี่ยวกับ BOQ/ราคา (อัตโนมัติ)', isExplicit: false };
+    }
+    return { role: defaultType, reason: '', isExplicit: false };
+  };
+
+  // Rule 4: Late Work Order issuance (> 3 days between completedDate and WO assignment)
+  const lateWOTasks = scopedTasks.filter(t => {
+    if (t.lateWorkOrder) return true;
+    if (t.status === 'จบงาน' && t.completedDate && t.workOrderNo) {
+      const woEntry = (t.timeline || []).find(e => e.action === 'WO_ATTACHED');
+      if (woEntry && t.completedDate) {
+        const diffDays = (new Date(woEntry.timestamp).getTime() - new Date(t.completedDate).getTime()) / (1000 * 3600 * 24);
+        return diffDays > 3;
+      }
+    }
+    return false;
+  });
+
+  const lateWOForemanAttributed = lateWOTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'admin');
+    if (attr.role === 'waived') return false;
+    return attr.role === 'foreman' || attr.role === 'shared';
+  });
+
+  const lateWOAdminAttributed = lateWOTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'admin');
+    if (attr.role === 'waived') return false;
+    return attr.role === 'admin' || attr.role === 'shared';
+  });
+
+  // Rule 5: Abandoned / Ghost tasks (> 7 days without update)
+  const nowMs = Date.now();
+  const staleGhostTasks = activeTasks.filter(t => {
+    const lastTime = t.updatedAt || t.startDate || t.receivedDate;
+    if (!lastTime) return false;
+    const diffDays = (nowMs - new Date(lastTime).getTime()) / (1000 * 3600 * 24);
+    return diffDays > 7;
+  });
+
+  // Rule 6: Waiting for parts ceiling (> 45 days)
+  const sparePartsOver45Days = issueTasks.filter(t => {
+    const reportTime = t.issueReportedAt || t.startDate;
+    if (!reportTime) return false;
+    const diffDays = (nowMs - new Date(reportTime).getTime()) / (1000 * 3600 * 24);
+    return diffDays > 45;
+  });
+
+  // Rule 6B: Disciplinary Revocation Flag ("ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)")
+  const penaltySparePartsTasks = scopedTasks.filter(t => {
+    return t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)' || t.penaltyRevokeSla === true;
+  });
+
+  // Rule 7: Duplicate Work Order Cancellation
+  const duplicateCancellations = canceledTasks.filter(t => {
+    const text = (t.cancelReason || '').toLowerCase();
+    return text.includes('ซ้ำ') || text.includes('duplicate') || text.includes('เปิดเบิ้ล');
+  });
+
+  // Rule 8: Monthly Billing Cycle (15th Cut-off Rule) - Evaluated for Admin
+  const billingEligible = completedTasks.filter(t => t.completedDate);
+  const billingViolations = billingEligible.filter(t => {
+    if (!t.completedDate) return false;
+    const compParts = t.completedDate.split('-');
+    if (compParts.length < 3) return false;
+    const day = parseInt(compParts[2], 10);
+    const compMonth = `${compParts[0]}-${compParts[1]}`;
+    const isFinishedBefore15 = day <= 15;
+    
+    // If finished on or before 15th, must be billed in that same month or earlier
+    if (isFinishedBefore15 && t.billingStatus !== 'ส่งเบิกแล้ว') {
+      const currentMonth = new Date().toISOString().substring(0, 7);
+      if (currentMonth > compMonth) return true; // Past the cycle without billing
+    }
+    return false;
+  });
+
+  // Collect All Discrepancy Tasks for Audit
+  const discrepancyTasks = [];
+
+  lateWOTasks.forEach(t => {
+    let diffDays = 3;
+    if (t.completedDate) {
+      const woEntry = (t.timeline || []).find(e => e.action === 'WO_ATTACHED');
+      if (woEntry) {
+        diffDays = Math.max(3, Math.round((new Date(woEntry.timestamp).getTime() - new Date(t.completedDate).getTime()) / (1000 * 3600 * 24)));
+      }
+    }
+    discrepancyTasks.push({
+      task: t,
+      type: 'LATE_WO',
+      title: 'ออกใบงานช้าเกิน 3 วัน',
+      ruleNo: 4,
+      desc: `จบงานหน้างานเมื่อ ${t.completedDate || '-'} แต่เปิดใบงานช้าไป ${diffDays} วัน`,
+      days: diffDays,
+      attribution: getTaskAttribution(t, 'admin')
+    });
+  });
+
+  staleGhostTasks.forEach(t => {
+    const lastTime = t.updatedAt || t.startDate || t.receivedDate;
+    const diffDays = Math.round((nowMs - new Date(lastTime).getTime()) / (1000 * 3600 * 24));
+    discrepancyTasks.push({
+      task: t,
+      type: 'STALE_TASK',
+      title: 'งานค้างทิ้งร้างเกิน 7 วัน',
+      ruleNo: 5,
+      desc: `ไม่มีการอัปเดตสถานะในระบบมาแล้ว ${diffDays} วัน`,
+      days: diffDays,
+      attribution: getTaskAttribution(t, 'shared')
+    });
+  });
+
+  sparePartsOver45Days.forEach(t => {
+    const reportTime = t.issueReportedAt || t.startDate;
+    const diffDays = Math.round((nowMs - new Date(reportTime).getTime()) / (1000 * 3600 * 24));
+    discrepancyTasks.push({
+      task: t,
+      type: 'SPARE_PARTS_45D',
+      title: 'รออะไหล่เกินเพดาน 45 วัน',
+      ruleNo: 6,
+      desc: `ติดปัญหารออะไหล่มาแล้ว ${diffDays} วัน (เกินเพดานอนุโลม 45 วัน)`,
+      days: diffDays,
+      attribution: getTaskAttribution(t, 'foreman')
+    });
+  });
+
+  penaltySparePartsTasks.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'PENALTY_SPARE_PART',
+      title: '🚨 ผิดเงื่อนไขรออะไหล่ (คำสั่งวินัย)',
+      ruleNo: 6.5,
+      desc: t.penaltyAudit?.reason || 'ตรวจพบอะไหล่ถึงหน้างานแล้วแต่งานไม่คืบหน้า (ถูกประทับตราตัดคะแนน)',
+      days: 0,
+      attribution: {
+        role: 'foreman',
+        reason: t.penaltyAudit?.reason || 'คำสั่งลงโทษโดยผู้ดูแล',
+        by: t.penaltyAudit?.supervisorName || 'ผู้ดูแล',
+        timestamp: t.penaltyAudit?.timestamp,
+        coords: t.penaltyAudit?.coords,
+        isExplicit: true
+      }
+    });
+  });
+
+  retroactiveStartPostpones.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'RETROACTIVE_START',
+      title: 'เลื่อนวันเริ่มย้อนหลัง',
+      ruleNo: 2,
+      desc: `ขอเลื่อนวันเริ่มหลังจากเลยกำหนดเริ่มเดิม (${t.previousStartDate || '-'})`,
+      days: 0,
+      attribution: getTaskAttribution(t, 'foreman')
+    });
+  });
+
+  retroactiveEndPostpones.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'RETROACTIVE_END',
+      title: 'เลื่อนวันจบหลังเลยกำหนด',
+      ruleNo: 3,
+      desc: `ขอเลื่อนวันจบหลังจากเลยกำหนดเดิมเกิน 1 วัน (${t.previousEndDate || '-'})`,
+      days: 0,
+      attribution: getTaskAttribution(t, 'foreman')
+    });
+  });
+
+  duplicateCancellations.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'DUPLICATE_WO',
+      title: 'เปิดงานซ้ำซ้อนจนต้องยกเลิก',
+      ruleNo: 7,
+      desc: t.cancelReason || 'ยกเลิกเนื่องจากเปิดใบงานซ้ำ',
+      days: 0,
+      attribution: getTaskAttribution(t, 'admin')
+    });
+  });
+
+  billingViolations.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'BILLING_CUTOFF',
+      title: 'หลุดรอบส่งเบิกเงินวันที่ 15',
+      ruleNo: 8,
+      desc: `งานจบก่อนวันที่ 15 (${t.completedDate}) แต่ยังไม่ส่งเบิกในรอบเดือน`,
+      days: 0,
+      attribution: getTaskAttribution(t, 'admin')
+    });
+  });
+
+  // Calculate Deductions & Recommendations
+  const penalties = [];
+  const alerts = [];
+
+  if (roleType === 'foreman') {
+    // Foreman Penalties: SLA Speed, Proactive Planning, Time Discipline, Crisis Discipline
+    if (lateCompleted.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(3, Math.ceil(lateCompleted.length * 0.5)),
+        reason: `จบงานช้ากว่ากำหนดจำนวน ${lateCompleted.length} งาน (หักคะแนน SLA Speed)`
+      });
+    }
+    if (retroactiveStartPostpones.length > 0) {
+      penalties.push({
+        axis: 'tech',
+        points: Math.min(2, retroactiveStartPostpones.length),
+        reason: `ขอเลื่อนวันเริ่มย้อนหลังจำนวน ${retroactiveStartPostpones.length} ครั้ง (หักคะแนนการวางแผนเชิงรุก)`
+      });
+    }
+    if (retroactiveEndPostpones.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(2, retroactiveEndPostpones.length),
+        reason: `ขอเลื่อนวันจบหลังเลยกำหนดเดิมเกิน 1 วัน จำนวน ${retroactiveEndPostpones.length} ครั้ง (หักคะแนนวินัยเวลา)`
+      });
+    }
+    if (lateWOForemanAttributed.length > 0) {
+      penalties.push({
+        axis: 'tech',
+        points: Math.min(2, lateWOForemanAttributed.length),
+        reason: `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา จำนวน ${lateWOForemanAttributed.length} รายการ (หักคะแนนความเร็วทำราคา)`
+      });
+    }
+    // Rule 5: Stale tasks (70% responsibility)
+    const activeUnwaivedStale = staleGhostTasks.filter(t => getTaskAttribution(t, 'shared').role !== 'waived');
+    if (activeUnwaivedStale.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(3, Math.ceil(activeUnwaivedStale.length * 0.7)),
+        reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 70% ด้านการขับเคลื่อนงาน)`
+      });
+    }
+    if (penaltySparePartsTasks.length > 0) {
+      penalties.push({
+        axis: 'crisis',
+        points: Math.min(4, penaltySparePartsTasks.length * 2),
+        reason: `🚨 ถูกผู้ดูแลลงโทษสถานะ "ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)" จำนวน ${penaltySparePartsTasks.length} รายการ (หักคะแนนวินัยวิกฤต)`
+      });
+      alerts.push({
+        type: 'danger',
+        title: '🚨 ตรวจพบการถูกลงโทษทางวินัยอะไหล่',
+        desc: `พบงานที่ถูกผู้ดูแลประทับตรา "ผิดเงื่อนไขรออะไหล่" จำนวน ${penaltySparePartsTasks.length} รายการ ส่งผลให้ถูกตัดคะแนน SLA และ Crisis ทันที`
+      });
+    }
+    if (sparePartsOver45Days.length > 0) {
+      alerts.push({
+        type: 'warning',
+        title: '⚠️ งานรออะไหล่เกินเพดาน 45 วัน',
+        desc: `มีงานรออะไหล่นานเกิน 45 วันจำนวน ${sparePartsOver45Days.length} รายการ ควรตรวจสอบและเร่งรัดผู้ผลิต/ผู้รับเหมา`
+      });
+    }
+  } else if (roleType === 'admin') {
+    // Admin Penalties: WO SLA Speed, Billing Cycle Discipline (15th Cut-off), System Integrity
+    if (lateWOAdminAttributed.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(3, Math.ceil(lateWOAdminAttributed.length * 0.5)),
+        reason: `ออกใบงานช้าเกิน 3 วัน SLA จำนวน ${lateWOAdminAttributed.length} รายการ (หักคะแนนความเร็วระบบเอกสาร)`
+      });
+    }
+    // Rule 5: Stale tasks (30% responsibility)
+    const activeUnwaivedStale = staleGhostTasks.filter(t => getTaskAttribution(t, 'shared').role !== 'waived');
+    if (activeUnwaivedStale.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(2, Math.ceil(activeUnwaivedStale.length * 0.3)),
+        reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 30% ด้านการติดตามระบบ)`
+      });
+    }
+    if (duplicateCancellations.length > 0) {
+      penalties.push({
+        axis: 'innovation',
+        points: Math.min(2, duplicateCancellations.length),
+        reason: `เปิดใบงานซ้ำซ้อนจนต้องยกเลิกจำนวน ${duplicateCancellations.length} รายการ (หักคะแนนความถูกต้องของระบบ)`
+      });
+    }
+    if (billingViolations.length > 0) {
+      penalties.push({
+        axis: 'resource',
+        points: Math.min(3, Math.ceil(billingViolations.length * 0.5)),
+        reason: `ไม่ส่งเบิกงานที่จบก่อนวันที่ 15 ภายในรอบเดือน จำนวน ${billingViolations.length} รายการ (หักคะแนนวินัยการเงิน)`
+      });
+      alerts.push({
+        type: 'warning',
+        title: '⚠️ หลุดรอบส่งเบิกเงินตามเกณฑ์วันที่ 15',
+        desc: `พบงานที่ปิดจบก่อนวันที่ 15 แต่ยังไม่ส่งเบิกในรอบเดือนจำนวน ${billingViolations.length} รายการ`
+      });
+    }
+  }
+
+  return {
+    isExempt: false,
+    roleType,
+    roleTitle: roleType === 'foreman' ? 'วิศวกร/โฟร์แมนหน้างาน (Foreman)' : 'ธุรการ/ผู้ประสานงานโครงการ (Admin)',
+    roleBadge: roleType === 'foreman' 
+      ? '🛠️ โฟร์แมน/วิศวกรภาคสนาม (Field Operations) — ผูกโยงสถิติงานหน้างานจริง'
+      : '📋 ธุรการ/ผู้ประสานงานโครงการ (System & Fiscal Operations) — ผูกโยงสถิติระบบและรอบเบิกจ่าย',
+    badgeClass: roleType === 'foreman' ? 'bg-amber-500/20 text-amber-300 border-amber-400/40' : 'bg-blue-500/20 text-blue-300 border-blue-400/40',
+    assignedProjects,
+    totalTasks: totalAssigned,
+    completedTasks: completedTasks.length,
+    activeTasks: activeTasks.length,
+    issueTasks: issueTasks.length,
+    canceledTasks: canceledTasks.length,
+    activeOverdueTasks: activeOverdue.length,
+    lateFinishedTasks: lateCompleted.length,
+    onTimeFinishedTasks: onTimeCompleted,
+    slaRate,
+    retroactiveStartPostpones: retroactiveStartPostpones.length,
+    retroactiveEndPostpones: retroactiveEndPostpones.length,
+    lateWOTasks: lateWOTasks.length,
+    lateWOForemanAttributed: lateWOForemanAttributed.length,
+    lateWOAdminAttributed: lateWOAdminAttributed.length,
+    staleGhostTasks: staleGhostTasks.length,
+    sparePartsOver45Days: sparePartsOver45Days.length,
+    penaltySparePartsTasks: penaltySparePartsTasks.length,
+    duplicateCancellations: duplicateCancellations.length,
+    billingViolations: billingViolations.length,
+    discrepancyTasks,
+    penalties,
+    alerts
+  };
+};
+
 

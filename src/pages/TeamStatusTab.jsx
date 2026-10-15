@@ -6,6 +6,7 @@ import RadarChart from '../components/charts/RadarChart';
 import StaffAssessmentReportModal from '../components/reports/StaffAssessmentReportModal';
 import AITalentAdvisorModal from '../components/modals/AITalentAdvisorModal';
 import TeamCalibrationModal from '../components/modals/TeamCalibrationModal';
+import DiscrepancyAuditModal from '../components/modals/DiscrepancyAuditModal';
 import archetypesData from '../data/archetypes.json';
 import { 
   calculateArchetypeKey,
@@ -25,7 +26,13 @@ import {
   DATA_ANCHOR_GUIDE,
   getStatDisplay,
   getCorporateArchetypePersona,
-  generateHeuristicTalentDiagnostic
+  generateHeuristicTalentDiagnostic,
+  aggregateStaffTaskTelemetry,
+  getStaffRoleType,
+  getStaffAssignedProjects,
+  NINE_BOX_DEFINITIONS,
+  calculateBusinessRiskIndex,
+  calculateSuccessionReadiness
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -46,7 +53,11 @@ export default function TeamStatusTab({
   setCropImg: _setCropImg,
   saveTeam,
   Icon,
-  setAlert: _setAlert
+  setAlert: _setAlert,
+  tasks = [],
+  isSupervisor = false,
+  supervisorSession = null,
+  onOpenSupervisorModal = null
 }) {
   const [assessMode, setAssessMode] = useState(false);
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
@@ -55,7 +66,47 @@ export default function TeamStatusTab({
   const [staffReportModalOpen, setStaffReportModalOpen] = useState(false);
   const [aiAdvisorModalOpen, setAiAdvisorModalOpen] = useState(false);
   const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
-    if (!teamUnlk) return (<div className="bg-white p-8 rounded-xl shadow border text-center max-w-sm mx-auto mt-10"><h2 className="text-lg font-bold mb-4 text-[#0f2e4a]">เข้าสู่ระบบทีมงาน</h2><input type="password" placeholder="รหัสผ่าน" className="border p-3 rounded-lg w-full mb-4 text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-[#bca374]" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&pwd==='1312'&&setTeamUnlk(true)} /><button type="button" onClick={()=>pwd==='1312'&&setTeamUnlk(true)} className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-4 py-2 rounded-lg w-full font-bold transition">ยืนยัน</button></div>);
+  const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState('performance'); // 'performance' | 'field_logs' | 'settings'
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+
+  if (!teamUnlk && !isSupervisor) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center max-w-md mx-auto mt-12 animate-in zoom-in-95">
+        <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-inner">
+          <Icon name="users" size={28} className="text-[#0f2e4a]" />
+        </div>
+        <h2 className="text-lg font-bold mb-1 text-[#0f2e4a]">ระบบสถานะและประเมินศักยภาพทีมงาน</h2>
+        <p className="text-xs text-slate-500 mb-6">Talent Engine 2.0 & Competency Framework</p>
+        
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setTeamUnlk(true)}
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition border border-slate-300 flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+          >
+            <Icon name="eye" size={15} />
+            <span>เข้าชมในโหมดผู้ใช้งานทั่วไป (View Only)</span>
+          </button>
+          
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-200"></div>
+            <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">หรือ</span>
+            <div className="flex-grow border-t border-slate-200"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenSupervisorModal || (() => {})}
+            className="w-full bg-gradient-to-r from-[#0f2e4a] to-[#1a446c] hover:from-[#163a5d] hover:to-[#225686] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Icon name="shieldCheck" size={16} className="text-amber-400" />
+            <span>ยืนยันตัวตนโหมดผู้ดูแล (Supervisor PIN + GPS)</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
     const sList = sets.staffStats || [];
     const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
@@ -270,14 +321,20 @@ export default function TeamStatusTab({
         </span>
       );
 
+      const outerSummary = analyzeOuterLayer(u, statsObj);
       const outers = [
-        { k: 'cx', n: 'Customer Exp.', val: Math.round((statsObj.con + statsObj.sen)/2) },
-        { k: 'tech', n: 'Tech. Expertise', val: Math.round((statsObj.int + statsObj.dex)/2) },
-        { k: 'sla', n: 'Ops & SLA', val: Math.round((statsObj.agi + statsObj.dex)/2) },
-        { k: 'crisis', n: 'Crisis Resolv.', val: Math.round((statsObj.str + statsObj.con)/2) },
-        { k: 'resource', n: 'Resource Ctrl.', val: Math.round((statsObj.str + statsObj.sen)/2) },
-        { k: 'innovation', n: 'Innovation', val: Math.round((statsObj.int + statsObj.sen)/2) }
-      ].map(o => ({...o, finalVal: (u[o.k] !== null && u[o.k] !== undefined) ? u[o.k] : o.val}));
+        { k: 'cx', n: 'Customer Exp.' },
+        { k: 'tech', n: 'Tech. Expertise' },
+        { k: 'sla', n: 'Ops & SLA' },
+        { k: 'crisis', n: 'Crisis Resolv.' },
+        { k: 'resource', n: 'Resource Ctrl.' },
+        { k: 'innovation', n: 'Innovation' }
+      ].map(o => ({
+        ...o,
+        finalVal: outerSummary.isAssessed && outerSummary.actualValues[o.k] !== null && outerSummary.actualValues[o.k] !== undefined
+          ? outerSummary.actualValues[o.k]
+          : null
+      }));
 
       return (
           <>
@@ -307,76 +364,212 @@ export default function TeamStatusTab({
                   alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
                }}
             />
-        <div key={u.id} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative overflow-y-auto custom-scrollbar flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] rounded-xl h-full min-h-[450px]">
+        <div key={u.id || 'new'} className="animate-fade-in-up flex-1 w-full bg-[#08080c] relative flex flex-col rounded-xl overflow-hidden shadow-2xl h-full min-h-[450px]">
+           {/* Ambient Background Lights */}
            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#08080c] to-[#08080c] pointer-events-none"></div>
-           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[150px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
+           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#bca374] rounded-full blur-[160px] opacity-10 pointer-events-none mix-blend-screen translate-x-1/3 -translate-y-1/4"></div>
 
-           <div className="w-full md:w-[55%] p-5 lg:p-8 z-10 flex flex-col border-r border-white/10 relative h-auto">
-              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 max-w-[85%]">
-                  {/* Dual View Mode Toggle [🎮 RPG] / [💼 Corporate] */}
-                  <div className="flex items-center bg-slate-950/90 p-0.5 rounded-full border border-white/20 text-[10px] shadow-lg backdrop-blur-md shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setTalentViewMode('rpg')}
-                      className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
-                        talentViewMode === 'rpg'
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                      title="มุมมองแบบเกมจำลองศักยภาพ (RPG View)"
-                    >
-                      <span>🎮 RPG</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTalentViewMode('corporate')}
-                      className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
-                        talentViewMode === 'corporate'
-                          ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                      title="มุมมองสมรรถนะองค์กรเชิงวิชาชีพ (Corporate Competency View)"
-                    >
-                      <span>💼 Corporate</span>
-                    </button>
-                  </div>
+           {/* =========================================================================
+               EXECUTIVE COMMAND HEADER (TOP NAVIGATION & CONTROLS)
+               ========================================================================= */}
+           <div className="bg-[#0b101b] border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-white z-20">
+              {/* Left: Staff Identity Pill */}
+              <div className="flex items-center gap-2.5 min-w-0">
+                 <div className="w-9 h-9 rounded-full border border-[#bca374] overflow-hidden bg-[#0f2e4a] flex items-center justify-center shrink-0 shadow-xs">
+                    {u.image ? (
+                       <img src={u.image} className="w-full h-full object-cover" alt={u.name} />
+                    ) : (
+                       <Icon name="user" size={18} className="text-[#bca374]" />
+                    )}
+                 </div>
+                 <div className="truncate text-left">
+                    <div className="flex items-center gap-2 flex-wrap">
+                       <h3 className="font-black text-sm text-white truncate">{u.name || 'พนักงานใหม่'}</h3>
+                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${telemetry.badgeClass}`}>
+                          {telemetry.roleTitle}
+                       </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                       {role?.name || 'ไม่ระบุสายอาชีพ'} • {displayTitle}
+                    </span>
+                 </div>
+              </div>
 
-                  <button 
-                    type="button" 
-                    onClick={() => setAiAdvisorModalOpen(true)} 
-                    title="วิเคราะห์ศักยภาพเชิงลึกด้วย AI (AI Talent Coach)" 
-                    className="bg-gradient-to-r from-amber-500/20 to-amber-600/30 hover:from-amber-500/40 hover:to-amber-600/50 border border-amber-400/40 text-amber-300 hover:text-white px-2.5 py-1.5 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(245,158,11,0.2)] flex items-center gap-1.5 text-xs font-bold"
-                  >
-                    <Icon name="sparkles" size={15} className="text-amber-300" />
-                    <span className="hidden sm:inline">AI วิเคราะห์</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setStaffReportModalOpen(true)} 
-                    title="พิมพ์ / ส่งออกรายงานประเมินรายบุคคล (Character Sheet A4)" 
-                    className="bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/30 text-sky-200 hover:text-white p-2 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center"
-                  >
-                    <Icon name="printer" size={18} />
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setCinematicViewMode(cinematicViewMode === 'spider' ? 'avatar' : 'spider')} 
-                    title={cinematicViewMode === 'spider' ? 'ดูภาพตัวละคร' : 'ดู Performance Spider Map'} 
-                    className={`p-2 rounded-full backdrop-blur-sm transition border ${
-                      cinematicViewMode === 'spider' 
-                        ? 'bg-[#bca374] text-[#0f2e4a] border-[#e6d0a7] shadow-[0_0_15px_rgba(188,163,116,0.5)]' 
-                        : 'bg-white/10 hover:bg-white/20 text-white/70 hover:text-white border-white/10'
+              {/* Center: 3 Segmented Sub-Tabs */}
+              <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-white/10 shadow-inner">
+                 <button
+                    type="button"
+                    onClick={() => setActiveSubTab('performance')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                       activeSubTab === 'performance'
+                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
                     }`}
-                  >
-                    <Icon name={cinematicViewMode === 'spider' ? 'user' : 'network'} size={18} />
-                  </button>
-                  <button type="button" onClick={() => setTeamEditMode(true)} title="ตั้งค่าข้อมูลพื้นฐาน" className="bg-white/10 hover:bg-white/20 text-white/50 hover:text-white p-2 rounded-full backdrop-blur-sm transition">
-                    <Icon name="settings" size={18} />
-                  </button>
-                  <button type="button" onClick={() => setAssessMode(true)} title="ประเมินศักยภาพบุคลากร" className="bg-[#bca374]/20 hover:bg-[#bca374]/40 border border-[#bca374]/30 text-[#e6d0a7] hover:text-white p-2 rounded-full backdrop-blur-sm transition shadow-[0_0_15px_rgba(188,163,116,0.3)]">
-                    <Icon name="clipboard-check" size={18} />
-                  </button>
-                </div>
+                 >
+                    <Icon name="award" size={14} className={activeSubTab === 'performance' ? 'text-amber-300' : 'text-slate-400'} />
+                    <span>1. สมรรถนะ &amp; ศักยภาพ</span>
+                 </button>
+
+                 <button
+                    type="button"
+                    onClick={() => setActiveSubTab('field_logs')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
+                       activeSubTab === 'field_logs'
+                          ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                    }`}
+                 >
+                    <Icon name="clipboardList" size={14} className={activeSubTab === 'field_logs' ? 'text-sky-300' : 'text-slate-400'} />
+                    <span>2. บันทึกงาน &amp; Telemetry</span>
+                    {telemetry.discrepancyTasks && telemetry.discrepancyTasks.length > 0 && (
+                       <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white animate-pulse">
+                          {telemetry.discrepancyTasks.length}
+                       </span>
+                    )}
+                 </button>
+
+                 <button
+                    type="button"
+                    onClick={() => setActiveSubTab('settings')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                       activeSubTab === 'settings'
+                          ? 'bg-slate-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                    }`}
+                 >
+                    <Icon name="settings" size={14} className={activeSubTab === 'settings' ? 'text-amber-300' : 'text-slate-400'} />
+                    <span>3. ตั้งค่า &amp; ข้อมูล</span>
+                 </button>
+              </div>
+
+              {/* Right: Mode & Quick Actions */}
+              <div className="flex items-center gap-2">
+                 {/* Dual Mode Switch */}
+                 <div className="flex items-center bg-slate-950/90 p-0.5 rounded-full border border-white/20 text-[10px]">
+                    <button
+                       type="button"
+                       onClick={() => setTalentViewMode('rpg')}
+                       className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
+                          talentViewMode === 'rpg'
+                             ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 shadow-xs'
+                             : 'text-slate-400 hover:text-white'
+                       }`}
+                       title="มุมมองแบบจำลองเกม (RPG Mode)"
+                    >
+                       <span>🎮 RPG</span>
+                    </button>
+                    <button
+                       type="button"
+                       onClick={() => setTalentViewMode('corporate')}
+                       className={`px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 ${
+                          talentViewMode === 'corporate'
+                             ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs'
+                             : 'text-slate-400 hover:text-white'
+                       }`}
+                       title="มุมมองสมรรถนะองค์กรผู้บริหาร (Corporate Mode)"
+                    >
+                       <span>💼 Corporate</span>
+                    </button>
+                 </div>
+
+                 {/* Supervisor Status Button */}
+                 <button
+                    type="button"
+                    onClick={() => {
+                       if (!isSupervisor && onOpenSupervisorModal) onOpenSupervisorModal();
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition flex items-center gap-1 ${
+                       isSupervisor
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                          : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                    }`}
+                    title={isSupervisor ? `ผู้ดูแล: ${supervisorSession?.supervisorName || 'อนุมัติแล้ว'}` : 'คลิกเพื่อสลับเป็นโหมดผู้ดูแล (PIN)'}
+                 >
+                    <Icon name={isSupervisor ? 'shieldCheck' : 'user'} size={12} className={isSupervisor ? 'text-emerald-400' : 'text-slate-400'} />
+                    <span>{isSupervisor ? '🛡️ ผู้ดูแล' : '👤 ผู้ใช้งาน'}</span>
+                 </button>
+
+                 {/* AI Advisor Button */}
+                 <button
+                    type="button"
+                    onClick={() => setAiAdvisorModalOpen(true)}
+                    className="bg-gradient-to-r from-amber-500/20 to-amber-600/30 hover:from-amber-500/40 hover:to-amber-600/50 border border-amber-400/40 text-amber-300 hover:text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs transition"
+                    title="วิเคราะห์ศักยภาพด้วย AI"
+                 >
+                    <Icon name="sparkles" size={13} className="text-amber-300" />
+                    <span className="hidden sm:inline">AI วิเคราะห์</span>
+                 </button>
+
+                 {/* More Actions Dropdown */}
+                 <div className="relative">
+                    <button
+                       type="button"
+                       onClick={() => setMoreActionsOpen(!moreActionsOpen)}
+                       className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 transition"
+                       title="การดำเนินการเพิ่มเติม"
+                    >
+                       <Icon name="moreVertical" size={15} />
+                    </button>
+
+                    {moreActionsOpen && (
+                       <>
+                          <div className="fixed inset-0 z-40" onClick={() => setMoreActionsOpen(false)}></div>
+                          <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-white/15 rounded-xl shadow-2xl py-1 z-50 text-xs animate-in fade-in zoom-in-95">
+                             <button
+                                type="button"
+                                onClick={() => { setMoreActionsOpen(false); setAssessMode(true); }}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 text-slate-200"
+                             >
+                                <Icon name="clipboardCheck" size={14} className="text-indigo-400" />
+                                <span>เปิดตัวช่วยประเมิน (Wizard)</span>
+                             </button>
+                             <button
+                                type="button"
+                                onClick={() => { setMoreActionsOpen(false); setStaffReportModalOpen(true); }}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 text-slate-200"
+                             >
+                                <Icon name="printer" size={14} className="text-sky-400" />
+                                <span>พิมพ์รายงาน A4 (Character Sheet)</span>
+                             </button>
+                             <button
+                                type="button"
+                                onClick={() => {
+                                   setMoreActionsOpen(false);
+                                   if (!isSupervisor) {
+                                      if (onOpenSupervisorModal) onOpenSupervisorModal();
+                                      else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อตรวจสอบเทียบระดับศักยภาพทั้งทีม');
+                                      return;
+                                   }
+                                   setCalibrationModalOpen(true);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 text-slate-200"
+                             >
+                                <Icon name="sliders" size={14} className="text-amber-400" />
+                                <span>ตรวจสอบเทียบระดับทั้งทีม (Calibration)</span>
+                             </button>
+                             <div className="border-t border-white/10 my-1"></div>
+                             <button
+                                type="button"
+                                onClick={() => { setMoreActionsOpen(false); setActiveSubTab('settings'); }}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2 text-slate-200"
+                             >
+                                <Icon name="edit" size={14} className="text-slate-400" />
+                                <span>แก้ไขข้อมูลพื้นฐาน &amp; สเตตัส</span>
+                             </button>
+                          </div>
+                       </>
+                    )}
+                 </div>
+              </div>
+           </div>
+
+           {/* =========================================================================
+               SUB-TAB 1: CHARACTER & PERFORMANCE (HERO STAGE + ANALYSIS SUITE)
+               ========================================================================= */}
+           {activeSubTab === 'performance' && (
+              <div className="flex-1 w-full overflow-y-auto custom-scrollbar flex flex-col md:flex-row relative">
+                 {/* Left Column (Scrollable Intelligence Suite) */}
+                 <div className="w-full md:w-[58%] p-5 lg:p-7 border-r border-white/10 space-y-5 text-left">
 
               <div className="animate-in fade-in slide-in-from-left-8 duration-700 mt-auto mb-auto py-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-5 mb-4">
@@ -406,6 +599,119 @@ export default function TeamStatusTab({
                      {bottomDescText}
                   </div>
                 </div>
+
+                {/* Project Scope & TaskFlow Operational Telemetry Grounding */}
+                {(() => {
+                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+                  return (
+                    <div className="mb-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2 backdrop-blur-md">
+                      {/* Role Classification & Project Scope Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-slate-800">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${telemetry.badgeClass}`}>
+                            {telemetry.roleBadge}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                          <Icon name="mapPin" size={12} className="text-[#bca374]" />
+                          <span>ขอบเขต:</span>
+                          {telemetry.assignedProjects.length > 0 ? (
+                            <span className="text-[#e6d0a7] font-bold">
+                              {telemetry.assignedProjects.join(', ')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">ไม่ระบุโครงการ</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* If Officer: Show clear Exemption Notice */}
+                      {telemetry.isExempt ? (
+                        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-400/20 text-amber-200 text-[11px] flex items-start gap-2">
+                          <Icon name="shield" size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-amber-300 font-bold block">บทบาทผู้กำกับดูแลและประเมินโครงการ (Evaluator Role)</strong>
+                            <span>{telemetry.reason}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        /* If Foreman or Admin: Show Real TaskFlow KPI Telemetry */
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                              <span className="text-[9px] text-slate-400 block">งานในขอบเขต</span>
+                              <strong className="text-xs text-white font-bold">{telemetry.totalTasks} งาน</strong>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                              <span className="text-[9px] text-slate-400 block">ปิดงานสำเร็จ</span>
+                              <strong className="text-xs text-emerald-400 font-bold">{telemetry.completedTasks} งาน</strong>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                              <span className="text-[9px] text-slate-400 block">อัตราตรงเวลา (SLA)</span>
+                              <strong className={`text-xs font-bold ${telemetry.slaRate >= 85 ? 'text-emerald-400' : telemetry.slaRate >= 70 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                {telemetry.slaRate}%
+                              </strong>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+                              <span className="text-[9px] text-slate-400 block">งานค้างเกินกำหนด</span>
+                              <strong className={`text-xs font-bold ${telemetry.activeOverdueTasks > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                                {telemetry.activeOverdueTasks} งาน
+                              </strong>
+                            </div>
+                          </div>
+
+                          {/* Operational RACI Flags / Penalty Breakdown */}
+                          {telemetry.penalties && telemetry.penalties.length > 0 && (
+                            <div className="space-y-1 pt-1">
+                              {telemetry.penalties.map((pen, pIdx) => (
+                                <div key={pIdx} className="p-2 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-200 text-[10px] flex items-start justify-between gap-2">
+                                  <span className="leading-snug">⚠️ {pen.reason}</span>
+                                  <span className="font-bold text-rose-400 font-mono shrink-0">-{pen.points} pt ({pen.axis.toUpperCase()})</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Disciplinary / Warning Alerts */}
+                          {telemetry.alerts && telemetry.alerts.length > 0 && (
+                            <div className="space-y-1">
+                              {telemetry.alerts.map((alt, aIdx) => (
+                                <div key={aIdx} className={`p-2 rounded-lg text-[10px] flex items-start gap-1.5 ${
+                                  alt.type === 'danger' ? 'bg-rose-900/40 border border-rose-500/50 text-rose-200' : 'bg-amber-900/30 border border-amber-500/40 text-amber-200'
+                                }`}>
+                                  <Icon name={alt.type === 'danger' ? 'alertOctagon' : 'alertTriangle'} size={13} className="shrink-0 mt-0.5" />
+                                  <div>
+                                    <strong className="block font-bold">{alt.title}</strong>
+                                    <span>{alt.desc}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Discrepancy Audit Trigger Button */}
+                          {telemetry.discrepancyTasks && telemetry.discrepancyTasks.length > 0 && (
+                            <div className="pt-2">
+                              <button
+                                type="button"
+                                onClick={() => setDiscrepancyModalOpen(true)}
+                                className="w-full py-2 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-amber-300 hover:text-amber-200 text-xs font-bold transition flex items-center justify-between gap-2 shadow-xs cursor-pointer group"
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <Icon name="scale" size={14} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                                  <span>ตรวจสอบงานผิดเงื่อนไข & วินิจฉัยความรับผิดชอบ</span>
+                                </span>
+                                <span className="bg-amber-500/30 text-amber-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                                  {telemetry.discrepancyTasks.length} รายการ
+                                </span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 
                 <div className="grid grid-cols-2 2xl:grid-cols-3 gap-x-4 lg:gap-x-6 gap-y-2 lg:gap-y-3 mb-4 lg:mb-5">
                    {[
@@ -603,13 +909,132 @@ export default function TeamStatusTab({
                   );
                 })()}
               </div>
+
+              {/* Full Intelligence Suite Analysis (Corporate / RPG) */}
+              {renderAnalysis()}
            </div>
 
-           <div className="w-full md:w-[45%] min-h-[300px] h-full flex items-start justify-center relative overflow-hidden">
+           {/* Right Column: Sticky Full-Figure Hero Stage */}
+           <div className="w-full md:w-[42%] md:sticky md:top-0 self-start md:h-[calc(100vh-140px)] min-h-[460px] flex items-center justify-center relative overflow-hidden bg-radial from-slate-900/50 to-transparent">
+              {/* View Mode Switcher for Hero Stage */}
+              <div className="absolute top-3 z-30 flex items-center bg-slate-950/80 p-1 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
+                 <button
+                    type="button"
+                    onClick={() => setCinematicViewMode('avatar')}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
+                       cinematicViewMode === 'avatar' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                 >
+                    <Icon name="user" size={12} />
+                    <span>Avatar</span>
+                 </button>
+                 <button
+                    type="button"
+                    onClick={() => setCinematicViewMode('spider')}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
+                       cinematicViewMode === 'spider' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                 >
+                    <Icon name="swords" size={12} />
+                    <span>Radar</span>
+                 </button>
+                 <button
+                    type="button"
+                    onClick={() => setCinematicViewMode('ninebox')}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
+                       cinematicViewMode === 'ninebox' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                 >
+                    <Icon name="grid" size={12} />
+                    <span>9-Box</span>
+                 </button>
+              </div>
+
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
               
               <div className="relative z-10 w-full h-full flex items-center justify-center p-4 lg:p-8 animate-in fade-in slide-in-from-right-8 duration-1000 delay-300 fill-mode-both">
-                {cinematicViewMode === 'spider' ? (
+                {cinematicViewMode === 'ninebox' ? (
+                  <div className="w-full flex flex-col items-center justify-center max-w-[340px] bg-slate-900/90 p-4 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div className="w-full flex justify-between items-center mb-2">
+                      <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider flex items-center gap-1">
+                        <Icon name="grid" size={13} /> MCKINSEY 9-BOX MATRIX
+                      </span>
+                      {outerSummary.isAssessed ? (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          ประเมินแล้ว
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          รอประเมิน WHAT
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 3x3 Grid */}
+                    <div className="w-full grid grid-cols-3 gap-1.5 my-1">
+                      {NINE_BOX_DEFINITIONS.map(cell => {
+                        const isMatched = outerSummary.isAssessed && outerSummary.talentGrid?.key === cell.code;
+                        const isPotentialRow = !outerSummary.isAssessed && outerSummary.talentGrid?.howLevel === cell.howLevel;
+                        return (
+                          <div
+                            key={cell.code}
+                            className={`p-2 rounded-lg border flex flex-col justify-between min-h-[56px] text-center transition-all ${
+                              isMatched
+                                ? 'bg-sky-500/30 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] ring-2 ring-sky-300'
+                                : isPotentialRow
+                                ? 'bg-amber-500/10 border-amber-400/40 text-amber-200'
+                                : 'bg-white/5 border-white/5 text-slate-400'
+                            }`}
+                          >
+                            <span className={`text-[8.5px] font-bold leading-tight ${isMatched ? 'text-white font-black' : ''}`}>
+                              {cell.title}
+                            </span>
+                            {isMatched && (
+                              <span className="text-[7.5px] font-black text-sky-300 uppercase mt-0.5">
+                                ● พนักงาน
+                              </span>
+                            )}
+                            {isPotentialRow && !outerSummary.isAssessed && cell.whatLevel === 'med' && (
+                              <span className="text-[7px] text-amber-300 font-bold leading-none mt-0.5">
+                                แถว HOW
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="w-full mt-2 p-2.5 rounded-lg bg-white/5 border border-white/10 text-[9.5px] text-slate-300 leading-snug">
+                      {outerSummary.isAssessed ? (
+                        <>
+                          <div className="flex justify-between items-center mb-1">
+                            <strong className="text-sky-300 font-bold">{outerSummary.talentGrid?.title}</strong>
+                            <span className="text-[8.5px] text-slate-400 font-mono">
+                              HOW: {outerSummary.avgInner} | WHAT: {outerSummary.avgOuter}
+                            </span>
+                          </div>
+                          <p className="text-[8.5px] text-slate-400">{outerSummary.talentGrid?.action}</p>
+                        </>
+                      ) : (
+                        <div className="flex flex-col gap-1 text-center">
+                          <span className="text-amber-300 font-bold">
+                            ⏳ ระบุศักยภาพแล้ว (HOW: {outerSummary.avgInner}/10)
+                          </span>
+                          <span className="text-[8px] text-slate-400">
+                            ยังไม่ได้ประเมินผลงาน 6 แกน (WHAT) เพื่อระบุตำแหน่งใน Matrix
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setAssessMode(true)}
+                            className="mt-1 py-1 px-2.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[9.5px] transition shadow-xs"
+                          >
+                            + บันทึกผลงาน 6 แกน
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : cinematicViewMode === 'spider' ? (
                   <div className="w-full flex flex-col items-center justify-center max-w-[320px] bg-slate-900/85 p-5 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
                     <div className="w-full flex justify-between items-center mb-2">
                       <span className="text-[10px] uppercase font-bold text-[#bca374] tracking-wider flex items-center">
@@ -663,26 +1088,634 @@ export default function TeamStatusTab({
                   </div>
                 ) : (
                   u.image ? (
-                     <img src={u.image} className="max-w-[85%] max-h-[90%] object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] transform scale-105" style={{maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'}} alt="Character" />
+                    <div className="relative w-full h-full flex flex-col items-center justify-end pb-3 group">
+                      {/* Ambient Golden Stage Pedestal Glow */}
+                      <div className="absolute bottom-4 w-3/4 h-12 bg-[#bca374]/20 blur-2xl rounded-full pointer-events-none"></div>
+                      <div className="absolute bottom-2 w-2/3 h-1.5 bg-gradient-to-r from-transparent via-[#bca374]/60 to-transparent rounded-full shadow-[0_0_20px_rgba(188,163,116,0.8)] pointer-events-none"></div>
+                      
+                      <img
+                        src={u.image}
+                        className="max-w-[95%] max-h-[85vh] object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] drop-shadow-[0_0_25px_rgba(188,163,116,0.25)] transition-transform duration-500 hover:scale-105 relative z-10 select-none"
+                        alt={u.name}
+                      />
+                    </div>
                   ) : (
-                     <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                       <Icon name="user" size={64} className="text-slate-600" />
-                     </div>
+                    <div className="w-64 h-64 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                      <Icon name="user" size={64} className="text-slate-600" />
+                    </div>
                   )
                 )}
               </div>
               
-              <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#08080c] to-transparent pointer-events-none z-20"></div>
-              
-              <div className="absolute bottom-10 -right-10 text-[150px] font-black text-white/5 whitespace-nowrap pointer-events-none z-0 transform -rotate-12 select-none tracking-tighter mix-blend-overlay">
+              {/* Subtle watermarked name in background */}
+              <div className="absolute bottom-8 -right-8 text-[130px] font-black text-white/5 whitespace-nowrap pointer-events-none z-0 transform -rotate-12 select-none tracking-tighter mix-blend-overlay">
                  {u.name.split(' ')[0]}
-                           </div>
+              </div>
            </div>
         </div>
-      </>);
-    };
+      )}
 
-    const renderAnalysis = () => {
+      {/* =========================================================================
+          SUB-TAB 2: OPERATIONAL LOGS & AUDIT TELEMETRY
+          ========================================================================= */}
+      {activeSubTab === 'field_logs' && (() => {
+         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+         const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
+
+         return (
+            <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left">
+               {/* Officer Exemption Notice or Role Telemetry Status */}
+               {telemetry.isExempt ? (
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-600/15 border border-amber-400/40 flex items-start gap-3 shadow-sm">
+                     <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30 shrink-0 mt-0.5">
+                        <Icon name="shieldCheck" size={20} />
+                     </div>
+                     <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                           <h4 className="font-bold text-amber-300 text-sm">{telemetry.roleTitle}</h4>
+                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                              EXEMPT FROM SLA PENALTIES
+                           </span>
+                        </div>
+                        <p className="text-xs text-amber-100/90 mt-1 leading-relaxed">
+                           {telemetry.reason || 'เจ้าหน้าที่บริหารโครงการ / ผจก. LH มีบทบาทเป็นผู้กำกับดูแล (Supervisor & Approver) จึงได้รับการยกเว้นจากการนำสถิติงานภาคสนามรายใบงานมาหักคะแนน'}
+                        </p>
+                        <div className="mt-2 text-[11px] text-amber-200/80 flex items-center gap-2">
+                           <span>โครงการในความดูแล:</span>
+                           <strong className="text-white">
+                              {telemetry.assignedProjects.length > 0 ? telemetry.assignedProjects.join(', ') : 'ทุกโครงการ'}
+                           </strong>
+                        </div>
+                     </div>
+                  </div>
+               ) : (
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                           <Icon name="clipboardList" size={20} />
+                        </div>
+                        <div>
+                           <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-white text-sm">{telemetry.roleTitle}</h4>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${telemetry.badgeClass}`}>
+                                 Active Telemetry
+                              </span>
+                           </div>
+                           <span className="text-xs text-slate-400 mt-0.5 block">
+                              ขอบเขตโครงการที่รับผิดชอบ: <strong className="text-slate-200">{telemetry.assignedProjects.length > 0 ? telemetry.assignedProjects.join(', ') : 'ทั้งหมด'}</strong>
+                           </span>
+                        </div>
+                     </div>
+                     <button
+                        type="button"
+                        onClick={() => setDiscrepancyModalOpen(true)}
+                        className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition"
+                     >
+                        <Icon name="scale" size={14} className="text-amber-300" />
+                        <span>เปิดห้องตัดสินข้อขัดแย้ง (Audit Modal)</span>
+                     </button>
+                  </div>
+               )}
+
+               {/* 4 KPI Telemetry Cards */}
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Total Workload */}
+                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 shadow-sm relative overflow-hidden group hover:border-sky-500/50 transition">
+                     <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ภาระงานในมือทั้งหมด</span>
+                        <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                           <Icon name="briefcase" size={16} />
+                        </span>
+                     </div>
+                     <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-3xl font-black text-white">{telemetry.totalTasks}</span>
+                        <span className="text-xs text-slate-400">งาน</span>
+                     </div>
+                     <div className="text-[10px] text-slate-400 pt-2 border-t border-white/10 flex justify-between items-center">
+                        <span>ปิดแล้ว: <strong className="text-emerald-400">{telemetry.completedTasks}</strong></span>
+                        <span>กำลังทำ: <strong className="text-sky-300">{telemetry.activeTasks}</strong></span>
+                        <span>ติดปัญหา: <strong className="text-amber-400">{telemetry.issueTasks}</strong></span>
+                     </div>
+                  </div>
+
+                  {/* Card 2: On-Time SLA Rate */}
+                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 shadow-sm relative overflow-hidden group hover:border-emerald-500/50 transition">
+                     <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">อัตราส่งมอบตรงเวลา (SLA)</span>
+                        <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                           <Icon name="clock" size={16} />
+                        </span>
+                     </div>
+                     <div className="flex items-baseline gap-2 mb-2">
+                        <span className={`text-3xl font-black ${
+                           telemetry.slaRate >= 90 ? 'text-emerald-400' :
+                           telemetry.slaRate >= 75 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                           {telemetry.slaRate}%
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                           {telemetry.slaRate >= 90 ? 'ดีเยี่ยม' : telemetry.slaRate >= 75 ? 'มาตรฐาน' : 'ต้องปรับปรุง'}
+                        </span>
+                     </div>
+                     <div className="text-[10px] text-slate-400 pt-2 border-t border-white/10 flex justify-between items-center">
+                        <span>จบช้า: <strong className="text-rose-400">{telemetry.lateFinishedTasks}</strong></span>
+                        <span>เกินกำหนดปัจจุบัน: <strong className="text-amber-400">{telemetry.activeOverdueTasks}</strong></span>
+                     </div>
+                  </div>
+
+                  {/* Card 3: Disciplinary Penalties */}
+                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 shadow-sm relative overflow-hidden group hover:border-rose-500/50 transition">
+                     <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">แต้มหักวินัยสะสม</span>
+                        <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                           <Icon name="shieldAlert" size={16} />
+                        </span>
+                     </div>
+                     <div className="flex items-baseline gap-2 mb-2">
+                        <span className={`text-3xl font-black ${totalPenaltyPts > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                           {totalPenaltyPts > 0 ? `-${totalPenaltyPts}` : '0'}
+                        </span>
+                        <span className="text-xs text-slate-400">แต้ม</span>
+                     </div>
+                     <div className="text-[10px] text-slate-400 pt-2 border-t border-white/10 flex justify-between items-center">
+                        <span>รายการผิดกฎ: <strong className={totalPenaltyPts > 0 ? 'text-rose-400' : 'text-emerald-400'}>{telemetry.penalties.length} ข้อ</strong></span>
+                        <span>สถานะ: <strong className={totalPenaltyPts === 0 ? 'text-emerald-300' : 'text-amber-300'}>{totalPenaltyPts === 0 ? 'ไร้ข้อหัก' : 'ถูกตัดแต้ม'}</strong></span>
+                     </div>
+                  </div>
+
+                  {/* Card 4: Discrepancy Tasks */}
+                  <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 shadow-sm relative overflow-hidden group hover:border-amber-500/50 transition">
+                     <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">งานขัดแย้งรอตัดสิน</span>
+                        <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                           <Icon name="scale" size={16} />
+                        </span>
+                     </div>
+                     <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-3xl font-black text-amber-400">
+                           {telemetry.discrepancyTasks?.length || 0}
+                        </span>
+                        <span className="text-xs text-slate-400">รายการ</span>
+                     </div>
+                     <div className="text-[10px] text-slate-400 pt-2 border-t border-white/10 flex justify-between items-center">
+                        <span>รออะไหล่ &gt;45 วัน: <strong className="text-amber-300">{telemetry.sparePartsOver45Days}</strong></span>
+                        <span>WO ช้า &gt;3 วัน: <strong className="text-sky-300">{telemetry.lateWOTasks}</strong></span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Alerts & RACI Disciplinary Breakdown */}
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Box 1: RACI Penalties */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm space-y-3">
+                     <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <h4 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                           <Icon name="alertOctagon" size={16} className="text-rose-400" />
+                           <span>สรุปการตัดแต้มตาม 7 กฎกติกา SLA (RACI Attribution)</span>
+                        </h4>
+                        <span className="text-[10px] font-mono text-slate-400">
+                           {telemetry.penalties.length} รายการ
+                        </span>
+                     </div>
+
+                     {telemetry.penalties.length === 0 ? (
+                        <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-center space-y-1">
+                           <span className="text-xs font-bold text-emerald-300 block">✅ ไม่พบการทำผิดกฎกติกา SLA</span>
+                           <p className="text-[11px] text-slate-400">พนักงานมีวินัยการทำงานและปฏิบัติตามมาตรฐานกระบวนการของโครงการอย่างสมบูรณ์</p>
+                        </div>
+                     ) : (
+                        <div className="space-y-2">
+                           {telemetry.penalties.map((pen, pIdx) => (
+                              <div key={pIdx} className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-start justify-between gap-3 text-xs">
+                                 <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                       <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                          แกน {pen.axis.toUpperCase()}
+                                       </span>
+                                       <strong className="text-slate-200">{pen.reason}</strong>
+                                    </div>
+                                 </div>
+                                 <span className="text-xs font-black text-rose-400 shrink-0 font-mono">
+                                    -{pen.points} แต้ม
+                                 </span>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Box 2: 45-day Spare Parts Ceiling & Disciplinary Revocation */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm space-y-3">
+                     <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <h4 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                           <Icon name="package" size={16} className="text-amber-400" />
+                           <span>เพดานอนุโลมรออะไหล่ 45 วัน &amp; การระงับสิทธิ์</span>
+                        </h4>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                           telemetry.sparePartsOver45Days > 0 ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        }`}>
+                           {telemetry.sparePartsOver45Days > 0 ? `เกินเพดาน ${telemetry.sparePartsOver45Days} งาน` : 'อยู่ในเกณฑ์'}
+                        </span>
+                     </div>
+
+                     <p className="text-[11px] text-slate-400 leading-relaxed">
+                        กฎข้อที่ 6: งานที่ติดปัญหารออะไหล่จะได้รับการอนุโลมไม่นำมาคิดเป็นงานค้างได้สูงสุด <strong>45 วัน</strong> หากเกินกว่านั้นระบบจะดึงเข้าสู่ตารางตรวจสอบทันที และหากตรวจสอบพบว่าอะไหล่มาถึงแล้วแต่ไม่ดำเนินการ จะถูกสั่งระงับสิทธิ์และประทับตราตัดคะแนนวินัย
+                     </p>
+
+                     {telemetry.penaltySparePartsTasks > 0 && (
+                        <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/50 flex items-start gap-2.5 text-xs text-rose-200">
+                           <Icon name="shieldAlert" size={16} className="text-rose-400 shrink-0 mt-0.5" />
+                           <div>
+                              <strong className="font-black text-rose-300 block">🚨 พบงานที่ถูกประทับตรา "ผิดเงื่อนไขรออะไหล่" ({telemetry.penaltySparePartsTasks} รายการ)</strong>
+                              <span>มีคำสั่งวินัยจากผู้ดูแลระงับสิทธิ์การอนุโลม เนื่องจากอะไหล่ถึงหน้างานแล้วแต่งานไม่คืบหน้า</span>
+                           </div>
+                        </div>
+                     )}
+
+                     {telemetry.alerts && telemetry.alerts.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                           {telemetry.alerts.map((al, aIdx) => (
+                              <div key={aIdx} className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-400/20 text-[11px] text-amber-200 flex items-start gap-2">
+                                 <Icon name="alertTriangle" size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                                 <div>
+                                    <strong className="block text-amber-300 font-bold">{al.title}</strong>
+                                    <span className="text-slate-300">{al.desc}</span>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               </div>
+
+               {/* Discrepancy Tasks Audit Table */}
+               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/10">
+                     <div>
+                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                           <Icon name="scale" size={16} className="text-indigo-400" />
+                           <span>ตารางบันทึกงานข้อขัดแย้งที่ต้องได้รับการตรวจสอบ (Discrepancy Tasks Audit)</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                           รายการงานที่ผิดกติกา SLA พร้อมระบุ RACI Attribution เพื่อให้หัวหน้างาน/ผู้ดูแลตรวจสอบและตัดสิน
+                        </p>
+                     </div>
+                     <button
+                        type="button"
+                        onClick={() => setDiscrepancyModalOpen(true)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+                     >
+                        <Icon name="gavel" size={13} />
+                        <span>เปิดห้องตัดสินเต็มรูปแบบ</span>
+                     </button>
+                  </div>
+
+                  {(!telemetry.discrepancyTasks || telemetry.discrepancyTasks.length === 0) ? (
+                     <div className="p-6 rounded-xl bg-white/5 border border-dashed border-white/10 text-center space-y-1">
+                        <span className="text-xs font-bold text-slate-300 block">✨ ไม่พบงานที่เข้าข่ายข้อขัดแย้งในขณะนี้</span>
+                        <p className="text-[11px] text-slate-500">ทุกใบงานดำเนินการเป็นไปตามเกณฑ์เวลาและกติกา 7 ข้อ</p>
+                     </div>
+                  ) : (
+                     <div className="overflow-x-auto rounded-xl border border-white/10">
+                        <table className="w-full text-left text-xs border-collapse">
+                           <thead>
+                              <tr className="bg-slate-950/80 text-slate-400 border-b border-white/10">
+                                 <th className="py-2.5 px-3 font-bold">#</th>
+                                 <th className="py-2.5 px-3 font-bold">ใบงาน / โครงการ</th>
+                                 <th className="py-2.5 px-3 font-bold">ประเภทข้อขัดแย้ง</th>
+                                 <th className="py-2.5 px-3 font-bold">คำอธิบายหน้างาน</th>
+                                 <th className="py-2.5 px-3 font-bold">RACI Attribution</th>
+                                 <th className="py-2.5 px-3 font-bold text-center">การตัดสิน</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-white/5 text-slate-300">
+                              {telemetry.discrepancyTasks.map((item, idx) => {
+                                 const t = item.task || {};
+                                 const attrRole = item.attribution?.role || 'foreman';
+                                 return (
+                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                       <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{idx + 1}</td>
+                                       <td className="py-2.5 px-3">
+                                          <div className="font-bold text-white truncate max-w-[180px]">{t.title || 'ไม่ระบุชื่อ'}</div>
+                                          <div className="text-[10px] text-slate-400">{t.project || '-'} • แปลง/บ้าน: {t.houseNo || '-'}</div>
+                                       </td>
+                                       <td className="py-2.5 px-3">
+                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                             item.ruleNo === 4 ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' :
+                                             item.ruleNo === 5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                                             item.ruleNo === 6 ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                                             item.ruleNo === 6.5 ? 'bg-rose-500/30 text-rose-300 border-rose-500/40' :
+                                             'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                          }`}>
+                                             กฎข้อ {item.ruleNo}: {item.title}
+                                          </span>
+                                       </td>
+                                       <td className="py-2.5 px-3 text-[11px] text-slate-300 max-w-[240px]">
+                                          {item.desc}
+                                       </td>
+                                       <td className="py-2.5 px-3">
+                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                             attrRole === 'admin' ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' :
+                                             attrRole === 'foreman' ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' :
+                                             'bg-purple-500/20 text-purple-300 border-purple-400/30'
+                                          }`}>
+                                             {attrRole === 'admin' ? 'ธุรการ (Admin)' : attrRole === 'foreman' ? 'โฟร์แมน (Foreman)' : 'รับผิดชอบร่วม (70/30)'}
+                                          </span>
+                                       </td>
+                                       <td className="py-2.5 px-3 text-center">
+                                          <button
+                                             type="button"
+                                             onClick={() => setDiscrepancyModalOpen(true)}
+                                             className="px-2.5 py-1 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white text-[10px] font-bold transition shadow-xs"
+                                          >
+                                             ⚖️ ตัดสิน
+                                          </button>
+                                       </td>
+                                    </tr>
+                                 );
+                              })}
+                           </tbody>
+                        </table>
+                     </div>
+                  )}
+               </div>
+            </div>
+         );
+      })()}
+
+      {/* =========================================================================
+          SUB-TAB 3: TEAM ROSTER & SETTINGS
+          ========================================================================= */}
+      {activeSubTab === 'settings' && (
+         <div className="flex-1 w-full overflow-y-auto custom-scrollbar p-5 lg:p-7 space-y-6 text-left">
+            {/* Header Title */}
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+               <div>
+                  <h3 className="font-bold text-white text-base flex items-center gap-2">
+                     <Icon name="settings" size={18} className="text-[#bca374]" />
+                     <span>ตั้งค่าโปรไฟล์และข้อมูลศักยภาพพนักงาน</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                     แก้ไขข้อมูลพื้นฐาน คลาสสายอาชีพ สเตตัสศักยภาพ 6 มิติ และจัดการฐานข้อมูลทีม
+                  </p>
+               </div>
+               <div className="flex items-center gap-2">
+                  {teamForm.id && !selTeam?.isNew && (
+                     <button
+                        type="button"
+                        onClick={() => setStaffReportModalOpen(true)}
+                        className="px-3 py-1.5 rounded-lg bg-sky-600/80 hover:bg-sky-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+                     >
+                        <Icon name="printer" size={14} />
+                        <span>รายงาน A4</span>
+                     </button>
+                  )}
+                  <button
+                     type="button"
+                     onClick={saveTeam}
+                     className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                  >
+                     <Icon name="save" size={14} />
+                     <span>บันทึกข้อมูล</span>
+                  </button>
+               </div>
+            </div>
+
+            {/* 2-Column Responsive Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+               {/* Left: Complete Profile Editing Form */}
+               <div className="lg:col-span-7 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-5 text-slate-800">
+                  {/* Avatar & Photo Upload */}
+                  <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-slate-100">
+                     <div className="relative group shrink-0">
+                        <div className="w-24 h-24 rounded-full border-[3px] border-[#bca374] shadow-[0_0_20px_rgba(188,163,116,0.25)] overflow-hidden bg-[#0f2e4a] flex items-center justify-center relative z-10">
+                           {teamForm.image ? (
+                              <img src={teamForm.image} className="w-full h-full object-cover" alt={teamForm.name} />
+                           ) : (
+                              <Icon name="camera" size={28} className="text-[#bca374]/50" />
+                           )}
+                        </div>
+                        <label className="absolute bottom-0 right-0 bg-gradient-to-tr from-[#bca374] to-[#e6d0a7] text-[#0f2e4a] p-2 rounded-full cursor-pointer shadow-md hover:scale-110 transition-transform z-20 border border-white">
+                           <Icon name="upload" size={14} />
+                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        </label>
+                     </div>
+                     <div className="text-center sm:text-left">
+                        <h4 className="font-bold text-sm text-[#0f2e4a]">รูปประจำตัวพนักงาน</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                           อัปโหลดภาพถ่ายตัวเต็มหรือครึ่งตัว ระบบรองรับการครอบตัดและปรับขนาดอัตโนมัติ
+                        </p>
+                        {teamForm.image && (
+                           <button
+                              type="button"
+                              onClick={() => setTeamForm({ ...teamForm, image: '' })}
+                              className="text-[10px] text-rose-600 hover:underline mt-1 inline-block"
+                           >
+                              ลบรูปภาพ
+                           </button>
+                        )}
+                     </div>
+                  </div>
+
+                  {/* Name & Class Form Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div>
+                        <label className="text-xs font-bold text-slate-600 mb-1 block">ชื่อ - นามสกุล</label>
+                        <input
+                           type="text"
+                           className="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] outline-none transition"
+                           placeholder="ชื่อพนักงาน..."
+                           value={teamForm.name || ''}
+                           onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
+                        />
+                     </div>
+                     <div>
+                        <label className="text-xs font-bold text-slate-600 mb-1 block">คลาส (สายอาชีพ)</label>
+                        <select
+                           className="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:ring-2 focus:ring-[#bca374] outline-none transition bg-white"
+                           value={teamForm.classId || ''}
+                           onChange={e => setTeamForm({ ...teamForm, classId: e.target.value })}
+                        >
+                           <option value="">-- ไม่ระบุ --</option>
+                           {(sets.staffClasses || []).map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                           ))}
+                        </select>
+                     </div>
+                  </div>
+
+                  {/* 6 Inner Stats */}
+                  <div className="pt-3 border-t border-slate-100">
+                     <div className="flex justify-between items-center mb-3">
+                        <label className="text-xs font-bold text-slate-700">สเตตัสศักยภาพ 6 มิติ (Inner Stats - HOW)</label>
+                        <span className="text-[10px] text-slate-400">เกณฑ์ 1 - 10 คะแนน</span>
+                     </div>
+
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                           { k: 'str', l: 'STR', f: 'พลังขับเคลื่อน & ตัดสินใจ', c: 'text-rose-600', bg: 'bg-rose-50', b: 'border-rose-200' },
+                           { k: 'agi', l: 'AGI', f: 'ความรวดเร็ว & การปรับตัว', c: 'text-emerald-600', bg: 'bg-emerald-50', b: 'border-emerald-200' },
+                           { k: 'dex', l: 'DEX', f: 'ความแม่นยำ & คุณภาพ', c: 'text-amber-600', bg: 'bg-amber-50', b: 'border-amber-200' },
+                           { k: 'int', l: 'INT', f: 'ระบบเทคโนโลยี & จัดการ', c: 'text-blue-600', bg: 'bg-blue-50', b: 'border-blue-200' },
+                           { k: 'con', l: 'CON', f: 'ความทรหด & คุมอารมณ์', c: 'text-orange-600', bg: 'bg-orange-50', b: 'border-orange-200' },
+                           { k: 'sen', l: 'SEN', f: 'การเจรจา & เข้าใจผู้คน', c: 'text-purple-600', bg: 'bg-purple-50', b: 'border-purple-200' }
+                        ].map(s => (
+                           <div key={s.k} className={`p-2.5 rounded-xl border ${s.b} ${s.bg} flex items-center justify-between gap-2 shadow-2xs`}>
+                              <div className="flex flex-col">
+                                 <span className={`text-xs font-black ${s.c}`}>{s.l}</span>
+                                 <span className="text-[9px] font-bold text-slate-500">{s.f}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    className="w-16 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                    value={Number(teamForm[s.k]) || 5}
+                                    onChange={e => setTeamForm({ ...teamForm, [s.k]: Number(e.target.value) || 1 })}
+                                 />
+                                 <input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    className={`w-9 text-center text-sm font-black bg-white rounded border border-slate-300 py-0.5 outline-none ${s.c}`}
+                                    value={Number(teamForm[s.k]) || 5}
+                                    onChange={e => setTeamForm({ ...teamForm, [s.k]: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })}
+                                 />
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* Save & Action Buttons */}
+                  <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-2.5">
+                     <button
+                        type="button"
+                        onClick={saveTeam}
+                        className="flex-1 bg-[#0f2e4a] hover:bg-[#1a3f63] text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                     >
+                        <Icon name="save" size={15} />
+                        <span>บันทึกข้อมูลพนักงาน</span>
+                     </button>
+
+                     {teamForm.id && !selTeam?.isNew && (
+                        <button
+                           type="button"
+                           onClick={() => {
+                              setTeamForm({ ...selTeam });
+                              setActiveSubTab('performance');
+                           }}
+                           className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition"
+                        >
+                           ยกเลิก
+                        </button>
+                     )}
+
+                     {teamForm.id && (
+                        <button
+                           type="button"
+                           onClick={() => {
+                              if (!isSupervisor) {
+                                 if (onOpenSupervisorModal) onOpenSupervisorModal();
+                                 else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อลบพนักงาน');
+                                 return;
+                              }
+                              if (confirm('ยืนยันการลบพนักงานคนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+                                 let ns = (sets.staffStats || []).filter(x => x.id !== teamForm.id);
+                                 const newSets = { ...sets, staffStats: ns };
+                                 setSets(newSets);
+                                 saveD('settings', newSets);
+                                 setSelTeam(null);
+                                 setTeamForm({ id: '', name: '', classId: '', image: '', str: 5, agi: 5, dex: 5, int: 5, con: 5, sen: 5 });
+                                 setActiveSubTab('performance');
+                              }
+                           }}
+                           className="p-2.5 rounded-xl bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 transition"
+                           title="ลบพนักงาน"
+                        >
+                           <Icon name="trash" size={16} />
+                        </button>
+                     )}
+                  </div>
+               </div>
+
+               {/* Right: Management & Calibration Tools */}
+               <div className="lg:col-span-5 space-y-4">
+                  {/* Calibration Card */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 border border-white/10 shadow-sm text-white space-y-3">
+                     <div className="flex items-center gap-2.5">
+                        <span className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                           <Icon name="sliders" size={18} />
+                        </span>
+                        <div>
+                           <h4 className="font-bold text-sm text-white">ตรวจสอบเทียบระดับทั้งทีม (Calibration)</h4>
+                           <span className="text-[10px] text-slate-400">ป้องกันเกรดเฟ้อและปรับสมดุล Bell Curve</span>
+                        </div>
+                     </div>
+                     <p className="text-xs text-slate-300 leading-relaxed">
+                        ระบบเปรียบเทียบสเตตัสพนักงานทั้งทีมเพื่อจัดกลุ่มตามเกณฑ์มาตรฐานองค์กร LH ควบคุมการกระจายตัวของความสามารถในแต่ละสายอาชีพ
+                     </p>
+                     <button
+                        type="button"
+                        onClick={() => {
+                           if (!isSupervisor) {
+                              if (onOpenSupervisorModal) onOpenSupervisorModal();
+                              else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อตรวจสอบเทียบระดับศักยภาพทั้งทีม');
+                              return;
+                           }
+                           setCalibrationModalOpen(true);
+                        }}
+                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs shadow-md transition flex items-center justify-center gap-2"
+                     >
+                        <Icon name="sliders" size={14} />
+                        <span>เปิดระบบ Talent Calibration ทั้งทีม</span>
+                     </button>
+                  </div>
+
+                  {/* Excel Bulk Upload Card */}
+                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm text-white space-y-3">
+                     <div className="flex items-center gap-2.5">
+                        <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                           <Icon name="upload" size={18} />
+                        </span>
+                        <div>
+                           <h4 className="font-bold text-sm text-white">นำเข้าข้อมูลผ่าน Excel</h4>
+                           <span className="text-[10px] text-slate-400">อัปเดตสเตตัสและผลประเมินแบบกลุ่ม</span>
+                        </div>
+                     </div>
+                     <p className="text-xs text-slate-300 leading-relaxed">
+                        อัปโหลดแบบประเมินผลทีม (.xlsx, .xls) ระบบจะคำนวณสเตตัส 6 มิติและระบุ Archetype Identity ให้โดยอัตโนมัติ
+                     </p>
+                     <label className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                        <Icon name="fileSpreadsheet" size={15} />
+                        <span>เลือกไฟล์ Excel (.xlsx, .xls)</span>
+                        <input
+                           type="file"
+                           accept=".xlsx, .xls"
+                           className="hidden"
+                           onChange={e => {
+                              if (!isSupervisor) {
+                                 if (onOpenSupervisorModal) onOpenSupervisorModal();
+                                 else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อนำเข้าไฟล์ Excel');
+                                 return;
+                              }
+                              handleExcelUpload(e);
+                           }}
+                        />
+                     </label>
+                  </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      </div>
+   </>
+);
+};
+
+function renderAnalysis() {
       const u = teamForm;
       if (!u.id && !selTeam?.isNew) return null;
       const role = classMap[u.classId];
@@ -712,13 +1745,18 @@ export default function TeamStatusTab({
       const heuristic = generateHeuristicTalentDiagnostic(u, sets, archetypesData) || {};
       const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(analysis.archetypeKey, mainStyle);
 
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+      const outerSummary = analyzeOuterLayer(teamForm, statsObj);
+      const businessRisk = calculateBusinessRiskIndex(u, telemetry, outerSummary);
+      const succession = calculateSuccessionReadiness(u, analysis, outerSummary);
+
       return (
         <div className="mt-6 pt-4 w-full text-left relative z-10 font-sans">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center">
-              <Icon name="user" size={16} className="mr-2 text-[#bca374]" />
+              <Icon name={isCorporate ? "briefcase" : "user"} size={16} className="mr-2 text-[#bca374]" />
               {isCorporate 
-                ? 'วิเคราะห์สมรรถนะองค์กร & เกณฑ์มาตรฐานตำแหน่ง (Corporate Competency & Benchmark)'
+                ? 'วิเคราะห์สมรรถนะองค์กร & บริหารจัดการบุคลากร (Corporate Competency & Executive Suite)'
                 : 'วิเคราะห์ศักยภาพ & เกณฑ์มาตรฐานตำแหน่ง (Talent & Benchmark)'}
             </h4>
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10px]">
@@ -739,7 +1777,446 @@ export default function TeamStatusTab({
             </div>
           </div>
 
-          {/* กล่องข้อความสีฟ้า: BARS Behavioral Rubric Spotlight Box */}
+          {isCorporate ? (
+            /* =========================================================================
+               CORPORATE EXECUTIVE TALENT SUITE (TRUE DIVERGENCE)
+               1. BARS Behavioral Rubric Spotlight
+               2. McKinsey 9-Box Talent Matrix (Full 3x3 Grid)
+               3. Strategic Business Risk Index (SLA, Quality, Fiscal Governance)
+               4. Succession Readiness Index & Key Promotion Milestones
+               5. Corporate Competency Framework (The Outer Layer 6 Axes)
+               ========================================================================= */
+            <div className="space-y-4">
+              {/* กล่องข้อความสีฟ้า: BARS Behavioral Rubric Spotlight Box */}
+              {heuristic?.primaryBarsStrength && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-sky-50 via-sky-50/70 to-blue-50/50 border border-sky-300 shadow-xs">
+                  <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-sky-200">
+                    <div className="flex items-center gap-1.5">
+                      <span className="p-1 rounded-md bg-sky-600 text-white">
+                        <Icon name="award" size={13} />
+                      </span>
+                      <span className="font-bold text-xs text-sky-950">
+                        หลักฐานพฤติกรรมเชิงประจักษ์จริง (BARS Level {heuristic.primaryBarsStrength.level}): {heuristic.primaryBarsStrength.corporateName || heuristic.primaryBarsStrength.statName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300 font-mono">
+                      rubrics.json
+                    </span>
+                  </div>
+                  
+                  <div className="text-[11px] font-bold text-sky-900 mb-1">
+                    ▶ เกณฑ์การประเมินย่อย: 「{heuristic.primaryBarsStrength.criterionLabel}」
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white/90 border border-sky-200 text-slate-700 text-xs leading-relaxed italic shadow-2xs mb-2">
+                    "{heuristic.primaryBarsStrength.behaviorText}"
+                  </div>
+
+                  {heuristic.primaryBarsNextMilestone?.behaviorText && (
+                    <div className="p-2 rounded-lg bg-sky-100/60 border border-sky-200/80 flex items-start gap-2 text-[11px]">
+                      <span className="text-amber-800 font-bold shrink-0 flex items-center gap-1">
+                        <Icon name="target" size={13} className="text-amber-600" />
+                        เป้าหมายการยกระดับถัดไป (Level {heuristic.primaryBarsNextMilestone.targetLevel}):
+                      </span>
+                      <span className="text-slate-700 leading-snug">
+                        ด้าน「{heuristic.primaryBarsNextMilestone.criterionLabel}」— "{heuristic.primaryBarsNextMilestone.behaviorText}"
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 1. McKinsey 9-Box Talent Matrix */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <Icon name="grid" size={16} />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-[#0f2e4a] text-sm flex items-center gap-1.5">
+                        <span>McKinsey 9-Box Talent Matrix</span>
+                        <span className="text-[10px] font-normal text-slate-500">(ตารางจัดกลุ่มศักยภาพและผลสัมฤทธิ์)</span>
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        แกนตั้ง (Y): ศักยภาพพฤติกรรมหลัก (HOW) | แกนนอน (X): ผลสัมฤทธิ์ผลงานจริง (WHAT)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {outerSummary.isAssessed ? (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
+                        {outerSummary.talentGrid?.title}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1">
+                        <Icon name="clock" size={12} />
+                        <span>รอประเมิน WHAT</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* If unassessed on WHAT, show clear actionable notice */}
+                {!outerSummary.isAssessed && (
+                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-50 to-amber-100/60 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+                    <div className="flex items-start gap-2.5">
+                      <span className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0 mt-0.5">
+                        <Icon name="alertCircle" size={16} />
+                      </span>
+                      <div>
+                        <strong className="font-bold block text-sm text-amber-950">
+                          ⏳ รอผลการประเมิน 6 แกนสมรรถนะหน้างานจริง (WHAT)
+                        </strong>
+                        <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                          พนักงานได้รับการประเมินเฉพาะสเตตัสศักยภาพตั้งต้น (HOW: <strong>{outerSummary.avgInner}/10</strong> ระดับ {outerSummary.talentGrid?.howLevel === 'high' ? 'ศักยภาพสูง' : outerSummary.talentGrid?.howLevel === 'med' ? 'ศักยภาพปานกลาง' : 'ศักยภาพพื้นฐาน'}) ยังไม่มีคะแนนผลสัมฤทธิ์หน้างาน กรุณาประเมินสมรรถนะ 6 แกนเพื่อจัดตำแหน่ง 9-Box
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAssessMode(true)}
+                      className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0 shadow-sm flex items-center gap-1.5 transition"
+                    >
+                      <Icon name="clipboardCheck" size={14} />
+                      <span>+ ประเมินสมรรถนะ 6 แกน (WHAT)</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 3x3 McKinsey Grid */}
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {NINE_BOX_DEFINITIONS.map(cell => {
+                    const isMatched = outerSummary.isAssessed && outerSummary.talentGrid?.key === cell.code;
+                    const isPotentialRow = !outerSummary.isAssessed && outerSummary.talentGrid?.howLevel === cell.howLevel;
+                    return (
+                      <div
+                        key={cell.code}
+                        className={`p-3 rounded-xl border flex flex-col justify-between min-h-[90px] transition-all relative ${
+                          isMatched
+                            ? 'bg-gradient-to-br from-sky-50 to-blue-50/80 border-sky-400 shadow-md ring-2 ring-sky-300'
+                            : isPotentialRow
+                            ? 'bg-amber-50/40 border-amber-300/80'
+                            : 'bg-slate-50/60 border-slate-200'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className={`text-[11px] font-bold ${isMatched ? 'text-sky-950 font-black' : 'text-slate-800'}`}>
+                              {cell.title}
+                            </span>
+                            {isMatched && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-sky-600 text-white shadow-xs">
+                                ★ ประจำตำแหน่ง
+                              </span>
+                            )}
+                            {isPotentialRow && !outerSummary.isAssessed && cell.whatLevel === 'med' && (
+                              <span className="text-[8.5px] font-bold px-1 rounded bg-amber-200 text-amber-900">
+                                แถวศักยภาพ (HOW)
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-tight">
+                            {cell.thai}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200/60 mt-2 flex justify-between items-center text-[9px] text-slate-400">
+                          <span className="truncate">{cell.category}</span>
+                          {isMatched && (
+                            <span className="font-bold text-sky-700">
+                              HOW {outerSummary.avgInner} / WHAT {outerSummary.avgOuter}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Column Footers: Performance Axes */}
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold text-slate-500 pt-0.5">
+                  <div className="p-1 rounded bg-slate-100">ผลงานต่ำ (WHAT &lt; 4.5)</div>
+                  <div className="p-1 rounded bg-slate-100">ผลงานมาตรฐาน (4.5 - 6.7)</div>
+                  <div className="p-1 rounded bg-slate-100">ผลงานโดดเด่น (WHAT ≥ 6.8)</div>
+                </div>
+
+                {/* Matched Action Playbook */}
+                {outerSummary.isAssessed && outerSummary.talentGrid && (
+                  <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-950 space-y-1 mt-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-sky-900">📦 แผนขับเคลื่อนบุคลากร (Talent Action Playbook):</span>
+                      <span className="font-bold text-sky-700">{outerSummary.talentGrid.title}</span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      ▶ <strong>ข้อแนะนำสำหรับผู้บริหาร:</strong> {outerSummary.talentGrid.action}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Strategic Business Risk Index (3 Cards) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200">
+                      <Icon name="shieldAlert" size={16} />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-[#0f2e4a] text-sm">ดัชนีชี้วัดความเสี่ยงเชิงธุรกิจ (Strategic Business Risk Index)</h4>
+                      <span className="text-[10px] text-slate-500">ประเมินความเสี่ยงต่อการดำเนินงานโครงการ 3 มิติจากสถิติจริงและสมรรถนะ</span>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${businessRisk.overallBadge}`}>
+                    {businessRisk.overallTitle}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* SLA Speed Risk */}
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    businessRisk.slaRisk.level === 'high' ? 'bg-rose-50/70 border-rose-200 text-rose-950' :
+                    businessRisk.slaRisk.level === 'moderate' ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
+                    'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                  }`}>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold">1. ความเสี่ยงด้านเวลา &amp; SLA</span>
+                        <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
+                          businessRisk.slaRisk.level === 'high' ? 'bg-rose-100 text-rose-800 border-rose-300' :
+                          businessRisk.slaRisk.level === 'moderate' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                          'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        }`}>
+                          {businessRisk.slaRisk.level.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed mb-2 text-slate-700">
+                        {businessRisk.slaRisk.reason}
+                      </p>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 pt-1.5 border-t border-slate-200/60">
+                      งานในมือ: {telemetry.totalTasks} | ปิดแล้ว: {telemetry.completedTasks} | SLA: {telemetry.slaRate}%
+                    </div>
+                  </div>
+
+                  {/* Quality & Defect Risk */}
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    businessRisk.qualityRisk.level === 'high' ? 'bg-rose-50/70 border-rose-200 text-rose-950' :
+                    businessRisk.qualityRisk.level === 'moderate' ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
+                    'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                  }`}>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold">2. คุณภาพ &amp; งานซ่อมซ้ำ</span>
+                        <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
+                          businessRisk.qualityRisk.level === 'high' ? 'bg-rose-100 text-rose-800 border-rose-300' :
+                          businessRisk.qualityRisk.level === 'moderate' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                          'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        }`}>
+                          {businessRisk.qualityRisk.level.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed mb-2 text-slate-700">
+                        {businessRisk.qualityRisk.reason}
+                      </p>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 pt-1.5 border-t border-slate-200/60">
+                      DEX: {u.dex || 5}/10 | TECH: {outerSummary.actualValues?.tech !== null ? outerSummary.actualValues?.tech + '/10' : 'รอประเมิน'}
+                    </div>
+                  </div>
+
+                  {/* Fiscal & Governance Risk */}
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    businessRisk.fiscalRisk.level === 'high' ? 'bg-rose-50/70 border-rose-200 text-rose-950' :
+                    businessRisk.fiscalRisk.level === 'moderate' ? 'bg-amber-50/70 border-amber-200 text-amber-950' :
+                    'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                  }`}>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold">3. งบประมาณ &amp; คลังอะไหล่</span>
+                        <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
+                          businessRisk.fiscalRisk.level === 'high' ? 'bg-rose-100 text-rose-800 border-rose-300' :
+                          businessRisk.fiscalRisk.level === 'moderate' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                          'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        }`}>
+                          {businessRisk.fiscalRisk.level.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed mb-2 text-slate-700">
+                        {businessRisk.fiscalRisk.reason}
+                      </p>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 pt-1.5 border-t border-slate-200/60">
+                      ค้าง &gt;30 วัน: {telemetry.staleTasksCount || 0} | RESOURCE: {outerSummary.actualValues?.resource !== null ? outerSummary.actualValues?.resource + '/10' : 'รอประเมิน'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Succession Readiness Index */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200">
+                      <Icon name="trendingUp" size={16} />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-[#0f2e4a] text-sm">ดัชนีความพร้อมสืบทอดตำแหน่ง (Succession Readiness Index)</h4>
+                      <span className="text-[10px] text-slate-500">วิเคราะห์ความพร้อมในการเลื่อนขั้นสู่บทบาทระดับอาวุโส / ผู้นำทีม</span>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${succession.badgeClass}`}>
+                    {succession.statusTitle}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700">คะแนนความพร้อมรวม:</span>
+                    <span className="font-black text-sm text-[#0f2e4a]">{succession.score} / 100</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        succession.score >= 85 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                        succession.score >= 70 ? 'bg-gradient-to-r from-sky-500 to-blue-600' :
+                        'bg-gradient-to-r from-amber-500 to-orange-500'
+                      }`}
+                      style={{ width: `${succession.score}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex flex-wrap justify-between items-center text-[11px] text-slate-600">
+                    <span>สถานะ: <strong className="text-slate-800">{succession.statusThai}</strong></span>
+                    <span>กรอบเวลาเตรียมความพร้อม: <strong className="text-indigo-900">{succession.timeHorizon}</strong></span>
+                  </div>
+                  {succession.isProvisional && (
+                    <div className="text-[10px] text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                      ℹ️ <strong>หมายเหตุ:</strong> คะแนนนี้เป็นการคำนวณเบื้องต้น (Provisional) จากศักยภาพ HOW กรุณาประเมินผลงานจริง 6 แกน (WHAT) เพื่อวิเคราะห์ความพร้อม 100%
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs font-bold text-slate-700 block">🎯 หมุดหมายการพัฒนาเพื่อความพร้อม (Key Promotion Milestones):</span>
+                  <div className="space-y-1">
+                    {succession.keyMilestones.map((m, mIdx) => (
+                      <div key={mIdx} className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-start gap-2">
+                        <Icon name="checkCircle2" size={14} className="text-sky-600 shrink-0 mt-0.5" />
+                        <span>{m}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Corporate Competency Framework (The Outer Layer 6 Axes) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700">
+                      <Icon name="layers" size={16} />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-[#0f2e4a] text-sm">6 แกนสมรรถนะองค์กรภาคสนาม (The Outer Layer Competencies)</h4>
+                      <span className="text-[10px] text-slate-500">ผลสัมฤทธิ์หน้างานจริง (WHAT) แยกอิสระจากสเตตัสศักยภาพ (HOW)</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAssessMode(true)}
+                    className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <Icon name="clipboardCheck" size={14} />
+                    <span>เปิดแบบประเมินสมรรถนะ (Wizard)</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {OUTER_KEYS.map(k => {
+                    const def = OUTER_DEFINITIONS[k];
+                    const actualVal = (u[k] !== null && u[k] !== undefined) ? u[k] : 5;
+                    const isAssessed = u[k] !== null && u[k] !== undefined;
+                    const rubricText = getRubricText(k, actualVal);
+
+                    return (
+                      <div key={k} className={`p-3.5 rounded-xl border transition-all ${isAssessed ? 'border-indigo-200 bg-indigo-50/20' : 'border-slate-200 bg-white'}`}>
+                        <div className="flex flex-col sm:flex-row sm:justify-between items-start mb-2 gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${def.bg}`}>
+                                {def.key.toUpperCase()}
+                              </span>
+                              <strong className="text-xs text-slate-900 font-bold">{def.name}</strong>
+                              <span className="text-[11px] text-slate-500">({def.thai})</span>
+                              {!isAssessed && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                  รอประเมิน
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-500 block mt-1 leading-relaxed">{def.desc}</span>
+                          </div>
+
+                          <div className="flex items-baseline gap-1 shrink-0">
+                            <span className={`font-black text-lg leading-none ${isAssessed ? 'text-indigo-600' : 'text-slate-400'}`}>
+                              {isAssessed ? actualVal : '—'}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-normal">/10</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Tier Buttons */}
+                        <div className="flex flex-wrap gap-1.5 mb-2.5 pt-2 border-t border-slate-100">
+                          {[
+                            { label: '1-3 เริ่มต้น', val: 2, active: isAssessed && actualVal <= 3 },
+                            { label: '4-6 ปฏิบัติได้', val: 5, active: isAssessed && actualVal >= 4 && actualVal <= 6 },
+                            { label: '7-8 ชำนาญ', val: 8, active: isAssessed && actualVal >= 7 && actualVal <= 8 },
+                            { label: '9-10 เชี่ยวชาญ', val: 9, active: isAssessed && actualVal >= 9 }
+                          ].map((tier, ti) => (
+                            <button
+                              key={ti}
+                              type="button"
+                              onClick={() => {
+                                setTeamForm({ ...teamForm, [k]: tier.val, outerAssessed: true });
+                              }}
+                              className={`flex-1 min-w-[70px] text-[10.5px] py-1.5 px-2 rounded-lg text-center font-bold border transition ${
+                                tier.active
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {tier.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Slider */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            step="1"
+                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            value={actualVal}
+                            onChange={e => setTeamForm({ ...teamForm, [k]: Number(e.target.value), outerAssessed: true })}
+                          />
+                        </div>
+
+                        {/* Rubric Guidance */}
+                        <div className="mt-2 text-[10px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200 leading-snug">
+                          <strong className="text-slate-800 font-bold block mb-0.5">พฤติกรรมหน้างาน (เกณฑ์ระดับ {actualVal}/10):</strong>
+                          <span>{rubricText}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ==================== RPG TALENT SUITE ==================== */
+            <div>
+              {/* กล่องข้อความสีฟ้า: BARS Behavioral Rubric Spotlight Box */}
           {heuristic?.primaryBarsStrength && (
             <div className="mb-3.5 p-3.5 rounded-xl bg-gradient-to-r from-sky-50 via-sky-50/70 to-blue-50/50 border border-sky-300 shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-sky-200">
@@ -1162,7 +2639,9 @@ export default function TeamStatusTab({
                   </div>
                 );
               })()}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -1175,17 +2654,51 @@ export default function TeamStatusTab({
             <div className="flex items-center gap-1.5 shrink-0">
                <button 
                  type="button" 
-                 onClick={() => setCalibrationModalOpen(true)} 
+                 onClick={() => {
+                   if (!isSupervisor) {
+                     if (onOpenSupervisorModal) onOpenSupervisorModal();
+                     else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อตรวจสอบเทียบระดับศักยภาพทั้งทีม');
+                     return;
+                   }
+                   setCalibrationModalOpen(true);
+                 }} 
                  title="ตรวจสอบและเทียบระดับศักยภาพทั้งทีม (Talent Calibration)"
-                 className="bg-slate-800 hover:bg-slate-900 text-amber-300 text-[11px] px-2 py-1 rounded flex items-center transition shadow-xs font-bold border border-slate-700"
+                 className="bg-slate-800 hover:bg-slate-900 text-amber-300 text-[11px] px-2 py-1 rounded flex items-center transition shadow-xs font-bold border border-slate-700 cursor-pointer"
                >
                  <Icon name="sliders" size={11} className="mr-1 text-amber-400" /> ตรวจสอบทีม
                </button>
                <label className="bg-indigo-600 text-white text-[11px] px-2 py-1 rounded hover:bg-indigo-700 cursor-pointer flex items-center transition shadow-sm">
                  <Icon name="upload" size={12} className="mr-1" /> Excel
-                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
+                 <input 
+                   type="file" 
+                   accept=".xlsx, .xls" 
+                   className="hidden" 
+                   onChange={(e) => {
+                     if (!isSupervisor) {
+                       if (onOpenSupervisorModal) onOpenSupervisorModal();
+                       else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อนำเข้าไฟล์ Excel');
+                       return;
+                     }
+                     handleExcelUpload(e);
+                   }} 
+                 />
                </label>
-               <button type="button" onClick={()=>{setSelTeam({isNew: true}); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});}} className="bg-[#bca374] text-white text-[11px] px-2 py-1 rounded hover:bg-[#a38a5b] transition shadow-sm">+ เพิ่ม</button>
+               <button 
+                 type="button" 
+                 onClick={() => {
+                   if (!isSupervisor) {
+                     if (onOpenSupervisorModal) onOpenSupervisorModal();
+                     else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อเพิ่มพนักงานใหม่');
+                     return;
+                   }
+                   setSelTeam({isNew: true}); 
+                   setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5});
+                   setActiveSubTab('settings');
+                 }} 
+                 className="bg-[#bca374] text-white text-[11px] px-2 py-1 rounded hover:bg-[#a38a5b] transition shadow-sm cursor-pointer"
+               >
+                 + เพิ่ม
+               </button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
@@ -1210,190 +2723,9 @@ export default function TeamStatusTab({
                <p className="font-bold">เลือกทีมงานจากเมนูด้านซ้าย</p>
                <p className="text-xs mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
              </div>
-          ) : ( (!teamEditMode && teamForm.id && !selTeam?.isNew) ? renderCinematicView() : (
-            <div className="flex-1 overflow-y-auto hide-scrollbar p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-               <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
-                 <div className="w-full lg:w-1/2 flex flex-col items-center bg-white/90 p-4 md:p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-transparent via-[#bca374] to-transparent opacity-30"></div>
-                    <div className="relative group mb-6 mt-2">
-                      <div className="w-32 h-32 rounded-full border-[3px] border-[#bca374] shadow-[0_0_20px_rgba(188,163,116,0.3)] overflow-hidden bg-[#0f2e4a] flex items-center justify-center relative z-10">
-                        {teamForm.image ? <img src={teamForm.image} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-[#bca374]/50"/>}
-                      </div>
-                      <div className="absolute -inset-2 border-2 border-dashed border-[#bca374]/30 rounded-full animate-[spin_20s_linear_infinite] pointer-events-none"></div>
-                      <label className="absolute bottom-0 right-0 bg-gradient-to-tr from-[#bca374] to-[#e6d0a7] text-[#0f2e4a] p-2.5 rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform z-20 border border-white/50">
-                        <Icon name="upload" size={16} />
-                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                      </label>
-                    </div>
-                    
-                    <div className="w-full space-y-4">
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 mb-1 block">ชื่อ - นามสกุล</label>
-                        <input type="text" className="w-full border rounded-lg px-4 py-2 text-sm font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] outline-none" placeholder="ชื่อพนักงาน..." value={teamForm.name} onChange={e=>setTeamForm({...teamForm, name:e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 mb-1 block">คลาส (สายอาชีพ)</label>
-                        <select className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#bca374] outline-none" value={teamForm.classId} onChange={e=>setTeamForm({...teamForm, classId:e.target.value})}>
-                          <option value="">-- ไม่ระบุ --</option>
-                          {(sets.staffClasses||[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-4 border-t border-slate-100 mt-2">
-                        {[{k:'str',l:'STR',f:'พลังขับเคลื่อน & ตัดสินใจ',c:'text-rose-600',bg:'bg-rose-50',b:'border-rose-200'},{k:'agi',l:'AGI',f:'ความรวดเร็ว & การปรับตัว',c:'text-emerald-600',bg:'bg-emerald-50',b:'border-emerald-200'},{k:'dex',l:'DEX',f:'ความแม่นยำ & คุณภาพ',c:'text-amber-600',bg:'bg-amber-50',b:'border-amber-200'},{k:'int',l:'INT',f:'ระบบเทคโนโลยี & จัดการ',c:'text-blue-600',bg:'bg-blue-50',b:'border-blue-200'},{k:'con',l:'CON',f:'ความทรหด & คุมอารมณ์',c:'text-orange-600',bg:'bg-orange-50',b:'border-orange-200'},{k:'sen',l:'SEN',f:'การเจรจา & เข้าใจผู้คน',c:'text-purple-600',bg:'bg-purple-50',b:'border-purple-200'}].map(s=>(
-                          <div key={s.k} className={`flex items-center justify-between ${s.bg} p-2 rounded-lg border ${s.b} shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-transform hover:scale-[1.02]`}>
-                            <div className="flex flex-col">
-                              <label className={`text-[12px] font-black ${s.c} leading-none`}>{s.l}</label>
-                              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{s.f}</label>
-                            </div>
-                            <input type="number" min="1" max="10" className={`w-10 text-center text-[14px] font-black border-b-2 border-transparent focus:${s.b} bg-transparent outline-none ${s.c}`} value={teamForm[s.k]} onChange={e=>setTeamForm({...teamForm, [s.k]: Number(e.target.value)||1})} />
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex gap-2 pt-4">
-                        <button type="button" onClick={saveTeam} className="flex-1 bg-[#0f2e4a] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#1a3f63] flex justify-center items-center"><Icon name="save" size={16} className="mr-2"/> บันทึกข้อมูล</button>
-                        {teamForm.id && !selTeam?.isNew && (
-                          <button 
-                            type="button" 
-                            onClick={() => setStaffReportModalOpen(true)} 
-                            title="พิมพ์ / ส่งออกรายงานประเมินรายบุคคล (Character Sheet A4)" 
-                            className="bg-sky-50 hover:bg-sky-100 text-sky-700 px-3 py-2.5 rounded-lg font-bold border border-sky-200 flex items-center shadow-xs transition"
-                          >
-                            <Icon name="printer" size={16} className="mr-1.5" /> รายงาน A4
-                          </button>
-                        )}
-                        {teamForm.id && !selTeam?.isNew && <button type="button" onClick={()=>{setTeamEditMode(false); setTeamForm({...selTeam});}} className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg font-bold hover:bg-slate-200">ยกเลิก</button>}
-                        {teamForm.id && <button type="button" onClick={()=>{if(confirm('ลบพนักงานคนนี้?')){ let ns=(sets.staffStats||[]).filter(x=>x.id!==teamForm.id); const newSets = {...sets, staffStats: ns}; setSets(newSets); saveD('settings', newSets); setSelTeam(null); setTeamForm({id:'', name:'', classId:'', image:'', str:5, agi:5, dex:5, int:5, con:5, sen:5}); }}} className="bg-red-50 text-red-500 p-2.5 rounded-lg border border-red-200 hover:bg-red-100"><Icon name="trash" size={16}/></button>}
-                      </div>
-                    </div>
-                 </div>
-
-                 <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#0f2e4a] to-transparent opacity-20"></div>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-100/50 via-transparent to-transparent pointer-events-none"></div>
-                    <div className="w-full mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
-                       <h4 className="font-bold text-[#0f2e4a] mb-1 text-center tracking-wider flex items-center justify-center text-sm">
-                          <Icon name="swords" size={18} className="mr-2 text-[#bca374]"/> PERFORMANCE SPIDER MAP
-                        </h4>
-                        <p className="text-[10px] text-slate-400 text-center mb-4">
-                          คลิกที่แกนสเตตัสเพื่อเจาะลึกคำอธิบายรายมิติ
-                        </p>
-                        <div className="w-full max-w-[280px] aspect-square">
-                          <RadarChart 
-                             userStats={[teamForm.str, teamForm.agi, teamForm.dex, teamForm.int, teamForm.con, teamForm.sen]}
-                             selectedAxis={selectedRadarAxis}
-                             onSelectAxis={(idx, key) => setSelectedRadarAxis(selectedRadarAxis === key ? null : key)}
-                             showBaseline={true}
-                             roleTargetStats={getRoleTargetProfile(classMap[teamForm.classId] || teamForm.classId || teamForm.potentialIdentity).targetStats}
-                          />
-                        </div>
-
-                        {/* Radar Legend */}
-                        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2 mb-1 text-[10px] font-medium text-slate-600">
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-3 h-2 rounded bg-gradient-to-r from-[#0f2e4a] to-[#1e3a8a]"></span>
-                            <span>ประเมินจริง</span>
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-3 h-0 border-t-2 border-dashed border-[#bca374]"></span>
-                            <span>ฐานมาตรฐาน (5)</span>
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-3 h-0 border-t-2 border-dashed border-[#0284c7]"></span>
-                            <span>เป้าหมาย ({getRoleTargetProfile(classMap[teamForm.classId] || teamForm.classId || teamForm.potentialIdentity).shortRole})</span>
-                          </span>
-                        </div>
-
-                        {/* Radar Morphology Live Interpretation Card */}
-                        {(() => {
-                          const statsObj = { 
-                            str: Number(teamForm.str) || 5, 
-                            agi: Number(teamForm.agi) || 5, 
-                            dex: Number(teamForm.dex) || 5, 
-                            int: Number(teamForm.int) || 5, 
-                            con: Number(teamForm.con) || 5, 
-                            sen: Number(teamForm.sen) || 5 
-                          };
-                          const morph = analyzeRadarMorphology(statsObj);
-                          
-                          return (
-                            <div className="w-full mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 shadow-sm text-left">
-                              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${morph.badgeColor}`}>
-                                  {morph.shapeName}
-                                </span>
-                                <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                  พื้นที่ครอบคลุม: <strong className="text-[#0f2e4a]">{morph.coveragePct}%</strong>
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-600 mb-2 leading-relaxed">
-                                {morph.shapeDesc}
-                              </p>
-                              <div className="text-[10px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200 space-y-1">
-                                <div><strong>🎯 จุดเน้นหลัก:</strong> {morph.topFocus}</div>
-                                <div className="text-indigo-900"><strong>💡 การจัดสรรงาน:</strong> {morph.managementAdvice}</div>
-                              </div>
-
-                              {/* Interactive Axis Inspector Detail Box */}
-                              {selectedRadarAxis && (() => {
-                                const statKey = selectedRadarAxis.toLowerCase();
-                                const statDef = STAT_DEFINITIONS[statKey];
-                                const val = statsObj[statKey];
-                                const lvlText = getStatLevelText(val);
-                                const rubricText = getRubricText(statKey, val);
-                                const anchorGuide = DATA_ANCHOR_GUIDE[statKey];
-                                
-                                return (
-                                  <div className="mt-2.5 p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-[11px] animate-in fade-in slide-in-from-top-1 duration-200 shadow-xs">
-                                    <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-amber-200/60">
-                                      <strong className="text-[#0f2e4a] flex items-center gap-1.5 font-bold">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-[#bca374]"></span>
-                                        {statDef.label} ({statDef.name}) : ระดับ {val}/10 ({lvlText})
-                                      </strong>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => setSelectedRadarAxis(null)} 
-                                        className="text-[10px] text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded hover:bg-amber-100 font-semibold"
-                                      >
-                                        ✕ ปิด
-                                      </button>
-                                    </div>
-                                    <p className="text-slate-700 text-[10.5px] leading-relaxed mb-2">
-                                      <strong className="text-slate-900">พฤติกรรมหน้างาน:</strong> {rubricText}
-                                    </p>
-
-                                    {/* LH Operational Data Grounding */}
-                                    {anchorGuide && (
-                                      <div className="mb-2 p-2 rounded-lg bg-white/90 border border-amber-200/70 space-y-1 text-[10px]">
-                                        <div className="text-[#0f2e4a] flex items-start gap-1">
-                                          <span className="font-bold shrink-0">📊 แหล่งข้อมูลอ้างอิง LH:</span>
-                                          <span className="text-slate-700">{anchorGuide.lhSource}</span>
-                                        </div>
-                                        <div className="text-indigo-950 flex items-start gap-1">
-                                          <span className="font-bold shrink-0">⚖️ เกณฑ์มาตรฐาน 5 คะแนน:</span>
-                                          <span className="text-indigo-900 font-medium">{anchorGuide.level5Rule}</span>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    <div className="text-[9.5px] text-amber-900 bg-white/80 p-2 rounded-lg border border-amber-100 font-medium">
-                                      🚀 <strong>เกณฑ์สู่ระดับถัดไป:</strong> {val >= 9 ? 'รักษามาตรฐานระดับปรมาจารย์ และเป็นพี่เลี้ยงถ่ายทอดความรู้แก่ทีม' : 'พัฒนาความเร็วและความสม่ำเสมอในงานซ้ำซ้อน และลดข้อผิดพลาดหน้างาน'}
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          );
-                        })()}
-
-                        <div className="w-full mt-6 border-t border-slate-100"></div>
-                        {renderAnalysis()}
-                    </div>
-                 </div>
-               </div>
-            </div>
-          ))}
+          ) : (
+             renderCinematicView()
+          )}
         </div>
         <StaffAssessmentReportModal 
           isOpen={staffReportModalOpen} 
@@ -1420,6 +2752,18 @@ export default function TeamStatusTab({
             setSelTeam(staff);
             setTeamForm({ ...staff });
           }}
+        />
+        <DiscrepancyAuditModal
+          isOpen={discrepancyModalOpen}
+          onClose={() => setDiscrepancyModalOpen(false)}
+          staff={teamForm?.id ? teamForm : selTeam}
+          tasks={tasks}
+          discrepancyTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets).discrepancyTasks || []}
+          saveD={saveD}
+          isSupervisor={isSupervisor}
+          supervisorSession={supervisorSession}
+          onOpenSupervisorModal={onOpenSupervisorModal}
+          Icon={Icon}
         />
       </div>
     );
