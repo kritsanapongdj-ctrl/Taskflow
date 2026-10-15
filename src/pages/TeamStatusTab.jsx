@@ -197,8 +197,9 @@ export default function TeamStatusTab({
     
     const renderCinematicView = () => {
       const u = teamForm;
-      if (!u.id) return null;
+      if (!u.id && !selTeam?.isNew && !u.name) return null;
       const role = classMap[u.classId];
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
 
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const archAnalysis = analyzeArchetype(u, sets, archetypesData) || {};

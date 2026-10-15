@@ -2045,7 +2045,13 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
       assignedProjects: [],
       totalTasks: 0,
       completedTasks: 0,
+      activeTasks: 0,
+      activeOverdueTasks: 0,
+      lateFinishedTasks: 0,
+      sparePartsOver45Days: 0,
+      lateWOTasks: 0,
       slaRate: 100,
+      discrepancyTasks: [],
       penalties: [],
       alerts: []
     };
