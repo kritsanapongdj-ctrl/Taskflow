@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import ClassEmblem from '../ClassEmblem';
 import AssessmentModal from '../AssessmentModal';
@@ -75,6 +75,9 @@ export default function TeamStatusTab({
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
 
+  const sList = sets?.staffStats || [];
+  const classMap = (sets?.staffClasses || []).reduce((a, c) => { a[c.id] = c; return a; }, {});
+
   // Escape key exits Focus Mode
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -96,7 +99,7 @@ export default function TeamStatusTab({
       }
       const paramStaffId = params.get('staffId');
       if (paramStaffId) {
-        const found = (sets.staffStats || []).find(s => String(s.id) === String(paramStaffId));
+        const found = (sets?.staffStats || []).find(s => String(s.id) === String(paramStaffId));
         if (found) {
           setSelTeam(found);
           const assigned = (found.assignedProjects && found.assignedProjects.length > 0) ? found.assignedProjects : getStaffAssignedProjects(found, sets);
@@ -104,7 +107,43 @@ export default function TeamStatusTab({
         }
       }
     }
-  }, [sets.staffStats, setTeamUnlk]);
+  }, [sets?.staffStats, setTeamUnlk]);
+
+  // Auto-select first staff member if in Focus Mode with none selected
+  useEffect(() => {
+    if (isFocusMode && (!selTeam && !teamForm?.name && !teamForm?.id) && sList.length > 0) {
+      const firstStaff = sList[0];
+      setSelTeam(firstStaff);
+      const assigned = (firstStaff.assignedProjects && firstStaff.assignedProjects.length > 0)
+        ? firstStaff.assignedProjects
+        : getStaffAssignedProjects(firstStaff, sets);
+      setTeamForm({ ...firstStaff, assignedProjects: assigned, email: firstStaff.email || '' });
+    }
+  }, [isFocusMode, sList, selTeam, teamForm]);
+
+  const currentStaffIndex = sList.findIndex(s => String(s.id) === String(teamForm?.id || selTeam?.id));
+  const prevStaffMember = currentStaffIndex > 0 ? sList[currentStaffIndex - 1] : sList[sList.length - 1];
+  const nextStaffMember = currentStaffIndex >= 0 && currentStaffIndex < sList.length - 1 ? sList[currentStaffIndex + 1] : sList[0];
+
+  const handleSelectStaff = (targetStaff) => {
+    if (!targetStaff) return;
+    setSelTeam(targetStaff);
+    const assigned = (targetStaff.assignedProjects && targetStaff.assignedProjects.length > 0)
+      ? targetStaff.assignedProjects
+      : getStaffAssignedProjects(targetStaff, sets);
+    setTeamForm({ ...targetStaff, assignedProjects: assigned, email: targetStaff.email || '' });
+  };
+
+  const handleOpenInNewTab = (customStaffId = null) => {
+    const staffId = customStaffId || teamForm?.id || selTeam?.id || '';
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('tab', 'team');
+      if (staffId) currentUrl.searchParams.set('staffId', staffId);
+      currentUrl.searchParams.set('fullscreen', 'true');
+      window.open(currentUrl.toString(), '_blank');
+    }
+  };
 
   if (!teamUnlk && !isSupervisor && !isFocusMode) {
     return (
@@ -143,45 +182,6 @@ export default function TeamStatusTab({
       </div>
     );
   }
-
-    const sList = sets.staffStats || [];
-    const classMap = (sets.staffClasses||[]).reduce((a,c)=>{a[c.id]=c; return a;},{});
-
-    // Auto-select first staff member if in Focus Mode with none selected
-    useEffect(() => {
-      if (isFocusMode && (!selTeam && !teamForm.name && !teamForm.id) && sList.length > 0) {
-        const firstStaff = sList[0];
-        setSelTeam(firstStaff);
-        const assigned = (firstStaff.assignedProjects && firstStaff.assignedProjects.length > 0)
-          ? firstStaff.assignedProjects
-          : getStaffAssignedProjects(firstStaff, sets);
-        setTeamForm({ ...firstStaff, assignedProjects: assigned, email: firstStaff.email || '' });
-      }
-    }, [isFocusMode, sList, selTeam, teamForm]);
-
-    const currentStaffIndex = sList.findIndex(s => String(s.id) === String(teamForm.id || selTeam?.id));
-    const prevStaffMember = currentStaffIndex > 0 ? sList[currentStaffIndex - 1] : sList[sList.length - 1];
-    const nextStaffMember = currentStaffIndex >= 0 && currentStaffIndex < sList.length - 1 ? sList[currentStaffIndex + 1] : sList[0];
-
-    const handleSelectStaff = (targetStaff) => {
-      if (!targetStaff) return;
-      setSelTeam(targetStaff);
-      const assigned = (targetStaff.assignedProjects && targetStaff.assignedProjects.length > 0)
-        ? targetStaff.assignedProjects
-        : getStaffAssignedProjects(targetStaff, sets);
-      setTeamForm({ ...targetStaff, assignedProjects: assigned, email: targetStaff.email || '' });
-    };
-
-    const handleOpenInNewTab = (customStaffId = null) => {
-      const staffId = customStaffId || teamForm.id || selTeam?.id || '';
-      if (typeof window !== 'undefined') {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('tab', 'team');
-        if (staffId) currentUrl.searchParams.set('staffId', staffId);
-        currentUrl.searchParams.set('fullscreen', 'true');
-        window.open(currentUrl.toString(), '_blank');
-      }
-    };
     
     const handleImageUpload = (e) => {
       const file = e.target.files[0];
