@@ -23,18 +23,30 @@ export default function MonthlyCalendarTab({
     .concat(Array.from({ length: dM }, (_, i) => new Date(y, m, i + 1)));
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
-      <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center">
-        <Icon name="calendar" size={20} className="mr-2 text-[#bca374]" /> ปฏิทินเดือน {gFilt.month}
-      </h2>
-      <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">
-        {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((d) => (
-          <div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">
+    <div className="bg-white border-2 border-[#0B1B3D] shadow-[4px_4px_0px_#0B1B3D] p-4 animate-in space-y-4">
+      {/* Terminal Window Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#0B1B3D] border-2 border-[#B89246] shadow-[2px_2px_0px_#B89246] text-white">
+        <h2 className="text-sm sm:text-base font-serif font-bold text-[#B89246] tracking-wider uppercase flex items-center gap-2">
+          <span className="w-2.5 h-5 bg-[#B89246] inline-block shadow-[0_0_8px_#B89246]" />
+          <Icon name="calendar" size={18} className="text-[#00F0FF]" />
+          <span>CALENDAR_MATRIX // ปฏิทินงานประจำเดือน</span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="font-tech text-xs text-[#00F0FF] bg-[#102A43] px-2 py-0.5 border border-[#00F0FF]/40 font-bold">
+            [ MONTH // {gFilt.month} ]
+          </span>
+        </div>
+      </div>
+
+      {/* Cyber Grid Calendar */}
+      <div className="grid grid-cols-7 gap-px bg-[#0B1B3D] border-2 border-[#0B1B3D] shadow-[2px_2px_0px_#0B1B3D] overflow-hidden">
+        {['อา (SUN)', 'จ (MON)', 'อ (TUE)', 'พ (WED)', 'พฤ (THU)', 'ศ (FRI)', 'ส (SAT)'].map((d) => (
+          <div key={d} className="bg-[#0B1B3D] py-2 text-center text-[11px] font-tech font-bold text-[#B89246] border-b border-[#102A43]">
             {d}
           </div>
         ))}
         {ds.map((d, i) => {
-          if (!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]" />;
+          if (!d) return <div key={`e-${i}`} className="bg-slate-100/60 min-h-[90px]" />;
           const dS = pYMD(d);
           const iT = dS === tS;
           const dTs = tasks.filter(
@@ -57,33 +69,43 @@ export default function MonthlyCalendarTab({
             <div
               key={dS}
               onClick={() => dTs.length > 0 && onOpenCalendarModal(dS, dTs)}
-              className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 transition-colors ${
-                iT ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-300' : ''
+              className={`min-h-[90px] p-1.5 transition-colors cursor-pointer relative ${
+                iT
+                  ? 'bg-cyan-50/60 border-2 border-[#00F0FF]'
+                  : 'bg-white hover:bg-amber-50/30'
               }`}
             >
-              <div
-                className={`text-right text-[10px] mb-1 ${
-                  iT ? 'font-black text-blue-600' : 'text-gray-400'
-                }`}
-              >
-                {d.getDate()}
+              <div className="flex justify-between items-center mb-1">
+                {iT ? (
+                  <span className="text-[9px] font-tech font-bold px-1 py-0.2 bg-[#00F0FF] text-[#0B1B3D]">
+                    TODAY
+                  </span>
+                ) : <span />}
+                <div
+                  className={`text-right text-[11px] font-tech font-bold ${
+                    iT ? 'text-[#0B1B3D]' : 'text-slate-500'
+                  }`}
+                >
+                  {d.getDate()}
+                </div>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {dTs.slice(0, 3).map((t) => (
                   <div
                     key={t.id}
-                    className={`text-[8px] px-1 rounded truncate font-bold ${
+                    className={`text-[9px] px-1 py-0.5 truncate font-tech font-bold ${
                       t.status?.startsWith('จบงาน')
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-[#060E21] text-[#00F0FF] border border-[#00F0FF]/40 shadow-[1px_1px_0px_#00F0FF]'
+                        : 'bg-[#102A43] text-[#FFEA00] border border-[#FFEA00]/40 shadow-[1px_1px_0px_#FFEA00]'
                     }`}
+                    title={t.details}
                   >
                     {getStdProj(t.project)}
                   </div>
                 ))}
                 {dTs.length > 3 && (
-                  <div className="text-[8px] text-center text-gray-400 font-bold">
-                    + {dTs.length - 3}
+                  <div className="text-[9px] text-center text-[#0B1B3D] font-tech font-bold bg-[#F0F4F8] border border-[#0B1B3D]/30 py-0.2">
+                    + {dTs.length - 3} MORE
                   </div>
                 )}
               </div>
