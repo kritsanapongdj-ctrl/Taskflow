@@ -1446,23 +1446,28 @@ export default function App() {
       )}
       <div className="w-full min-h-screen">
         <div id="app-main" className="flex h-screen overflow-hidden text-slate-800 print:hidden">
-          <aside className="w-64 bg-[#0f2e4a] blueprint-grid-dark text-white hidden md:flex flex-col shadow-xl z-20 relative border-r border-[#bca374]/20">
-            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-              <div className="text-xl font-bold font-display tracking-wider text-[#bca374]">
-                LH <span className="font-light text-white font-body tracking-normal">TaskFlow</span>
+          <aside className="w-64 bg-[#0B1B3D] cyber-grid-dark cyber-scanlines text-white hidden md:flex flex-col z-20 relative border-r-2 border-[#B89246] shadow-[4px_0px_0px_rgba(11,27,61,0.5)]">
+            <div className="p-4 border-b-2 border-[#B89246] bg-[#060E21] flex items-center justify-between">
+              <div>
+                <div className="text-base font-serif font-bold tracking-wider text-[#B89246]">
+                  LAND & HOUSES
+                </div>
+                <div className="text-[10px] font-tech text-[#00F0FF] tracking-widest uppercase">
+                  [ SYS_CTRL // TASKFLOW ]
+                </div>
               </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#bca374] animate-pulse" title="System Online"></span>
+              <span className="w-2.5 h-2.5 bg-[#00F0FF] shadow-[0_0_8px_#00F0FF] animate-pulse" title="System Online"></span>
             </div>
-            <nav className="p-4 space-y-1.5 flex-1">
+            <nav className="p-3 space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {[
-                { i: 'dashboard', l: 'แดชบอร์ด', icon: 'layoutDashboard' },
-                { i: 'simulation', l: 'กิลด์ (Simulation)', icon: 'swords' },
-                { i: 'daily', l: 'งานรายวัน', icon: 'listTodo' },
-                { i: 'monthly', l: 'ปฏิทิน', icon: 'calendar' },
-                { i: 'kanban', l: 'ส่งเบิก', icon: 'fileText' },
-                { i: 'inform', l: 'แจ้งเปิดงาน', icon: 'bell' },
-                { i: 'team', l: 'สถานะทีม', icon: 'users' },
-                { i: 'settings', l: 'ตั้งค่า', icon: 'settings' }
+                { i: 'dashboard', l: 'แดชบอร์ด', code: '01', icon: 'layoutDashboard' },
+                { i: 'simulation', l: 'กิลด์ (Simulation)', code: '02', icon: 'swords' },
+                { i: 'daily', l: 'งานรายวัน', code: '03', icon: 'listTodo' },
+                { i: 'monthly', l: 'ปฏิทิน', code: '04', icon: 'calendar' },
+                { i: 'kanban', l: 'ส่งเบิก', code: '05', icon: 'fileText' },
+                { i: 'inform', l: 'แจ้งเปิดงาน', code: '06', icon: 'bell' },
+                { i: 'team', l: 'สถานะทีม', code: '07', icon: 'users' },
+                { i: 'settings', l: 'ตั้งค่า', code: '08', icon: 'settings' }
               ].map((x) => {
                 const isActive = tab === x.i;
                 return (
@@ -1473,113 +1478,113 @@ export default function App() {
                       setTab(x.i);
                       if (x.i !== 'settings') setSetUnlk(false);
                     }}
-                    className={`w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all relative overflow-hidden group cursor-pointer tactile-press ${
+                    className={`w-full text-left flex items-center justify-between px-3 py-2 text-xs font-bold transition-all relative cursor-pointer border ${
                       isActive
-                        ? 'bg-[#bca374] text-stone-950 font-display tracking-wide shadow-md shadow-amber-950/20 translate-x-1'
-                        : 'text-white/80 hover:text-white hover:bg-white/10 hover:translate-x-1 font-body'
+                        ? 'bg-[#B89246] text-[#0B1B3D] border-[#00F0FF] shadow-[3px_3px_0px_#00F0FF] translate-x-1'
+                        : 'bg-[#102A43]/70 text-slate-200 border-white/10 hover:border-[#B89246] hover:bg-[#102A43] hover:text-white hover:shadow-[3px_3px_0px_#B89246] active:translate-x-1 active:translate-y-1'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className={`text-[10px] font-tech font-bold px-1 py-0.2 border ${isActive ? 'bg-[#0B1B3D] text-[#B89246] border-[#0B1B3D]' : 'bg-[#0B1B3D]/80 text-[#B89246] border-[#B89246]/40'}`}>
+                        {x.code}
+                      </span>
                       <Icon
                         name={x.icon}
-                        size={17}
-                        className={isActive ? 'text-stone-950' : 'text-[#bca374] group-hover:scale-110 transition-transform'}
+                        size={16}
+                        className={isActive ? 'text-[#0B1B3D]' : 'text-[#B89246]'}
                       />
-                      <span>{x.l}</span>
+                      <span className="truncate">{x.l}</span>
                     </div>
                     {isActive && (
-                      <span className="w-1.5 h-3.5 bg-stone-950/40 rounded-full" />
+                      <span className="text-[10px] font-tech font-bold text-[#0B1B3D] ml-1">▶</span>
                     )}
                   </button>
                 );
               })}
-              <div className="pt-3 mt-3 border-t border-white/10">
+              <div className="pt-2 mt-2 border-t border-[#B89246]/40">
                 <a
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold font-display tracking-wide text-sky-200 hover:text-white bg-sky-950/40 hover:bg-sky-500/20 border border-sky-400/30 hover:border-sky-300 transition-all hover:translate-x-1 group shadow-xs tactile-press"
+                  className="w-full text-left flex items-center justify-between px-3 py-2 text-xs font-bold text-[#00F0FF] bg-[#060E21] hover:bg-[#00F0FF]/10 border border-[#00F0FF]/60 hover:border-[#00F0FF] shadow-[3px_3px_0px_#00F0FF] active:translate-x-1 active:translate-y-1 transition-all group"
                   title="เปิดแผนที่สถานการณ์น้ำท่วมและระบายน้ำ 30 โครงการ Real-time"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-                    <Icon name="map" size={16} className="text-sky-300 group-hover:scale-110 transition-transform"/>
-                    <span>แผนที่น้ำ Real-time</span>
+                    <span className="w-2 h-2 bg-[#00F0FF] animate-pulse" />
+                    <Icon name="map" size={15} className="text-[#00F0FF]"/>
+                    <span className="tracking-wide">แผนที่น้ำ LIVE</span>
                   </div>
-                  <span className="text-[10px] text-sky-300/80 font-tech">LIVE</span>
+                  <span className="text-[9px] text-[#FFEA00] font-tech border border-[#FFEA00]/40 px-1">RADAR</span>
                 </a>
               </div>
             </nav>
           </aside>
-          <main className="flex-1 flex flex-col min-w-0 bg-[#f8f9fa] blueprint-grid relative">
-            <header className="bg-white/95 backdrop-blur-xs h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-xs border-b border-slate-200/80">
+          <main className="flex-1 flex flex-col min-w-0 bg-[#F0F4F8] cyber-grid relative">
+            <header className="bg-[#0B1B3D] text-white h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-[0_2px_0px_#B89246] border-b-2 border-[#B89246]">
               <div className="flex items-center gap-2.5">
-                <div className="font-bold font-display text-[#0f2e4a] text-sm md:text-base tracking-wide flex items-center gap-1.5">
-                  <span className="w-1.5 h-3.5 bg-[#bca374] rounded-xs inline-block"></span>
-                  WORK CENTER
+                <div className="font-serif font-bold text-[#B89246] text-sm md:text-base tracking-widest flex items-center gap-2">
+                  <span className="w-2 h-3.5 bg-[#B89246] inline-block"></span>
+                  <span>LH EXECUTIVE CONSOLE</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowChangelog(true)}
-                  className="text-[11px] font-bold text-[#bca374] bg-[#bca374]/15 hover:bg-[#bca374]/25 active:scale-95 px-2.5 py-0.5 rounded-full flex items-center gap-1 transition cursor-pointer"
+                  className="text-[10px] font-tech font-bold text-[#00F0FF] bg-[#102A43] hover:bg-[#102A43]/80 active:translate-x-0.5 active:translate-y-0.5 px-2 py-0.5 border border-[#00F0FF]/60 flex items-center gap-1 transition cursor-pointer shadow-[2px_2px_0px_#00F0FF]"
                   title="ดูรายการอัปเดตเวอร์ชันใหม่"
                 >
-                  <Icon name="sparkles" size={13} /> {CURRENT_VERSION}
+                  <Icon name="sparkles" size={12} className="text-[#00F0FF]" /> {CURRENT_VERSION}
                 </button>
                 <a
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 active:scale-95 px-2.5 py-0.5 rounded-full hidden sm:flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                  className="text-[10px] font-tech font-bold text-[#FFEA00] bg-[#102A43] hover:bg-[#102A43]/80 border border-[#FFEA00]/60 active:translate-x-0.5 active:translate-y-0.5 px-2 py-0.5 hidden sm:flex items-center gap-1 transition cursor-pointer shadow-[2px_2px_0px_#FFEA00]"
                   title="เปิดแผนที่ติดตามสถานการณ์น้ำและระบายน้ำ 30 โครงการ Real-time"
                 >
-                  <Icon name="map" size={12} className="text-sky-600" /> แผนที่น้ำ Real-time
+                  <Icon name="map" size={12} className="text-[#FFEA00]" /> RADAR LIVE
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 {/* Supervisor Mode Toggle */}
                 {isSupervisor ? (
-                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/15 via-amber-600/15 to-amber-700/15 border border-amber-400/50 px-2.5 sm:px-3 py-1 rounded-full shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[11px] sm:text-xs font-bold text-amber-900 flex items-center gap-1">
-                      <Icon name="shieldCheck" size={14} className="text-amber-600" />
-                      <span className="hidden sm:inline">ผู้ดูแล:</span>
-                      <strong className="text-[#0f2e4a]">{supervisorSession?.supervisorName}</strong>
-                    </span>
+                  <div className="flex items-center gap-1.5 bg-[#102A43] border border-[#B89246] px-2.5 py-1 text-white shadow-[2px_2px_0px_#B89246]">
+                    <span className="w-2 h-2 bg-[#00F0FF] animate-pulse" />
+                    <span className="text-[10px] font-tech text-slate-300">SEC_LVL:</span>
+                    <strong className="text-[#B89246] font-tech text-xs uppercase">{supervisorSession?.supervisorName || 'SUPERVISOR'}</strong>
                     {supervisorSession?.coords && (
-                      <span className="hidden md:inline text-[9px] text-amber-800 font-mono bg-amber-100/80 px-1.5 py-0.2 rounded border border-amber-300" title={`พิกัด: ${supervisorSession.coords.lat?.toFixed(5)}, ${supervisorSession.coords.lng?.toFixed(5)}`}>
-                        📍 GPS
+                      <span className="hidden md:inline text-[9px] text-[#00F0FF] font-tech bg-[#0B1B3D] px-1 py-0.2 border border-[#00F0FF]/40" title={`พิกัด: ${supervisorSession.coords.lat?.toFixed(5)}, ${supervisorSession.coords.lng?.toFixed(5)}`}>
+                        GPS_LOCK
                       </span>
                     )}
                     <button
                       type="button"
                       onClick={handleExitSupervisor}
-                      className="text-[10px] text-rose-600 hover:text-rose-800 font-bold ml-1 hover:underline cursor-pointer"
+                      className="text-[10px] font-tech text-rose-400 hover:text-rose-300 font-bold ml-1 hover:underline cursor-pointer"
                       title="ออกจากโหมดผู้ดูแล กลับสู่โหมดผู้ใช้งานทั่วไป"
                     >
-                      ออก
+                      [EXIT]
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setSupervisorAuthModalOpen(true)}
-                    className="text-[11px] font-bold text-slate-700 hover:text-[#0f2e4a] bg-slate-100 hover:bg-slate-200 border border-slate-300 active:scale-95 px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    className="text-[10px] font-tech font-bold text-slate-200 hover:text-[#B89246] bg-[#102A43] hover:bg-[#102A43]/80 border border-slate-600 hover:border-[#B89246] active:translate-x-0.5 active:translate-y-0.5 px-2.5 py-1 flex items-center gap-1.5 transition cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
                     title="สลับเข้าสู่โหมดผู้ดูแล (ต้องการ PIN และพิกัด GPS)"
                   >
-                    <Icon name="shield" size={13} className="text-slate-500" />
-                    <span>ผู้ใช้งาน</span>
-                    <span className="text-[9px] text-[#bca374] font-semibold">⇄ ผู้ดูแล</span>
+                    <Icon name="shield" size={12} className="text-[#B89246]" />
+                    <span>OPERATOR</span>
+                    <span className="text-[9px] text-[#00F0FF]">⇄ SUPERVISOR</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
-                  className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a] transition cursor-pointer"
+                  className="p-1.5 bg-[#102A43] border border-[#B89246]/60 text-[#B89246] hover:text-white hover:border-[#B89246] active:translate-x-0.5 active:translate-y-0.5 transition cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
                   title="รีเฟรชข้อมูล"
                 >
-                  {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
+                  {loading ? <Icon name="loader2" size={15} className="animate-spin"/> : <Icon name="database" size={15}/>}
                 </button>
               </div>
             </header>
@@ -1692,10 +1697,10 @@ export default function App() {
               };
 
               return (
-                <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 md:px-6 py-2.5 md:py-3 flex overflow-x-auto md:flex-wrap gap-2 md:gap-3 items-center text-sm shadow-xs z-10 sticky top-14 hide-scrollbar">
-                  <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs font-display font-bold text-[#0f2e4a]">
-                    <Icon name="filter" size={13} className="text-[#bca374]"/>
-                    <span className="uppercase tracking-wider">ตัวกรอง</span>
+                <div className="bg-[#102A43] border-b-2 border-[#B89246] px-3 md:px-6 py-2 md:py-2.5 flex overflow-x-auto md:flex-wrap gap-2 md:gap-2.5 items-center text-xs shadow-[0_3px_0px_rgba(11,27,61,0.2)] z-10 sticky top-14 hide-scrollbar">
+                  <div className="flex items-center gap-1.5 shrink-0 bg-[#0B1B3D] border border-[#B89246] px-2.5 py-1 text-[11px] font-tech font-bold text-[#B89246] shadow-[2px_2px_0px_#B89246]">
+                    <Icon name="filter" size={12} className="text-[#00F0FF]"/>
+                    <span className="tracking-widest uppercase">FILTER_SYS</span>
                   </div>
                   
                   {tab !== 'daily' ? (
@@ -1703,7 +1708,7 @@ export default function App() {
                       type="month"
                       value={gFilt.month}
                       onChange={e=>setGilt({...gFilt, month: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-tech font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                       title="เลือกเดือน"
                     />
                   ) : (
@@ -1711,7 +1716,7 @@ export default function App() {
                       type="date"
                       value={gFilt.date}
                       onChange={e=>setGilt({...gFilt, date: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-tech font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                       title="เลือกวันที่"
                     />
                   )}
@@ -1720,21 +1725,21 @@ export default function App() {
                   <select
                     value={gFilt.staffRole || 'ทั้งหมด'}
                     onChange={e=>handleRoleFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                     title="กรองตามตำแหน่ง/สายงาน"
                   >
-                    <option value="ทั้งหมด">👥 ทุกสายงาน</option>
-                    {availableRoles.map(r=><option key={r.key} value={r.key}>{r.label}</option>)}
+                    <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">👥 ทุกสายงาน</option>
+                    {availableRoles.map(r=><option key={r.key} value={r.key} className="bg-[#0B1B3D] text-white">{r.label}</option>)}
                   </select>
 
                   {/* 2. เจ้าหน้าที่ */}
                   <select
                     value={gFilt.staffName}
                     onChange={e=>handleStaffFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                     title="กรองตามเจ้าหน้าที่"
                   >
-                    <option value="ทั้งหมด">
+                    <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">
                       👤 ทุกเจ้าหน้าที่{gFilt.staffRole && gFilt.staffRole !== 'ทั้งหมด' ? ` (${availableRoles.find(r=>r.key===gFilt.staffRole)?.label.replace(/^[^\s]+\s*/, '') || ''})` : ''}
                     </option>
                     {gFilt.staffRole === 'ทั้งหมด' ? (
@@ -1742,13 +1747,13 @@ export default function App() {
                         const roleStaff = allStaffNames.filter(n => getStaffRole(n).key === role.key);
                         if (roleStaff.length === 0) return null;
                         return (
-                          <optgroup key={role.key} label={role.label}>
-                            {roleStaff.map(n => <option key={n} value={n}>{n}</option>)}
+                          <optgroup key={role.key} label={role.label} className="bg-[#102A43] text-[#B89246]">
+                            {roleStaff.map(n => <option key={n} value={n} className="bg-[#0B1B3D] text-white">{n}</option>)}
                           </optgroup>
                         );
                       })
                     ) : (
-                      availableStaffNames.map(n => <option key={n} value={n}>{n}</option>)
+                      availableStaffNames.map(n => <option key={n} value={n} className="bg-[#0B1B3D] text-white">{n}</option>)
                     )}
                   </select>
 
@@ -1756,44 +1761,44 @@ export default function App() {
                   <select
                     value={gFilt.area}
                     onChange={e=>handleAreaFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-semibold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                     title="กรองตามพื้นที่"
                   >
-                    <option value="ทั้งหมด">📍 ทุกพื้นที่</option>
-                    {availableAreas.map(a=><option key={a}>{a}</option>)}
+                    <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">📍 ทุกพื้นที่</option>
+                    {availableAreas.map(a=><option key={a} value={a} className="bg-[#0B1B3D] text-white">{a}</option>)}
                   </select>
 
                   {/* 3. โครงการ (สัมพันธ์กับเจ้าหน้าที่และพื้นที่) */}
                   <select
                     value={gFilt.project}
                     onChange={e=>handleProjectFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 max-w-[190px] truncate shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-semibold max-w-[190px] truncate shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                     title="กรองตามโครงการ"
                   >
-                    <option value="ทั้งหมด">🏡 ทุกโครงการ</option>
-                    {availableProjects.map(p=><option key={p}>{getProjName(p)}</option>)}
+                    <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">🏡 ทุกโครงการ</option>
+                    {availableProjects.map(p=><option key={p} value={getProjName(p)} className="bg-[#0B1B3D] text-white">{getProjName(p)}</option>)}
                   </select>
 
-                  {/* 4. ผู้แจ้ง (Requirement 1) */}
+                  {/* 4. ผู้แจ้ง */}
                   <select
                     value={gFilt.requester || 'ทั้งหมด'}
                     onChange={e=>setGilt({...gFilt, requester: e.target.value})}
-                    className="border border-amber-200 hover:border-amber-300 focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-amber-50/70 hover:bg-amber-50 text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-[#E5C989] text-xs font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#B89246] hover:shadow-[2px_2px_0px_#00F0FF] transition-all"
                     title="กรองตามผู้แจ้ง"
                   >
-                    <option value="ทั้งหมด">🏷️ ทุกผู้แจ้ง</option>
-                    {allRequesters.map(r=><option key={r}>{r}</option>)}
+                    <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">🏷️ ทุกผู้แจ้ง</option>
+                    {allRequesters.map(r=><option key={r} value={r} className="bg-[#0B1B3D] text-white">{r}</option>)}
                   </select>
 
                   {tab === 'inform' && iTab === 'manage' && (
                     <select
                       value={gFilt.status}
                       onChange={e=>setGilt({...gFilt, status: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-semibold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] transition-all"
                     >
-                      <option value="ทั้งหมด">ทุกสถานะ</option>
-                      <option value="รอดำเนินการ">รอดำเนินการ</option>
-                      <option value="เปิด Inform Job แล้ว">เปิดงานแล้ว</option>
+                      <option value="ทั้งหมด" className="bg-[#0B1B3D] text-white">ทุกสถานะ</option>
+                      <option value="รอดำเนินการ" className="bg-[#0B1B3D] text-white">รอดำเนินการ</option>
+                      <option value="เปิด Inform Job แล้ว" className="bg-[#0B1B3D] text-white">เปิดงานแล้ว</option>
                     </select>
                   )}
                 </div>

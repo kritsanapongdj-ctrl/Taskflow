@@ -22,22 +22,120 @@ body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
   font-family: 'Prompt', sans-serif !important;
 }
 
+/* 80s Cyber-Corporate Textures & Grids */
+.cyber-scanlines {
+  background: linear-gradient(
+    rgba(11, 27, 61, 0) 50%, 
+    rgba(0, 0, 0, 0.22) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(184, 146, 70, 0.04),
+    rgba(0, 240, 255, 0.02),
+    rgba(184, 146, 70, 0.04)
+  );
+  background-size: 100% 4px, 6px 100%;
+}
+
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(184, 146, 70, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 146, 70, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.cyber-grid-dark {
+  background-image: 
+    linear-gradient(rgba(184, 146, 70, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 146, 70, 0.16) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* 80s Hard Displacement Tactile Buttons */
+.btn-retro {
+  transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.4, 1), box-shadow 0.08s cubic-bezier(0.2, 0.8, 0.4, 1);
+  border: 1px solid #B89246;
+  box-shadow: 3px 3px 0px 0px #0B1B3D;
+  border-radius: 0px !important;
+}
+.btn-retro:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #B89246;
+}
+.btn-retro:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #B89246;
+}
+
+.card-retro {
+  border: 1px solid #B89246;
+  box-shadow: 4px 4px 0px 0px rgba(11, 27, 61, 0.85);
+  border-radius: 0px !important;
+}
+
+.card-retro-gold {
+  border: 2px solid #B89246;
+  box-shadow: 5px 5px 0px 0px #B89246;
+  border-radius: 0px !important;
+}
+
+.terminal-titlebar {
+  background: #0B1B3D;
+  border-bottom: 1px solid #B89246;
+  font-family: 'JetBrains Mono', 'Chakra Petch', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Pixelated Progress Bar Steps */
+.pixel-meter {
+  display: flex;
+  gap: 3px;
+  background: transparent;
+}
+.pixel-meter-block {
+  height: 8px;
+  flex: 1;
+  background: rgba(184, 146, 70, 0.18);
+  border: 1px solid rgba(184, 146, 70, 0.3);
+}
+.pixel-meter-block.done {
+  background: #00F0FF;
+  border-color: #00F0FF;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+}
+.pixel-meter-block.active {
+  background: #B89246;
+  border-color: #B89246;
+  box-shadow: 0 0 5px rgba(184, 146, 70, 0.4);
+}
+.pixel-meter-block.alert {
+  background: #FFEA00;
+  border-color: #FFEA00;
+  box-shadow: 0 0 6px rgba(255, 234, 0, 0.5);
+}
+.pixel-meter-block.danger {
+  background: #EF4444;
+  border-color: #EF4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
 /* Subtle Blueprint & Paper Textures */
 .blueprint-grid {
   background-image: 
-    linear-gradient(rgba(15, 46, 74, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 46, 74, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(11, 27, 61, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 27, 61, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 .blueprint-grid-subtle {
   background-image: 
-    radial-gradient(circle, rgba(188, 163, 116, 0.15) 1px, transparent 1px);
+    radial-gradient(circle, rgba(184, 146, 70, 0.18) 1px, transparent 1px);
   background-size: 18px 18px;
 }
 .blueprint-grid-dark {
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(184, 146, 70, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 146, 70, 0.12) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
