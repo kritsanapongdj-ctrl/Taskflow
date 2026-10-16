@@ -80,62 +80,62 @@ export default function DailyTasksTab({
     if (status?.startsWith('จบงาน')) {
       if (status === 'จบงาน(รอใบงาน)') {
         return (
-          <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#102A43] text-[#FFEA00] border border-[#FFEA00]/80 inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[1px_1px_0px_#FFEA00]">
-            <span className="w-1.5 h-1.5 bg-[#FFEA00]"></span>
+          <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             จบงาน (รอใบงาน)
           </span>
         );
       }
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#060E21] text-[#00F0FF] border border-[#00F0FF]/80 inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[1px_1px_0px_#00F0FF]">
-          <span className="w-1.5 h-1.5 bg-[#00F0FF]"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           จบงาน
         </span>
       );
     }
     if (status === 'กำลังดำเนินการ' || status === 'อยู่ระหว่างดำเนินการ') {
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#102A43] text-[#00F0FF] border border-[#00F0FF] inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[2px_2px_0px_#00F0FF]">
-          <span className="w-1.5 h-1.5 bg-[#00F0FF] animate-pulse"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
           กำลังดำเนินการ
         </span>
       );
     }
     if (status === 'ติดปัญหา/รออะไหล่' || status === 'รออะไหล่/ติดปัญหา') {
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#2A0812] text-[#FF6B6B] border border-[#FF6B6B] inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[2px_2px_0px_#FF6B6B]">
-          <span className="w-1.5 h-1.5 bg-[#FF6B6B] animate-pulse"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
           ติดปัญหา/รออะไหล่
         </span>
       );
     }
     if (status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') {
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-rose-950 text-white border-2 border-rose-500 inline-flex items-center gap-1.5 shrink-0 animate-pulse font-tech shadow-[2px_2px_0px_#f43f5e]" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
-          <span className="w-1.5 h-1.5 bg-rose-500"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shrink-0 animate-pulse" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
           🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)
         </span>
       );
     }
     if (status === 'เลื่อนวันเริ่ม') {
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#0B1B3D] text-[#70A5FF] border border-[#70A5FF]/70 inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[1px_1px_0px_#70A5FF]">
-          <span className="w-1.5 h-1.5 bg-[#70A5FF]"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
           เลื่อนวันเริ่ม
         </span>
       );
     }
     if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') {
       return (
-        <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#1E1238] text-[#C084FC] border border-[#C084FC]/70 inline-flex items-center gap-1.5 shrink-0 font-tech shadow-[1px_1px_0px_#C084FC]">
-          <span className="w-1.5 h-1.5 bg-[#C084FC]"></span>
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
           เลื่อนวันจบ
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 text-[10.5px] font-bold bg-[#0B1B3D] text-slate-300 border border-slate-600 inline-flex items-center gap-1.5 shrink-0 font-tech">
-        <span className="w-1.5 h-1.5 bg-slate-400"></span>
+      <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 shrink-0">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
         {status || 'รอดำเนินการ'}
       </span>
     );
@@ -144,35 +144,33 @@ export default function DailyTasksTab({
   return (
     <div className="space-y-4 animate-in">
       {/* Top Header & Quick Overdue Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-[#0B1B3D] border-2 border-[#B89246] shadow-[3px_3px_0px_#B89246]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-5 bg-[#B89246] inline-block shadow-[0_0_8px_#B89246]" />
-            <h2 className="text-sm sm:text-base font-serif font-bold text-[#B89246] tracking-wider uppercase">
-              DAILY OPERATIONS // งานประจำวัน
-            </h2>
+            <span className="w-2.5 h-6 bg-[#0f2e4a] rounded-sm inline-block shadow-xs" />
+            <h2 className="text-xl font-bold text-[#0f2e4a] font-display tracking-tight">งานประจำวัน</h2>
           </div>
-          <span className="text-[11px] bg-[#102A43] text-[#00F0FF] font-tech font-bold px-2 py-0.5 border border-[#00F0FF]/40">
-            [ {displayTasks.length} TASKS ]
+          <span className="text-xs bg-slate-100 text-slate-700 font-tech font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
+            {displayTasks.length} รายการ
           </span>
 
-          {/* Quick Overdue Filter Button */}
+          {/* Quick Overdue Filter Pill */}
           {overdueCount > 0 && (
             <button
               type="button"
               onClick={() => setOnlyOverdueFilter(!onlyOverdueFilter)}
-              className={`px-2.5 py-1 text-xs font-bold font-tech transition-all flex items-center gap-1.5 cursor-pointer border ${
+              className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
                 onlyOverdueFilter
-                  ? 'bg-rose-900 text-white border-rose-400 shadow-[2px_2px_0px_#f43f5e]'
-                  : 'bg-[#102A43] text-[#FF6B6B] border-rose-500/60 hover:bg-rose-950/60 hover:shadow-[2px_2px_0px_#FF6B6B] active:translate-x-0.5 active:translate-y-0.5'
+                  ? 'bg-rose-600 text-white ring-2 ring-rose-300'
+                  : 'bg-white border border-rose-200 text-rose-700 hover:bg-rose-50'
               }`}
               title="กรองแสดงเฉพาะงานที่เกินกำหนดหรือปิดงานช้า"
             >
-              <Icon name="alertTriangle" size={13} className="text-[#FF6B6B]" />
-              <span>OVERDUE // เกินกำหนด</span>
+              <Icon name="alertTriangle" size={13} />
+              <span>เฉพาะงานเกินกำหนด/ปิดช้า</span>
               <span
-                className={`px-1 py-0.2 text-[10px] font-bold border ${
-                  onlyOverdueFilter ? 'bg-white/20 text-white border-white/40' : 'bg-rose-950 text-rose-300 border-rose-500/40'
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  onlyOverdueFilter ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
                 }`}
               >
                 {overdueCount}
@@ -184,9 +182,9 @@ export default function DailyTasksTab({
             <button
               type="button"
               onClick={() => setOnlyOverdueFilter(false)}
-              className="text-xs text-[#00F0FF] hover:underline font-tech font-bold cursor-pointer"
+              className="text-xs text-slate-500 hover:text-slate-800 underline font-medium cursor-pointer"
             >
-              [ SHOW ALL ]
+              แสดงทั้งหมด
             </button>
           )}
         </div>
@@ -194,9 +192,9 @@ export default function DailyTasksTab({
         <button
           type="button"
           onClick={() => openTaskModal()}
-          className="bg-[#B89246] text-[#0B1B3D] px-4 py-2 text-xs font-serif font-bold flex items-center justify-center border-2 border-[#00F0FF] shadow-[3px_3px_0px_#00F0FF] hover:bg-[#d4ac5d] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer self-start sm:self-auto transition-all"
+          className="bg-[#0f2e4a] text-white px-4 py-2.5 rounded-xl text-xs font-display font-bold flex items-center justify-center shadow-md hover:bg-[#1a3f63] hover:shadow-lg snap-spring border border-[#bca374]/30 cursor-pointer self-start sm:self-auto"
         >
-          <Icon name="plus" size={14} className="mr-1.5 text-[#0B1B3D] stroke-[3]" /> + เพิ่มงานใหม่ (NEW_TASK)
+          <Icon name="plus" size={15} className="mr-1.5 text-[#bca374]" /> เพิ่มงานใหม่
         </button>
       </div>
 
@@ -220,31 +218,30 @@ export default function DailyTasksTab({
             <div
               key={t.id}
               id={`task-card-${t.id}`}
-              className={`bg-white p-4 space-y-3 transition-all duration-200 border-2 relative ${
+              className={`bg-white rounded-3xl p-4 sm:p-5 space-y-3 transition-all duration-200 border tactile-card ${
                 isHighlighted
-                  ? 'border-[#00F0FF] bg-cyan-50/40 shadow-[4px_4px_0px_#00F0FF] animate-pulse'
+                  ? 'ring-4 ring-[#bca374] bg-[#bca374]/10 border-[#bca374] shadow-lg animate-pulse'
                   : info.isOverdue
-                  ? 'border-rose-500 bg-white shadow-[3px_3px_0px_#e11d48]'
-                  : 'border-[#0B1B3D] shadow-[3px_3px_0px_#0B1B3D] hover:shadow-[4px_4px_0px_#B89246] hover:border-[#B89246]'
+                  ? `${info.borderClass} ${info.bgHighlightClass} border-slate-200/90 shadow-xs`
+                  : 'border-slate-200/85 hover:border-slate-300 shadow-xs'
               }`}
             >
               {/* Project & Status Header */}
-              <div className="flex items-start justify-between gap-2 border-b-2 border-[#0B1B3D]/15 pb-2.5">
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[#B89246] text-xs">■</span>
-                    <h3 className="font-serif font-bold text-[#0B1B3D] text-base leading-snug break-words tracking-tight">
+                    <h3 className="font-bold text-[#bca374] text-base leading-snug break-words font-display tracking-tight">
                       {getStdProj(t.project)}
                     </h3>
                     {info.isOverdue && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-tech font-bold border border-rose-500 bg-rose-50 text-rose-800 shadow-[1px_1px_0px_#f43f5e]">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${info.badgeClass}`}>
                         {info.shortBadge}
                       </span>
                     )}
                   </div>
                   {t.area && (
-                    <span className="inline-block text-[11px] text-[#B89246] font-tech font-bold mt-0.5">
-                      📍 LOC: {t.area}
+                    <span className="inline-block text-[11px] text-slate-500 font-medium mt-0.5">
+                      📍 {t.area}
                     </span>
                   )}
                 </div>
@@ -253,20 +250,20 @@ export default function DailyTasksTab({
 
               {/* Task Details */}
               <div>
-                <div className="text-sm font-medium text-slate-900 leading-relaxed break-words font-sans">
+                <div className="text-sm font-semibold text-slate-800 leading-relaxed break-words">
                   {t.details}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-2 flex flex-wrap gap-1.5 items-center font-tech">
-                  <span className="bg-[#0B1B3D] text-[#00F0FF] px-1.5 py-0.5 font-bold border border-[#00F0FF]/30">
-                    ID: {t.id}
+                <div className="text-[11px] text-slate-400 mt-2 flex flex-wrap gap-1.5 items-center font-tech">
+                  <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px]">
+                    {t.id}
                   </span>
                   {t.requester && (
-                    <span className="text-slate-700 font-sans px-1 border border-slate-300 bg-slate-50">
+                    <span className="text-slate-500 font-sans">
                       ผู้แจ้ง: {t.requester}
                     </span>
                   )}
                   {t.workOrderNo && (
-                    <span className="bg-[#102A43] text-[#FFEA00] font-bold px-1.5 py-0.5 border border-[#FFEA00]/50 shadow-[1px_1px_0px_#FFEA00]">
+                    <span className="bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
                       WO: {t.workOrderNo}
                     </span>
                   )}
@@ -274,10 +271,10 @@ export default function DailyTasksTab({
                     <button
                       type="button"
                       onClick={() => onOpenTimeline(t)}
-                      className="bg-[#F0F4F8] hover:bg-[#0B1B3D] hover:text-[#00F0FF] text-[#0B1B3D] px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 border border-[#0B1B3D]/30 active:translate-x-0.5 active:translate-y-0.5 transition cursor-pointer shadow-[1px_1px_0px_#0B1B3D]"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer snap-spring font-sans"
                       title="ดูประวัติไทม์ไลน์ของงานนี้"
                     >
-                      <Icon name="clock" size={11} className="text-[#B89246]" />
+                      <Icon name="clock" size={11} className="text-[#0f2e4a]" />
                       <span>ไทม์ไลน์</span>
                     </button>
                   )}
@@ -285,21 +282,21 @@ export default function DailyTasksTab({
 
                 {/* Sub-reason banners */}
                 {info.reason && (
-                  <div className="mt-2 text-xs text-amber-950 bg-amber-50 px-2.5 py-1.5 border-l-4 border-l-amber-500 border border-amber-300 flex items-start gap-1.5">
-                    <span className="font-bold shrink-0 font-tech">💬 สาเหตุที่ช้า:</span>
+                  <div className="mt-2 text-xs text-amber-900 bg-amber-100/70 px-2.5 py-1.5 rounded-xl border border-amber-200/80 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">💬 สาเหตุที่ช้า:</span>
                     <span className="break-words font-medium">{info.reason}</span>
                   </div>
                 )}
                 {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
-                  <div className="mt-2 text-xs text-blue-950 bg-blue-50 px-2.5 py-1.5 border-l-4 border-l-blue-500 border border-blue-300 flex items-start gap-1.5">
-                    <span className="font-bold shrink-0 font-tech">📅 เหตุผลเลื่อนวันเริ่ม:</span>
+                  <div className="mt-2 text-xs text-sky-700 bg-sky-50/90 px-2.5 py-1.5 rounded-xl border border-sky-200 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">📅 เหตุผลเลื่อนวันเริ่ม:</span>
                     <span className="break-words font-medium">{t.startPostponeReason}</span>
                   </div>
                 )}
                 {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
                   <div className="space-y-1.5 mt-2">
-                    <div className="text-xs text-rose-950 bg-rose-50 px-2.5 py-1.5 border-l-4 border-l-rose-500 border border-rose-300 flex items-start gap-1.5">
-                      <span className="font-bold shrink-0 font-tech">⚠️ สาเหตุติดปัญหา:</span>
+                    <div className="text-xs text-rose-700 bg-rose-50/90 px-2.5 py-1.5 rounded-xl border border-rose-200 flex items-start gap-1.5">
+                      <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
                       <span className="break-words font-medium">{t.issueReason}</span>
                     </div>
                     {(() => {
@@ -308,7 +305,7 @@ export default function DailyTasksTab({
                       const waitDays = Math.floor((Date.now() - new Date(repTime).getTime()) / (1000 * 3600 * 24));
                       if (waitDays <= 45) return null;
                       return (
-                        <div className="p-2 bg-rose-950 border-2 border-rose-500 text-white text-[11px] font-bold flex items-center justify-between gap-1.5 animate-pulse shadow-[2px_2px_0px_#f43f5e] font-tech">
+                        <div className="p-2 rounded-xl bg-rose-100 border border-rose-300 text-rose-900 text-[11px] font-bold flex items-center justify-between gap-1.5 animate-pulse">
                           <div className="flex items-center gap-1.5">
                             <span>🚨</span>
                             <span>รออะไหล่เกินเพดาน 45 วัน ({waitDays} วัน)</span>
@@ -317,7 +314,7 @@ export default function DailyTasksTab({
                             <button
                               type="button"
                               onClick={() => initSt(t.id, 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)')}
-                              className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white border border-white text-[10px] font-bold cursor-pointer active:translate-x-0.5 active:translate-y-0.5 shrink-0"
+                              className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded text-[10px] font-bold shadow-xs cursor-pointer snap-spring shrink-0"
                             >
                               ลงโทษตัดคะแนน
                             </button>
@@ -328,72 +325,72 @@ export default function DailyTasksTab({
                   </div>
                 )}
                 {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
-                  <div className="mt-2 text-xs text-amber-950 bg-amber-50/90 px-2.5 py-1.5 border-l-4 border-l-amber-500 border border-amber-300 flex items-start justify-between gap-1.5">
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50/90 px-2.5 py-1.5 rounded-xl border border-amber-200 flex items-start justify-between gap-1.5">
                     <div className="flex items-start gap-1.5">
-                      <span className="font-bold shrink-0 font-tech">⚠️ ประวัติรออะไหล่:</span>
+                      <span className="font-bold shrink-0">⚠️ ประวัติรออะไหล่:</span>
                       <span className="break-words font-medium">{t.issueReason}</span>
                     </div>
                     {onOpenTimeline && (
                       <button
                         type="button"
                         onClick={() => onOpenTimeline(t)}
-                        className="text-[10px] font-bold font-tech text-amber-800 underline shrink-0 hover:text-amber-950 cursor-pointer"
+                        className="text-[10px] font-bold text-amber-700 underline shrink-0 hover:text-amber-900 cursor-pointer"
                       >
-                        [ ไทม์ไลน์ ]
+                        ไทม์ไลน์
                       </button>
                     )}
                   </div>
                 )}
                 {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
-                  <div className="mt-2 text-xs text-purple-950 bg-purple-50 px-2.5 py-1.5 border-l-4 border-l-purple-500 border border-purple-300 flex items-start gap-1.5">
-                    <span className="font-bold shrink-0 font-tech">📅 เหตุผลเลื่อน:</span>
+                  <div className="mt-2 text-xs text-indigo-700 bg-indigo-50/90 px-2.5 py-1.5 rounded-xl border border-indigo-200 flex items-start gap-1.5">
+                    <span className="font-bold shrink-0">📅 เหตุผลเลื่อน:</span>
                     <span className="break-words font-medium">{t.postponeReason}</span>
                   </div>
                 )}
               </div>
 
               {/* Duration & Overdue Status */}
-              <div className="bg-[#F0F4F8] p-2.5 flex items-center justify-between text-xs text-slate-700 border border-[#0B1B3D]/20 font-tech">
+              <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between text-xs text-slate-600 border border-slate-200/60 font-tech">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Icon name="calendar" size={14} className="text-[#B89246] shrink-0" />
+                  <Icon name="calendar" size={14} className="text-[#bca374] shrink-0" />
                   <span>
-                    START: <strong className="text-slate-900 whitespace-nowrap">{fDate(t.startDate)}</strong>
+                    เริ่ม: <strong className="text-slate-800 whitespace-nowrap">{fDate(t.startDate)}</strong>
                   </span>
-                  <span className="text-slate-400">➔</span>
+                  <span className="text-slate-300">—</span>
                   <span>
-                    END:{' '}
+                    จบ:{' '}
                     <strong
                       className={`whitespace-nowrap ${
                         info.type === 'ACTIVE_OVERDUE'
                           ? 'text-rose-600 font-bold'
                           : info.type === 'COMPLETED_LATE'
                           ? 'text-amber-700 font-bold'
-                          : 'text-slate-900'
+                          : 'text-slate-800'
                       }`}
                     >
                       {fDate(t.endDate)}
                     </strong>
                   </span>
                   {t.completedDate && (
-                    <span className="text-[11px] text-emerald-800 font-bold whitespace-nowrap border-l border-slate-300 pl-1.5 ml-1">
-                      (CLOSED: <strong>{fDate(t.completedDate)}</strong>)
+                    <span className="text-[11px] text-emerald-700 font-medium whitespace-nowrap">
+                      (ปิด: <strong>{fDate(t.completedDate)}</strong>)
                     </span>
                   )}
                 </div>
                 {info.isOverdue && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold border border-rose-500 bg-rose-100 text-rose-800 shrink-0 font-tech shadow-[1px_1px_0px_#f43f5e]">
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 font-sans ${info.badgeClass}`}>
                     {info.label}
                   </span>
                 )}
               </div>
 
               {/* Mobile Bottom Action Bar (Thumb-friendly >= 44px) */}
-              <div className="flex items-center gap-2 pt-2 border-t-2 border-[#0B1B3D]/15">
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
                 <div className="flex-1">
                   <select
                     value={currentSelectVal}
                     onChange={(e) => initSt(t.id, e.target.value)}
-                    className="w-full h-11 px-3 border-2 border-[#0B1B3D] text-xs font-bold text-[#0B1B3D] bg-white focus:border-[#B89246] focus:bg-amber-50/20 outline-none shadow-[2px_2px_0px_#0B1B3D] transition-all cursor-pointer font-sans"
+                    className="w-full h-11 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 outline-none shadow-2xs transition-all tactile-select"
                   >
                     <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
                     <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
@@ -412,7 +409,7 @@ export default function DailyTasksTab({
                 <button
                   type="button"
                   onClick={() => handleEdit(t)}
-                  className="w-11 h-11 border-2 border-[#0B1B3D] flex items-center justify-center text-[#0B1B3D] bg-[#F0F4F8] hover:bg-[#B89246] hover:text-white transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
+                  className="w-11 h-11 border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-100 hover:text-[#0f2e4a] transition-all snap-spring cursor-pointer shadow-2xs"
                   title="แก้ไขงาน"
                 >
                   <Icon name="edit2" size={16} />
@@ -420,7 +417,7 @@ export default function DailyTasksTab({
                 <button
                   type="button"
                   onClick={() => deleteTask(t)}
-                  className="w-11 h-11 border-2 border-rose-600 flex items-center justify-center text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_#e11d48]"
+                  className="w-11 h-11 border border-rose-200 rounded-xl flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition-all snap-spring cursor-pointer shadow-2xs"
                   title="ลบงาน"
                 >
                   <Icon name="trash" size={16} />
@@ -432,29 +429,29 @@ export default function DailyTasksTab({
       </div>
 
       {/* 2. Desktop Table View (width >= 768px) */}
-      <div className="hidden md:block bg-white border-2 border-[#0B1B3D] shadow-[4px_4px_0px_#0B1B3D] overflow-hidden">
+      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[780px]">
             <thead>
-              <tr className="bg-[#0B1B3D] text-white border-b-2 border-[#B89246]">
-                <th className="py-3 px-4 w-[36%] min-w-[240px] font-tech text-xs font-bold tracking-wider text-[#B89246] uppercase border-r border-[#102A43]">
-                  [ 01 // DETAILS // รายละเอียด ]
+              <tr className="bg-[#0f2e4a] blueprint-grid-dark text-white border-b-2 border-[#bca374]">
+                <th className="py-3.5 px-4 w-[36%] min-w-[240px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+                  รายละเอียด
                 </th>
-                <th className="py-3 px-4 w-[20%] min-w-[140px] font-tech text-xs font-bold tracking-wider text-[#B89246] uppercase border-r border-[#102A43]">
-                  [ 02 // PROJECT // โครงการ ]
+                <th className="py-3.5 px-4 w-[20%] min-w-[140px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+                  โครงการ
                 </th>
-                <th className="py-3 px-4 w-[18%] min-w-[160px] font-tech text-xs font-bold tracking-wider text-[#B89246] uppercase border-r border-[#102A43] whitespace-nowrap">
-                  [ 03 // SCHEDULE // ระยะเวลา ]
+                <th className="py-3.5 px-4 w-[18%] min-w-[160px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase whitespace-nowrap">
+                  ระยะเวลา
                 </th>
-                <th className="py-3 px-4 w-[13%] min-w-[120px] font-tech text-xs font-bold tracking-wider text-[#B89246] uppercase border-r border-[#102A43]">
-                  [ 04 // STATUS // สถานะ ]
+                <th className="py-3.5 px-4 w-[13%] min-w-[115px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+                  สถานะ & SLA
                 </th>
-                <th className="py-3 px-4 w-[13%] min-w-[130px] font-tech text-xs font-bold tracking-wider text-[#B89246] uppercase text-center">
-                  [ 05 // ACTION // จัดการ ]
+                <th className="py-3.5 px-4 w-[13%] min-w-[130px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase text-center">
+                  จัดการ
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0B1B3D]/10">
+            <tbody className="divide-y divide-slate-100">
               {displayTasks.map((t) => {
                 const info = t.overdueInfo;
                 const isHighlighted = highlightTaskId === t.id;
@@ -473,34 +470,29 @@ export default function DailyTasksTab({
                   <tr
                     key={t.id}
                     id={`task-row-${t.id}`}
-                    className={`border-b border-[#0B1B3D]/10 transition-colors ${
+                    className={`border-b transition-all duration-300 ${
                       isHighlighted
-                        ? 'border-l-4 border-l-[#00F0FF] bg-[#00F0FF]/10 font-semibold'
+                        ? 'ring-2 ring-[#bca374] bg-[#bca374]/15 font-semibold'
                         : info.isOverdue
-                        ? 'border-l-4 border-l-rose-600 bg-rose-50/40 hover:bg-rose-50/70'
-                        : 'hover:bg-amber-50/20'
+                        ? `${info.bgHighlightClass} hover:bg-amber-50/50`
+                        : 'hover:bg-gray-50/80'
                     }`}
                   >
-                    <td className="p-3.5 align-top">
-                      <div className="font-medium text-slate-900 flex items-center gap-2 leading-relaxed">
+                    <td className="p-4 align-top">
+                      <div className="font-medium text-slate-800 flex items-center gap-2">
                         <span>{t.details}</span>
                         {info.isOverdue && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 text-[10px] font-tech border border-rose-500 bg-rose-100 text-rose-800 font-bold shadow-[1px_1px_0px_#f43f5e]">
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] border font-bold ${info.badgeClass}`}>
                             {info.shortBadge}
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-1.5 items-center font-tech">
-                        <span className="bg-[#0B1B3D] text-[#00F0FF] px-1.5 py-0.2 font-bold border border-[#00F0FF]/30">
-                          ID: {t.id}
+                      <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-1.5 items-center">
+                        <span>
+                          {t.id} | {t.requester}
                         </span>
-                        {t.requester && (
-                          <span className="text-slate-700 font-sans px-1 border border-slate-300 bg-slate-50">
-                            ผู้แจ้ง: {t.requester}
-                          </span>
-                        )}
                         {t.workOrderNo && (
-                          <span className="bg-[#102A43] text-[#FFEA00] font-bold px-1.5 py-0.2 border border-[#FFEA00]/50 shadow-[1px_1px_0px_#FFEA00]">
+                          <span className="bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded border border-blue-200">
                             WO:{t.workOrderNo}
                           </span>
                         )}
@@ -508,30 +500,30 @@ export default function DailyTasksTab({
                           <button
                             type="button"
                             onClick={() => onOpenTimeline(t)}
-                            className="bg-[#F0F4F8] hover:bg-[#0B1B3D] hover:text-[#00F0FF] text-[#0B1B3D] px-1.5 py-0.2 font-bold inline-flex items-center gap-1 border border-[#0B1B3D]/30 active:translate-x-0.5 active:translate-y-0.5 transition cursor-pointer shadow-[1px_1px_0px_#0B1B3D]"
+                            className="text-slate-400 hover:text-[#0f2e4a] inline-flex items-center gap-0.5 font-bold cursor-pointer ml-1"
                             title="ดูประวัติไทม์ไลน์"
                           >
-                            <Icon name="clock" size={10} className="text-[#B89246]" />
+                            <Icon name="clock" size={10} />
                             <span>ไทม์ไลน์</span>
                           </button>
                         )}
                       </div>
                       {info.reason && (
-                        <div className="mt-1 text-xs text-amber-950 bg-amber-50 px-2 py-0.5 border-l-2 border-l-amber-500 border border-amber-300 inline-flex items-center gap-1 max-w-full">
-                          <span className="font-bold shrink-0 font-tech">💬 ช้า:</span>
+                        <div className="mt-1 text-xs text-amber-900 bg-amber-100/70 px-2 py-0.5 rounded border border-amber-200/80 inline-flex items-center gap-1 max-w-full">
+                          <span className="font-bold shrink-0">💬 สาเหตุที่ช้า:</span>
                           <span className="truncate">{info.reason}</span>
                         </div>
                       )}
                       {t.startPostponeReason && t.status === 'เลื่อนวันเริ่ม' && (
-                        <div className="mt-1 text-xs text-blue-950 bg-blue-50 px-2 py-0.5 border-l-2 border-l-blue-500 border border-blue-300 inline-flex items-center gap-1 max-w-full">
-                          <span className="font-bold shrink-0 font-tech">📅 เลื่อนเริ่ม:</span>
+                        <div className="mt-1.5 text-xs text-sky-700 bg-sky-50/90 px-2 py-0.5 rounded border border-sky-200 inline-flex items-center gap-1 max-w-full">
+                          <span className="font-bold shrink-0">📅 หมายเหตุเลื่อนวันเริ่ม:</span>
                           <span className="truncate">{t.startPostponeReason}</span>
                         </div>
                       )}
                       {t.issueReason && (t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา') && (
-                        <div className="space-y-1 mt-1">
-                          <div className="text-xs text-rose-950 bg-rose-50 px-2 py-0.5 border-l-2 border-l-rose-500 border border-rose-300 inline-flex items-center gap-1 max-w-full">
-                            <span className="font-bold shrink-0 font-tech">⚠️ ติดปัญหา:</span>
+                        <div className="space-y-1 mt-1.5">
+                          <div className="text-xs text-rose-700 bg-rose-50/90 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1 max-w-full">
+                            <span className="font-bold shrink-0">⚠️ สาเหตุติดปัญหา:</span>
                             <span className="truncate">{t.issueReason}</span>
                           </div>
                           {(() => {
@@ -540,7 +532,7 @@ export default function DailyTasksTab({
                             const waitDays = Math.floor((Date.now() - new Date(repTime).getTime()) / (1000 * 3600 * 24));
                             if (waitDays <= 45) return null;
                             return (
-                              <div className="p-1.5 bg-rose-950 border border-rose-500 text-white text-[10.5px] font-bold flex items-center justify-between gap-2 animate-pulse shadow-[2px_2px_0px_#f43f5e] font-tech">
+                              <div className="p-1.5 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 text-[10.5px] font-bold flex items-center justify-between gap-2 animate-pulse">
                                 <div className="flex items-center gap-1">
                                   <span>🚨</span>
                                   <span>รออะไหล่เกิน 45 วัน ({waitDays} วัน)</span>
@@ -549,7 +541,7 @@ export default function DailyTasksTab({
                                   <button
                                     type="button"
                                     onClick={() => initSt(t.id, 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)')}
-                                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white border border-white text-[9.5px] font-bold cursor-pointer active:translate-x-0.5 active:translate-y-0.5 shrink-0"
+                                    className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded text-[9.5px] font-bold shadow-xs cursor-pointer snap-spring shrink-0"
                                   >
                                     ลงโทษตัดคะแนน
                                   </button>
@@ -560,73 +552,69 @@ export default function DailyTasksTab({
                         </div>
                       )}
                       {t.issueReason && t.status !== 'ติดปัญหา/รออะไหล่' && t.status !== 'รออะไหล่/ติดปัญหา' && (
-                        <div className="mt-1 text-xs text-amber-950 bg-amber-50/90 px-2 py-0.5 border-l-2 border-l-amber-500 border border-amber-300 inline-flex items-center gap-1 max-w-full">
-                          <span className="font-bold shrink-0 font-tech">⚠️ ประวัติรออะไหล่:</span>
+                        <div className="mt-1.5 text-xs text-amber-800 bg-amber-50/90 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 max-w-full">
+                          <span className="font-bold shrink-0">⚠️ ประวัติรออะไหล่:</span>
                           <span className="truncate">{t.issueReason}</span>
                         </div>
                       )}
                       {t.postponeReason && (t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน') && (
-                        <div className="mt-1 text-xs text-purple-950 bg-purple-50 px-2 py-0.5 border-l-2 border-l-purple-500 border border-purple-300 inline-flex items-center gap-1 max-w-full">
-                          <span className="font-bold shrink-0 font-tech">📅 เลื่อนจบ:</span>
+                        <div className="mt-1.5 text-xs text-indigo-700 bg-indigo-50/90 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center gap-1 max-w-full">
+                          <span className="font-bold shrink-0">📅 เหตุผลเลื่อน:</span>
                           <span className="truncate">{t.postponeReason}</span>
                         </div>
                       )}
                     </td>
-                    <td className="p-3.5 align-top">
-                      <div className="font-serif font-bold text-[#0B1B3D] text-sm">
-                        {getStdProj(t.project)}
-                      </div>
-                      <div className="text-xs text-[#B89246] font-tech font-bold mt-0.5">
-                        📍 {t.area}
-                      </div>
+                    <td className="p-4 font-bold text-[#bca374] align-top">
+                      {getStdProj(t.project)}
+                      <div className="text-xs text-gray-400 font-normal">{t.area}</div>
                     </td>
-                    <td className="p-3.5 text-xs text-slate-700 whitespace-nowrap align-top font-tech">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-500 text-[11px] shrink-0">START:</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap">{fDate(t.startDate)}</span>
+                    <td className="p-4 text-xs text-slate-600 whitespace-nowrap align-top">
+                      <div className="flex items-center gap-1.5 font-tech">
+                        <span className="text-slate-400 font-sans text-[11px] shrink-0">เริ่ม:</span>
+                        <span className="font-semibold text-slate-700 whitespace-nowrap">{fDate(t.startDate)}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-slate-500 text-[11px] shrink-0">END:</span>
+                      <div className="flex items-center gap-1.5 font-tech mt-1">
+                        <span className="text-slate-400 font-sans text-[11px] shrink-0">จบ:</span>
                         <span
-                          className={`whitespace-nowrap font-bold ${
+                          className={`whitespace-nowrap font-semibold ${
                             info.type === 'ACTIVE_OVERDUE'
-                              ? 'text-rose-600'
+                              ? 'text-rose-600 font-bold'
                               : info.type === 'COMPLETED_LATE'
-                              ? 'text-amber-700'
-                              : 'text-slate-900'
+                              ? 'text-amber-700 font-bold'
+                              : 'text-slate-700'
                           }`}
                         >
                           {fDate(t.endDate)}
                         </span>
                       </div>
                       {t.completedDate && (
-                        <div className="text-[11px] text-emerald-800 font-bold pt-1.5 flex items-center gap-1 border-t border-slate-200 mt-1 whitespace-nowrap">
-                          <span className="text-slate-500 text-[10px] shrink-0">CLOSED:</span>
+                        <div className="text-[11px] text-emerald-700 font-medium pt-1.5 flex items-center gap-1 font-tech whitespace-nowrap">
+                          <span className="text-emerald-500 font-sans text-[10px] shrink-0">ปิดจริง:</span>
                           <span className="whitespace-nowrap">{fDate(t.completedDate)}</span>
                           {info.isCompletedLate && (
-                            <span className="text-amber-900 font-bold text-[10px] bg-amber-100 px-1 py-0.2 border border-amber-300 shrink-0">
-                              +{info.daysLate}D
+                            <span className="text-amber-800 font-bold text-[10px] bg-amber-50 px-1 py-0.2 rounded border border-amber-200 shrink-0">
+                              +{info.daysLate}ว
                             </span>
                           )}
                         </div>
                       )}
                     </td>
-                    <td className="p-3.5 align-top">
+                    <td className="p-4 align-top">
                       <div>{getStatusBadge(t.status)}</div>
                       {info.isOverdue && (
                         <div className="mt-1.5">
-                          <span className="inline-block px-1.5 py-0.5 text-[10px] font-tech font-bold border border-rose-500 bg-rose-100 text-rose-800 shadow-[1px_1px_0px_#f43f5e]">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${info.badgeClass}`}>
                             {info.label}
                           </span>
                         </div>
                       )}
                     </td>
-                    <td className="p-3.5 text-center align-top">
+                    <td className="p-4 text-center align-top">
                       <div className="flex justify-center items-center gap-1.5">
                         <select
                           value={currentSelectVal}
                           onChange={(e) => initSt(t.id, e.target.value)}
-                          className="border-2 border-[#0B1B3D] text-xs p-1.5 outline-none bg-white hover:bg-[#F0F4F8] font-bold text-[#0B1B3D] focus:border-[#B89246] transition-all cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
+                          className="border border-slate-200 rounded-lg text-xs p-1.5 outline-none bg-slate-50 hover:bg-white font-medium focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 transition-all cursor-pointer shadow-2xs tactile-select"
                         >
                           <option value="รอดำเนินการ">รอดำเนินการ</option>
                           <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
@@ -645,7 +633,7 @@ export default function DailyTasksTab({
                           <button
                             type="button"
                             onClick={() => onOpenTimeline(t)}
-                            className="p-1.5 border border-[#0B1B3D] text-[#0B1B3D] bg-[#F0F4F8] hover:bg-[#0B1B3D] hover:text-[#00F0FF] transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
+                            className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
                             title="ดูประวัติไทม์ไลน์งาน"
                           >
                             <Icon name="clock" size={14} />
@@ -654,7 +642,7 @@ export default function DailyTasksTab({
                         <button
                           type="button"
                           onClick={() => handleEdit(t)}
-                          className="p-1.5 border border-[#0B1B3D] text-[#0B1B3D] bg-[#F0F4F8] hover:bg-[#B89246] hover:text-white transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_#0B1B3D]"
+                          className="text-slate-500 hover:text-[#0f2e4a] p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
                           title="แก้ไขงาน"
                         >
                           <Icon name="edit2" size={14} />
@@ -662,27 +650,27 @@ export default function DailyTasksTab({
                         <button
                           type="button"
                           onClick={() => deleteTask(t)}
-                          className="p-1.5 border border-rose-600 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_#e11d48]"
+                          className="text-rose-500 hover:text-rose-700 p-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all cursor-pointer snap-spring shadow-2xs"
                           title="ลบงาน"
                         >
                           <Icon name="trash" size={14} />
                         </button>
                       </div>
                     </td>
-                  </tr>
-                );
-              })}
-              {displayTasks.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="text-center py-12 text-slate-500 font-tech font-bold text-xs bg-slate-50">
-                    {onlyOverdueFilter ? '[ NO_OVERDUE_TASKS_TODAY // ไม่มีงานที่เกินกำหนดหรือปิดช้าในวันนี้ ]' : '[ NO_TASKS_TODAY // ไม่มีงานในวันนี้ ]'}
-                  </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+            {displayTasks.length === 0 && (
+              <tr>
+                <td colSpan="5" className="text-center py-10 text-gray-400 text-xs">
+                  {onlyOverdueFilter ? 'ไม่มีงานที่เกินกำหนดหรือปิดช้าในวันนี้' : 'ไม่มีงานในวันนี้'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
-  );
+  </div>
+);
 }
