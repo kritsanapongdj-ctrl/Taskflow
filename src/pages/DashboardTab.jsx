@@ -3,13 +3,13 @@ import SimplePieChart from '../components/charts/SimplePieChart';
 import { getTaskOverdueInfo } from '../utils/overdueHelper';
 
 const REQUESTER_PALETTE = {
-  'SVC': '#0f2e4a',
-  'ICSC': '#bca374',
-  'จนท./ผจก.LH': '#10b981',
-  'ผู้ควบคุมงาน': '#3b82f6',
-  'CEM': '#8b5cf6',
+  'SVC': '#0F2E4A',      // Secondary Navy
+  'ICSC': '#7A1C28',     // Primary Burgundy
+  'จนท./ผจก.LH': '#10B981',
+  'ผู้ควบคุมงาน': '#2563EB',
+  'CEM': '#7C3AED',
 };
-const FALLBACK_COLORS = ['#f59e0b', '#ec4899', '#06b6d4', '#64748b', '#84cc16', '#14b8a6'];
+const FALLBACK_COLORS = ['#C5A869', '#F59E0B', '#06B6D4', '#64748B', '#84CC16', '#EC4899'];
 
 export default function DashboardTab({
   tasks = [],
@@ -75,21 +75,21 @@ export default function DashboardTab({
       value: arr.filter(
         (t) => t.status?.startsWith('จบงาน') && !getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
-      color: THEME.success
+      color: '#16A34A' // Clean Emerald
     },
     {
-      name: 'ดำเนินการ',
+      name: 'กำลังดำเนินการ',
       value: arr.filter(
         (t) => !t.status?.startsWith('จบงาน') && !getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
-      color: THEME.secondary
+      color: '#0F2E4A' // Deep Navy
     },
     {
       name: 'ล่าช้า/เกินกำหนด',
       value: arr.filter(
         (t) => getTaskOverdueInfo(t, tS, sets).isOverdue
       ).length,
-      color: THEME.danger
+      color: '#DC2626' // Distinct Alert Red
     }
   ];
 
@@ -121,91 +121,84 @@ export default function DashboardTab({
   const monthRate = mt.length > 0 ? Math.round((monthDone / mt.length) * 100) : 0;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header with Live Telemetry */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/60">
+    <div className="space-y-7 animate-in fade-in duration-200">
+      {/* 1. Header with Clean Corporate Breadcrumb */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-6 bg-[#0f2e4a] rounded-sm inline-block shadow-xs" />
-            <h2 className="text-xl sm:text-2xl font-bold text-[#0f2e4a] font-display tracking-tight flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0F2E4A] tracking-tight flex items-center gap-2">
               ภาพรวมผลการดำเนินงาน
-              <span className="text-sm font-normal text-slate-500 font-body">
-                (เดือน {gFilt.month})
+              <span className="text-sm font-normal text-slate-500">
+                (รอบเดือน {gFilt.month})
               </span>
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-1 ml-4.5">
-            ระบบวิเคราะห์ตัวชี้วัดและภารกิจการปฏิบัติงานแบบรวมศูนย์ Land & Houses
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed pl-4.5">
+            ระบบวิเคราะห์ตัวชี้วัดและติดตามภารกิจการปฏิบัติงานแบบรวมศูนย์ Land &amp; Houses
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full shadow-2xs">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto bg-white border border-slate-200/90 px-3.5 py-1.5 rounded-full shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-tech font-semibold text-slate-600 uppercase tracking-wider">
-            LIVE TELEMETRY
+          <span className="text-xs font-semibold text-slate-700 tracking-wide">
+            ระบบเชื่อมต่อปกติ
           </span>
         </div>
       </div>
 
-      {/* Asymmetric Hero & Support Composition */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* HERO CARD (Span 7 / ~60%) - Today's Operational Targets */}
-        <div className="lg:col-span-7 bg-[#0f2e4a] rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-[#bca374]/30 blueprint-grid-dark drafting-corner relative flex flex-col justify-between group overflow-hidden">
-          {/* Subtle architectural background glow */}
-          <div className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-[#bca374]/10 blur-2xl pointer-events-none" />
-
+      {/* 2. Symmetrical 3-Column Corporate Grid System */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Card 1: ภารกิจส่งมอบวันนี้ (Today's Targets) */}
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-card hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between relative group">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#7A1C28] rounded-t-2xl" />
+          
           <div>
-            {/* Top Telemetry Header */}
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                <span className="text-[11px] font-display font-bold uppercase tracking-widest text-[#bca374]">
-                  ภารกิจส่งมอบวันนี้ (TODAY'S TARGETS)
-                </span>
-              </div>
-              <span className="text-xs font-tech font-semibold text-slate-300 bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
+              <span className="text-xs font-semibold tracking-wide uppercase text-[#7A1C28]">
+                ภารกิจส่งมอบวันนี้ (TODAY)
+              </span>
+              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
                 {gFilt.date || tS}
               </span>
             </div>
 
-            {/* Main Metric with Oversized Numeral */}
-            <div className="mt-5 flex items-baseline justify-between gap-4">
+            <div className="mt-4 flex items-baseline justify-between">
               <div>
-                <div className="flex items-baseline gap-2.5">
-                  <span className="font-numeric text-6xl sm:text-7xl font-black text-white tracking-tight drop-shadow-sm group-hover:scale-105 origin-left transition-transform duration-300">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl sm:text-6xl font-bold text-[#0F2E4A] tracking-tight">
                     {dy.length}
                   </span>
-                  <span className="text-sm font-display font-medium text-slate-300 uppercase tracking-wider">
+                  <span className="text-sm font-medium text-slate-500">
                     รายการ
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-300/90 font-medium mt-1">
-                  เป้าหมายงานที่ต้องปฏิบัติการและส่งมอบในรอบวัน
+                <p className="text-xs text-slate-500 mt-1">
+                  เป้าหมายงานที่ต้องปฏิบัติการในรอบวัน
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-white/10 text-[#bca374] border border-[#bca374]/30 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shrink-0">
-                <Icon name="calendar" size={32} color="#bca374" />
+              <div className="p-3 rounded-xl bg-rose-50 text-[#7A1C28] shrink-0">
+                <Icon name="calendar" size={26} />
               </div>
             </div>
           </div>
 
-          {/* Bottom Operational Progress Ribbon */}
-          <div className="mt-6 pt-5 border-t border-white/10 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-tech">
-              <span className="text-slate-300">ความคืบหน้าการส่งมอบ</span>
-              <span className="font-bold text-[#bca374]">{todayRate}% สำเร็จ</span>
+          {/* Progress bar */}
+          <div className="mt-6 pt-5 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">ความคืบหน้าการส่งมอบ</span>
+              <span className="font-bold text-[#7A1C28]">{todayRate}% สำเร็จ</span>
             </div>
 
-            {/* Multi-segment progress bar */}
-            <div className="h-2 w-full bg-white/15 rounded-full overflow-hidden flex">
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
               <div
-                className="bg-emerald-400 transition-all duration-500"
+                className="bg-emerald-500 transition-all duration-500"
                 style={{ width: `${dy.length > 0 ? (todayDone / dy.length) * 100 : 0}%` }}
                 title={`เสร็จสิ้น: ${todayDone}`}
               />
               <div
-                className="bg-[#bca374] transition-all duration-500"
+                className="bg-[#0F2E4A] transition-all duration-500"
                 style={{ width: `${dy.length > 0 ? (todayActive / dy.length) * 100 : 0}%` }}
                 title={`กำลังดำเนินการ: ${todayActive}`}
               />
@@ -216,18 +209,17 @@ export default function DashboardTab({
               />
             </div>
 
-            {/* Micro status legend */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-tech text-slate-300">
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-600">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                เสร็จสิ้น {todayDone}
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                เสร็จ {todayDone}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#bca374]" />
+                <span className="w-2 h-2 rounded-full bg-[#0F2E4A]" />
                 กำลังทำ {todayActive}
               </span>
               {todayOverdue > 0 && (
-                <span className="flex items-center gap-1.5 text-rose-300 font-bold">
+                <span className="flex items-center gap-1.5 text-rose-600 font-bold">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   เกินกำหนด {todayOverdue}
                 </span>
@@ -236,212 +228,255 @@ export default function DashboardTab({
           </div>
         </div>
 
-        {/* SUPPORT STACK (Span 5 / ~40%) */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          {/* Card 1: พันธกิจประจำเดือน */}
-          <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 hover:shadow-md hover:border-[#0f2e4a]/40 transition-all duration-300 flex flex-col justify-between group flex-1">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-[11px] font-display font-bold uppercase tracking-wider text-slate-500">
-                  พันธกิจประจำเดือน (Monthly Commitments)
-                </div>
-                <div className="flex items-baseline gap-2 mt-1.5">
-                  <span className="font-numeric text-4xl sm:text-5xl font-black text-[#0f2e4a] tracking-tight group-hover:scale-105 origin-left transition-transform duration-300">
-                    {mt.length}
-                  </span>
-                  <span className="text-xs font-display text-slate-400 uppercase font-semibold">รายการ</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  รอบเดือน <span className="font-tech font-bold text-slate-700">{gFilt.month}</span> (ปิดแล้ว {monthDone} รายการ)
-                </p>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#0f2e4a]/10 text-[#0f2e4a] shadow-inner group-hover:scale-110 transition-transform">
-                <Icon name="listTodo" size={24} color="#0f2e4a" />
-              </div>
+        {/* Card 2: พันธกิจประจำเดือน (Monthly Commitments) */}
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-card hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between relative group">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#0F2E4A] rounded-t-2xl" />
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold tracking-wide uppercase text-[#0F2E4A]">
+                พันธกิจประจำเดือน (MONTHLY)
+              </span>
+              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                รอบเดือน {gFilt.month}
+              </span>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-tech">สัดส่วนปิดงาน</span>
-              <span className="font-tech font-bold text-[#0f2e4a]">{monthRate}% สำเร็จ</span>
+            <div className="mt-4 flex items-baseline justify-between">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl sm:text-6xl font-bold text-[#0F2E4A] tracking-tight">
+                    {mt.length}
+                  </span>
+                  <span className="text-sm font-medium text-slate-500">
+                    รายการ
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  ปิดงานสำเร็จแล้ว {monthDone} รายการ
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-100 text-[#0F2E4A] shrink-0">
+                <Icon name="listTodo" size={26} />
+              </div>
             </div>
           </div>
 
-          {/* Card 2: จุดวิกฤตที่ต้องสนับสนุน (Priority Escalation) */}
+          <div className="mt-6 pt-5 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">สัดส่วนปิดงานประจำเดือน</span>
+              <span className="font-bold text-[#0F2E4A]">{monthRate}% สำเร็จ</span>
+            </div>
+
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="bg-[#0F2E4A] h-full transition-all duration-500 rounded-full"
+                style={{ width: `${monthRate}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+              <span>กำลังดำเนินงาน: {mt.length - monthDone}</span>
+              <span>ปิดแล้ว: {monthDone}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: จุดวิกฤตที่ต้องสนับสนุน (Overdue & SLA Tracking) */}
+        <div
+          onClick={() => onOpenOverdueModal && onOpenOverdueModal(ov)}
+          className={`rounded-2xl p-6 sm:p-7 border shadow-card transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ${
+            ov.length > 0
+              ? 'bg-white border-rose-200 hover:border-rose-300 hover:shadow-card-hover'
+              : 'bg-white border-slate-200 hover:shadow-card-hover'
+          }`}
+        >
           <div
-            onClick={() => onOpenOverdueModal && onOpenOverdueModal(ov)}
-            className={`rounded-3xl p-5 sm:p-6 shadow-sm border transition-all duration-300 cursor-pointer group flex flex-col justify-between flex-1 ${
-              ov.length > 0
-                ? 'bg-gradient-to-br from-rose-50/70 via-white to-white border-rose-200 hover:border-rose-400 hover:shadow-lg hover:-translate-y-0.5'
-                : 'bg-white border-slate-200/80 hover:shadow-md'
+            className={`absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl ${
+              ov.length > 0 ? 'bg-rose-500' : 'bg-emerald-500'
             }`}
-          >
-            <div className="flex items-start justify-between">
+          />
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className={`text-xs font-semibold tracking-wide uppercase ${
+                  ov.length > 0 ? 'text-rose-600' : 'text-slate-600'
+                }`}
+              >
+                งานเกินกำหนด / ปิดช้า
+              </span>
+              {ov.length > 0 && (
+                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                  SLA ALERT
+                </span>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-baseline justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-display font-bold uppercase tracking-wider text-slate-600">
-                    งานเกินกำหนด / ปิดช้า
-                  </span>
-                  {ov.length > 0 && (
-                    <span className="stamp-badge">
-                      URGENT SLA
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-baseline gap-2 mt-1.5">
+                <div className="flex items-baseline gap-2">
                   <span
-                    className={`font-numeric text-4xl sm:text-5xl font-black tracking-tight group-hover:scale-105 origin-left transition-transform duration-300 ${
+                    className={`text-5xl sm:text-6xl font-bold tracking-tight ${
                       ov.length > 0 ? 'text-rose-600' : 'text-slate-800'
                     }`}
                   >
                     {ov.length}
                   </span>
-                  <span className="text-xs font-display text-slate-400 uppercase font-semibold">รายการ</span>
+                  <span className="text-sm font-medium text-slate-500">
+                    รายการ
+                  </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
                   {ov.length > 0
-                    ? `ค้างส่งมอบ ${activeOvdCount} | ปิดงานช้า ${completedLateCount}`
-                    : 'ทุกรายการอยู่ในกรอบเวลา SLA'}
+                    ? `ค้างส่งมอบ ${activeOvdCount} | ปิดช้ากว่ากำหนด ${completedLateCount}`
+                    : 'ทุกรายการอยู่ในกรอบเวลา SLA ปกติ'}
                 </p>
               </div>
+
               <div
-                className={`p-3 rounded-2xl shadow-inner group-hover:scale-110 transition-transform ${
-                  ov.length > 0 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'
+                className={`p-3 rounded-xl shrink-0 ${
+                  ov.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
                 }`}
               >
-                <Icon name="alertTriangle" size={24} color={ov.length > 0 ? '#e11d48' : '#64748b'} />
+                <Icon
+                  name={ov.length > 0 ? 'alertTriangle' : 'checkCircle2'}
+                  size={26}
+                />
               </div>
             </div>
+          </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between text-xs">
-              {ov.length > 0 ? (
-                <span className="text-rose-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  <span>คลิกตรวจสอบรายการวิกฤต</span>
-                  <span>➔</span>
-                </span>
-              ) : (
-                <span className="text-emerald-600 font-medium flex items-center gap-1">
-                  <span>✓ ระบบปกติ ไม่มีงานค้าง</span>
-                </span>
-              )}
-              <span className="text-[10px] text-slate-400 font-tech">SLA Tracking</span>
-            </div>
+          <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs">
+            {ov.length > 0 ? (
+              <span className="text-rose-600 font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>คลิกเปิดดูรายการที่ต้องเร่งรัด</span>
+                <span>➔</span>
+              </span>
+            ) : (
+              <span className="text-emerald-700 font-medium flex items-center gap-1">
+                <span>✓ ไม่มีงานตกค้าง</span>
+              </span>
+            )}
+            <span className="text-xs text-slate-400">SLA Monitor</span>
           </div>
         </div>
       </div>
 
-      {/* Chart Section Header with View Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-6 bg-[#0f2e4a] rounded-sm shadow-xs" />
-          <h3 className="text-base font-bold text-[#0f2e4a] font-display tracking-tight">
-            การวิเคราะห์มิติการปฏิบัติงาน (Operational Analytics)
-          </h3>
+      {/* 3. Operational Analytics Header & Segment Filter */}
+      <div className="pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-[#0F2E4A] rounded-full inline-block" />
+            <h3 className="text-base font-bold text-[#0F2E4A] tracking-tight">
+              การวิเคราะห์มิติการปฏิบัติงาน (Operational Analytics)
+            </h3>
+          </div>
+
+          <div className="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600 self-start sm:self-auto border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setChartTab('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                chartTab === 'all'
+                  ? 'bg-[#7A1C28] text-white shadow-xs'
+                  : 'hover:text-[#0F2E4A] hover:bg-white/60'
+              }`}
+            >
+              แสดงทั้งหมด
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartTab('status')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                chartTab === 'status'
+                  ? 'bg-[#7A1C28] text-white shadow-xs'
+                  : 'hover:text-[#0F2E4A] hover:bg-white/60'
+              }`}
+            >
+              สถานะงาน
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartTab('requester')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                chartTab === 'requester'
+                  ? 'bg-[#7A1C28] text-white shadow-xs'
+                  : 'hover:text-[#0F2E4A] hover:bg-white/60'
+              }`}
+            >
+              สัดส่วนผู้แจ้ง
+            </button>
+          </div>
         </div>
-        <div className="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600 self-start sm:self-auto border border-slate-200/60 shadow-inner font-display">
-          <button
-            type="button"
-            onClick={() => setChartTab('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer snap-spring ${
-              chartTab === 'all'
-                ? 'bg-[#0f2e4a] text-white shadow-xs'
-                : 'hover:text-[#0f2e4a] hover:bg-white/60'
-            }`}
-          >
-            แสดงทั้งหมด
-          </button>
-          <button
-            type="button"
-            onClick={() => setChartTab('status')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer snap-spring ${
-              chartTab === 'status'
-                ? 'bg-[#0f2e4a] text-white shadow-xs'
-                : 'hover:text-[#0f2e4a] hover:bg-white/60'
-            }`}
-          >
-            สถานะงาน
-          </button>
-          <button
-            type="button"
-            onClick={() => setChartTab('requester')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer snap-spring ${
-              chartTab === 'requester'
-                ? 'bg-[#0f2e4a] text-white shadow-xs'
-                : 'hover:text-[#0f2e4a] hover:bg-white/60'
-            }`}
-          >
-            สัดส่วนผู้แจ้ง
-          </button>
-        </div>
+
+        {/* 4. Symmetrical Analytics Charts */}
+        {(chartTab === 'all' || chartTab === 'status') && (
+          <div className="space-y-4 mb-6">
+            {chartTab === 'all' && (
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#0F2E4A]" />
+                สถิติสถานะการปฏิบัติงาน (TASK STATUS BREAKDOWN)
+              </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-card">
+                <SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้ (Today's Tasks)" />
+              </div>
+              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-card">
+                <SimplePieChart data={getChartData(mt)} title="สถานะงานประจำเดือน (Monthly Status)" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(chartTab === 'all' || chartTab === 'requester') && (
+          <div className="space-y-4">
+            {chartTab === 'all' && (
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2 pt-2">
+                <span className="w-2 h-2 rounded-full bg-[#7A1C28]" />
+                สถิติสัดส่วนผู้แจ้งงาน (REQUESTER BREAKDOWN)
+              </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-card flex flex-col justify-between">
+                <SimplePieChart 
+                  data={getRequesterChartData(dy)} 
+                  title="สัดส่วนผู้แจ้งงานวันนี้ (Today's Requesters)" 
+                />
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">ผู้แจ้งสูงสุดวันนี้:</span>
+                  {getRequesterChartData(dy).length > 0 && dy.length > 0 ? (
+                    <span className="font-bold text-[#0F2E4A] bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                      {getRequesterChartData(dy)[0].name} ({getRequesterChartData(dy)[0].value} งาน / {((getRequesterChartData(dy)[0].value / dy.length) * 100).toFixed(1)}%)
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">- ไม่มีข้อมูลงานวันนี้ -</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-card flex flex-col justify-between">
+                <SimplePieChart 
+                  data={getRequesterChartData(mt)} 
+                  title={`สัดส่วนผู้แจ้งงานประจำเดือน (${gFilt.month})`} 
+                />
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">ผู้แจ้งสูงสุดประจำเดือน:</span>
+                  {getRequesterChartData(mt).length > 0 && mt.length > 0 ? (
+                    <span className="font-bold text-[#0F2E4A] bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                      {getRequesterChartData(mt)[0].name} ({getRequesterChartData(mt)[0].value} งาน / {((getRequesterChartData(mt)[0].value / mt.length) * 100).toFixed(1)}%)
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">- ไม่มีข้อมูลงานเดือนนี้ -</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* 1. Status Charts */}
-      {(chartTab === 'all' || chartTab === 'status') && (
-        <div className="space-y-3">
-          {chartTab === 'all' && (
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 font-display">
-              <span className="w-2 h-2 rounded-full bg-[#0f2e4a]"></span>
-              สถิติสถานะการปฏิบัติงาน (Task Status)
-            </div>
-          )}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300 drafting-corner">
-              <SimplePieChart data={getChartData(dy)} title="สถานะงานวันนี้ (Today's Tasks)" />
-            </div>
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300 drafting-corner">
-              <SimplePieChart data={getChartData(mt)} title="สถานะงานประจำเดือน (Monthly Status)" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Requester Charts */}
-      {(chartTab === 'all' || chartTab === 'requester') && (
-        <div className="space-y-3">
-          {chartTab === 'all' && (
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 pt-2 font-display">
-              <span className="w-2 h-2 rounded-full bg-[#bca374]"></span>
-              สถิติสัดส่วนผู้แจ้งงาน (Requester Breakdown)
-            </div>
-          )}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Today's Requester Distribution */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300 flex flex-col justify-between drafting-corner">
-              <SimplePieChart 
-                data={getRequesterChartData(dy)} 
-                title="สัดส่วนผู้แจ้งงานวันนี้ (Today's Requesters)" 
-              />
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-tech">
-                <span className="text-slate-400 font-medium">ผู้แจ้งงานสูงสุดวันนี้:</span>
-                {getRequesterChartData(dy).length > 0 && dy.length > 0 ? (
-                  <span className="font-bold text-[#0f2e4a] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                    🥇 {getRequesterChartData(dy)[0].name} ({getRequesterChartData(dy)[0].value} งาน / {((getRequesterChartData(dy)[0].value / dy.length) * 100).toFixed(1)}%)
-                  </span>
-                ) : (
-                  <span className="text-slate-400">- ไม่มีข้อมูลงานวันนี้ -</span>
-                )}
-              </div>
-            </div>
-
-            {/* Monthly Requester Distribution */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow duration-300 flex flex-col justify-between drafting-corner">
-              <SimplePieChart 
-                data={getRequesterChartData(mt)} 
-                title={`สัดส่วนผู้แจ้งงานประจำเดือน (${gFilt.month})`} 
-              />
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-tech">
-                <span className="text-slate-400 font-medium">ผู้แจ้งงานสูงสุดประจำเดือน:</span>
-                {getRequesterChartData(mt).length > 0 && mt.length > 0 ? (
-                  <span className="font-bold text-[#0f2e4a] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
-                    🥇 {getRequesterChartData(mt)[0].name} ({getRequesterChartData(mt)[0].value} งาน / {((getRequesterChartData(mt)[0].value / mt.length) * 100).toFixed(1)}%)
-                  </span>
-                ) : (
-                  <span className="text-slate-400">- ไม่มีข้อมูลงานเดือนนี้ -</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

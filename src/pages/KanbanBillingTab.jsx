@@ -29,86 +29,120 @@ export default function KanbanBillingTab({
   );
 
   return (
-    <div className="space-y-4 animate-in">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-[#0f2e4a]">ส่งเบิก (เดือน {gFilt.month})</h2>
+    <div className="space-y-6 animate-in">
+      <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2E4A] flex items-center gap-2">
+          <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
+          <span>บอร์ดส่งเบิกงาน</span>
+          <span className="text-sm font-normal text-slate-500">
+            (รอบเดือน {gFilt.month})
+          </span>
+        </h2>
+        <span className="text-xs font-semibold text-[#0F2E4A] bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+          รวม {ubGrp.length + biGrp.length} ใบงาน
+        </span>
       </div>
-      <div className="flex flex-col md:flex-row gap-4 h-[70vh]">
-        <div className="flex-1 bg-gray-100 rounded-xl p-3 flex flex-col border">
-          <h3 className="font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-2 flex justify-between">
-            <span>รอส่งเบิก / ค้างเบิก</span>
-            <span className="bg-gray-200 px-2 rounded-full text-xs">{ubGrp.length} ใบงาน</span>
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+
+      <div className="flex flex-col md:flex-row gap-6 h-[74vh]">
+        {/* Column 1: รอส่งเบิก */}
+        <div className="flex-1 bg-slate-50/70 rounded-2xl p-4.5 flex flex-col border border-slate-200 shadow-xs">
+          <div className="font-bold text-[#0F2E4A] mb-3 pb-3 border-b border-slate-200 flex justify-between items-center">
+            <span className="flex items-center gap-2 text-sm">
+              <span className="w-2 h-2 rounded-full bg-[#7A1C28]" />
+              รอส่งเบิก / ค้างเบิก
+            </span>
+            <span className="bg-rose-50 text-[#7A1C28] border border-rose-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+              {ubGrp.length} ใบงาน
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1 hide-scrollbar">
             {ubGrp.map((g) => (
               <div
                 key={g.id}
                 onClick={() => onOpenBillingModal(g, 'รอส่งเบิก')}
-                className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all relative"
+                className="bg-white p-4 rounded-xl shadow-card border border-slate-200/90 cursor-pointer hover:border-[#7A1C28]/40 hover:shadow-card-hover transition-all relative"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">
+                  <span className="bg-slate-100 text-[#0F2E4A] font-semibold px-2 py-0.5 rounded text-[11px] border border-slate-200">
                     {g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0]?.id}`}
                   </span>
-                </div>
-                <div className="font-bold text-[#0f2e4a] text-sm mb-1">
-                  {getStdProj(g.project)}{' '}
-                  <span className="text-xs text-gray-500 font-normal">
-                    ({g.tasks.length} งาน)
+                  <span className="text-xs text-slate-400 font-medium">
+                    {g.tasks.length} งาน
                   </span>
                 </div>
-                <div className="space-y-1.5 mt-2">
+                <div className="font-bold text-[#0F2E4A] text-sm mb-2">
+                  {getStdProj(g.project)}
+                </div>
+                <div className="space-y-1.5">
                   {g.tasks.map((t, i) => (
                     <div
                       key={t.id}
-                      className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"
+                      className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 line-clamp-1"
                     >
-                      <span className="text-gray-400 font-bold mr-1">#{i + 1}</span>
+                      <span className="text-slate-400 font-semibold mr-1">#{i + 1}</span>
                       {t.details}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+            {ubGrp.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                ไม่มีรายการค้างส่งเบิก
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 bg-green-50 rounded-xl p-3 flex flex-col border border-green-100">
-          <h3 className="font-bold text-green-700 mb-3 border-b-2 border-green-200 pb-2 flex justify-between">
-            <span>ส่งเบิกแล้ว (รอบ {gFilt.month})</span>
-            <span className="bg-green-200 px-2 rounded-full text-xs">{biGrp.length} ใบงาน</span>
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+        {/* Column 2: ส่งเบิกแล้ว */}
+        <div className="flex-1 bg-slate-50/70 rounded-2xl p-4.5 flex flex-col border border-slate-200 shadow-xs">
+          <div className="font-bold text-[#0F2E4A] mb-3 pb-3 border-b border-slate-200 flex justify-between items-center">
+            <span className="flex items-center gap-2 text-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              ส่งเบิกแล้ว (รอบ {gFilt.month})
+            </span>
+            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+              {biGrp.length} ใบงาน
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1 hide-scrollbar">
             {biGrp.map((g) => (
               <div
                 key={g.id}
                 onClick={() => onOpenBillingModal(g, 'ส่งเบิกแล้ว')}
-                className="bg-white p-3 rounded-lg shadow-sm border border-green-200 cursor-pointer hover:border-green-400 hover:shadow-md transition-all relative"
+                className="bg-white p-4 rounded-xl shadow-card border border-slate-200/90 cursor-pointer hover:border-emerald-400/50 hover:shadow-card-hover transition-all relative"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                  <span className="bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded text-[11px] border border-emerald-200">
                     {g.isWO && g.woNo ? `ใบงาน: ${g.woNo}` : `JOB: ${g.tasks[0]?.id}`}
                   </span>
-                </div>
-                <div className="font-bold text-green-800 text-sm mb-1">
-                  {getStdProj(g.project)}{' '}
-                  <span className="text-xs text-green-600/70 font-normal">
-                    ({g.tasks.length} งาน)
+                  <span className="text-xs text-slate-400 font-medium">
+                    {g.tasks.length} งาน
                   </span>
                 </div>
-                <div className="space-y-1.5 mt-2 opacity-70">
+                <div className="font-bold text-[#0F2E4A] text-sm mb-2">
+                  {getStdProj(g.project)}
+                </div>
+                <div className="space-y-1.5 opacity-80">
                   {g.tasks.map((t, i) => (
                     <div
                       key={t.id}
-                      className="text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100 line-clamp-1"
+                      className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 line-clamp-1"
                     >
-                      <span className="text-gray-400 font-bold mr-1">#{i + 1}</span>
+                      <span className="text-emerald-600 font-semibold mr-1">#{i + 1}</span>
                       {t.details}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+            {biGrp.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                ยังไม่มีรายการส่งเบิกในรอบนี้
+              </div>
+            )}
           </div>
         </div>
       </div>

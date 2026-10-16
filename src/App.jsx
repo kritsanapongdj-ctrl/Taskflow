@@ -84,9 +84,16 @@ const GlobalStyles = () => (
   `}</style>
 );
 
-// --- ฟังก์ชันช่วยเหลือต่างๆ ---
 const REQ_TYPES = ['SVC', 'ICSC', 'จนท./ผจก.LH', 'ผู้ควบคุมงาน', 'CEM'];
-const THEME = { primary: '#0f2e4a', secondary: '#bca374', danger: '#dc3545', success: '#28a745' };
+const THEME = {
+  primary: '#7A1C28', // Primary Burgundy (Corporate Luxury)
+  secondary: '#0F2E4A', // Secondary Navy (LH Anchor)
+  danger: '#DC2626',
+  success: '#16A34A',
+  accent: '#C5A869',
+  canvas: '#F8FAFC',
+  surface: '#FFFFFF'
+};
 
 const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   const iconName = Object.keys(LucideIcons).find(k => k.toLowerCase() === name.toLowerCase().replace(/[-_]/g, ''));
@@ -1446,14 +1453,19 @@ export default function App() {
       )}
       <div className="w-full min-h-screen">
         <div id="app-main" className="flex h-screen overflow-hidden text-slate-800 print:hidden">
-          <aside className="w-64 bg-[#0f2e4a] blueprint-grid-dark text-white hidden md:flex flex-col shadow-xl z-20 relative border-r border-[#bca374]/20">
-            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-              <div className="text-xl font-bold font-display tracking-wider text-[#bca374]">
-                LH <span className="font-light text-white font-body tracking-normal">TaskFlow</span>
+          <aside className="w-64 bg-[#0F2E4A] text-white hidden md:flex flex-col shadow-lg z-20 relative border-r border-slate-800/40">
+            <div className="p-5 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <div className="text-base font-bold tracking-wider text-white">
+                  LAND &amp; HOUSES
+                </div>
+                <div className="text-[11px] font-medium text-rose-300/90 tracking-wide mt-0.5">
+                  TaskFlow Management
+                </div>
               </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#bca374] animate-pulse" title="System Online"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-xs" title="System Online"></span>
             </div>
-            <nav className="p-4 space-y-1.5 flex-1">
+            <nav className="p-3.5 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
               {[
                 { i: 'dashboard', l: 'แดชบอร์ด', icon: 'layoutDashboard' },
                 { i: 'simulation', l: 'กิลด์ (Simulation)', icon: 'swords' },
@@ -1473,22 +1485,22 @@ export default function App() {
                       setTab(x.i);
                       if (x.i !== 'settings') setSetUnlk(false);
                     }}
-                    className={`w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all relative overflow-hidden group cursor-pointer tactile-press ${
+                    className={`w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#bca374] text-stone-950 font-display tracking-wide shadow-md shadow-amber-950/20 translate-x-1'
-                        : 'text-white/80 hover:text-white hover:bg-white/10 hover:translate-x-1 font-body'
+                        ? 'bg-[#7A1C28] text-white font-semibold shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/10 font-normal'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                       <Icon
                         name={x.icon}
                         size={17}
-                        className={isActive ? 'text-stone-950' : 'text-[#bca374] group-hover:scale-110 transition-transform'}
+                        className={isActive ? 'text-white' : 'text-slate-300'}
                       />
                       <span>{x.l}</span>
                     </div>
                     {isActive && (
-                      <span className="w-1.5 h-3.5 bg-stone-950/40 rounded-full" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
                     )}
                   </button>
                 );
@@ -1498,12 +1510,12 @@ export default function App() {
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold font-display tracking-wide text-sky-200 hover:text-white bg-sky-950/40 hover:bg-sky-500/20 border border-sky-400/30 hover:border-sky-300 transition-all hover:translate-x-1 group shadow-xs tactile-press"
+                  className="w-full text-left flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-sky-200 hover:text-white bg-sky-950/40 hover:bg-sky-900/50 border border-sky-400/30 transition-all group shadow-xs"
                   title="เปิดแผนที่สถานการณ์น้ำท่วมและระบายน้ำ 30 โครงการ Real-time"
                 >
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-                    <Icon name="map" size={16} className="text-sky-300 group-hover:scale-110 transition-transform"/>
+                    <Icon name="map" size={16} className="text-sky-300"/>
                     <span>แผนที่น้ำ Real-time</span>
                   </div>
                   <span className="text-[10px] text-sky-300/80 font-tech">LIVE</span>
@@ -1511,26 +1523,26 @@ export default function App() {
               </div>
             </nav>
           </aside>
-          <main className="flex-1 flex flex-col min-w-0 bg-[#f8f9fa] blueprint-grid relative">
-            <header className="bg-white/95 backdrop-blur-xs h-14 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-xs border-b border-slate-200/80">
-              <div className="flex items-center gap-2.5">
-                <div className="font-bold font-display text-[#0f2e4a] text-sm md:text-base tracking-wide flex items-center gap-1.5">
-                  <span className="w-1.5 h-3.5 bg-[#bca374] rounded-xs inline-block"></span>
-                  WORK CENTER
+          <main className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC] relative">
+            <header className="bg-white h-15 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-xs border-b border-slate-200/80">
+              <div className="flex items-center gap-3">
+                <div className="font-bold text-[#0F2E4A] text-sm md:text-base tracking-tight flex items-center gap-2">
+                  <span className="w-1.5 h-4 bg-[#7A1C28] rounded-full inline-block"></span>
+                  <span>LH TASKFLOW</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowChangelog(true)}
-                  className="text-[11px] font-bold text-[#bca374] bg-[#bca374]/15 hover:bg-[#bca374]/25 active:scale-95 px-2.5 py-0.5 rounded-full flex items-center gap-1 transition cursor-pointer"
+                  className="text-xs font-semibold text-[#7A1C28] bg-[#FDF2F4] hover:bg-[#FCE7EB] border border-[#FCE7EB] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition cursor-pointer"
                   title="ดูรายการอัปเดตเวอร์ชันใหม่"
                 >
-                  <Icon name="sparkles" size={13} /> {CURRENT_VERSION}
+                  <Icon name="sparkles" size={13} className="text-[#7A1C28]" /> {CURRENT_VERSION}
                 </button>
                 <a
                   href="/api/flood-report?mode=map"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 active:scale-95 px-2.5 py-0.5 rounded-full hidden sm:flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                  className="text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/70 px-2.5 py-0.5 rounded-full hidden sm:flex items-center gap-1.5 transition cursor-pointer"
                   title="เปิดแผนที่ติดตามสถานการณ์น้ำและระบายน้ำ 30 โครงการ Real-time"
                 >
                   <Icon name="map" size={12} className="text-sky-600" /> แผนที่น้ำ Real-time
@@ -1564,19 +1576,19 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setSupervisorAuthModalOpen(true)}
-                    className="text-[11px] font-bold text-slate-700 hover:text-[#0f2e4a] bg-slate-100 hover:bg-slate-200 border border-slate-300 active:scale-95 px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    className="text-xs font-medium text-slate-700 hover:text-[#0F2E4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                     title="สลับเข้าสู่โหมดผู้ดูแล (ต้องการ PIN และพิกัด GPS)"
                   >
                     <Icon name="shield" size={13} className="text-slate-500" />
                     <span>ผู้ใช้งาน</span>
-                    <span className="text-[9px] text-[#bca374] font-semibold">⇄ ผู้ดูแล</span>
+                    <span className="text-[10px] text-[#7A1C28] font-semibold">⇄ ผู้ดูแล</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
-                  className="p-1.5 bg-gray-100 rounded text-gray-500 hover:text-[#0f2e4a] transition cursor-pointer"
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-[#0F2E4A] transition cursor-pointer"
                   title="รีเฟรชข้อมูล"
                 >
                   {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
@@ -1692,10 +1704,10 @@ export default function App() {
               };
 
               return (
-                <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 md:px-6 py-2.5 md:py-3 flex overflow-x-auto md:flex-wrap gap-2 md:gap-3 items-center text-sm shadow-xs z-10 sticky top-14 hide-scrollbar">
-                  <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs font-display font-bold text-[#0f2e4a]">
-                    <Icon name="filter" size={13} className="text-[#bca374]"/>
-                    <span className="uppercase tracking-wider">ตัวกรอง</span>
+                <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 md:px-6 py-2.5 md:py-3 flex overflow-x-auto md:flex-wrap gap-2 md:gap-3 items-center text-xs shadow-xs z-10 sticky top-0 hide-scrollbar">
+                  <div className="flex items-center gap-1.5 shrink-0 bg-slate-100 border border-slate-200/80 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#0F2E4A]">
+                    <Icon name="filter" size={13} className="text-[#7A1C28]"/>
+                    <span>ตัวกรองระบบ</span>
                   </div>
                   
                   {tab !== 'daily' ? (
@@ -1703,7 +1715,7 @@ export default function App() {
                       type="month"
                       value={gFilt.month}
                       onChange={e=>setGilt({...gFilt, month: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all"
                       title="เลือกเดือน"
                     />
                   ) : (
@@ -1711,7 +1723,7 @@ export default function App() {
                       type="date"
                       value={gFilt.date}
                       onChange={e=>setGilt({...gFilt, date: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-tech font-bold text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-800 shrink-0 cursor-pointer shadow-2xs transition-all"
                       title="เลือกวันที่"
                     />
                   )}
@@ -1720,7 +1732,7 @@ export default function App() {
                   <select
                     value={gFilt.staffRole || 'ทั้งหมด'}
                     onChange={e=>handleRoleFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-semibold text-[#0F2E4A] shrink-0 cursor-pointer shadow-2xs transition-all"
                     title="กรองตามตำแหน่ง/สายงาน"
                   >
                     <option value="ทั้งหมด">👥 ทุกสายงาน</option>
@@ -1731,7 +1743,7 @@ export default function App() {
                   <select
                     value={gFilt.staffName}
                     onChange={e=>handleStaffFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-semibold text-[#0F2E4A] shrink-0 cursor-pointer shadow-2xs transition-all"
                     title="กรองตามเจ้าหน้าที่"
                   >
                     <option value="ทั้งหมด">
@@ -1756,7 +1768,7 @@ export default function App() {
                   <select
                     value={gFilt.area}
                     onChange={e=>handleAreaFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all"
                     title="กรองตามพื้นที่"
                   >
                     <option value="ทั้งหมด">📍 ทุกพื้นที่</option>
@@ -1767,18 +1779,18 @@ export default function App() {
                   <select
                     value={gFilt.project}
                     onChange={e=>handleProjectFilterChange(e.target.value)}
-                    className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 max-w-[190px] truncate shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-700 max-w-[190px] truncate shrink-0 cursor-pointer shadow-2xs transition-all"
                     title="กรองตามโครงการ"
                   >
                     <option value="ทั้งหมด">🏡 ทุกโครงการ</option>
                     {availableProjects.map(p=><option key={p}>{getProjName(p)}</option>)}
                   </select>
 
-                  {/* 4. ผู้แจ้ง (Requirement 1) */}
+                  {/* 4. ผู้แจ้ง */}
                   <select
                     value={gFilt.requester || 'ทั้งหมด'}
                     onChange={e=>setGilt({...gFilt, requester: e.target.value})}
-                    className="border border-amber-200 hover:border-amber-300 focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-amber-50/70 hover:bg-amber-50 text-xs font-bold text-[#0f2e4a] shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                    className="border border-rose-200/80 hover:border-rose-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-rose-50/40 hover:bg-white text-xs font-semibold text-[#7A1C28] shrink-0 cursor-pointer shadow-2xs transition-all"
                     title="กรองตามผู้แจ้ง"
                   >
                     <option value="ทั้งหมด">🏷️ ทุกผู้แจ้ง</option>
@@ -1789,7 +1801,7 @@ export default function App() {
                     <select
                       value={gFilt.status}
                       onChange={e=>setGilt({...gFilt, status: e.target.value})}
-                      className="border border-slate-200 hover:border-[#bca374] focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 rounded-xl px-3 py-1.5 outline-none bg-slate-50/80 hover:bg-white text-xs font-semibold text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all tactile-select"
+                      className="border border-slate-200 hover:border-slate-300 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-lg px-3 py-1.5 outline-none bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-700 shrink-0 cursor-pointer shadow-2xs transition-all"
                     >
                       <option value="ทั้งหมด">ทุกสถานะ</option>
                       <option value="รอดำเนินการ">รอดำเนินการ</option>
@@ -1970,12 +1982,12 @@ export default function App() {
                   className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
                 >
                   <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
-                    isActive ? 'bg-[#0f2e4a] text-[#bca374] shadow-sm ring-1 ring-[#bca374]/50' : 'text-slate-400 hover:text-slate-600'
+                    isActive ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-slate-600'
                   }`}>
                     <Icon name={x.icon} size={18} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
                   </div>
-                  <span className={`text-[10px] mt-1 tracking-tight font-display ${
-                    isActive ? 'text-[#0f2e4a] font-bold' : 'text-slate-500 font-medium'
+                  <span className={`text-[10px] mt-1 tracking-tight ${
+                    isActive ? 'text-[#7A1C28] font-bold' : 'text-slate-500 font-medium'
                   }`}>
                     {x.l}
                   </span>
@@ -1993,12 +2005,12 @@ export default function App() {
                   className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
                 >
                   <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
-                    isMoreActive ? 'bg-[#0f2e4a] text-[#bca374] shadow-sm ring-1 ring-[#bca374]/50' : 'text-slate-400 hover:text-slate-600'
+                    isMoreActive ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-slate-600'
                   }`}>
                     <Icon name={showMoreMobileMenu ? "x" : "grid"} size={18} className={isMoreActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
                   </div>
-                  <span className={`text-[10px] mt-1 tracking-tight font-display ${
-                    isMoreActive ? 'text-[#0f2e4a] font-bold' : 'text-slate-500 font-medium'
+                  <span className={`text-[10px] mt-1 tracking-tight ${
+                    isMoreActive ? 'text-[#7A1C28] font-bold' : 'text-slate-500 font-medium'
                   }`}>
                     {['simulation', 'monthly', 'team', 'settings'].includes(tab)
                       ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
@@ -2025,7 +2037,7 @@ export default function App() {
                 
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                   <div>
-                    <h3 className="text-base font-bold text-[#0f2e4a]">เมนูระบบเพิ่มเติม</h3>
+                    <h3 className="text-base font-bold text-[#0F2E4A]">เมนูระบบเพิ่มเติม</h3>
                     <p className="text-xs text-slate-500 font-medium">เครื่องมือและการจัดการระบบทั้งหมด</p>
                   </div>
                   <button
@@ -2080,7 +2092,7 @@ export default function App() {
                       title: `เวอร์ชัน ${CURRENT_VERSION}`,
                       subtitle: 'ประวัติการอัปเดตระบบ',
                       icon: 'sparkles',
-                      color: 'bg-yellow-500/10 text-yellow-700 border-yellow-200/60',
+                      color: 'bg-rose-500/10 text-[#7A1C28] border-rose-200/60',
                       isChangelog: true
                     },
                   ].map((item) => {
@@ -2102,19 +2114,19 @@ export default function App() {
                         }}
                         className={`flex flex-col items-start p-3.5 rounded-2xl border text-left transition-all active:scale-95 cursor-pointer ${
                           isCurrent
-                            ? 'bg-[#0f2e4a] text-white border-[#0f2e4a] shadow-md'
+                            ? 'bg-[#7A1C28] text-white border-[#7A1C28] shadow-md'
                             : 'bg-slate-50/70 hover:bg-slate-100 text-slate-800 border-slate-200/80 shadow-2xs'
                         }`}
                       >
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2.5 ${
-                          isCurrent ? 'bg-white/20 text-[#bca374]' : item.color
+                          isCurrent ? 'bg-white/20 text-white' : item.color
                         }`}>
                           <Icon name={item.icon} size={20} />
                         </div>
                         <span className={`text-xs font-bold leading-tight ${isCurrent ? 'text-white' : 'text-slate-800'}`}>
                           {item.title}
                         </span>
-                        <span className={`text-[10px] mt-0.5 leading-tight ${isCurrent ? 'text-slate-300' : 'text-slate-400 font-medium'}`}>
+                        <span className={`text-[10px] mt-0.5 leading-tight ${isCurrent ? 'text-rose-100' : 'text-slate-400 font-medium'}`}>
                           {item.subtitle}
                         </span>
                       </button>

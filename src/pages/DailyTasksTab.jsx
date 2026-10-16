@@ -142,15 +142,15 @@ export default function DailyTasksTab({
   };
 
   return (
-    <div className="space-y-4 animate-in">
+    <div className="space-y-6 animate-in">
       {/* Top Header & Quick Overdue Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-6 bg-[#0f2e4a] rounded-sm inline-block shadow-xs" />
-            <h2 className="text-xl font-bold text-[#0f2e4a] font-display tracking-tight">งานประจำวัน</h2>
+            <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0F2E4A] tracking-tight">งานประจำวัน</h2>
           </div>
-          <span className="text-xs bg-slate-100 text-slate-700 font-tech font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
+          <span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2.5 py-0.5 rounded-full border border-slate-200">
             {displayTasks.length} รายการ
           </span>
 
@@ -159,9 +159,9 @@ export default function DailyTasksTab({
             <button
               type="button"
               onClick={() => setOnlyOverdueFilter(!onlyOverdueFilter)}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                 onlyOverdueFilter
-                  ? 'bg-rose-600 text-white ring-2 ring-rose-300'
+                  ? 'bg-rose-600 text-white'
                   : 'bg-white border border-rose-200 text-rose-700 hover:bg-rose-50'
               }`}
               title="กรองแสดงเฉพาะงานที่เกินกำหนดหรือปิดงานช้า"
@@ -182,7 +182,7 @@ export default function DailyTasksTab({
             <button
               type="button"
               onClick={() => setOnlyOverdueFilter(false)}
-              className="text-xs text-slate-500 hover:text-slate-800 underline font-medium cursor-pointer"
+              className="text-xs text-[#7A1C28] hover:underline font-semibold cursor-pointer"
             >
               แสดงทั้งหมด
             </button>
@@ -192,9 +192,9 @@ export default function DailyTasksTab({
         <button
           type="button"
           onClick={() => openTaskModal()}
-          className="bg-[#0f2e4a] text-white px-4 py-2.5 rounded-xl text-xs font-display font-bold flex items-center justify-center shadow-md hover:bg-[#1a3f63] hover:shadow-lg snap-spring border border-[#bca374]/30 cursor-pointer self-start sm:self-auto"
+          className="bg-[#7A1C28] hover:bg-[#65121E] text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center shadow-xs transition-all cursor-pointer self-start sm:self-auto"
         >
-          <Icon name="plus" size={15} className="mr-1.5 text-[#bca374]" /> เพิ่มงานใหม่
+          <Icon name="plus" size={15} className="mr-1.5 text-white" /> เพิ่มงานใหม่
         </button>
       </div>
 
@@ -218,19 +218,19 @@ export default function DailyTasksTab({
             <div
               key={t.id}
               id={`task-card-${t.id}`}
-              className={`bg-white rounded-3xl p-4 sm:p-5 space-y-3 transition-all duration-200 border tactile-card ${
+              className={`bg-white rounded-2xl p-5 space-y-3.5 transition-all duration-200 border ${
                 isHighlighted
-                  ? 'ring-4 ring-[#bca374] bg-[#bca374]/10 border-[#bca374] shadow-lg animate-pulse'
+                  ? 'ring-2 ring-[#7A1C28] bg-rose-50/20 border-rose-300 shadow-md animate-pulse'
                   : info.isOverdue
-                  ? `${info.borderClass} ${info.bgHighlightClass} border-slate-200/90 shadow-xs`
-                  : 'border-slate-200/85 hover:border-slate-300 shadow-xs'
+                  ? `${info.borderClass} ${info.bgHighlightClass} border-slate-200 shadow-card`
+                  : 'border-slate-200/90 hover:border-slate-300 shadow-card'
               }`}
             >
               {/* Project & Status Header */}
               <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <h3 className="font-bold text-[#bca374] text-base leading-snug break-words font-display tracking-tight">
+                    <h3 className="font-bold text-[#0F2E4A] text-base leading-snug break-words tracking-tight">
                       {getStdProj(t.project)}
                     </h3>
                     {info.isOverdue && (
@@ -433,20 +433,20 @@ export default function DailyTasksTab({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[780px]">
             <thead>
-              <tr className="bg-[#0f2e4a] blueprint-grid-dark text-white border-b-2 border-[#bca374]">
-                <th className="py-3.5 px-4 w-[36%] min-w-[240px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+              <tr className="bg-[#0F2E4A] text-white border-b border-slate-200">
+                <th className="py-3.5 px-4 w-[36%] min-w-[240px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   รายละเอียด
                 </th>
-                <th className="py-3.5 px-4 w-[20%] min-w-[140px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-3.5 px-4 w-[20%] min-w-[140px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   โครงการ
                 </th>
-                <th className="py-3.5 px-4 w-[18%] min-w-[160px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase whitespace-nowrap">
+                <th className="py-3.5 px-4 w-[18%] min-w-[160px] text-xs font-semibold tracking-wider text-slate-100 uppercase whitespace-nowrap">
                   ระยะเวลา
                 </th>
-                <th className="py-3.5 px-4 w-[13%] min-w-[115px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-3.5 px-4 w-[13%] min-w-[115px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   สถานะ & SLA
                 </th>
-                <th className="py-3.5 px-4 w-[13%] min-w-[130px] font-display text-[11px] font-semibold tracking-wider text-slate-100 uppercase text-center">
+                <th className="py-3.5 px-4 w-[13%] min-w-[130px] text-xs font-semibold tracking-wider text-slate-100 uppercase text-center">
                   จัดการ
                 </th>
               </tr>
@@ -564,7 +564,7 @@ export default function DailyTasksTab({
                         </div>
                       )}
                     </td>
-                    <td className="p-4 font-bold text-[#bca374] align-top">
+                    <td className="p-4 font-bold text-[#0F2E4A] align-top">
                       {getStdProj(t.project)}
                       <div className="text-xs text-gray-400 font-normal">{t.area}</div>
                     </td>

@@ -62,13 +62,16 @@ export default function InformJobTab({
   ).length;
 
   return (
-    <div className="space-y-4 animate-in">
-      <div className="bg-white p-4 rounded-xl shadow-sm border flex gap-2">
+    <div className="space-y-6 animate-in">
+      {/* Top Switcher Bar */}
+      <div className="bg-white p-2 rounded-2xl shadow-card border border-slate-200 flex gap-2">
         <button
           type="button"
           onClick={() => setITab('form')}
-          className={`flex-1 py-2 text-xs font-bold rounded ${
-            iTab === 'form' ? 'bg-[#0f2e4a] text-white shadow' : 'bg-gray-100 text-gray-500'
+          className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            iTab === 'form'
+              ? 'bg-[#7A1C28] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-600 hover:text-[#0F2E4A] hover:bg-slate-100'
           }`}
         >
           แจ้งเปิดงานใหม่
@@ -76,31 +79,33 @@ export default function InformJobTab({
         <button
           type="button"
           onClick={() => setITab('manage')}
-          className={`flex-1 py-2 text-xs font-bold rounded ${
-            iTab === 'manage' ? 'bg-[#0f2e4a] text-white shadow' : 'bg-gray-100 text-gray-500'
+          className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            iTab === 'manage'
+              ? 'bg-[#7A1C28] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-600 hover:text-[#0F2E4A] hover:bg-slate-100'
           }`}
         >
-          จัดการสถานะ
+          จัดการสถานะ ({ft.length})
         </button>
       </div>
 
       {iTab === 'form' ? (
         <form
           onSubmit={subInf}
-          className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-2 gap-4 border-t-4 border-t-[#bca374]"
+          className="bg-white p-6 sm:p-7 rounded-2xl shadow-card border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-5 border-t-4 border-t-[#7A1C28]"
         >
           <div>
-            <label className="text-xs font-bold mb-1 block">วันที่</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">วันที่</label>
             <input
               type="date"
               value={informForm.date}
               onChange={(e) => setInformForm({ ...informForm, date: e.target.value })}
               required
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none shadow-2xs"
             />
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">ผู้แจ้ง / เบอร์</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">ผู้แจ้ง / เบอร์โทร</label>
             <div className="flex gap-2">
               <input
                 value={informForm.requesterName}
@@ -108,20 +113,20 @@ export default function InformJobTab({
                   setInformForm({ ...informForm, requesterName: e.target.value })
                 }
                 required
-                placeholder="ชื่อ"
-                className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none"
+                placeholder="ชื่อผู้แจ้ง"
+                className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-1/2 text-xs outline-none shadow-2xs"
               />
               <input
                 value={informForm.phone}
                 onChange={(e) => setInformForm({ ...informForm, phone: e.target.value })}
                 required
-                placeholder="เบอร์โทร"
-                className="border rounded-xl px-3 py-2 w-1/2 text-sm outline-none"
+                placeholder="เบอร์โทรศัพท์"
+                className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-1/2 text-xs outline-none shadow-2xs"
               />
             </div>
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-bold mb-1 block">
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
               เจ้าหน้าที่ดูแลโครงการ (ตัวกรอง)
             </label>
             <select
@@ -134,7 +139,7 @@ export default function InformJobTab({
                   area: ''
                 })
               }
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-blue-50"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none bg-slate-50/60 shadow-2xs"
             >
               <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
               {Array.from(
@@ -160,7 +165,7 @@ export default function InformJobTab({
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">โครงการ (ออโต้พื้นที่)</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">โครงการ (ออโต้พื้นที่)</label>
             <select
               value={informForm.project}
               required
@@ -174,9 +179,9 @@ export default function InformJobTab({
                   area: getProjArea(pData)
                 });
               }}
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none shadow-2xs"
             >
-              <option value="">เลือก...</option>
+              <option value="">เลือกโครงการ...</option>
               {(sets.projects || [])
                 .filter(
                   (p) =>
@@ -191,96 +196,96 @@ export default function InformJobTab({
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">พื้นที่</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">พื้นที่</label>
             <input
               type="text"
               value={informForm.area}
               readOnly
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none bg-gray-100 text-gray-500"
+              className="border border-slate-200 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none bg-slate-100 text-slate-500 font-medium"
             />
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">ประเภทงาน</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">ประเภทงาน</label>
             <select
               value={informForm.jobType}
               onChange={(e) => setInformForm({ ...informForm, jobType: e.target.value })}
               required
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none shadow-2xs"
             >
-              <option value="">เลือก...</option>
+              <option value="">เลือกประเภทงาน...</option>
               {(sets.jobTypes || []).map((a) => (
                 <option key={a}>{a}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold mb-1 block">บริเวณ</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">บริเวณ</label>
             <select
               value={informForm.location}
               onChange={(e) => setInformForm({ ...informForm, location: e.target.value })}
               required
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none shadow-2xs"
             >
-              <option value="">เลือก...</option>
+              <option value="">เลือกบริเวณ...</option>
               {(sets.locations || []).map((a) => (
                 <option key={a}>{a}</option>
               ))}
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-bold mb-1 block">รายละเอียดปัญหา</label>
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">รายละเอียดปัญหา</label>
             <textarea
               value={informForm.details}
               onChange={(e) => setInformForm({ ...informForm, details: e.target.value })}
               required
               rows="3"
-              className="border rounded-xl px-3 py-2 w-full text-sm outline-none resize-none"
+              className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none resize-none shadow-2xs"
             />
           </div>
           <div className="md:col-span-2 text-center mt-2">
             <button
               type="submit"
-              className="bg-[#bca374] hover:bg-[#a38a5b] text-white px-10 py-2 rounded-lg text-sm font-bold shadow-md"
+              className="bg-[#7A1C28] hover:bg-[#65121E] text-white px-10 py-2.5 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               ส่งแจ้งงาน
             </button>
           </div>
         </form>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {carriedOverCount > 0 && (
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-3.5 rounded-xl shadow-sm flex items-center justify-between gap-3 animate-in fade-in">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2 bg-white/20 rounded-lg backdrop-blur-xs shrink-0">
-                  <Icon name="alert-triangle" size={18} className="text-white" />
+            <div className="bg-amber-500 text-white p-4 rounded-2xl shadow-xs flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-white/20 rounded-xl shrink-0">
+                  <Icon name="alertTriangle" size={18} className="text-white" />
                 </span>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold leading-tight">
                     ตรวจพบรายการค้างจากเดือนก่อนหน้าที่ยังไม่ได้เปิด Inform Job จำนวน {carriedOverCount} รายการ
                   </h4>
-                  <p className="text-[10px] sm:text-[11px] text-amber-100 leading-tight mt-0.5">
-                    ระบบยกยอดมาแสดงผลในเดือนปัจจุบัน ({currentMonth}) เพื่อป้องกันการตกหล่น โปรดตรวจสอบและเปิด Inform Job
+                  <p className="text-[11px] text-amber-100 leading-tight mt-0.5">
+                    ระบบยกยอดมาแสดงผลในเดือนปัจจุบัน ({currentMonth}) เพื่อป้องกันการตกหล่น
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-black bg-white text-amber-800 px-2.5 py-1 rounded-full shadow-xs shrink-0 whitespace-nowrap">
+              <span className="text-xs font-bold bg-white text-amber-900 px-3 py-1 rounded-full shadow-xs shrink-0 whitespace-nowrap">
                 ค้าง {carriedOverCount} รายการ
               </span>
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-gray-100 border-b">
+                <thead className="bg-[#0F2E4A] text-white border-b border-slate-200">
                   <tr>
-                    <th className="p-3 w-32">วันที่/ID</th>
-                    <th className="p-3">ข้อมูลเบื้องต้น</th>
-                    <th className="p-3 w-32">สถานะ</th>
-                    <th className="p-3 w-28">จัดการ</th>
+                    <th className="p-3.5 w-32 font-semibold">วันที่/ID</th>
+                    <th className="p-3.5 font-semibold">ข้อมูลเบื้องต้น</th>
+                    <th className="p-3.5 w-32 font-semibold">สถานะ</th>
+                    <th className="p-3.5 w-28 font-semibold text-center">จัดการ</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {ft.map((j) => {
                     const isCarriedOver = j.status === 'รอดำเนินการ' && j.date && j.date.slice(0, 7) < currentMonth;
                     const isOpenedFromPrior = j.status === 'เปิด Inform Job แล้ว' && j.openedMonth === currentMonth && j.date && j.date.slice(0, 7) < currentMonth;
@@ -291,121 +296,121 @@ export default function InformJobTab({
                         className={`border-b transition-colors ${
                           isCarriedOver 
                             ? 'bg-amber-50/60 hover:bg-amber-100/70 border-l-4 border-l-amber-500' 
-                            : 'hover:bg-gray-50'
+                            : 'hover:bg-slate-50'
                         }`}
                       >
-                        <td className="p-3 font-bold">
+                        <td className="p-3.5 font-bold align-top">
                           <div className="flex flex-col items-start gap-1">
-                            <span>{fDate(j.date)}</span>
+                            <span className="text-slate-900">{fDate(j.date)}</span>
                             {isCarriedOver && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
-                                <Icon name="alert-triangle" size={10} className="text-amber-600" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                <Icon name="alertTriangle" size={10} className="text-amber-600" />
                                 ค้างจากเดือนก่อน
                               </span>
                             )}
                             {isOpenedFromPrior && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                📋 เปิดงานในเดือนนี้
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                📋 เปิดในเดือนนี้
                               </span>
                             )}
-                            <div className="text-[9px] text-gray-400">{j.id}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{j.id}</div>
                           </div>
                         </td>
-                        <td className="p-3">
-                          <div className="font-bold text-[#0f2e4a] text-sm">
+                        <td className="p-3.5 align-top">
+                          <div className="font-bold text-[#0F2E4A] text-sm">
                             {getStdProj(j.project)}{' '}
-                            <span className="font-normal text-xs text-gray-500">({j.area})</span>
+                            <span className="font-normal text-xs text-slate-500">({j.area})</span>
                           </div>
-                          <div className="text-gray-500 mt-1">
+                          <div className="text-slate-500 mt-1">
                             {j.requesterName} {j.phone && `| เบอร์: ${j.phone}`}
                           </div>
-                      <div className="flex gap-1 mt-1.5 mb-1">
-                        {j.jobType && (
-                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-medium border">
-                            {j.jobType}
+                          <div className="flex gap-1.5 mt-1.5 mb-1">
+                            {j.jobType && (
+                              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-medium border border-slate-200">
+                                {j.jobType}
+                              </span>
+                            )}
+                            {j.location && (
+                              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-medium border border-slate-200">
+                                {j.location}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-slate-700 font-medium line-clamp-1">
+                            {j.details || '-'}
+                          </div>
+                        </td>
+                        <td className="p-3.5 align-top">
+                          <span
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-bold inline-block ${
+                              j.status === 'เปิด Inform Job แล้ว'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {j.status}
                           </span>
-                        )}
-                        {j.location && (
-                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-medium border">
-                            {j.location}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-gray-700 font-medium line-clamp-1">
-                        {j.details || '-'}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded text-[10px] font-bold ${
-                          j.status === 'เปิด Inform Job แล้ว'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        }`}
-                      >
-                        {j.status}
-                      </span>
-                      {j.informNo && (
-                        <div className="text-[10px] text-blue-600 font-bold mt-1">
-                          #{j.informNo}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setInfView(j)}
-                          className="text-gray-400 hover:text-blue-600 p-1.5 bg-gray-100 rounded hover:bg-blue-50"
-                          title="ดูรายละเอียด"
-                        >
-                          <Icon name="search" size={14} />
-                        </button>
-                        {j.status === 'รอดำเนินการ' && (
-                          <>
+                          {j.informNo && (
+                            <div className="text-[10px] text-blue-600 font-bold mt-1">
+                              #{j.informNo}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3.5 align-top text-center">
+                          <div className="flex justify-center gap-1">
                             <button
                               type="button"
-                              onClick={() => openInfModal(j.id, 'open')}
-                              className="text-green-600 hover:text-green-700 p-1.5 bg-green-50 rounded hover:bg-green-100"
-                              title="เปิด Inform Job"
+                              onClick={() => setInfView(j)}
+                              className="text-slate-400 hover:text-blue-600 p-1.5 bg-slate-100 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+                              title="ดูรายละเอียด"
                             >
-                              <Icon name="checkCircle" size={14} />
+                              <Icon name="search" size={14} />
                             </button>
+                            {j.status === 'รอดำเนินการ' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => openInfModal(j.id, 'open')}
+                                  className="text-emerald-600 hover:text-emerald-700 p-1.5 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+                                  title="เปิด Inform Job"
+                                >
+                                  <Icon name="checkCircle" size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openInfModal(j.id, 'cancel')}
+                                  className="text-rose-500 hover:text-rose-700 p-1.5 bg-rose-50 rounded-lg hover:bg-rose-100 transition cursor-pointer"
+                                  title="ยกเลิก"
+                                >
+                                  <Icon name="xCircle" size={14} />
+                                </button>
+                              </>
+                            )}
                             <button
                               type="button"
-                              onClick={() => openInfModal(j.id, 'cancel')}
-                              className="text-red-400 hover:text-red-600 p-1.5 bg-red-50 rounded hover:bg-red-100"
-                              title="ยกเลิก"
+                              onClick={() => deleteInform(j)}
+                              className="text-slate-400 hover:text-rose-600 p-1.5 bg-slate-100 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                              title="ลบ"
                             >
-                              <Icon name="xCircle" size={14} />
+                              <Icon name="trash" size={14} />
                             </button>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => deleteInform(j)}
-                          className="text-gray-400 hover:text-red-600 p-1.5 bg-gray-100 rounded hover:bg-red-50"
-                          title="ลบ"
-                        >
-                          <Icon name="trash" size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-                })}
-                {ft.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="text-center py-10 text-gray-400">
-                      ไม่มีรายการแจ้งงาน
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {ft.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="text-center py-10 text-slate-400">
+                        ไม่มีรายการแจ้งงาน
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );

@@ -2,168 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
-body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.animate-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+body, input, textarea, select, button {
+  font-family: 'Prompt', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-/* Architectural & Craft Typography */
+body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.animate-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-scale-in { animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Corporate Minimalism Typography */
 .font-display {
-  font-family: 'Chakra Petch', 'Outfit', 'Prompt', sans-serif !important;
+  font-family: 'Prompt', 'Inter', sans-serif !important;
+  letter-spacing: -0.01em;
 }
 .font-numeric {
-  font-family: 'Outfit', 'Chakra Petch', 'Prompt', sans-serif !important;
+  font-family: 'Inter', 'Prompt', sans-serif !important;
+  font-feature-settings: 'tnum' on, 'cv05' on;
 }
 .font-tech {
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: 'Inter', 'Prompt', sans-serif !important;
+  letter-spacing: 0.02em;
 }
 .font-body {
-  font-family: 'Prompt', sans-serif !important;
+  font-family: 'Prompt', 'Inter', sans-serif !important;
+  line-height: 1.6;
 }
 
-/* Subtle Blueprint & Paper Textures */
-.blueprint-grid {
-  background-image: 
-    linear-gradient(rgba(15, 46, 74, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 46, 74, 0.035) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-.blueprint-grid-subtle {
-  background-image: 
-    radial-gradient(circle, rgba(188, 163, 116, 0.15) 1px, transparent 1px);
-  background-size: 18px 18px;
-}
-.blueprint-grid-dark {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 24px 24px;
+/* Corporate Minimalist Surface & Card System */
+.corporate-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Stamp & Craft Accents */
-.stamp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-family: 'Chakra Petch', sans-serif !important;
-  letter-spacing: 0.04em;
-  border-width: 1.5px;
-  border-style: dashed;
-  transform: rotate(-1.5deg);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+.corporate-card-hover {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.stamp-badge:hover {
-  transform: rotate(0deg) scale(1.03);
-}
-
-/* Architectural Drafting Registration Marks */
-.drafting-corner {
-  position: relative;
-}
-.drafting-corner::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  width: 8px;
-  height: 8px;
-  border-top: 2px solid #bca374;
-  border-left: 2px solid #bca374;
-  opacity: 0.7;
-  pointer-events: none;
-}
-.drafting-corner::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 8px;
-  height: 8px;
-  border-bottom: 2px solid #bca374;
-  border-right: 2px solid #bca374;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Sightline Divider */
-.sightline-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: #64748b;
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-family: 'JetBrains Mono', monospace;
-}
-.sightline-divider::before,
-.sightline-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(188, 163, 116, 0.35), transparent);
-}
-
-/* Hand-Drawn Underline Highlight */
-.craft-underline {
-  background-image: linear-gradient(120deg, rgba(188, 163, 116, 0.22) 0%, rgba(188, 163, 116, 0.22) 100%);
-  background-repeat: no-repeat;
-  background-size: 100% 38%;
-  background-position: 0 88%;
-}
-
-/* Bespoke Micro-Spring Interaction */
-.snap-spring {
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
-}
-.snap-spring:hover {
-  transform: translateY(-2px) scale(1.01);
-}
-.snap-spring:active {
-  transform: translateY(0px) scale(0.97);
-}
-
-/* Tactile Press Interaction for Buttons & Tabs */
-.tactile-press {
-  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1), box-shadow 0.15s ease;
-}
-.tactile-press:hover {
-  transform: translateY(-1px);
-}
-.tactile-press:active {
-  transform: translateY(1px) scale(0.97);
-}
-
-/* Tactile Select dropdown focus */
-.tactile-select {
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-}
-.tactile-select:focus {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 46, 74, 0.08);
-}
-
-/* Subtle Tactile Card Elevation */
-.tactile-card {
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
-}
-.tactile-card:hover {
+.corporate-card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px -4px rgba(15, 46, 74, 0.08);
+  border-color: #CBD5E1;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06);
+}
+
+/* Subtle Interactive Press */
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-press:hover {
+  transform: translateY(-1px);
+}
+.btn-press:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* Custom Corporate Input & Select */
+.corporate-input {
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.corporate-input:focus {
+  outline: none;
+  border-color: #7A1C28;
+  box-shadow: 0 0 0 3px rgba(122, 28, 40, 0.12);
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
-.glass-dark { background: rgba(15, 46, 74, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-
-/* View Transitions configuration */
+/* View Transitions */
 ::view-transition-old(root), ::view-transition-new(root) {
-  animation-duration: 0.4s;
+  animation-duration: 0.25s;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 ::view-transition-old(root) { animation-name: fade-out; }
@@ -171,7 +100,6 @@ body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
 
 @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-
 
 @media print {
   body { background-color: white !important; -webkit-print-color-adjust: exact; }

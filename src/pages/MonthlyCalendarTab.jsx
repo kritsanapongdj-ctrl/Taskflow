@@ -23,18 +23,26 @@ export default function MonthlyCalendarTab({
     .concat(Array.from({ length: dM }, (_, i) => new Date(y, m, i + 1)));
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-4 animate-in">
-      <h2 className="text-xl font-bold text-[#0f2e4a] mb-4 flex items-center">
-        <Icon name="calendar" size={20} className="mr-2 text-[#bca374]" /> ปฏิทินเดือน {gFilt.month}
-      </h2>
-      <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">
-        {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((d) => (
-          <div key={d} className="bg-gray-50 py-2 text-center text-xs font-bold text-gray-500">
+    <div className="bg-white rounded-2xl shadow-card border border-slate-200 p-6 animate-in space-y-5">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h2 className="text-xl font-bold text-[#0F2E4A] flex items-center gap-2">
+          <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
+          <Icon name="calendar" size={20} className="text-[#7A1C28]" />
+          <span>ปฏิทินงานประจำเดือน {gFilt.month}</span>
+        </h2>
+        <span className="text-xs font-semibold text-[#0F2E4A] bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+          รอบเดือน {gFilt.month}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+        {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((d) => (
+          <div key={d} className="bg-slate-50 py-2.5 text-center text-xs font-semibold text-slate-600">
             {d}
           </div>
         ))}
         {ds.map((d, i) => {
-          if (!d) return <div key={`e-${i}`} className="bg-white/50 min-h-[80px]" />;
+          if (!d) return <div key={`e-${i}`} className="bg-slate-50/50 min-h-[90px]" />;
           const dS = pYMD(d);
           const iT = dS === tS;
           const dTs = tasks.filter(
@@ -57,33 +65,43 @@ export default function MonthlyCalendarTab({
             <div
               key={dS}
               onClick={() => dTs.length > 0 && onOpenCalendarModal(dS, dTs)}
-              className={`bg-white min-h-[80px] p-1 border-t cursor-pointer hover:bg-slate-50 transition-colors ${
-                iT ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-300' : ''
+              className={`min-h-[90px] p-2 transition-colors cursor-pointer relative ${
+                iT
+                  ? 'bg-rose-50/40 ring-1 ring-inset ring-[#7A1C28]/40'
+                  : 'bg-white hover:bg-slate-50/80'
               }`}
             >
-              <div
-                className={`text-right text-[10px] mb-1 ${
-                  iT ? 'font-black text-blue-600' : 'text-gray-400'
-                }`}
-              >
-                {d.getDate()}
+              <div className="flex justify-between items-center mb-1">
+                {iT ? (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#7A1C28] text-white">
+                    วันนี้
+                  </span>
+                ) : <span />}
+                <div
+                  className={`text-right text-xs font-semibold ${
+                    iT ? 'text-[#7A1C28] font-bold' : 'text-slate-400'
+                  }`}
+                >
+                  {d.getDate()}
+                </div>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {dTs.slice(0, 3).map((t) => (
                   <div
                     key={t.id}
-                    className={`text-[8px] px-1 rounded truncate font-bold ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium truncate ${
                       t.status?.startsWith('จบงาน')
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                        : 'bg-slate-100 text-[#0F2E4A] border border-slate-200'
                     }`}
+                    title={t.details}
                   >
                     {getStdProj(t.project)}
                   </div>
                 ))}
                 {dTs.length > 3 && (
-                  <div className="text-[8px] text-center text-gray-400 font-bold">
-                    + {dTs.length - 3}
+                  <div className="text-[10px] text-center text-slate-500 font-semibold bg-slate-50 rounded py-0.5 border border-slate-200">
+                    + {dTs.length - 3} งาน
                   </div>
                 )}
               </div>
