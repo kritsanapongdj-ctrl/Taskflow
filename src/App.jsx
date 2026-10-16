@@ -1708,6 +1708,7 @@ export default function App() {
                       type="month"
                       value={gFilt.month}
                       onChange={e=>setGilt({...gFilt, month: e.target.value})}
+                      style={{ colorScheme: 'dark' }}
                       className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-tech font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                       title="เลือกเดือน"
                     />
@@ -1716,6 +1717,7 @@ export default function App() {
                       type="date"
                       value={gFilt.date}
                       onChange={e=>setGilt({...gFilt, date: e.target.value})}
+                      style={{ colorScheme: 'dark' }}
                       className="border border-[#B89246] focus:border-[#00F0FF] px-2.5 py-1 outline-none bg-[#0B1B3D] text-white text-xs font-tech font-bold shrink-0 cursor-pointer shadow-[2px_2px_0px_#0B1B3D] hover:shadow-[2px_2px_0px_#B89246] transition-all"
                       title="เลือกวันที่"
                     />

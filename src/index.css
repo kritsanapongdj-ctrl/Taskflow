@@ -24,7 +24,7 @@ body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
 
 /* 80s Cyber-Corporate Textures & Grids */
 .cyber-scanlines {
-  background: linear-gradient(
+  background-image: linear-gradient(
     rgba(11, 27, 61, 0) 50%, 
     rgba(0, 0, 0, 0.22) 50%
   ), linear-gradient(
@@ -44,6 +44,7 @@ body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
 }
 
 .cyber-grid-dark {
+  background-color: #0B1B3D;
   background-image: 
     linear-gradient(rgba(184, 146, 70, 0.16) 1px, transparent 1px),
     linear-gradient(90deg, rgba(184, 146, 70, 0.16) 1px, transparent 1px);
