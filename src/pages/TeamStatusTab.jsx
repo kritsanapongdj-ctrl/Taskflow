@@ -61,7 +61,8 @@ export default function TeamStatusTab({
   isSupervisor = false,
   supervisorSession = null,
   onOpenSupervisorModal = null,
-  initialFocusMode = false
+  initialFocusMode = false,
+  currentMonth = null
 }) {
   const getProjName = propGetProjName || ((str) => str ? String(str).split('|')[0] : '');
   const [subTabProjSearch, setSubTabProjSearch] = useState('');
@@ -74,10 +75,18 @@ export default function TeamStatusTab({
   const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [auditInitialTaskId, setAuditInitialTaskId] = useState(null);
-  const [discrepancyViewFilter, setDiscrepancyViewFilter] = useState('affecting'); // 'affecting' | 'all' | 'waived'
+  const [discrepancyViewFilter, setDiscrepancyViewFilter] = useState('affecting'); // 'affecting' | 'all' | 'waived' | 'history'
   const [activeSubTab, setActiveSubTab] = useState('performance'); // 'performance' | 'field_logs' | 'settings'
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
+
+  const now = new Date();
+  const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [evalMonth, setEvalMonth] = useState(currentMonth || currentSystemMonth);
+
+  useEffect(() => {
+    if (currentMonth) setEvalMonth(currentMonth);
+  }, [currentMonth]);
 
   const sList = sets?.staffStats || [];
   const classMap = (sets?.staffClasses || []).reduce((a, c) => { a[c.id] = c; return a; }, {});
@@ -286,7 +295,7 @@ export default function TeamStatusTab({
       const u = teamForm;
       if (!u.id && !selTeam?.isNew && !u.name) return null;
       const role = classMap[u.classId];
-      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
 
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const archAnalysis = analyzeArchetype(u, sets, archetypesData) || {};
@@ -767,7 +776,7 @@ export default function TeamStatusTab({
 
                 {/* Project Scope & TaskFlow Operational Telemetry Grounding */}
                 {(() => {
-                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
                   return (
                     <div className="mb-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2 backdrop-blur-md">
                       {/* Role Classification & Project Scope Bar */}
@@ -1289,7 +1298,7 @@ export default function TeamStatusTab({
           SUB-TAB 2: OPERATIONAL LOGS & AUDIT TELEMETRY
           ========================================================================= */}
       {activeSubTab === 'field_logs' && (() => {
-         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
          const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
 
          return (
@@ -1523,11 +1532,14 @@ export default function TeamStatusTab({
                   const allDiscrepancies = telemetry.discrepancyTasks || [];
                   const affectingDiscrepancies = allDiscrepancies.filter(item => doesDiscrepancyPenalizeStaff(item, telemetry.roleType));
                   const waivedDiscrepancies = allDiscrepancies.filter(item => item.attribution?.role === 'waived');
+                  const priorResolvedDiscrepancies = telemetry.priorResolvedDiscrepancies || [];
 
                   const displayedDiscrepancies = discrepancyViewFilter === 'affecting'
                      ? affectingDiscrepancies
                      : discrepancyViewFilter === 'waived'
                      ? waivedDiscrepancies
+                     : discrepancyViewFilter === 'history'
+                     ? priorResolvedDiscrepancies
                      : allDiscrepancies;
 
                   return (
@@ -1535,25 +1547,42 @@ export default function TeamStatusTab({
                         {/* Header */}
                         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
                            <div>
-                              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                                 <Icon name="scale" size={17} className="text-[#C5A059]" />
-                                 <span>ระบบตรวจสอบงานข้อขัดแย้ง &amp; วินิจฉัยความรับผิดชอบ (Discrepancy Audit &amp; RACI)</span>
-                              </h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                 <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                                    <Icon name="scale" size={17} className="text-[#C5A059]" />
+                                    <span>ระบบตรวจสอบงานข้อขัดแย้ง &amp; วินิจฉัยความรับผิดชอบ (Discrepancy Audit &amp; RACI)</span>
+                                 </h4>
+                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300">
+                                    รอบ: {evalMonth}
+                                 </span>
+                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300">
+                                    ✓ ก.ย. 2569 เป็นต้นไป (Go-Live)
+                                 </span>
+                              </div>
                               <p className="text-[11px] text-slate-400 mt-0.5">
-                                 ตรวจสอบรายการผิดกติกา SLA พร้อมระบุ RACI Attribution เพื่อให้หัวหน้างาน/ผู้ดูแลตรวจสอบและตัดสินใจ
+                                 ตรวจสอบรายการผิดกติกา SLA พร้อมระบุ RACI Attribution เพื่อให้หัวหน้างาน/ผู้ดูแลตรวจสอบและตัดสินใจ (งานที่ตัดสินแล้วในเดือนก่อนหน้าจะไม่นำมาแสดงซ้ำ)
                               </p>
                            </div>
-                           <button
-                              type="button"
-                              onClick={() => {
-                                 setAuditInitialTaskId(null);
-                                 setDiscrepancyModalOpen(true);
-                              }}
-                              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#7A1C28] to-[#5A141E] hover:from-[#8F2230] hover:to-[#6E1824] text-white font-bold text-xs flex items-center gap-1.5 shadow-md border border-[#C5A059]/30 transition cursor-pointer"
-                           >
-                              <Icon name="gavel" size={13} className="text-[#C5A059]" />
-                              <span>เปิดห้องตัดสินเต็มรูปแบบ</span>
-                           </button>
+                           <div className="flex items-center gap-2">
+                              <input
+                                 type="month"
+                                 value={evalMonth}
+                                 onChange={e => setEvalMonth(e.target.value)}
+                                 className="border border-white/15 bg-black/40 hover:bg-black/60 focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] rounded-lg px-2.5 py-1 text-xs text-white outline-none cursor-pointer"
+                                 title="เลือกรอบเดือนที่ต้องการประเมิน"
+                              />
+                              <button
+                                 type="button"
+                                 onClick={() => {
+                                    setAuditInitialTaskId(null);
+                                    setDiscrepancyModalOpen(true);
+                                 }}
+                                 className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#7A1C28] to-[#5A141E] hover:from-[#8F2230] hover:to-[#6E1824] text-white font-bold text-xs flex items-center gap-1.5 shadow-md border border-[#C5A059]/30 transition cursor-pointer"
+                              >
+                                 <Icon name="gavel" size={13} className="text-[#C5A059]" />
+                                 <span>เปิดห้องตัดสินเต็มรูปแบบ</span>
+                              </button>
+                           </div>
                         </div>
 
                         {/* Executive RACI Explainer Callout Box */}
@@ -1588,11 +1617,11 @@ export default function TeamStatusTab({
                                  }`}
                               >
                                  <Icon name="target" size={13} className={discrepancyViewFilter === 'affecting' ? 'text-[#C5A059]' : 'text-slate-400'} />
-                                 <span>เฉพาะที่หักคะแนน ${u.name}</span>
+                                 <span>เฉพาะที่หักคะแนน {u?.name || 'พนักงาน'}</span>
                                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                                     affectingDiscrepancies.length > 0 ? 'bg-rose-500 text-white' : 'bg-emerald-500/25 text-emerald-300'
                                  }`}>
-                                    ${affectingDiscrepancies.length}
+                                    {affectingDiscrepancies.length}
                                  </span>
                               </button>
 
@@ -1606,9 +1635,9 @@ export default function TeamStatusTab({
                                  }`}
                               >
                                  <Icon name="layers" size={13} className="text-slate-400" />
-                                 <span>งานขัดแย้งทั้งหมดในโครงการ</span>
+                                 <span>งานขัดแย้งทั้งหมดรอบเดือนนี้</span>
                                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
-                                    ${allDiscrepancies.length}
+                                    {allDiscrepancies.length}
                                  </span>
                               </button>
 
@@ -1624,13 +1653,31 @@ export default function TeamStatusTab({
                                  <Icon name="shieldCheck" size={13} className="text-emerald-400" />
                                  <span>ยกเว้นแล้ว (Waived)</span>
                                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-900/60 text-emerald-300">
-                                    ${waivedDiscrepancies.length}
+                                    {waivedDiscrepancies.length}
                                  </span>
                               </button>
+
+                              {priorResolvedDiscrepancies.length > 0 && (
+                                 <button
+                                    type="button"
+                                    onClick={() => setDiscrepancyViewFilter('history')}
+                                    className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                       discrepancyViewFilter === 'history'
+                                          ? 'bg-indigo-950/80 text-indigo-200 border border-indigo-500/50'
+                                          : 'text-slate-400 hover:text-white'
+                                    }`}
+                                 >
+                                    <Icon name="history" size={13} className="text-indigo-400" />
+                                    <span>ประวัติตัดสินแล้วในเดือนก่อนหน้า</span>
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-900/60 text-indigo-300">
+                                       {priorResolvedDiscrepancies.length}
+                                    </span>
+                                 </button>
+                              )}
                            </div>
 
                            <span className="text-[11px] text-slate-400">
-                              แสดง <strong>${displayedDiscrepancies.length}</strong> จาก ${allDiscrepancies.length} รายการ
+                              แสดง <strong>{displayedDiscrepancies.length}</strong> จาก {discrepancyViewFilter === 'history' ? priorResolvedDiscrepancies.length : allDiscrepancies.length} รายการ
                            </span>
                         </div>
 
@@ -1639,16 +1686,18 @@ export default function TeamStatusTab({
                            <div className="p-8 rounded-xl bg-white/5 border border-dashed border-white/10 text-center space-y-1.5">
                               <Icon name="checkCircle" size={32} className="text-emerald-400 mx-auto opacity-80" />
                               <span className="text-xs font-bold text-slate-200 block">
-                                 ${discrepancyViewFilter === 'affecting' 
-                                    ? `✨ ไม่พบงานผิดเงื่อนไขที่มีผลหักคะแนน ${u.name} ในขณะนี้`
+                                 {discrepancyViewFilter === 'affecting' 
+                                    ? `✨ ไม่พบงานผิดเงื่อนไขที่มีผลหักคะแนน ${u?.name || 'พนักงาน'} ในรอบเดือนนี้`
                                     : discrepancyViewFilter === 'waived'
                                     ? 'ยังไม่มีรายการที่ได้รับการยกเว้น'
-                                    : '✨ ไม่พบงานที่เข้าข่ายข้อขัดแย้ง'}
+                                    : discrepancyViewFilter === 'history'
+                                    ? 'ไม่มีประวัติงานที่ตัดสินเสร็จสิ้นในเดือนก่อนหน้า'
+                                    : '✨ ไม่พบงานที่เข้าข่ายข้อขัดแย้งในรอบเดือนนี้'}
                               </span>
                               <p className="text-[11px] text-slate-400">
-                                 ${discrepancyViewFilter === 'affecting'
+                                 {discrepancyViewFilter === 'affecting'
                                     ? 'งานอื่นๆ ในโครงการที่ตรวจพบเป็นความรับผิดชอบของฝ่ายธุรการหรือได้รับการยกเว้นแล้ว จึงไม่ถูกนำมาหักคะแนน'
-                                    : 'ทุกใบงานดำเนินการเป็นไปตามเกณฑ์เวลาและกติกา 7 ข้อ'}
+                                    : 'ข้อมูลยึดตามวันที่เริ่มใช้งานจริงตั้งแต่ 1 กันยายน 2569 เป็นต้นไป'}
                               </p>
                            </div>
                         ) : (
@@ -1672,10 +1721,23 @@ export default function TeamStatusTab({
                                        const isExplicit = item.attribution?.isExplicit;
 
                                        return (
-                                          <tr key={`${t.id || idx}-${idx}`} className="hover:bg-white/5 transition-colors">
+                                          <tr 
+                                             key={`${t.id || idx}-${idx}`} 
+                                             onClick={() => {
+                                                if (!isSupervisor) {
+                                                   if (onOpenSupervisorModal) onOpenSupervisorModal();
+                                                   else alert('กรุณาเข้าสู่โหมดผู้ดูแลเพื่อทำการตัดสินข้อขัดแย้ง');
+                                                   return;
+                                                }
+                                                setAuditInitialTaskId(item.task.id);
+                                                setDiscrepancyModalOpen(true);
+                                             }}
+                                             className="hover:bg-white/10 transition-colors cursor-pointer group"
+                                             title="คลิกที่แถวเพื่อเปิดวินิจฉัย/ปรับสิทธิ์งานนี้"
+                                          >
                                              <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{`${idx + 1}`}</td>
                                              <td className="py-2.5 px-3">
-                                                <div className="font-bold text-white truncate max-w-[190px]">{t.title || 'ไม่ระบุชื่อ'}</div>
+                                                <div className="font-bold text-white group-hover:text-amber-300 transition-colors truncate max-w-[190px]">{t.title || 'ไม่ระบุชื่อ'}</div>
                                                 <div className="text-[10px] text-slate-400 truncate max-w-[190px]">{t.project || '-'} • แปลง/บ้าน: {t.houseNo || '-'}</div>
                                              </td>
                                              <td className="py-2.5 px-3">
@@ -1685,9 +1747,10 @@ export default function TeamStatusTab({
                                                    item.ruleNo === 5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
                                                    item.ruleNo === 6 ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
                                                    item.ruleNo === 6.5 ? 'bg-rose-500/30 text-rose-300 border-rose-500/40' :
+                                                   item.ruleNo === 0 ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' :
                                                    'bg-purple-500/20 text-purple-300 border-purple-500/30'
                                                 }`}>
-                                                   กฎข้อ {item.ruleNo}: {item.title}
+                                                   {item.ruleNo > 0 ? `กฎข้อ ${item.ruleNo}: ${item.title}` : item.title}
                                                 </span>
                                              </td>
                                              <td className="py-2.5 px-3 text-[11px] text-slate-300 max-w-[240px]">
@@ -1718,21 +1781,25 @@ export default function TeamStatusTab({
                                                    <div>
                                                       {doesPenalize ? (
                                                          <span className="inline-block text-[9.5px] font-bold text-rose-300 bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-500/30">
-                                                            ⚠️ มีผลหักคะแนน {u.name}
+                                                            ⚠️ มีผลหักคะแนน {u?.name || 'พนักงาน'}
                                                          </span>
                                                       ) : attrRole === 'waived' ? (
                                                          <span className="inline-block text-[9.5px] font-bold text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/30">
                                                             ✅ ยกเว้น • ไม่หักคะแนนใคร
                                                          </span>
+                                                      ) : item.type === 'RESOLVED_PRIOR_MONTH' ? (
+                                                         <span className="inline-block text-[9.5px] font-medium text-indigo-300 bg-indigo-950/50 px-1.5 py-0.2 rounded border border-indigo-500/30">
+                                                            🏛️ ตัดสินเสร็จสิ้นในเดือนก่อนหน้า
+                                                         </span>
                                                       ) : (
                                                          <span className="inline-block text-[9.5px] font-medium text-slate-400 bg-white/5 px-1.5 py-0.2 rounded border border-white/5">
-                                                            🛡️ งานของธุรการ • ไม่หักคะแนน {u.name}
+                                                            🛡️ งานของธุรการ • ไม่หักคะแนน {u?.name || 'พนักงาน'}
                                                          </span>
                                                       )}
                                                    </div>
                                                 </div>
                                              </td>
-                                             <td className="py-2.5 px-3 text-center">
+                                             <td className="py-2.5 px-3 text-center" onClick={e => e.stopPropagation()}>
                                                 <button
                                                    type="button"
                                                    onClick={() => {
@@ -2186,7 +2253,7 @@ function renderAnalysis() {
       const heuristic = generateHeuristicTalentDiagnostic(u, sets, archetypesData) || {};
       const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(analysis.archetypeKey, mainStyle);
 
-      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets);
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
       const outerSummary = analyzeOuterLayer(teamForm, statsObj);
       const businessRisk = calculateBusinessRiskIndex(u, telemetry, outerSummary);
       const succession = calculateSuccessionReadiness(u, analysis, outerSummary);
@@ -3223,7 +3290,9 @@ function renderAnalysis() {
           }}
           staff={teamForm?.id ? teamForm : selTeam}
           tasks={tasks}
-          discrepancyTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets).discrepancyTasks || []}
+          discrepancyTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets, evalMonth).discrepancyTasks || []}
+          priorResolvedTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets, evalMonth).priorResolvedDiscrepancies || []}
+          currentMonth={evalMonth}
           initialTaskId={auditInitialTaskId}
           saveD={saveD}
           isSupervisor={isSupervisor}

@@ -1918,6 +1918,7 @@ export default function App() {
                     supervisorSession={supervisorSession}
                     onOpenSupervisorModal={() => setSupervisorAuthModalOpen(true)}
                     initialFocusMode={initialFullscreen}
+                    currentMonth={gFilt.month}
                   />
                 )}
                 {tab === 'settings' && (

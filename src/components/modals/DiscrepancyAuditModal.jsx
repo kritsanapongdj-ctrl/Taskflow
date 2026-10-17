@@ -7,6 +7,8 @@ export default function DiscrepancyAuditModal({
   staff = null,
   tasks = [],
   discrepancyTasks = [],
+  priorResolvedTasks = [],
+  currentMonth = null,
   initialTaskId = null,
   saveD,
   isSupervisor = false,
@@ -14,17 +16,30 @@ export default function DiscrepancyAuditModal({
   onOpenSupervisorModal = null,
   Icon
 }) {
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING'
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING' | 'PRIOR_RESOLVED'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [auditRole, setAuditRole] = useState('foreman');
   const [auditReason, setAuditReason] = useState('');
   const [savingTaskId, setSavingTaskId] = useState(null);
 
+  const formatMonthThai = (mStr) => {
+    if (!mStr) return 'กันยายน 2569 เป็นต้นไป';
+    const parts = mStr.split('-');
+    if (parts.length < 2) return mStr;
+    const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const mIndex = parseInt(parts[1], 10);
+    let year = parseInt(parts[0], 10);
+    if (year < 2500) year += 543;
+    return `${monthNames[mIndex] || parts[1]} ${year}`;
+  };
+
   useEffect(() => {
     if (isOpen && initialTaskId) {
-      const targetItem = discrepancyTasks.find(i => String(i.task.id) === String(initialTaskId));
+      const allItems = [...discrepancyTasks, ...priorResolvedTasks];
+      const targetItem = allItems.find(i => String(i.task.id) === String(initialTaskId));
       if (targetItem) {
-        if (targetItem.type === 'LATE_COMPLETED') setActiveTab('LATE_COMPLETED');
+        if (targetItem.type === 'RESOLVED_PRIOR_MONTH') setActiveTab('PRIOR_RESOLVED');
+        else if (targetItem.type === 'LATE_COMPLETED') setActiveTab('LATE_COMPLETED');
         else if (targetItem.type === 'LATE_WO') setActiveTab('LATE_WO');
         else if (targetItem.type === 'STALE_TASK') setActiveTab('STALE_TASK');
         else if (targetItem.type === 'SPARE_PARTS_45D') setActiveTab('SPARE_PARTS_45D');
@@ -35,25 +50,27 @@ export default function DiscrepancyAuditModal({
 
         setEditingTaskId(targetItem.task.id);
         setAuditRole(targetItem.attribution?.role || 'foreman');
-        setAuditReason(targetItem.attribution?.reason || '');
+        setAuditReason(targetItem.attribution?.reason || targetItem.task?.slaAuditResolution?.reason || '');
       }
     }
-  }, [isOpen, initialTaskId, discrepancyTasks]);
+  }, [isOpen, initialTaskId, discrepancyTasks, priorResolvedTasks]);
 
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  const filteredItems = discrepancyTasks.filter(item => {
-    if (activeTab === 'ALL') return true;
-    if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
-    if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
-    if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
-    if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
-    if (activeTab === 'RETROACTIVE') return item.type === 'RETROACTIVE_START' || item.type === 'RETROACTIVE_END';
-    if (activeTab === 'PENALTY_SPARE_PART') return item.type === 'PENALTY_SPARE_PART';
-    if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
-    return true;
-  });
+  const filteredItems = activeTab === 'PRIOR_RESOLVED' 
+    ? priorResolvedTasks 
+    : discrepancyTasks.filter(item => {
+        if (activeTab === 'ALL') return true;
+        if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
+        if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
+        if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
+        if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
+        if (activeTab === 'RETROACTIVE') return item.type === 'RETROACTIVE_START' || item.type === 'RETROACTIVE_END';
+        if (activeTab === 'PENALTY_SPARE_PART') return item.type === 'PENALTY_SPARE_PART';
+        if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
+        return true;
+      });
 
   const lateCompletedCount = discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length;
   const lateWOCount = discrepancyTasks.filter(i => i.type === 'LATE_WO').length;
@@ -64,14 +81,18 @@ export default function DiscrepancyAuditModal({
   const billingCount = discrepancyTasks.filter(i => i.type === 'BILLING_CUTOFF').length;
 
   const handleStartEdit = (item) => {
+    if (String(editingTaskId) === String(item.task.id)) {
+      setEditingTaskId(null); // Toggle off if already editing
+      return;
+    }
     if (!isSupervisor) {
       if (onOpenSupervisorModal) onOpenSupervisorModal();
       else alert('ต้องเข้าสู่โหมดผู้ดูแลเพื่อทำการวินิจฉัยความรับผิดชอบ');
       return;
     }
     setEditingTaskId(item.task.id);
-    setAuditRole(item.attribution?.role || 'foreman');
-    setAuditReason(item.attribution?.reason || '');
+    setAuditRole(item.attribution?.role || item.task?.slaAuditResolution?.responsibleRole || 'foreman');
+    setAuditReason(item.attribution?.reason || item.task?.slaAuditResolution?.reason || '');
   };
 
   const handleSaveResolution = async (item) => {
@@ -147,16 +168,19 @@ export default function DiscrepancyAuditModal({
               <Icon name="scale" size={20} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-base sm:text-lg text-white font-display">
                   วินิจฉัยและตรวจสอบงานผิดเงื่อนไข (Discrepancy Audit & RACI)
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300">
-                  Phase 2 Rules
+                  รอบ: {formatMonthThai(currentMonth)}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300">
+                  ✓ ก.ย. 2569 เป็นต้นไป
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {staff ? `บุคลากร: ${staff.name} (${staff.role || staff.classId || 'ทีมงาน'})` : 'ภาพรวมทีมงาน'} • พบรายการตรวจพบ {discrepancyTasks.length} รายการ
+                {staff ? `บุคลากร: ${staff.name} (${staff.role || staff.classId || 'ทีมงาน'})` : 'ภาพรวมทีมงาน'} • รายการรอตรวจรอบนี้ {discrepancyTasks.length} รายการ (คลิกที่รายการเพื่อปรับผลการตัดสิน)
               </p>
             </div>
           </div>
@@ -186,14 +210,15 @@ export default function DiscrepancyAuditModal({
         {/* Tab Filters */}
         <div className="bg-slate-950/60 p-2 sm:p-3 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs shrink-0 overflow-x-auto">
           {[
-            { id: 'ALL', label: 'ทั้งหมด', count: discrepancyTasks.length },
+            { id: 'ALL', label: 'ทั้งหมดรอบเดือนนี้', count: discrepancyTasks.length },
             { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: lateCompletedCount },
             { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: lateWOCount },
             { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: staleCount },
             { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: partsCount },
             { id: 'RETROACTIVE', label: 'เลื่อนวันย้อนหลัง', count: retroCount },
             { id: 'PENALTY_SPARE_PART', label: '🚨 ผิดวินัยอะไหล่', count: penaltyCount },
-            { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: billingCount }
+            { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: billingCount },
+            ...(priorResolvedTasks.length > 0 ? [{ id: 'PRIOR_RESOLVED', label: '🏛️ ตัดสินแล้วในเดือนก่อนหน้า', count: priorResolvedTasks.length }] : [])
           ].map(tab => (
             <button
               key={tab.id}
@@ -221,11 +246,15 @@ export default function DiscrepancyAuditModal({
             <div className="p-8 text-center bg-slate-900/40 rounded-xl border border-slate-800">
               <Icon name="checkCircle" size={36} className="text-emerald-400 mx-auto mb-2 opacity-80" />
               <h4 className="text-white font-bold text-sm">ไม่พบรายการงานผิดเงื่อนไขในหมวดหมู่นี้</h4>
-              <p className="text-slate-400 text-xs mt-1">งานในขอบเขตปฏิบัติตามมาตรฐาน SLA และ RACI เรียบร้อยดี</p>
+              <p className="text-slate-400 text-xs mt-1">
+                {activeTab === 'PRIOR_RESOLVED' 
+                  ? 'ไม่มีรายการที่ได้รับการตัดสินในเดือนก่อนหน้า' 
+                  : 'งานในขอบเขตรอบเดือนนี้ปฏิบัติตามมาตรฐาน SLA และ RACI เรียบร้อยดี'}
+              </p>
             </div>
           ) : (
             filteredItems.map((item, idx) => {
-              const isEditing = editingTaskId === item.task.id;
+              const isEditing = String(editingTaskId) === String(item.task.id);
               const attr = item.attribution || {};
               const isWaived = attr.role === 'waived';
               const isExplicit = attr.isExplicit;
@@ -238,10 +267,16 @@ export default function DiscrepancyAuditModal({
                       ? 'border-emerald-500/30 bg-emerald-950/10' 
                       : item.type === 'PENALTY_SPARE_PART'
                       ? 'border-rose-500/50 bg-rose-950/20'
-                      : 'border-slate-800 hover:border-slate-700'
+                      : isEditing
+                      ? 'border-amber-400/80 bg-amber-950/20 shadow-lg'
+                      : 'border-slate-800 hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div 
+                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 cursor-pointer group"
+                    onClick={() => handleStartEdit(item)}
+                    title="คลิกเพื่อวินิจฉัย/ปรับสิทธิ์งานนี้"
+                  >
                     {/* Left: Task Info & Trigger Violation */}
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -311,7 +346,10 @@ export default function DiscrepancyAuditModal({
                     <div className="shrink-0 flex items-center sm:flex-col gap-2">
                       <button
                         type="button"
-                        onClick={() => handleStartEdit(item)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEdit(item);
+                        }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                           isEditing
                             ? 'bg-slate-700 text-white'

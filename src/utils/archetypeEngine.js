@@ -2066,6 +2066,49 @@ export const getStaffAssignedProjects = (staffOrName, sets = {}) => {
   return [];
 };
 
+export const GO_LIVE_DATE_CUTOFF = '2026-09-01'; // 1 กันยายน 2569 (วันเริ่มใช้งานระบบจริง)
+
+/**
+ * Normalizes date string to standard Gregorian YYYY-MM-DD
+ * Handles Thai Buddhist Era (256x -> 202x) if present.
+ */
+export const normalizeToGregorianDate = (dateStr) => {
+  if (!dateStr) return '';
+  const s = String(dateStr).trim();
+  if (s.startsWith('256')) {
+    const year = parseInt(s.substring(0, 4), 10);
+    const ceYear = year - 543;
+    return `${ceYear}${s.substring(4)}`;
+  }
+  return s;
+};
+
+/**
+ * Returns the primary operational date of a task in YYYY-MM-DD format.
+ */
+export const getTaskOperationalDate = (t) => {
+  if (!t) return '';
+  const rawDate = t.completedDate || t.endDate || t.issueReportedAt || t.startDate || t.receivedDate || t.createdAt || t.updatedAt || '';
+  const normalized = normalizeToGregorianDate(rawDate);
+  return normalized ? normalized.substring(0, 10) : '';
+};
+
+/**
+ * Checks if a task was already adjudicated by a supervisor in a month prior to activeMonth.
+ * If resMonth < activeMonth (e.g. resolved in 2026-09 and viewing 2026-10), it returns true.
+ */
+export const isTaskDecidedInPriorMonth = (t, activeMonth) => {
+  if (!t || !t.slaAuditResolution || !t.slaAuditResolution.responsibleRole) {
+    return false;
+  }
+  const timestamp = t.slaAuditResolution.timestamp;
+  if (!timestamp) return false;
+  const normalizedTs = normalizeToGregorianDate(timestamp);
+  const resMonth = normalizedTs.substring(0, 7);
+  const curMonth = normalizeToGregorianDate(activeMonth).substring(0, 7);
+  return resMonth < curMonth;
+};
+
 /**
  * Evaluates whether a specific discrepancy task actually results in penalty point deductions
  * for a specific staff member based on their role type ('foreman' | 'admin' | 'officer') and RACI attribution.
@@ -2090,6 +2133,7 @@ export const doesDiscrepancyPenalizeStaff = (item, roleType) => {
     if (item.type === 'LATE_WO' || item.type === 'DUPLICATE_WO' || item.type === 'BILLING_CUTOFF') {
       return attrRole === 'admin' || attrRole === 'shared';
     }
+    if (item.type === 'LATE_COMPLETED') return attrRole === 'admin';
     if (item.type === 'STALE_TASK') return attrRole !== 'waived';
     return false;
   }
@@ -2103,8 +2147,16 @@ export const doesDiscrepancyPenalizeStaff = (item, roleType) => {
  * - Officer: EXEMPT from operational task metric penalties (governance role).
  * - Foreman: Field execution, SLA speed, retroactive postponements, BOQ delivery, parts integrity.
  * - Admin: Work order creation speed (3-day SLA), system integrity, 15th cut-off billing discipline.
+ * 
+ * Rules:
+ * 1. Go-Live Cutoff: Tasks older than September 2569 (2026-09-01) are excluded as legacy/pre-launch data.
+ * 2. Prior Resolution Roll-forward: Tasks decided by a supervisor in a prior month do not reappear in subsequent months.
  */
-export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
+export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, currentMonth = null) => {
+  const now = new Date();
+  const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const activeMonth = currentMonth ? normalizeToGregorianDate(currentMonth).substring(0, 7) : currentSystemMonth;
+
   if (!staff || !staff.name) {
     return {
       isExempt: false,
@@ -2122,8 +2174,11 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
       lateWOTasks: 0,
       slaRate: 100,
       discrepancyTasks: [],
+      priorResolvedDiscrepancies: [],
       penalties: [],
-      alerts: []
+      alerts: [],
+      activeMonth,
+      goLiveCutoff: GO_LIVE_DATE_CUTOFF
     };
   }
 
@@ -2147,6 +2202,10 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
       activeTasks: 0,
       slaRate: 100,
       penalties: [],
+      discrepancyTasks: [],
+      priorResolvedDiscrepancies: [],
+      activeMonth,
+      goLiveCutoff: GO_LIVE_DATE_CUTOFF,
       alerts: [
         {
           type: 'info',
@@ -2157,9 +2216,16 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     };
   }
 
-  // 2. Filter tasks within the staff member's operational scope
+  // 2. Filter tasks within the staff member's operational scope AND after the Go-Live Date (Sep 2026)
   const scopedTasks = tasks.filter(t => {
     if (!t) return false;
+
+    // Rule: Exclude tasks prior to Go-Live Date (September 2569 / 2026-09-01)
+    const opDate = getTaskOperationalDate(t);
+    if (opDate && opDate < GO_LIVE_DATE_CUTOFF) {
+      return false; // Older than September 2026: Ignore completely as system was not live yet
+    }
+
     const taskStaff = (t.staffName || '').trim().toLowerCase();
     const isDirectStaffMatch = taskStaff && taskStaff === staffName.toLowerCase();
     
@@ -2213,28 +2279,39 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     return { role: defaultType, reason: '', isExplicit: false };
   };
 
-  // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue (Waived tasks are excluded from penalties)
+  // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue (Waived and Admin-attributed tasks excluded from Foreman penalties)
   const activeOverdue = scopedTasks.filter(t => {
     if (t.status === 'จบงาน' || t.status === 'ยกเลิก') return false;
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false; // Already decided in prior month
     const attr = getTaskAttribution(t, 'foreman');
-    if (attr.role === 'waived') return false;
+    if (attr.role === 'waived' || attr.role === 'admin') return false;
     return t.overdueStatus === 'เกินกำหนด';
   });
 
   const lateCompleted = completedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false; // Already decided in prior month
     const attr = getTaskAttribution(t, 'foreman');
     if (attr.role === 'waived') return false; // Supervisor granted waiver
+    if (attr.role === 'admin') return false; // Supervisor attributed to Admin, Foreman is not penalized
     if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
     if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
     return false;
   });
+
+  const lateCompletedAdminAttributed = completedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
+    const attr = getTaskAttribution(t, 'foreman');
+    return attr.role === 'admin';
+  });
+
   const onTimeCompleted = completedTasks.length - lateCompleted.length;
   const slaRate = completedTasks.length > 0 ? Math.round((Math.max(0, onTimeCompleted) / completedTasks.length) * 100) : 100;
 
   // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม)
   const retroactiveStartPostpones = scopedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'foreman');
-    if (attr.role === 'waived') return false;
+    if (attr.role === 'waived' || attr.role === 'admin') return false;
     if (t.status === 'เลื่อนวันเริ่ม' && t.startPostponedAt && t.previousStartDate) {
       return new Date(t.startPostponedAt) > new Date(t.previousStartDate);
     }
@@ -2243,8 +2320,9 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน)
   const retroactiveEndPostpones = scopedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'foreman');
-    if (attr.role === 'waived') return false;
+    if (attr.role === 'waived' || attr.role === 'admin') return false;
     if (t.postponedAt && t.previousEndDate) {
       const diffMs = new Date(t.postponedAt).getTime() - new Date(t.previousEndDate).getTime();
       return diffMs >= 86400000; // >= 1 day
@@ -2254,6 +2332,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 4: Late Work Order issuance (> 3 days between completedDate and WO assignment)
   const lateWOTasks = scopedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     if (t.lateWorkOrder) return true;
     if (t.status === 'จบงาน' && t.completedDate && t.workOrderNo) {
       const woEntry = (t.timeline || []).find(e => e.action === 'WO_ATTACHED');
@@ -2280,6 +2359,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
   // Rule 5: Abandoned / Ghost tasks (> 7 days without update)
   const nowMs = Date.now();
   const staleGhostTasks = activeTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const lastTime = t.updatedAt || t.startDate || t.receivedDate;
     if (!lastTime) return false;
     const diffDays = (nowMs - new Date(lastTime).getTime()) / (1000 * 3600 * 24);
@@ -2288,8 +2368,9 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 6: Waiting for parts ceiling (> 45 days)
   const sparePartsOver45Days = issueTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'foreman');
-    if (attr.role === 'waived') return false;
+    if (attr.role === 'waived' || attr.role === 'admin') return false;
     const reportTime = t.issueReportedAt || t.startDate;
     if (!reportTime) return false;
     const diffDays = (nowMs - new Date(reportTime).getTime()) / (1000 * 3600 * 24);
@@ -2298,11 +2379,13 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 6B: Disciplinary Revocation Flag ("ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)")
   const penaltySparePartsTasks = scopedTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     return t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)' || t.penaltyRevokeSla === true;
   });
 
   // Rule 7: Duplicate Work Order Cancellation
   const duplicateCancellations = canceledTasks.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'admin');
     if (attr.role === 'waived') return false;
     const text = (t.cancelReason || '').toLowerCase();
@@ -2312,6 +2395,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
   // Rule 8: Monthly Billing Cycle (15th Cut-off Rule) - Evaluated for Admin
   const billingEligible = completedTasks.filter(t => t.completedDate);
   const billingViolations = billingEligible.filter(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'admin');
     if (attr.role === 'waived') return false;
     if (!t.completedDate) return false;
@@ -2323,8 +2407,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     
     // If finished on or before 15th, must be billed in that same month or earlier
     if (isFinishedBefore15 && t.billingStatus !== 'ส่งเบิกแล้ว') {
-      const currentMonth = new Date().toISOString().substring(0, 7);
-      if (currentMonth > compMonth) return true; // Past the cycle without billing
+      if (activeMonth > compMonth) return true; // Past the cycle without billing
     }
     return false;
   });
@@ -2522,7 +2605,14 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
       });
     }
   } else if (roleType === 'admin') {
-    // Admin Penalties: WO SLA Speed, Billing Cycle Discipline (15th Cut-off), System Integrity
+    // Admin Penalties: WO SLA Speed, Billing Cycle Discipline (15th Cut-off), Late Completions Attributed to Admin, System Integrity
+    if (lateCompletedAdminAttributed.length > 0) {
+      penalties.push({
+        axis: 'sla',
+        points: Math.min(2, lateCompletedAdminAttributed.length),
+        reason: `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร จำนวน ${lateCompletedAdminAttributed.length} งาน (คำวินิจฉัยผู้ดูแล)`
+      });
+    }
     if (lateWOAdminAttributed.length > 0) {
       penalties.push({
         axis: 'sla',
@@ -2560,6 +2650,25 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     }
   }
 
+  // Collect All Prior-Resolved Discrepancies (Historical Audits from Prior Months)
+  // These are preserved for audit trail transparency, but excluded from active month queues and deductions
+  const priorResolvedDiscrepancies = [];
+  scopedTasks.forEach(t => {
+    if (isTaskDecidedInPriorMonth(t, activeMonth)) {
+      const res = t.slaAuditResolution || {};
+      const resDate = res.timestamp ? String(res.timestamp).substring(0, 10) : '';
+      priorResolvedDiscrepancies.push({
+        task: t,
+        type: 'RESOLVED_PRIOR_MONTH',
+        title: 'งานที่ตัดสินเสร็จสิ้นในเดือนก่อนหน้า',
+        ruleNo: 0,
+        desc: `คำวินิจฉัย: "${res.reason || 'ตัดสินแล้ว'}" (วินิจฉัยให้: ${res.responsibleRole || '-'} โดย ${res.supervisorName || 'ผู้ดูแล'} เมื่อ ${resDate})`,
+        days: 0,
+        attribution: getTaskAttribution(t, 'foreman')
+      });
+    }
+  });
+
   return {
     isExempt: false,
     roleType,
@@ -2583,14 +2692,18 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     lateWOTasks: lateWOTasks.length,
     lateWOForemanAttributed: lateWOForemanAttributed.length,
     lateWOAdminAttributed: lateWOAdminAttributed.length,
+    lateCompletedAdminAttributed: lateCompletedAdminAttributed.length,
     staleGhostTasks: staleGhostTasks.length,
     sparePartsOver45Days: sparePartsOver45Days.length,
     penaltySparePartsTasks: penaltySparePartsTasks.length,
     duplicateCancellations: duplicateCancellations.length,
     billingViolations: billingViolations.length,
     discrepancyTasks,
+    priorResolvedDiscrepancies,
     penalties,
-    alerts
+    alerts,
+    activeMonth,
+    goLiveCutoff: GO_LIVE_DATE_CUTOFF
   };
 };
 
