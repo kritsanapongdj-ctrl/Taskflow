@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as lucide from 'lucide-react';
 import rubricsData from './data/rubrics.json';
 import { OUTER_DEFINITIONS, OUTER_KEYS, analyzeOuterLayer } from './utils/archetypeEngine';
@@ -253,8 +254,11 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
   const isOuterOverridden = outerCustomized[activeOuterTab];
   const outerGuide = getOuterGuideline(activeOuterTab, activeOuterCurrentVal);
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4">
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100000] flex items-center justify-center p-2 sm:p-4 font-sans">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
@@ -747,7 +751,8 @@ export default function AssessmentModal({ isOpen, onClose, staff, onSave }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

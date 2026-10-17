@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as lucide from 'lucide-react';
 import { 
   analyzeArchetype, 
@@ -104,6 +105,7 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
   }, [isOpen, staff]);
 
   if (!isOpen || !staff) return null;
+  if (typeof document === 'undefined') return null;
 
   const roleProfile = getRoleTargetProfile(staff.role || staff.classId || sets?.staffClasses?.find?.(c => c.id === staff.classId));
   const archAnalysis = analyzeArchetype(staff, sets, archetypesData) || {};
@@ -141,8 +143,8 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto animate-fade-in font-sans">
+  return createPortal(
+    <div className="fixed inset-0 z-[100000] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto animate-fade-in font-sans">
       <div className="bg-[#070D18] border border-amber-500/25 w-full max-w-5xl lg:max-w-6xl rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col max-h-[92vh] text-left">
         
         {/* Executive Header */}
@@ -472,6 +474,7 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

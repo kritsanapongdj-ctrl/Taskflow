@@ -33,7 +33,8 @@ import {
   getStaffAssignedProjects,
   NINE_BOX_DEFINITIONS,
   calculateBusinessRiskIndex,
-  calculateSuccessionReadiness
+  calculateSuccessionReadiness,
+  doesDiscrepancyPenalizeStaff
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -72,6 +73,8 @@ export default function TeamStatusTab({
   const [aiAdvisorModalOpen, setAiAdvisorModalOpen] = useState(false);
   const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
+  const [auditInitialTaskId, setAuditInitialTaskId] = useState(null);
+  const [discrepancyViewFilter, setDiscrepancyViewFilter] = useState('affecting'); // 'affecting' | 'all' | 'waived'
   const [activeSubTab, setActiveSubTab] = useState('performance'); // 'performance' | 'field_logs' | 'settings'
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
@@ -1516,96 +1519,248 @@ export default function TeamStatusTab({
                </div>
 
                {/* Discrepancy Tasks Audit Table */}
-               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm space-y-3.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/10">
-                     <div>
-                        <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                           <Icon name="scale" size={16} className="text-indigo-400" />
-                           <span>ตารางบันทึกงานข้อขัดแย้งที่ต้องได้รับการตรวจสอบ (Discrepancy Tasks Audit)</span>
-                        </h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                           รายการงานที่ผิดกติกา SLA พร้อมระบุ RACI Attribution เพื่อให้หัวหน้างาน/ผู้ดูแลตรวจสอบและตัดสิน
-                        </p>
-                     </div>
-                     <button
-                        type="button"
-                        onClick={() => setDiscrepancyModalOpen(true)}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
-                     >
-                        <Icon name="gavel" size={13} />
-                        <span>เปิดห้องตัดสินเต็มรูปแบบ</span>
-                     </button>
-                  </div>
+               {(() => {
+                  const allDiscrepancies = telemetry.discrepancyTasks || [];
+                  const affectingDiscrepancies = allDiscrepancies.filter(item => doesDiscrepancyPenalizeStaff(item, telemetry.roleType));
+                  const waivedDiscrepancies = allDiscrepancies.filter(item => item.attribution?.role === 'waived');
 
-                  {(!telemetry.discrepancyTasks || telemetry.discrepancyTasks.length === 0) ? (
-                     <div className="p-6 rounded-xl bg-white/5 border border-dashed border-white/10 text-center space-y-1">
-                        <span className="text-xs font-bold text-slate-300 block">✨ ไม่พบงานที่เข้าข่ายข้อขัดแย้งในขณะนี้</span>
-                        <p className="text-[11px] text-slate-500">ทุกใบงานดำเนินการเป็นไปตามเกณฑ์เวลาและกติกา 7 ข้อ</p>
-                     </div>
-                  ) : (
-                     <div className="overflow-x-auto rounded-xl border border-white/10">
-                        <table className="w-full text-left text-xs border-collapse">
-                           <thead>
-                              <tr className="bg-slate-950/80 text-slate-400 border-b border-white/10">
-                                 <th className="py-2.5 px-3 font-bold">#</th>
-                                 <th className="py-2.5 px-3 font-bold">ใบงาน / โครงการ</th>
-                                 <th className="py-2.5 px-3 font-bold">ประเภทข้อขัดแย้ง</th>
-                                 <th className="py-2.5 px-3 font-bold">คำอธิบายหน้างาน</th>
-                                 <th className="py-2.5 px-3 font-bold">RACI Attribution</th>
-                                 <th className="py-2.5 px-3 font-bold text-center">การตัดสิน</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-white/5 text-slate-300">
-                              {telemetry.discrepancyTasks.map((item, idx) => {
-                                 const t = item.task || {};
-                                 const attrRole = item.attribution?.role || 'foreman';
-                                 return (
-                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                       <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{idx + 1}</td>
-                                       <td className="py-2.5 px-3">
-                                          <div className="font-bold text-white truncate max-w-[180px]">{t.title || 'ไม่ระบุชื่อ'}</div>
-                                          <div className="text-[10px] text-slate-400">{t.project || '-'} • แปลง/บ้าน: {t.houseNo || '-'}</div>
-                                       </td>
-                                       <td className="py-2.5 px-3">
-                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                             item.ruleNo === 4 ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' :
-                                             item.ruleNo === 5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                                             item.ruleNo === 6 ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
-                                             item.ruleNo === 6.5 ? 'bg-rose-500/30 text-rose-300 border-rose-500/40' :
-                                             'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                                          }`}>
-                                             กฎข้อ {item.ruleNo}: {item.title}
-                                          </span>
-                                       </td>
-                                       <td className="py-2.5 px-3 text-[11px] text-slate-300 max-w-[240px]">
-                                          {item.desc}
-                                       </td>
-                                       <td className="py-2.5 px-3">
-                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                                             attrRole === 'admin' ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' :
-                                             attrRole === 'foreman' ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' :
-                                             'bg-purple-500/20 text-purple-300 border-purple-400/30'
-                                          }`}>
-                                             {attrRole === 'admin' ? 'ธุรการ (Admin)' : attrRole === 'foreman' ? 'โฟร์แมน (Foreman)' : 'รับผิดชอบร่วม (70/30)'}
-                                          </span>
-                                       </td>
-                                       <td className="py-2.5 px-3 text-center">
-                                          <button
-                                             type="button"
-                                             onClick={() => setDiscrepancyModalOpen(true)}
-                                             className="px-2.5 py-1 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white text-[10px] font-bold transition shadow-xs"
-                                          >
-                                             ⚖️ ตัดสิน
-                                          </button>
-                                       </td>
+                  const displayedDiscrepancies = discrepancyViewFilter === 'affecting'
+                     ? affectingDiscrepancies
+                     : discrepancyViewFilter === 'waived'
+                     ? waivedDiscrepancies
+                     : allDiscrepancies;
+
+                  return (
+                     <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/10 shadow-sm space-y-4">
+                        {/* Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                           <div>
+                              <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                                 <Icon name="scale" size={17} className="text-[#C5A059]" />
+                                 <span>ระบบตรวจสอบงานข้อขัดแย้ง &amp; วินิจฉัยความรับผิดชอบ (Discrepancy Audit &amp; RACI)</span>
+                              </h4>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                 ตรวจสอบรายการผิดกติกา SLA พร้อมระบุ RACI Attribution เพื่อให้หัวหน้างาน/ผู้ดูแลตรวจสอบและตัดสินใจ
+                              </p>
+                           </div>
+                           <button
+                              type="button"
+                              onClick={() => {
+                                 setAuditInitialTaskId(null);
+                                 setDiscrepancyModalOpen(true);
+                              }}
+                              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#7A1C28] to-[#5A141E] hover:from-[#8F2230] hover:to-[#6E1824] text-white font-bold text-xs flex items-center gap-1.5 shadow-md border border-[#C5A059]/30 transition cursor-pointer"
+                           >
+                              <Icon name="gavel" size={13} className="text-[#C5A059]" />
+                              <span>เปิดห้องตัดสินเต็มรูปแบบ</span>
+                           </button>
+                        </div>
+
+                        {/* Executive RACI Explainer Callout Box */}
+                        <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-950/90 to-[#0F2E4A]/30 border border-white/10 text-xs space-y-2 text-slate-300">
+                           <div className="flex items-center gap-2 text-white font-bold">
+                              <Icon name="info" size={15} className="text-[#C5A059]" />
+                              <span>หลักเกณฑ์การหักคะแนนตามความรับผิดชอบ (RACI Allocation Rule)</span>
+                           </div>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300 leading-relaxed">
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                                 <span className="text-amber-300 font-bold block mb-1">🛠️ ฝ่ายโฟร์แมน/วิศวกร (Foreman)</span>
+                                 รับผิดชอบ: จบงานล่าช้ากว่ากำหนด (SLA), เลื่อนวันเริ่ม/จบย้อนหลัง, งานค้างหน้างานเกิน 7 วัน (70%), ติดปัญหารออะไหล่เกินเพดาน 45 วัน
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                                 <span className="text-sky-300 font-bold block mb-1">📋 ฝ่ายธุรการโครงการ (Admin)</span>
+                                 รับผิดชอบ: ออกใบงานช้าเกิน 3 วัน (กฎข้อ 4), หลุดรอบส่งเบิกเงินวันที่ 15, เปิดใบงานซ้ำซ้อนจนยกเลิก <br/>
+                                 <strong className="text-emerald-300 text-[10px]">*งานที่ระบุว่า "ธุรการ (Admin)" จะไม่ถูกนำมาหักคะแนนโฟร์แมน*</strong>
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-1">
+                           <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-white/10 text-xs flex-wrap">
+                              <button
+                                 type="button"
+                                 onClick={() => setDiscrepancyViewFilter('affecting')}
+                                 className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                    discrepancyViewFilter === 'affecting'
+                                       ? 'bg-gradient-to-r from-[#7A1C28] to-[#55131C] text-white shadow-md border border-[#C5A059]/40'
+                                       : 'text-slate-400 hover:text-white'
+                                 }`}
+                              >
+                                 <Icon name="target" size={13} className={discrepancyViewFilter === 'affecting' ? 'text-[#C5A059]' : 'text-slate-400'} />
+                                 <span>เฉพาะที่หักคะแนน ${u.name}</span>
+                                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                                    affectingDiscrepancies.length > 0 ? 'bg-rose-500 text-white' : 'bg-emerald-500/25 text-emerald-300'
+                                 }`}>
+                                    ${affectingDiscrepancies.length}
+                                 </span>
+                              </button>
+
+                              <button
+                                 type="button"
+                                 onClick={() => setDiscrepancyViewFilter('all')}
+                                 className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                    discrepancyViewFilter === 'all'
+                                       ? 'bg-slate-700 text-white shadow-md border border-white/20'
+                                       : 'text-slate-400 hover:text-white'
+                                 }`}
+                              >
+                                 <Icon name="layers" size={13} className="text-slate-400" />
+                                 <span>งานขัดแย้งทั้งหมดในโครงการ</span>
+                                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
+                                    ${allDiscrepancies.length}
+                                 </span>
+                              </button>
+
+                              <button
+                                 type="button"
+                                 onClick={() => setDiscrepancyViewFilter('waived')}
+                                 className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                    discrepancyViewFilter === 'waived'
+                                       ? 'bg-emerald-950/70 text-emerald-200 border border-emerald-500/50'
+                                       : 'text-slate-400 hover:text-white'
+                                 }`}
+                              >
+                                 <Icon name="shieldCheck" size={13} className="text-emerald-400" />
+                                 <span>ยกเว้นแล้ว (Waived)</span>
+                                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-900/60 text-emerald-300">
+                                    ${waivedDiscrepancies.length}
+                                 </span>
+                              </button>
+                           </div>
+
+                           <span className="text-[11px] text-slate-400">
+                              แสดง <strong>${displayedDiscrepancies.length}</strong> จาก ${allDiscrepancies.length} รายการ
+                           </span>
+                        </div>
+
+                        {/* Table */}
+                        {displayedDiscrepancies.length === 0 ? (
+                           <div className="p-8 rounded-xl bg-white/5 border border-dashed border-white/10 text-center space-y-1.5">
+                              <Icon name="checkCircle" size={32} className="text-emerald-400 mx-auto opacity-80" />
+                              <span className="text-xs font-bold text-slate-200 block">
+                                 ${discrepancyViewFilter === 'affecting' 
+                                    ? `✨ ไม่พบงานผิดเงื่อนไขที่มีผลหักคะแนน ${u.name} ในขณะนี้`
+                                    : discrepancyViewFilter === 'waived'
+                                    ? 'ยังไม่มีรายการที่ได้รับการยกเว้น'
+                                    : '✨ ไม่พบงานที่เข้าข่ายข้อขัดแย้ง'}
+                              </span>
+                              <p className="text-[11px] text-slate-400">
+                                 ${discrepancyViewFilter === 'affecting'
+                                    ? 'งานอื่นๆ ในโครงการที่ตรวจพบเป็นความรับผิดชอบของฝ่ายธุรการหรือได้รับการยกเว้นแล้ว จึงไม่ถูกนำมาหักคะแนน'
+                                    : 'ทุกใบงานดำเนินการเป็นไปตามเกณฑ์เวลาและกติกา 7 ข้อ'}
+                              </p>
+                           </div>
+                        ) : (
+                           <div className="overflow-x-auto rounded-xl border border-white/10">
+                              <table className="w-full text-left text-xs border-collapse">
+                                 <thead>
+                                    <tr className="bg-slate-950/80 text-slate-400 border-b border-white/10">
+                                       <th className="py-2.5 px-3 font-bold">#</th>
+                                       <th className="py-2.5 px-3 font-bold">ใบงาน / โครงการ</th>
+                                       <th className="py-2.5 px-3 font-bold">ประเภทข้อขัดแย้ง</th>
+                                       <th className="py-2.5 px-3 font-bold">คำอธิบายหน้างาน</th>
+                                       <th className="py-2.5 px-3 font-bold">RACI Attribution &amp; ผลกระทบ</th>
+                                       <th className="py-2.5 px-3 font-bold text-center">การตัดสิน</th>
                                     </tr>
-                                 );
-                              })}
-                           </tbody>
-                        </table>
+                                 </thead>
+                                 <tbody className="divide-y divide-white/5 text-slate-300">
+                                    {displayedDiscrepancies.map((item, idx) => {
+                                       const t = item.task || {};
+                                       const attrRole = item.attribution?.role || 'foreman';
+                                       const doesPenalize = doesDiscrepancyPenalizeStaff(item, telemetry.roleType);
+                                       const isExplicit = item.attribution?.isExplicit;
+
+                                       return (
+                                          <tr key={`${t.id || idx}-${idx}`} className="hover:bg-white/5 transition-colors">
+                                             <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{`${idx + 1}`}</td>
+                                             <td className="py-2.5 px-3">
+                                                <div className="font-bold text-white truncate max-w-[190px]">{t.title || 'ไม่ระบุชื่อ'}</div>
+                                                <div className="text-[10px] text-slate-400 truncate max-w-[190px]">{t.project || '-'} • แปลง/บ้าน: {t.houseNo || '-'}</div>
+                                             </td>
+                                             <td className="py-2.5 px-3">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                                   item.ruleNo === 1 ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' :
+                                                   item.ruleNo === 4 ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' :
+                                                   item.ruleNo === 5 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                                                   item.ruleNo === 6 ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' :
+                                                   item.ruleNo === 6.5 ? 'bg-rose-500/30 text-rose-300 border-rose-500/40' :
+                                                   'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                                }`}>
+                                                   กฎข้อ {item.ruleNo}: {item.title}
+                                                </span>
+                                             </td>
+                                             <td className="py-2.5 px-3 text-[11px] text-slate-300 max-w-[240px]">
+                                                {item.desc}
+                                             </td>
+                                             <td className="py-2.5 px-3">
+                                                <div className="space-y-1">
+                                                   <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                                         attrRole === 'admin' ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' :
+                                                         attrRole === 'foreman' ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' :
+                                                         attrRole === 'waived' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30' :
+                                                         'bg-purple-500/20 text-purple-300 border-purple-400/30'
+                                                      }`}>
+                                                         {attrRole === 'admin' ? '📋 ธุรการ (Admin)' :
+                                                          attrRole === 'foreman' ? '🛠️ โฟร์แมน (Foreman)' :
+                                                          attrRole === 'waived' ? '🛡️ ยกเว้น (Waived)' :
+                                                          '🤝 รับผิดชอบร่วม (70/30)'}
+                                                      </span>
+                                                      {isExplicit && (
+                                                         <span className="text-[9px] text-emerald-400 bg-emerald-950/60 px-1 rounded border border-emerald-800">
+                                                            ✓ ตัดสินแล้ว
+                                                         </span>
+                                                      )}
+                                                   </div>
+
+                                                   {/* Explicit Penalty Impact Indicator */}
+                                                   <div>
+                                                      {doesPenalize ? (
+                                                         <span className="inline-block text-[9.5px] font-bold text-rose-300 bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-500/30">
+                                                            ⚠️ มีผลหักคะแนน {u.name}
+                                                         </span>
+                                                      ) : attrRole === 'waived' ? (
+                                                         <span className="inline-block text-[9.5px] font-bold text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                                                            ✅ ยกเว้น • ไม่หักคะแนนใคร
+                                                         </span>
+                                                      ) : (
+                                                         <span className="inline-block text-[9.5px] font-medium text-slate-400 bg-white/5 px-1.5 py-0.2 rounded border border-white/5">
+                                                            🛡️ งานของธุรการ • ไม่หักคะแนน {u.name}
+                                                         </span>
+                                                      )}
+                                                   </div>
+                                                </div>
+                                             </td>
+                                             <td className="py-2.5 px-3 text-center">
+                                                <button
+                                                   type="button"
+                                                   onClick={() => {
+                                                      if (!isSupervisor) {
+                                                         if (onOpenSupervisorModal) onOpenSupervisorModal();
+                                                         else alert('กรุณาเข้าสู่โหมดผู้ดูแลเพื่อทำการตัดสินข้อขัดแย้ง');
+                                                         return;
+                                                      }
+                                                      setAuditInitialTaskId(item.task.id);
+                                                      setDiscrepancyModalOpen(true);
+                                                   }}
+                                                   className="px-2.5 py-1 rounded bg-[#7A1C28]/80 hover:bg-[#7A1C28] text-white border border-[#C5A059]/40 text-[10.5px] font-bold transition shadow-xs flex items-center gap-1 mx-auto cursor-pointer"
+                                                   title={isSupervisor ? "วินิจฉัย/ปรับสิทธิ์ความรับผิดชอบงานนี้" : "เข้าสู่โหมดผู้ดูแลเพื่อตัดสิน"}
+                                                >
+                                                   <Icon name="scale" size={11} className="text-[#C5A059]" />
+                                                   <span>⚖️ ตัดสิน</span>
+                                                </button>
+                                             </td>
+                                          </tr>
+                                       );
+                                    })}
+                                 </tbody>
+                              </table>
+                           </div>
+                        )}
                      </div>
-                  )}
-               </div>
+                  );
+               })()}
             </div>
          );
       })()}
@@ -3015,7 +3170,7 @@ function renderAnalysis() {
 
         {/* Fullscreen Focus Theater Portal */}
         {isFocusMode && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[99999] w-screen h-screen m-0 p-0 rounded-none border-0 bg-[#060A14] overflow-hidden flex flex-col font-sans select-none animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[9990] w-screen h-screen m-0 p-0 rounded-none border-0 bg-[#060A14] overflow-hidden flex flex-col font-sans select-none animate-in fade-in duration-200">
             {renderCinematicView()}
           </div>,
           document.body
@@ -3062,10 +3217,14 @@ function renderAnalysis() {
         />
         <DiscrepancyAuditModal
           isOpen={discrepancyModalOpen}
-          onClose={() => setDiscrepancyModalOpen(false)}
+          onClose={() => {
+            setDiscrepancyModalOpen(false);
+            setAuditInitialTaskId(null);
+          }}
           staff={teamForm?.id ? teamForm : selTeam}
           tasks={tasks}
           discrepancyTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets).discrepancyTasks || []}
+          initialTaskId={auditInitialTaskId}
           saveD={saveD}
           isSupervisor={isSupervisor}
           supervisorSession={supervisorSession}

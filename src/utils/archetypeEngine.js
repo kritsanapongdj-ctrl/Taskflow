@@ -2067,6 +2067,37 @@ export const getStaffAssignedProjects = (staffOrName, sets = {}) => {
 };
 
 /**
+ * Evaluates whether a specific discrepancy task actually results in penalty point deductions
+ * for a specific staff member based on their role type ('foreman' | 'admin' | 'officer') and RACI attribution.
+ */
+export const doesDiscrepancyPenalizeStaff = (item, roleType) => {
+  if (!item || !roleType) return false;
+  if (roleType === 'officer') return false; // Officers are exempt
+  const attrRole = item.attribution?.role;
+  if (attrRole === 'waived') return false; // Waived tasks deduct from nobody
+
+  if (roleType === 'foreman') {
+    if (item.type === 'LATE_COMPLETED') return attrRole !== 'admin' && attrRole !== 'waived';
+    if (item.type === 'LATE_WO') return attrRole === 'foreman' || attrRole === 'shared';
+    if (item.type === 'STALE_TASK') return attrRole !== 'waived';
+    if (item.type === 'SPARE_PARTS_45D' || item.type === 'PENALTY_SPARE_PART' || (item.type && item.type.startsWith('RETROACTIVE'))) {
+      return attrRole !== 'admin' && attrRole !== 'waived';
+    }
+    return false;
+  }
+
+  if (roleType === 'admin') {
+    if (item.type === 'LATE_WO' || item.type === 'DUPLICATE_WO' || item.type === 'BILLING_CUTOFF') {
+      return attrRole === 'admin' || attrRole === 'shared';
+    }
+    if (item.type === 'STALE_TASK') return attrRole !== 'waived';
+    return false;
+  }
+
+  return false;
+};
+
+/**
  * Aggregates live TaskFlow operational telemetry for a staff member based on RACI rules.
  * Strictly separates:
  * - Officer: EXEMPT from operational task metric penalties (governance role).
@@ -2150,33 +2181,6 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
   const issueTasks = scopedTasks.filter(t => t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา');
   const canceledTasks = scopedTasks.filter(t => t.status === 'ยกเลิก');
 
-  // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue
-  const activeOverdue = scopedTasks.filter(t => t.overdueStatus === 'เกินกำหนด' && t.status !== 'จบงาน' && t.status !== 'ยกเลิก');
-  const lateCompleted = completedTasks.filter(t => {
-    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
-    if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
-    return false;
-  });
-  const onTimeCompleted = completedTasks.length - lateCompleted.length;
-  const slaRate = completedTasks.length > 0 ? Math.round((Math.max(0, onTimeCompleted) / completedTasks.length) * 100) : 100;
-
-  // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม)
-  const retroactiveStartPostpones = scopedTasks.filter(t => {
-    if (t.status === 'เลื่อนวันเริ่ม' && t.startPostponedAt && t.previousStartDate) {
-      return new Date(t.startPostponedAt) > new Date(t.previousStartDate);
-    }
-    return false;
-  });
-
-  // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน)
-  const retroactiveEndPostpones = scopedTasks.filter(t => {
-    if (t.postponedAt && t.previousEndDate) {
-      const diffMs = new Date(t.postponedAt).getTime() - new Date(t.previousEndDate).getTime();
-      return diffMs >= 86400000; // >= 1 day
-    }
-    return false;
-  });
-
   // Helper to determine attribution with precedence:
   // 1. Explicit supervisor audit resolution (slaAuditResolution)
   // 2. Explicit WO attribution recorded upon completion (woAttribution)
@@ -2208,6 +2212,45 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
     }
     return { role: defaultType, reason: '', isExplicit: false };
   };
+
+  // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue (Waived tasks are excluded from penalties)
+  const activeOverdue = scopedTasks.filter(t => {
+    if (t.status === 'จบงาน' || t.status === 'ยกเลิก') return false;
+    const attr = getTaskAttribution(t, 'foreman');
+    if (attr.role === 'waived') return false;
+    return t.overdueStatus === 'เกินกำหนด';
+  });
+
+  const lateCompleted = completedTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'foreman');
+    if (attr.role === 'waived') return false; // Supervisor granted waiver
+    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
+    if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
+    return false;
+  });
+  const onTimeCompleted = completedTasks.length - lateCompleted.length;
+  const slaRate = completedTasks.length > 0 ? Math.round((Math.max(0, onTimeCompleted) / completedTasks.length) * 100) : 100;
+
+  // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม)
+  const retroactiveStartPostpones = scopedTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'foreman');
+    if (attr.role === 'waived') return false;
+    if (t.status === 'เลื่อนวันเริ่ม' && t.startPostponedAt && t.previousStartDate) {
+      return new Date(t.startPostponedAt) > new Date(t.previousStartDate);
+    }
+    return false;
+  });
+
+  // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน)
+  const retroactiveEndPostpones = scopedTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'foreman');
+    if (attr.role === 'waived') return false;
+    if (t.postponedAt && t.previousEndDate) {
+      const diffMs = new Date(t.postponedAt).getTime() - new Date(t.previousEndDate).getTime();
+      return diffMs >= 86400000; // >= 1 day
+    }
+    return false;
+  });
 
   // Rule 4: Late Work Order issuance (> 3 days between completedDate and WO assignment)
   const lateWOTasks = scopedTasks.filter(t => {
@@ -2245,6 +2288,8 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 6: Waiting for parts ceiling (> 45 days)
   const sparePartsOver45Days = issueTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'foreman');
+    if (attr.role === 'waived') return false;
     const reportTime = t.issueReportedAt || t.startDate;
     if (!reportTime) return false;
     const diffDays = (nowMs - new Date(reportTime).getTime()) / (1000 * 3600 * 24);
@@ -2258,6 +2303,8 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Rule 7: Duplicate Work Order Cancellation
   const duplicateCancellations = canceledTasks.filter(t => {
+    const attr = getTaskAttribution(t, 'admin');
+    if (attr.role === 'waived') return false;
     const text = (t.cancelReason || '').toLowerCase();
     return text.includes('ซ้ำ') || text.includes('duplicate') || text.includes('เปิดเบิ้ล');
   });
@@ -2265,6 +2312,8 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
   // Rule 8: Monthly Billing Cycle (15th Cut-off Rule) - Evaluated for Admin
   const billingEligible = completedTasks.filter(t => t.completedDate);
   const billingViolations = billingEligible.filter(t => {
+    const attr = getTaskAttribution(t, 'admin');
+    if (attr.role === 'waived') return false;
     if (!t.completedDate) return false;
     const compParts = t.completedDate.split('-');
     if (compParts.length < 3) return false;
@@ -2282,6 +2331,19 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}) => {
 
   // Collect All Discrepancy Tasks for Audit
   const discrepancyTasks = [];
+
+  // Rule 1 Discrepancies
+  lateCompleted.forEach(t => {
+    discrepancyTasks.push({
+      task: t,
+      type: 'LATE_COMPLETED',
+      title: 'จบงานช้ากว่ากำหนด SLA',
+      ruleNo: 1,
+      desc: `กำหนดเสร็จ ${t.endDate || '-'} แต่จบงานจริงเมื่อ ${t.completedDate || '-'}`,
+      days: 0,
+      attribution: getTaskAttribution(t, 'foreman')
+    });
+  });
 
   lateWOTasks.forEach(t => {
     let diffDays = 3;

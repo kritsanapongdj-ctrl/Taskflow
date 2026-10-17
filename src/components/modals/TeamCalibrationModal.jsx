@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import * as lucide from 'lucide-react';
 import { analyzeArchetype, getRoleTargetProfile } from '../../utils/archetypeEngine';
 
@@ -79,9 +80,10 @@ export default function TeamCalibrationModal({ isOpen, onClose, staffList = [], 
   }, [calibratedStaff, filterTier, searchTerm]);
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in font-sans">
       <div className="bg-[#0f172a] border border-slate-700 w-full max-w-5xl rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
@@ -314,6 +316,7 @@ export default function TeamCalibrationModal({ isOpen, onClose, staffList = [], 
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

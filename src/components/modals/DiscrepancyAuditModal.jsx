@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function DiscrepancyAuditModal({
   isOpen,
@@ -6,22 +7,45 @@ export default function DiscrepancyAuditModal({
   staff = null,
   tasks = [],
   discrepancyTasks = [],
+  initialTaskId = null,
   saveD,
   isSupervisor = false,
   supervisorSession = null,
   onOpenSupervisorModal = null,
   Icon
 }) {
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING'
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [auditRole, setAuditRole] = useState('foreman');
   const [auditReason, setAuditReason] = useState('');
   const [savingTaskId, setSavingTaskId] = useState(null);
 
+  useEffect(() => {
+    if (isOpen && initialTaskId) {
+      const targetItem = discrepancyTasks.find(i => String(i.task.id) === String(initialTaskId));
+      if (targetItem) {
+        if (targetItem.type === 'LATE_COMPLETED') setActiveTab('LATE_COMPLETED');
+        else if (targetItem.type === 'LATE_WO') setActiveTab('LATE_WO');
+        else if (targetItem.type === 'STALE_TASK') setActiveTab('STALE_TASK');
+        else if (targetItem.type === 'SPARE_PARTS_45D') setActiveTab('SPARE_PARTS_45D');
+        else if (targetItem.type && targetItem.type.startsWith('RETROACTIVE')) setActiveTab('RETROACTIVE');
+        else if (targetItem.type === 'PENALTY_SPARE_PART') setActiveTab('PENALTY_SPARE_PART');
+        else if (targetItem.type === 'BILLING_CUTOFF') setActiveTab('BILLING');
+        else setActiveTab('ALL');
+
+        setEditingTaskId(targetItem.task.id);
+        setAuditRole(targetItem.attribution?.role || 'foreman');
+        setAuditReason(targetItem.attribution?.reason || '');
+      }
+    }
+  }, [isOpen, initialTaskId, discrepancyTasks]);
+
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const filteredItems = discrepancyTasks.filter(item => {
     if (activeTab === 'ALL') return true;
+    if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
     if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
     if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
     if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
@@ -31,6 +55,7 @@ export default function DiscrepancyAuditModal({
     return true;
   });
 
+  const lateCompletedCount = discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length;
   const lateWOCount = discrepancyTasks.filter(i => i.type === 'LATE_WO').length;
   const staleCount = discrepancyTasks.filter(i => i.type === 'STALE_TASK').length;
   const partsCount = discrepancyTasks.filter(i => i.type === 'SPARE_PARTS_45D').length;
@@ -106,9 +131,9 @@ export default function DiscrepancyAuditModal({
     }
   };
 
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 bg-black/75 flex items-center justify-center p-3 sm:p-5 z-[9999] backdrop-blur-md animate-in"
+      className="fixed inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-5 z-[100000] backdrop-blur-md animate-in"
       onClick={onClose}
     >
       <div 
@@ -162,6 +187,7 @@ export default function DiscrepancyAuditModal({
         <div className="bg-slate-950/60 p-2 sm:p-3 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs shrink-0 overflow-x-auto">
           {[
             { id: 'ALL', label: 'ทั้งหมด', count: discrepancyTasks.length },
+            { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: lateCompletedCount },
             { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: lateWOCount },
             { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: staleCount },
             { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: partsCount },
@@ -398,6 +424,7 @@ export default function DiscrepancyAuditModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

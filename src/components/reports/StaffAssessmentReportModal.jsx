@@ -71,7 +71,7 @@ export default function StaffAssessmentReportModal({
   const modalContent = (
     <div 
       id="staff-report-modal-portal" 
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center overflow-y-auto p-3 sm:p-6 print:p-0 print:bg-white print:static print:overflow-visible"
+      className="fixed inset-0 z-[100000] bg-slate-950/80 backdrop-blur-md flex flex-col items-center overflow-y-auto p-3 sm:p-6 print:p-0 print:bg-white print:static print:overflow-visible"
     >
       {/* Print Specific CSS to guarantee 100% clean 1-page A4 print without blank screen */}
       <style>{`

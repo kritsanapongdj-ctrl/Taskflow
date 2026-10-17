@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function SupervisorAuthModal({
   isOpen,
@@ -102,8 +103,11 @@ export default function SupervisorAuthModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-fade-in">
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100010] animate-fade-in font-sans">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-amber-200 animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-[#0f2e4a] via-[#163a5d] to-[#0f2e4a] p-5 text-white flex items-center justify-between border-b border-amber-400/30">
@@ -287,6 +291,7 @@ export default function SupervisorAuthModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
