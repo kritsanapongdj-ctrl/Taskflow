@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import ClassEmblem from '../ClassEmblem';
 import AssessmentModal from '../AssessmentModal';
@@ -87,6 +88,17 @@ export default function TeamStatusTab({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFocusMode]);
+
+  // Lock body scroll during Focus Mode
+  useEffect(() => {
+    if (isFocusMode && typeof document !== 'undefined') {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
   }, [isFocusMode]);
 
   // Deep link URL param effect
@@ -437,17 +449,18 @@ export default function TeamStatusTab({
                   alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
                }}
             />
-        <div key={u.id || 'new'} className={`animate-fade-in-up flex-1 w-full bg-[#08080c] relative flex flex-col ${isFocusMode ? 'rounded-none h-screen' : 'rounded-xl h-full'} overflow-hidden shadow-2xl min-h-[450px]`}>
-           {/* Ambient Background Glow (Behind Content) */}
+        <div key={u.id || 'new'} className={`animate-fade-in-up flex-1 w-full bg-[#060A14] relative flex flex-col ${isFocusMode ? 'rounded-none h-screen' : 'rounded-xl h-full'} overflow-hidden shadow-2xl min-h-[450px]`}>
+           {/* Ambient High Luxury Background Glow */}
            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0">
-              <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-[#bca374]/5 rounded-full blur-[140px]"></div>
-              <div className="absolute top-1/2 -left-32 w-[500px] h-[500px] bg-indigo-900/10 rounded-full blur-[140px]"></div>
+              <div className="absolute -top-40 -right-40 w-[650px] h-[650px] bg-[#7A1C28]/10 rounded-full blur-[160px]"></div>
+              <div className="absolute top-1/2 -left-40 w-[600px] h-[600px] bg-[#0F2E4A]/30 rounded-full blur-[160px]"></div>
+              <div className="absolute bottom-0 right-1/3 w-[450px] h-[450px] bg-[#C5A059]/5 rounded-full blur-[140px]"></div>
            </div>
 
            {/* =========================================================================
                EXECUTIVE COMMAND HEADER (TOP NAVIGATION & CONTROLS)
                ========================================================================= */}
-           <div className="bg-[#0b101b] border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-white z-20">
+           <div className="bg-[#0A1222] border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-white z-20">
               {/* Left: Staff Identity Pill & Focus Mode Controls */}
               <div className="flex items-center gap-2.5 min-w-0">
                  {isFocusMode && (
@@ -525,11 +538,11 @@ export default function TeamStatusTab({
                     onClick={() => setActiveSubTab('performance')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                        activeSubTab === 'performance'
-                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm'
+                          ? 'bg-gradient-to-r from-[#7A1C28] to-[#55131C] text-white shadow-md border border-[#C5A059]/30'
                           : 'text-slate-400 hover:text-white'
                     }`}
                  >
-                    <Icon name="award" size={14} className={activeSubTab === 'performance' ? 'text-amber-300' : 'text-slate-400'} />
+                    <Icon name="award" size={14} className={activeSubTab === 'performance' ? 'text-[#C5A059]' : 'text-slate-400'} />
                     <span>1. สมรรถนะ &amp; ศักยภาพ</span>
                  </button>
 
@@ -538,7 +551,7 @@ export default function TeamStatusTab({
                     onClick={() => setActiveSubTab('field_logs')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
                        activeSubTab === 'field_logs'
-                          ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-sm'
+                          ? 'bg-gradient-to-r from-[#0F2E4A] to-[#1E3A5F] text-white shadow-md border border-sky-400/30'
                           : 'text-slate-400 hover:text-white'
                     }`}
                  >
@@ -737,7 +750,7 @@ export default function TeamStatusTab({
                     </h1>
                   </div>
                 </div>
-                <div className={`mb-4 lg:mb-5 border-l-4 ${isCorporate ? 'border-sky-400' : 'border-[#bca374]'} pl-3`}>
+                <div className={`mb-4 lg:mb-5 border-l-2 ${isCorporate ? 'border-sky-400/80 bg-sky-950/20' : 'border-[#C5A059]/80 bg-[#C5A059]/5'} pl-3.5 py-1 rounded-r-xl`}>
                   <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1.5 lg:mb-2 leading-relaxed">
                      "{styleDesc}"
                   </p>
@@ -1063,15 +1076,15 @@ export default function TeamStatusTab({
               {renderAnalysis()}
            </div>
 
-           {/* Right Column: Hero Stage (Stationary & Always Centered) */}
-           <div className={`w-full ${isFocusMode ? 'md:w-[38%] lg:w-[36%] 2xl:w-[34%]' : 'md:w-[42%] lg:w-[40%]'} md:h-full min-h-[380px] md:min-h-0 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-slate-900/90 via-[#0a0f1d] to-[#08080c] shrink-0`}>
+           {/* Right Column: Hero Stage (Stationary & Always Centered, Top on Mobile) */}
+           <div className={`order-first md:order-last w-full ${isFocusMode ? 'md:w-[38%] lg:w-[36%] 2xl:w-[34%]' : 'md:w-[42%] lg:w-[40%]'} md:h-full min-h-[340px] sm:min-h-[380px] md:min-h-0 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#0B1528] via-[#070D18] to-[#04070D] shrink-0 border-b md:border-b-0 md:border-l border-white/10`}>
               {/* View Mode Switcher for Hero Stage */}
-              <div className="absolute top-3 z-30 flex items-center bg-slate-950/80 p-1 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
+              <div className="absolute top-3 z-30 flex items-center bg-black/60 p-1 rounded-full border border-white/15 backdrop-blur-md shadow-lg">
                  <button
                     type="button"
                     onClick={() => setCinematicViewMode('avatar')}
-                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
-                       cinematicViewMode === 'avatar' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                       cinematicViewMode === 'avatar' ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                  >
                     <Icon name="user" size={12} />
@@ -1080,8 +1093,8 @@ export default function TeamStatusTab({
                  <button
                     type="button"
                     onClick={() => setCinematicViewMode('spider')}
-                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
-                       cinematicViewMode === 'spider' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                       cinematicViewMode === 'spider' ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                  >
                     <Icon name="swords" size={12} />
@@ -1090,8 +1103,8 @@ export default function TeamStatusTab({
                  <button
                     type="button"
                     onClick={() => setCinematicViewMode('ninebox')}
-                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 ${
-                       cinematicViewMode === 'ninebox' ? 'bg-[#bca374] text-stone-950 shadow-xs' : 'text-slate-400 hover:text-white'
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                       cinematicViewMode === 'ninebox' ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                  >
                     <Icon name="grid" size={12} />
@@ -1099,7 +1112,8 @@ export default function TeamStatusTab({
                  </button>
               </div>
 
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-screen pointer-events-none"></div>
+              {/* High Luxury Studio Ambient Keylight */}
+              <div className="absolute inset-0 bg-radial-[at_50%_45%] from-[#C5A059]/10 via-[#0F2E4A]/20 to-transparent pointer-events-none"></div>
               
               <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4 lg:p-6 pt-16 animate-in fade-in slide-in-from-right-8 duration-700 min-h-0 overflow-hidden select-none">
                 {cinematicViewMode === 'ninebox' ? (
@@ -1238,19 +1252,23 @@ export default function TeamStatusTab({
                 ) : (
                   u.image ? (
                     <div className="relative w-full h-full flex flex-col items-center justify-center py-2 group min-h-0">
-                      {/* Ambient Golden Stage Pedestal Glow */}
-                      <div className="absolute bottom-6 w-3/4 max-w-[280px] h-10 bg-[#bca374]/25 blur-xl rounded-full pointer-events-none"></div>
-                      <div className="absolute bottom-4 w-2/3 max-w-[240px] h-1 bg-gradient-to-r from-transparent via-[#bca374]/80 to-transparent rounded-full shadow-[0_0_20px_rgba(188,163,116,0.9)] pointer-events-none"></div>
+                      {/* Studio Radial Keylight */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#C5A059]/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+                      {/* Luxury Smoked-Glass Base Pedestal */}
+                      <div className="absolute bottom-4 w-3/4 max-w-[280px] h-11 bg-gradient-to-t from-black/85 via-white/5 to-transparent rounded-[50%] border-t border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.9)] pointer-events-none"></div>
+                      <div className="absolute bottom-5 w-2/3 max-w-[240px] h-2.5 bg-gradient-to-r from-transparent via-[#C5A059]/40 to-transparent rounded-full blur-[2px] pointer-events-none"></div>
+                      <div className="absolute bottom-6 w-1/2 max-w-[190px] h-4 bg-black/80 blur-md rounded-full pointer-events-none"></div>
                       
                       <img
                         src={u.image}
-                        className="max-w-[90%] max-h-[82%] object-contain filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.85)] drop-shadow-[0_0_25px_rgba(188,163,116,0.3)] transition-transform duration-500 hover:scale-105 relative z-10 select-none"
+                        className="max-w-[90%] max-h-[85%] object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)] drop-shadow-[0_0_20px_rgba(197,160,89,0.2)] transition-transform duration-700 hover:scale-[1.02] relative z-10 select-none pointer-events-none"
                         alt={u.name}
                       />
                     </div>
                   ) : (
-                    <div className="w-56 h-56 bg-slate-800/50 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                      <Icon name="user" size={64} className="text-slate-600" />
+                    <div className="w-56 h-56 bg-slate-800/40 rounded-full flex items-center justify-center border border-white/10 backdrop-blur-md shadow-2xl">
+                      <Icon name="user" size={64} className="text-slate-500" />
                     </div>
                   )
                 )}
@@ -2995,15 +3013,24 @@ function renderAnalysis() {
           </div>
         </div>
 
-        <div className={`bg-white border flex flex-col transition-all duration-300 ${isFocusMode ? 'fixed inset-0 z-50 w-screen h-screen m-0 rounded-none border-0 bg-[#070b14] overflow-hidden' : 'flex-1 rounded-xl shadow-sm h-auto md:h-full overflow-hidden'}`}>
+        {/* Fullscreen Focus Theater Portal */}
+        {isFocusMode && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[99999] w-screen h-screen m-0 p-0 rounded-none border-0 bg-[#060A14] overflow-hidden flex flex-col font-sans select-none animate-in fade-in duration-200">
+            {renderCinematicView()}
+          </div>,
+          document.body
+        )}
+
+        {/* Regular In-page Container */}
+        <div className="flex-1 bg-white border border-slate-200/80 flex flex-col rounded-xl shadow-card h-auto md:h-full overflow-hidden">
           {(!selTeam && !teamForm.name && !teamForm.id) ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-10">
-               <Icon name="users" size={64} className="mb-4 opacity-50" />
-               <p className="font-bold">เลือกทีมงานจากเมนูด้านซ้าย</p>
-               <p className="text-xs mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
+             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-10">
+               <Icon name="users" size={64} className="mb-4 opacity-40 text-slate-300" />
+               <p className="font-bold text-slate-600">เลือกทีมงานจากเมนูด้านซ้าย</p>
+               <p className="text-xs text-slate-400 mt-1">หรือกด "+ เพิ่ม" เพื่อสร้างโปรไฟล์ใหม่</p>
              </div>
           ) : (
-             renderCinematicView()
+             !isFocusMode && renderCinematicView()
           )}
         </div>
         <StaffAssessmentReportModal 
