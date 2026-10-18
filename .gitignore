@@ -34,3 +34,4 @@ public/*.mp4
 public/agent*.webp
 
 .vercel
+skill-observations/

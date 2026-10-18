@@ -1,0 +1,76 @@
+@font-face {
+  font-family: 'FS Pixel Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/FSPixelSansUnicode-Regular.ttf') format('truetype');
+}
+
+.pixel-office-scope {
+  --color-bg: #1e1e2e;
+  --color-bg-dark: #181828;
+  --color-bg-thumb: #2a2a3a;
+  --color-border: #4a4a6a;
+  --color-accent: #6030ff;
+  --color-accent-bright: #746fff;
+  --color-text: rgba(255, 255, 255, 0.9);
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-btn-bg: rgb(53, 52, 69);
+  --color-btn-hover: rgb(78, 75, 104);
+  --color-active-bg: rgb(44, 43, 109);
+  --color-reset-text: #ecc;
+  --color-danger: #d14249;
+  --color-warning: #ff8d14;
+  --color-status-permission: #cca700;
+  --color-status-active: #3794ff;
+  --color-status-success: #89d185;
+  --color-status-error: #d14249;
+  --shadow-pixel: 2px 2px 0px #0a0a14;
+  --vignette: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+  --btn-disabled-opacity: 0.35;
+  font-family: 'FS Pixel Sans', 'Prompt', monospace, sans-serif;
+  image-rendering: pixelated;
+}
+
+.pixel-panel {
+  background-color: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: var(--shadow-pixel);
+}
+
+.carousel {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  padding-bottom: 8px;
+}
+
+.pixel-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  cursor: pointer;
+  border: 2px solid var(--color-border);
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--range-fill, 50%),
+    var(--color-bg-dark) var(--range-fill, 50%)
+  );
+}
+
+.pixel-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 18px;
+  background: var(--color-text);
+  border: 2px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: var(--shadow-pixel);
+}
+
+.pixel-range:hover::-webkit-slider-thumb {
+  background: var(--color-accent-bright);
+}

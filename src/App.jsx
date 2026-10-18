@@ -12,8 +12,7 @@ import PrintReport from './components/reports/PrintReport.jsx';
 import ChangelogModal, { CURRENT_VERSION } from './components/modals/ChangelogModal.jsx';
 import { detectSlaCategory, isSlaMismatch } from './utils/slaDetector.js';
 
-// Lazy-loaded heavy tabs and modals
-const GuildSimulation = React.lazy(() => import('./GuildSimulation.jsx'));
+const PixelAgentsOffice = React.lazy(() => import('./PixelAgentsOffice.jsx'));
 const TeamStatusTab = React.lazy(() => import('./pages/TeamStatusTab.jsx'));
 const MonthlyCalendarTab = React.lazy(() => import('./pages/MonthlyCalendarTab.jsx'));
 const KanbanBillingTab = React.lazy(() => import('./pages/KanbanBillingTab.jsx'));
@@ -1468,7 +1467,7 @@ export default function App() {
             <nav className="p-3.5 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
               {[
                 { i: 'dashboard', l: 'แดชบอร์ด', icon: 'layoutDashboard' },
-                { i: 'simulation', l: 'กิลด์ (Simulation)', icon: 'swords' },
+                { i: 'simulation', l: 'Pixel Office', icon: 'cpu' },
                 { i: 'daily', l: 'งานรายวัน', icon: 'listTodo' },
                 { i: 'monthly', l: 'ปฏิทิน', icon: 'calendar' },
                 { i: 'kanban', l: 'ส่งเบิก', icon: 'fileText' },
@@ -1828,7 +1827,7 @@ export default function App() {
                   />
                 )}
                 {tab === 'simulation' && (
-                  <GuildSimulation tasks={tasks} sets={sets} setTab={setTab} db={db} />
+                  <PixelAgentsOffice tasks={tasks} sets={sets} setTab={setTab} db={db} />
                 )}
                 {tab === 'daily' && (
                   <DailyTasksTab
