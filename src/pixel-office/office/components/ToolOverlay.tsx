@@ -202,10 +202,8 @@ export function ToolOverlay({
           );
         }
 
-        // Show label when hovered, selected, active, or away from desk on a break activity
-        const isAwayOnBreak =
-          !ch.isActive && ch.state !== CharacterState.TYPE && Boolean(ch.idleActivityLabel);
-        if (!alwaysShowOverlay && !isSelected && !isHovered && !ch.isActive && !isAwayOnBreak) {
+        // Show label when hovered, selected, active (running tool), or alwaysShowOverlay is true
+        if (!alwaysShowOverlay && !isSelected && !isHovered && !ch.isActive) {
           return bubbleNode && <Fragment key={id}>{bubbleNode}</Fragment>;
         }
 
@@ -305,32 +303,26 @@ export function ToolOverlay({
               data-testid="agent-overlay"
               data-agent-id={id}
             >
-              <div className="flex items-center border-border px-8 pt-2 pb-4 gap-5 pixel-panel whitespace-nowrap max-w-2xs">
+              <div className="flex items-center border-border px-3 py-1.5 gap-2.5 pixel-panel whitespace-nowrap max-w-xs shadow-xl">
                 {dotColor && (
                   <span
-                    className={`w-6 h-6 rounded-full shrink-0 ${isActive && !hasPermission && !hasWaiting ? 'pixel-pulse' : ''}`}
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${isActive && !hasPermission && !hasWaiting ? 'pixel-pulse' : ''}`}
                     style={{ background: dotColor }}
                   />
                 )}
-                <div className="flex flex-col gap-0 overflow-hidden">
+                <div className="flex flex-col gap-0.5 overflow-hidden">
                   {teamRoleLabel && (
                     <span
-                      className="overflow-hidden text-ellipsis block leading-none"
+                      className="overflow-hidden text-ellipsis block leading-none font-bold text-[11px]"
                       style={{
-                        fontSize: '18px',
                         color: ch.isTeamLead ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
-                        fontWeight: ch.isTeamLead ? 'bold' : undefined,
                       }}
                     >
                       {teamRoleLabel}
                     </span>
                   )}
                   <span
-                    className="overflow-hidden text-ellipsis block leading-none"
-                    style={{
-                      fontSize: isSub ? '20px' : '22px',
-                      fontStyle: isSub ? 'italic' : undefined,
-                    }}
+                    className="overflow-hidden text-ellipsis block leading-snug font-sans text-xs text-white"
                   >
                     {activityText}
                   </span>

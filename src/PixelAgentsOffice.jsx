@@ -1175,25 +1175,27 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               tapSelectsFirst={false}
             />
 
-            {/* Tool & Break Activity Bubbles */}
-            <ToolOverlay
-              officeState={officeState}
-              agents={agentIds}
-              agentTools={liveAgentTools}
-              subagentTools={EMPTY_SUBAGENT_TOOLS}
-              subagentCharacters={EMPTY_SUBAGENT_CHARACTERS}
-              containerRef={containerRef}
-              zoom={editor.zoom}
-              panRef={editor.panRef}
-              onCloseAgent={() => {
-                if (officeStateRef.current) {
-                  officeStateRef.current.selectedAgentId = null;
-                  officeStateRef.current.cameraFollowId = null;
-                }
-                setSeatAssigningBot(null);
-              }}
-              alwaysShowOverlay={false}
-            />
+            {/* Tool & Break Activity Bubbles - hidden in edit mode to keep room clear */}
+            {!editor.isEditMode && (
+              <ToolOverlay
+                officeState={officeState}
+                agents={agentIds}
+                agentTools={liveAgentTools}
+                subagentTools={EMPTY_SUBAGENT_TOOLS}
+                subagentCharacters={EMPTY_SUBAGENT_CHARACTERS}
+                containerRef={containerRef}
+                zoom={editor.zoom}
+                panRef={editor.panRef}
+                onCloseAgent={() => {
+                  if (officeStateRef.current) {
+                    officeStateRef.current.selectedAgentId = null;
+                    officeStateRef.current.cameraFollowId = null;
+                  }
+                  setSeatAssigningBot(null);
+                }}
+                alwaysShowOverlay={false}
+              />
+            )}
 
             {/* Interactive Seat Assignment Banner */}
             {seatAssigningBot && !editor.isEditMode && (
@@ -1223,7 +1225,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
             {/* Layout Edit Action Bar */}
             {editor.isEditMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-[#1e1e2e]/95 p-2 border-2 border-amber-500 shadow-pixel backdrop-blur-md">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-[#1e1e2e]/95 p-2 border-2 border-amber-500 shadow-pixel backdrop-blur-md">
                 <span className="text-xs text-amber-300 font-bold px-2">🛠️ โหมดแก้ไขแปลนห้อง (วางโต๊ะหัวหน้า/โซฟา/ตู้กาแฟได้อิสระ)</span>
                 <button
                   onClick={handleSaveLayout}
@@ -1248,7 +1250,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
             {/* Editor Toolbar (Tile, Wall, Furniture Brush Palette) */}
             {editor.isEditMode && loadedAssetData && (
-              <div className="absolute top-16 left-4 z-20 max-w-[420px]">
+              <div className="absolute top-4 left-4 z-30 w-[420px] max-w-[calc(100vw-32px)] max-h-[calc(100%-32px)] flex flex-col">
                 <EditorToolbar
                   activeTool={editorState.activeTool}
                   selectedTileType={editorState.selectedTileType}

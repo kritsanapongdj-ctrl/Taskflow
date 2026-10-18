@@ -239,86 +239,83 @@ export function EditorToolbar({
   };
 
   return (
-    <div className="absolute bottom-76 left-10 z-10 pixel-panel p-4 flex flex-col-reverse gap-4 max-w-[calc(100vw-20px)]">
-      {/* Tool row — at the bottom */}
-      <div className="flex gap-4 flex-wrap">
+    <div className="w-full max-h-full pixel-panel p-3 flex flex-col gap-2.5 bg-[#1e1e2e]/95 border-2 border-[#4a4a6a] shadow-2xl backdrop-blur-md overflow-hidden">
+      {/* ── 1. Tool Switcher Row (At the Top) ── */}
+      <div className="flex gap-1.5 flex-wrap shrink-0">
         <Button
           variant={isFurnitureActive ? 'active' : 'default'}
-          size="md"
+          size="sm"
           onClick={() => onToolChange(EditTool.FURNITURE_PLACE)}
-          title="Place furniture"
+          title="วางเฟอร์นิเจอร์ (Furniture)"
         >
-          Furniture
+          🛋️ Furniture
         </Button>
         <Button
           variant={isFloorActive ? 'active' : 'default'}
-          size="md"
+          size="sm"
           onClick={() => onToolChange(EditTool.TILE_PAINT)}
-          title="Paint floor tiles"
+          title="ปูพื้นกระเบื้อง (Floor)"
         >
-          Floor
+          🧱 Floor
         </Button>
         <Button
           variant={isWallActive ? 'active' : 'default'}
-          size="md"
+          size="sm"
           onClick={() => onToolChange(EditTool.WALL_PAINT)}
-          title="Paint walls (click to toggle)"
+          title="สร้าง/เปลี่ยนผนัง (Walls)"
         >
-          Walls
+          🧱 Walls
         </Button>
         <Button
           variant={isPetsActive ? 'active' : 'default'}
-          size="md"
+          size="sm"
           onClick={() => onToolChange(EditTool.PETS)}
-          title="Place pets"
+          title="สัตว์เลี้ยงในออฟฟิศ (Pets)"
         >
-          Pets
+          🐾 Pets
         </Button>
         {areasAvailable && (
           <Button
             variant={isAreasActive ? 'active' : 'default'}
-            size="md"
+            size="sm"
             onClick={() => onToolChange(EditTool.AREA_PAINT)}
-            title="Define folder-bound areas — agents spawn in their folder's area"
+            title="กำหนดโซนแผนก (Areas)"
           >
             Areas
           </Button>
         )}
         <Button
           variant={isEraseActive ? 'active' : 'default'}
-          size="md"
+          size="sm"
           onClick={() => onToolChange(EditTool.ERASE)}
-          title="Erase tiles to void"
+          title="ลบช่อง/คืนเป็นที่ว่าง (Erase)"
         >
-          Erase
+          🧹 Erase
         </Button>
       </div>
 
-      {/* Sub-panel: Floor tiles — stacked bottom-to-top via column-reverse */}
+      {/* ── 2. Sub-panel: Floor ── */}
       {isFloorActive && (
-        <div className="flex flex-col-reverse gap-4">
-          {/* Copy + Color toggle — just above tool row */}
-          <div className="flex gap-4 items-center">
+        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-hidden">
+          <div className="flex gap-2 items-center shrink-0">
             <Button
               variant={activeTool === EditTool.EYEDROPPER ? 'active' : 'ghost'}
               size="sm"
               onClick={() => onToolChange(EditTool.EYEDROPPER)}
-              title="Copy floor pattern + color from existing tile"
+              title="ดูดสีและลายจากพื้นเดิม"
             >
-              Copy
+              🔍 Copy
             </Button>
             <Button
               variant={showColor ? 'active' : 'ghost'}
               size="sm"
               onClick={() => setShowColor((v) => !v)}
-              title="Adjust floor color"
+              title="ปรับสีกระเบื้อง"
             >
-              Color
+              🎨 Color
             </Button>
           </div>
-
-          {/* Floor pattern horizontal carousel — below the color controls */}
-          <div className="carousel">
+          <div className="carousel p-1 bg-[#181828]/60 border border-[#3a3a5a] overflow-x-auto shrink-0">
             {floorPatterns.map((patIdx) => (
               <ItemSelect
                 key={patIdx}
@@ -340,30 +337,25 @@ export function EditorToolbar({
               />
             ))}
           </div>
-
-          {/* Color controls (collapsible) — at the top, above the previews. */}
           {showColor && <TileColorBox value={floorColor} onChange={onFloorColorChange} />}
         </div>
       )}
 
-      {/* Sub-panel: Wall — stacked bottom-to-top via column-reverse */}
+      {/* ── 3. Sub-panel: Wall ── */}
       {isWallActive && (
-        <div className="flex flex-col-reverse gap-4">
-          {/* Color toggle — just above tool row */}
-          <div className="flex gap-4 items-center">
+        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-hidden">
+          <div className="flex gap-2 items-center shrink-0">
             <Button
               variant={showWallColor ? 'active' : 'default'}
               size="sm"
               onClick={() => setShowWallColor((v) => !v)}
-              title="Adjust wall color"
+              title="ปรับสีผนัง"
             >
-              Color
+              🎨 Color
             </Button>
           </div>
-
-          {/* Wall set picker — horizontal carousel, below the color controls */}
           {getWallSetCount() > 0 && (
-            <div className="carousel">
+            <div className="carousel p-1 bg-[#181828]/60 border border-[#3a3a5a] overflow-x-auto shrink-0">
               {Array.from({ length: getWallSetCount() }, (_, i) => (
                 <ItemSelect
                   key={i}
@@ -391,16 +383,14 @@ export function EditorToolbar({
               ))}
             </div>
           )}
-
-          {/* Color controls (collapsible) — at the top, above the previews. */}
           {showWallColor && <TileColorBox value={wallColor} onChange={onWallColorChange} />}
         </div>
       )}
 
-      {/* Sub-panel: Pets — thumbnail grid above tool row */}
+      {/* ── 4. Sub-panel: Pets ── */}
       {isPetsActive && petCount > 0 && (
-        <div className="flex flex-col-reverse gap-4">
-          <div className="carousel" data-testid="pets-carousel">
+        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-hidden">
+          <div className="carousel p-1 bg-[#181828]/60 border border-[#3a3a5a] overflow-x-auto" data-testid="pets-carousel">
             {Array.from({ length: petCount }, (_, i) => {
               const sprites = getPetSprites(i);
               const isActive = activePetTypes.includes(i);
@@ -433,18 +423,16 @@ export function EditorToolbar({
         </div>
       )}
 
-      {/* Sub-panel: Areas — Add row + card list */}
+      {/* ── 5. Sub-panel: Areas ── */}
       {isAreasActive && (
-        <div className="flex flex-col-reverse gap-4 pb-2">
+        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-hidden">
           <AreaAddRow areas={areas} onAddArea={onAddArea} />
-          <div className="text-xs text-text-muted px-4 leading-none">
-            Paint areas on the map, then assign workspace folders. Agents will sit in their folder's
-            area.
+          <div className="text-[10px] text-text-muted px-1">
+            ระบุขอบเขตห้องหรือโซนแผนกเพื่อให้บอทประจำตำแหน่ง
           </div>
-          {/* Fixed 4-per-row grid; no overflow clip, or the upward Add-folder dropdown is cut off. */}
-          <div className="grid grid-cols-[repeat(4,130px)] gap-4">
+          <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-48 p-1">
             {areas.length === 0 ? (
-              <span className="text-xs text-text-muted italic">No areas yet — add one above</span>
+              <span className="text-xs text-text-muted italic">ยังไม่มีโซน — กดเพิ่มด้านบน</span>
             ) : (
               areas.map((area) => (
                 <AreaCard
@@ -465,11 +453,11 @@ export function EditorToolbar({
         </div>
       )}
 
-      {/* Sub-panel: Furniture — stacked bottom-to-top via column-reverse */}
+      {/* ── 6. Sub-panel: Furniture ── */}
       {isFurnitureActive && (
-        <div className="flex flex-col-reverse gap-4">
-          {/* Category tabs + contextual Copy button — just above tool row */}
-          <div className="flex gap-4 flex-wrap items-center">
+        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-hidden">
+          {/* Category tabs */}
+          <div className="flex gap-1 flex-wrap items-center shrink-0 pb-1.5 border-b border-[#3a3a5a]">
             {getActiveCategories().map((cat) => (
               <Button
                 key={cat.id}
@@ -477,7 +465,6 @@ export function EditorToolbar({
                 size="sm"
                 onClick={() => {
                   setActiveCategory(cat.id);
-                  // Leaving carpet sub-panel → snap back to FURNITURE_PLACE
                   if (isCarpetActive) {
                     onToolChange(EditTool.FURNITURE_PLACE);
                   }
@@ -494,14 +481,12 @@ export function EditorToolbar({
                   setActiveCategory(CARPET_CATEGORY_ID);
                   onToolChange(EditTool.CARPET_PAINT);
                 }}
-                title="Paint carpets"
+                title="พรมปูพื้น (Carpet)"
               >
                 Carpet
               </Button>
             )}
-            <div className="w-[1px] h-14 bg-white/15 mx-2 shrink-0" />
-            {/* Color toggle — available across the whole Furniture tab. Carpet
-                edits main+accent; other categories edit the new-furniture color. */}
+            <div className="w-[1px] h-4 bg-white/20 mx-1 shrink-0" />
             <Button
               variant={
                 (activeCategory === CARPET_CATEGORY_ID ? showCarpetColor : showFurnitureColor)
@@ -516,14 +501,12 @@ export function EditorToolbar({
               }
               title={
                 activeCategory === CARPET_CATEGORY_ID
-                  ? 'Adjust carpet main + accent colors'
-                  : 'Adjust color for new furniture'
+                  ? 'ปรับสีพรมหลัก & เส้นขอบ'
+                  : 'ปรับสีเฟอร์นิเจอร์ใหม่'
               }
             >
-              Color
+              🎨 Color
             </Button>
-            {/* Copy — the eyedropper tools, named for what they do: take the
-                settings off something already placed. */}
             {activeCategory === CARPET_CATEGORY_ID ? (
               <Button
                 variant={activeTool === EditTool.CARPET_PICK ? 'active' : 'ghost'}
@@ -535,29 +518,26 @@ export function EditorToolbar({
                       : EditTool.CARPET_PICK,
                   )
                 }
-                title="Copy carpet variant + colors from existing tile (P)"
+                title="คัดลอกลายพรมเดิม"
               >
-                Copy
+                🔍 Copy
               </Button>
             ) : (
               <Button
                 variant={activeTool === EditTool.FURNITURE_PICK ? 'active' : 'ghost'}
                 size="sm"
                 onClick={() => onToolChange(EditTool.FURNITURE_PICK)}
-                title="Copy furniture type from placed item"
+                title="คัดลอกประเภทเฟอร์นิเจอร์ที่วางอยู่แล้ว"
               >
-                Copy
+                🔍 Copy
               </Button>
             )}
           </div>
 
-          {/* Carpet sub-panel: variant carousel + compact color controls.
-              Column-reverse stacks the pickers on top, then the variant
-              previews, then the category tabs. */}
+          {/* Carpet sub-panel */}
           {activeCategory === CARPET_CATEGORY_ID && (
-            <>
-              {/* Variant carousel — below the color controls */}
-              <div className="carousel">
+            <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto">
+              <div className="carousel p-1 bg-[#181828]/60 border border-[#3a3a5a] overflow-x-auto shrink-0">
                 {Array.from({ length: carpetVariantCount }, (_, i) => i).map((variantIdx) => (
                   <ItemSelect
                     key={variantIdx}
@@ -576,93 +556,104 @@ export function EditorToolbar({
                   />
                 ))}
               </div>
-
-              {/* Compact Main/Accent pickers — collapsible, at the top.
-                  Each is a swatch + hex that opens its picker popup on click. */}
               {showCarpetColor && (
-                <div className="flex gap-8 ml-2 mb-6 -mt-6">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-[0.08em] text-text-muted">
-                      Main
-                    </span>
+                <div className="flex gap-4 p-2 bg-[#181828] border border-[#3a3a5a]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted">Main</span>
                     <VisualColorPicker value={carpetColor} onChange={onCarpetColorChange} />
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xs uppercase tracking-[0.08em] text-text-muted">
-                      Accent
-                    </span>
-                    <VisualColorPicker
-                      value={carpetAccentColor}
-                      onChange={onCarpetAccentColorChange}
-                    />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted">Accent</span>
+                    <VisualColorPicker value={carpetAccentColor} onChange={onCarpetAccentColorChange} />
                   </div>
                 </div>
               )}
-            </>
-          )}
-
-          {/* Furniture items grid — hidden when carpet category is active.
-              Thumbnails preview the new-furniture color so you see what places. */}
-          {activeCategory !== CARPET_CATEGORY_ID && (
-            <div className="carousel">
-              {categoryItems.map((entry) => (
-                <ItemSelect
-                  key={entry.type}
-                  width={thumbSize}
-                  height={thumbSize}
-                  selected={selectedFurnitureType === entry.type}
-                  onClick={() => onFurnitureTypeChange(entry.type)}
-                  title={entry.label}
-                  deps={[entry.type, entry.sprite, pickedFurnitureColor]}
-                  draw={(ctx, w, h) => {
-                    const sprite = pickedFurnitureColor
-                      ? getColorizedSprite(
-                          `thumb-${entry.type}-${pickedFurnitureColor.h}-${pickedFurnitureColor.s}-${pickedFurnitureColor.b}-${pickedFurnitureColor.c}-${pickedFurnitureColor.colorize ?? ''}`,
-                          entry.sprite,
-                          pickedFurnitureColor,
-                        )
-                      : entry.sprite;
-                    const cached = getCachedSprite(sprite, 2);
-                    const scale = Math.min(w / cached.width, h / cached.height) * 0.85;
-                    const dw = cached.width * scale;
-                    const dh = cached.height * scale;
-                    ctx.drawImage(cached, (w - dw) / 2, (h - dh) / 2, dw, dh);
-                  }}
-                />
-              ))}
             </div>
           )}
 
-          {/* New-furniture color picker — collapsible, above the palette. Editing
-              an already-placed selection is handled by the panel below. */}
+          {/* Furniture items grid — 4 columns with preview and item label */}
+          {activeCategory !== CARPET_CATEGORY_ID && (
+            <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-[#181828]/80 border border-[#3a3a5a] max-h-56 overflow-y-auto shrink-0">
+              {categoryItems.map((entry) => {
+                const isSelected = selectedFurnitureType === entry.type;
+                return (
+                  <div
+                    key={entry.type}
+                    onClick={() => onFurnitureTypeChange(entry.type)}
+                    className={`flex flex-col items-center justify-center p-1 cursor-pointer border transition-all ${
+                      isSelected
+                        ? 'bg-[#6030ff]/40 border-[#a78bfa] ring-1 ring-[#a78bfa]'
+                        : 'bg-[#252538] border-[#4a4a6a] hover:border-gray-400 hover:bg-[#2c2b48]'
+                    }`}
+                    title={entry.label}
+                  >
+                    <ItemSelect
+                      width={thumbSize}
+                      height={thumbSize}
+                      selected={isSelected}
+                      onClick={() => onFurnitureTypeChange(entry.type)}
+                      title={entry.label}
+                      deps={[entry.type, entry.sprite, pickedFurnitureColor]}
+                      draw={(ctx, w, h) => {
+                        const sprite = pickedFurnitureColor
+                          ? getColorizedSprite(
+                              `thumb-${entry.type}-${pickedFurnitureColor.h}-${pickedFurnitureColor.s}-${pickedFurnitureColor.b}-${pickedFurnitureColor.c}-${pickedFurnitureColor.colorize ?? ''}`,
+                              entry.sprite,
+                              pickedFurnitureColor,
+                            )
+                          : entry.sprite;
+                        const cached = getCachedSprite(sprite, 2);
+                        const scale = Math.min(w / cached.width, h / cached.height) * 0.85;
+                        const dw = cached.width * scale;
+                        const dh = cached.height * scale;
+                        ctx.drawImage(cached, (w - dw) / 2, (h - dh) / 2, dw, dh);
+                      }}
+                    />
+                    <span className="text-[9px] text-gray-300 truncate w-full text-center mt-0.5 font-mono">
+                      {entry.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* New-furniture color picker */}
           {activeCategory !== CARPET_CATEGORY_ID && showFurnitureColor && !selectedFurnitureUid && (
-            <ColorPicker
-              value={pickedFurnitureColor ?? DEFAULT_FURNITURE_COLOR}
-              onChange={onPickedFurnitureColorChange}
-              showColorizeToggle
-              onCopy={onColorPickToggle}
-              copyActive={isColorPicking}
-              onReset={() => onPickedFurnitureColorChange(null)}
-            />
+            <div className="shrink-0 p-2 bg-[#181828] border border-[#3a3a5a] max-h-40 overflow-y-auto">
+              <ColorPicker
+                value={pickedFurnitureColor ?? DEFAULT_FURNITURE_COLOR}
+                onChange={onPickedFurnitureColorChange}
+                showColorizeToggle
+                onCopy={onColorPickToggle}
+                copyActive={isColorPicking}
+                onReset={() => onPickedFurnitureColorChange(null)}
+              />
+            </div>
           )}
         </div>
       )}
 
-      {/* Selected furniture color panel — shows when any placed furniture item
-          is selected. Selecting an item is already the deliberate act, so the
-          sliders open straight away rather than behind a Color toggle, and
-          restoring the original sprite is the picker's own Reset (same control
-          the new-furniture picker offers). */}
+      {/* Selected furniture color panel */}
       {selectedFurnitureUid && (
-        <ColorPicker
-          value={effectiveColor}
-          onChange={onSelectedFurnitureColorChange}
-          showColorizeToggle
-          onCopy={onColorPickToggle}
-          copyActive={isColorPicking}
-          onReset={() => onSelectedFurnitureColorChange(null)}
-        />
+        <div className="shrink-0 p-2 bg-[#252538] border-2 border-amber-400 max-h-40 overflow-y-auto">
+          <div className="text-[10px] text-amber-300 font-bold mb-1">🎨 ปรับสีชิ้นส่วนที่เลือกอยู่บนแผนผัง:</div>
+          <ColorPicker
+            value={effectiveColor}
+            onChange={onSelectedFurnitureColorChange}
+            showColorizeToggle
+            onCopy={onColorPickToggle}
+            copyActive={isColorPicking}
+            onReset={() => onSelectedFurnitureColorChange(null)}
+          />
+        </div>
       )}
+
+      {/* Helpful Editor Tips Footer */}
+      <div className="mt-auto pt-2 border-t border-[#3a3a5a] text-[10px] text-gray-400 flex items-center justify-between shrink-0 font-sans">
+        <span>💡 คลิกซ้าย: วาง / ลากย้าย</span>
+        <span>คลิกขวา: หมุน | Del: ลบ</span>
+      </div>
     </div>
   );
 }
@@ -683,13 +674,13 @@ function TileColorBox({
 }) {
   const contrastFill = ((value.c + 100) / 200) * 100;
   return (
-    <div className="flex flex-col gap-4 py-8 px-10 bg-bg-dark border-2 border-border rounded-none">
-      <div className="flex items-center gap-8">
-        <span className="text-sm text-text-muted w-64 shrink-0">Color</span>
+    <div className="flex flex-col gap-2 py-2 px-2.5 bg-[#181828] border border-[#4a4a6a]">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-text-muted w-16 shrink-0">Color</span>
         <VisualColorPicker value={value} onChange={onChange} />
       </div>
-      <div className="flex items-center gap-8">
-        <span className="text-sm text-text-muted w-64 shrink-0">Contrast</span>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-text-muted w-16 shrink-0">Contrast</span>
         <input
           type="range"
           min={-100}
@@ -699,7 +690,7 @@ function TileColorBox({
           className="pixel-range flex-1 min-w-0"
           style={{ '--range-fill': `${contrastFill}%` } as CSSProperties}
         />
-        <span className="text-sm text-text w-44 text-right shrink-0 tabular-nums">{value.c}</span>
+        <span className="text-xs text-text w-10 text-right shrink-0 tabular-nums">{value.c}</span>
       </div>
     </div>
   );

@@ -3,12 +3,12 @@ import type { ButtonHTMLAttributes } from 'react';
 const base = 'border-2 rounded-none cursor-pointer';
 
 const sizes = {
-  sm: 'py-1 px-8 text-sm',
-  md: 'py-2 px-12',
-  lg: 'py-3 px-14 text-lg',
-  xl: 'py-6 px-24 text-xl',
-  icon: 'p-0 w-16 h-16 flex items-center justify-center',
-  icon_lg: 'p-0 w-40 h-40 flex items-center justify-center',
+  sm: 'py-0.5 px-2 text-xs',
+  md: 'py-1 px-2.5 text-xs',
+  lg: 'py-1.5 px-3 text-sm',
+  xl: 'py-2 px-4 text-base',
+  icon: 'p-0 w-6 h-6 flex items-center justify-center text-xs',
+  icon_lg: 'p-0 w-8 h-8 flex items-center justify-center text-sm',
 } as const;
 
 const variants = {
