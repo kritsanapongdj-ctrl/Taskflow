@@ -110,7 +110,56 @@ const LH_BOTS = [
 // Single shared editorState instance
 const editorState = new EditorState();
 
-export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
+// Stable empty props matching the engine's expected types
+// (ToolOverlay expects plain objects + an array, NOT Maps)
+const EMPTY_AGENT_TOOLS = {};
+const EMPTY_SUBAGENT_TOOLS = {};
+const EMPTY_SUBAGENT_CHARACTERS = [];
+const EMPTY_AREA_MAPPINGS = {};
+const EMPTY_DIRECTORIES = [];
+
+// Local error boundary: a crash inside the simulation must not take down the whole app
+class PixelOfficeErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[PixelOffice] render error:', error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="w-full h-[calc(100vh-68px)] flex items-center justify-center bg-[#181828] p-4">
+          <div className="max-w-md text-center bg-red-950/90 border-2 border-red-500 p-6 text-white">
+            <h3 className="text-base font-bold text-red-200 mb-2">Pixel Office เกิดข้อผิดพลาด</h3>
+            <p className="text-xs text-red-300 font-mono mb-4 break-words">{String(this.state.error?.message || this.state.error)}</p>
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white text-xs border border-red-400 font-bold cursor-pointer"
+            >
+              ↺ ลองใหม่
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function PixelAgentsOffice(props) {
+  return (
+    <PixelOfficeErrorBoundary>
+      <PixelAgentsOfficeInner {...props} />
+    </PixelOfficeErrorBoundary>
+  );
+}
+
+function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
   const containerRef = useRef(null);
   const officeStateRef = useRef(null);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
@@ -542,7 +591,7 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
       </header>
 
       {/* ─── Main Office Viewport ─── */}
-      <div className="flex-1 relative w-full h-full overflow-hidden" ref={containerRef}>
+      <div className="flex-1 min-h-0 relative w-full overflow-hidden" ref={containerRef}>
         {!assetsLoaded ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#181828] text-white z-50 p-4">
             {loadError ? (
@@ -591,14 +640,14 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
             <ToolOverlay
               officeState={officeState}
               agents={agentIds}
-              agentTools={new Map()}
-              subagentTools={new Map()}
-              subagentCharacters={new Map()}
+              agentTools={EMPTY_AGENT_TOOLS}
+              subagentTools={EMPTY_SUBAGENT_TOOLS}
+              subagentCharacters={EMPTY_SUBAGENT_CHARACTERS}
               containerRef={containerRef}
               zoom={editor.zoom}
               panRef={editor.panRef}
               onCloseAgent={() => {}}
-              alwaysShowOverlay={true}
+              alwaysShowOverlay={false}
             />
 
             {/* Zoom Controls Overlay */}
@@ -665,9 +714,9 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
                   onCarpetAccentColorChange={editor.handleCarpetAccentColorChange}
                   areas={officeState.getLayout().areas ?? []}
                   selectedAreaLabel={editor.selectedAreaLabel}
-                  directories={[]}
+                  directories={EMPTY_DIRECTORIES}
                   areasAvailable={false}
-                  areaMappings={new Map()}
+                  areaMappings={EMPTY_AREA_MAPPINGS}
                   onSelectArea={editor.handleSelectArea}
                   onAddArea={editor.handleAddArea}
                   onRemoveArea={editor.handleRemoveArea}
@@ -701,7 +750,7 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
             >
               {/* Mugshot */}
               <div className="relative shrink-0">
-                <CharacterMugShot palette={bot.palette} hueShift={0} size={48} />
+                <CharacterMugShot key={assetsLoaded ? 'ready' : 'pending'} palette={bot.palette} hueShift={0} size={48} />
                 <span
                   className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#1e1e2e] ${
                     isRunning ? 'bg-cyan-400 animate-ping' : isAlert ? 'bg-red-500 animate-bounce' : 'bg-emerald-400'
@@ -802,7 +851,7 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
           >
             <div className="flex items-center justify-between border-b border-[#4a4a6a] pb-2 mb-3">
               <div className="flex items-center gap-3">
-                <CharacterMugShot palette={selectedAgentDetail.palette} hueShift={0} size={42} />
+                <CharacterMugShot key={assetsLoaded ? 'ready' : 'pending'} palette={selectedAgentDetail.palette} hueShift={0} size={42} />
                 <div>
                   <h3 className="font-bold text-base text-white">{selectedAgentDetail.name}</h3>
                   <p className="text-xs text-gray-400">{selectedAgentDetail.title}</p>
