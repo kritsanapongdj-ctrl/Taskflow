@@ -143,12 +143,15 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
   const officeState = getOfficeState();
   const editor = useEditorActions(getOfficeState, editorState);
 
+  const [loadError, setLoadError] = useState(null);
+
   // 1. Preload Decoded Assets and Layout
   useEffect(() => {
     let isMounted = true;
 
     async function loadAllAssets() {
       try {
+        setLoadError(null);
         const [
           charsRes,
           floorsRes,
@@ -158,13 +161,34 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
           furnitureRes,
           layoutRes
         ] = await Promise.all([
-          fetch('/pixel-agents-assets/decoded/characters.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/decoded/floors.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/decoded/walls.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/decoded/carpets.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/decoded/furniture-catalog.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/decoded/furniture.json').then(r => r.json()),
-          fetch('/pixel-agents-assets/default-layout-1.json').then(r => r.json()),
+          fetch('/pixel-agents-assets/decoded/characters.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching characters.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/decoded/floors.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching floors.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/decoded/walls.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching walls.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/decoded/carpets.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching carpets.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/decoded/furniture-catalog.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching furniture-catalog.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/decoded/furniture.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching furniture.json`);
+            return r.json();
+          }),
+          fetch('/pixel-agents-assets/default-layout-1.json').then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} fetching default-layout-1.json`);
+            return r.json();
+          }),
         ]);
 
         if (!isMounted) return;
@@ -188,14 +212,18 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
           console.warn('Failed to load saved layout from localStorage:', e);
         }
 
-        officeState.loadLayout(layoutToLoad);
+        officeState.rebuildFromLayout(layoutToLoad);
 
         // Load saved agent seats if available
         try {
           const savedSeatsStr = localStorage.getItem('lh_pixel_agent_seats');
           if (savedSeatsStr) {
             const seats = JSON.parse(savedSeatsStr);
-            officeState.applySavedSeats(seats);
+            Object.entries(seats).forEach(([agentId, meta]) => {
+              if (meta && meta.seatId) {
+                officeState.reassignSeat(Number(agentId), meta.seatId);
+              }
+            });
           }
         } catch (e) {
           console.warn('Failed to load saved seats:', e);
@@ -211,6 +239,9 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
         setAssetsLoaded(true);
       } catch (err) {
         console.error('Error pre-loading Pixel Office assets:', err);
+        if (isMounted) {
+          setLoadError(err.message || String(err));
+        }
       }
     }
 
@@ -398,7 +429,7 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
     try {
       localStorage.removeItem('lh_pixel_office_layout');
       const layoutRes = await fetch('/pixel-agents-assets/default-layout-1.json').then(r => r.json());
-      officeState.loadLayout(layoutRes);
+      officeState.rebuildFromLayout(layoutRes);
       editor.setLastSavedLayout(layoutRes);
       alert('รีเซ็ตเลย์เอาต์สำนักงานเรียบร้อยแล้ว');
     } catch (e) {
@@ -513,10 +544,26 @@ export default function PixelAgentsOffice({ tasks, sets, setTab, db }) {
       {/* ─── Main Office Viewport ─── */}
       <div className="flex-1 relative w-full h-full overflow-hidden" ref={containerRef}>
         {!assetsLoaded ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#181828] text-white z-50">
-            <div className="w-12 h-12 border-4 border-[#6030ff] border-t-transparent rounded-full animate-spin mb-4" />
-            <h3 className="text-lg font-bold">กำลังโหลด Pixel Office และ Asset พิกเซลอาร์ต...</h3>
-            <p className="text-xs text-gray-400 font-mono mt-1">Pre-decoded 38 Furniture & 6 Character Sprites</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#181828] text-white z-50 p-4">
+            {loadError ? (
+              <div className="max-w-md text-center bg-red-950/90 border-2 border-red-500 p-6 shadow-pixel">
+                <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-red-200 mb-2">ไม่สามารถโหลด Asset สำนักงานได้</h3>
+                <p className="text-xs text-red-300 font-mono mb-4 break-words">{loadError}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white text-xs border border-red-400 font-bold cursor-pointer"
+                >
+                  ↺ ลองใหม่อีกครั้ง (Reload)
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="w-12 h-12 border-4 border-[#6030ff] border-t-transparent rounded-full animate-spin mb-4" />
+                <h3 className="text-lg font-bold">กำลังโหลด Pixel Office และ Asset พิกเซลอาร์ต...</h3>
+                <p className="text-xs text-gray-400 font-mono mt-1">Pre-decoded 38 Furniture & 6 Character Sprites</p>
+              </>
+            )}
           </div>
         ) : (
           <>
