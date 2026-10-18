@@ -48,62 +48,86 @@ import { setSoundEnabled, isSoundEnabled } from './pixel-office/notificationSoun
 import { transport } from './pixel-office/transport/index.js';
 import './pixel-office/pixel-office.css';
 
-// 5 Fixed LH Bots definition
+// 6 LH Agents definition (Orchestrator Boss + 5 Specialized Operational Bots)
 const LH_BOTS = [
+  {
+    id: 6,
+    key: 'orchestrator',
+    name: 'Orchestrator (Boss)',
+    shortRole: '👑 BOSS • ORCHESTRATOR',
+    title: 'Master Orchestrator & HQ Boss',
+    role: 'หัวหน้าสำนักงาน ควบคุม Multi-Agent, LINE OA Webhook & ภาพรวมทั้ง 5 บอท',
+    palette: 5,
+    themeColor: '#eab308',
+    avatar: 'Commander',
+    icon: 'Crown',
+    isBoss: true,
+    defaultSeatId: 'f-1773356768339-eo6u' // Top-left executive desk (col: 3, row: 14)
+  },
   {
     id: 1,
     key: 'scout',
     name: 'Scout Bot',
+    shortRole: 'SCOUT • LHAPPSERV',
     title: 'LHAppServ Job Scraper',
     role: 'กวาดงานซ่อมที่ติดสถานะ Wait จากระบบ LHAppServ',
     palette: 0,
     themeColor: '#38bdf8',
     avatar: 'Scout',
-    icon: 'Radar'
+    icon: 'Radar',
+    defaultSeatId: 'f-1773354879805-px9b' // Cluster desk (col: 3, row: 16)
   },
   {
     id: 2,
     key: 'utility',
     name: 'Utility Bot',
+    shortRole: 'UTILITY • LHIAS',
     title: 'LHIAS Meter & Bills',
     role: 'ดึงข้อมูลค่าน้ำ-ค่าไฟ 160 จุดใน 9 โครงการจาก LHIAS',
     palette: 1,
     themeColor: '#f97316',
     avatar: 'Mechanic',
-    icon: 'Zap'
+    icon: 'Zap',
+    defaultSeatId: 'f-1773354877474-kt9s' // Cluster desk (col: 3, row: 18)
   },
   {
     id: 3,
     key: 'wizard',
     name: 'Wizard Bot',
+    shortRole: 'WIZARD • BUDGET',
     title: 'Budget Planner & Verifier',
     role: 'คำนวณงบประมาณ 10 หมวดบัญชี B69 vs Actual YTD วางงบ B70',
     palette: 2,
     themeColor: '#a855f7',
     avatar: 'Mage',
-    icon: 'Sparkles'
+    icon: 'Sparkles',
+    defaultSeatId: 'f-1773356769007-a8jm' // Top-right executive desk (col: 7, row: 14)
   },
   {
     id: 4,
     key: 'watcher',
     name: 'Watcher Bot',
+    shortRole: 'WATCHER • SLA',
     title: 'SLA Watcher & Sentinel',
     role: 'ตรวจจับงานค้างเกิน 48 ชม. และเสี่ยงหลุด SLA ส่งเตือน',
     palette: 3,
     themeColor: '#ef4444',
     avatar: 'Knight',
-    icon: 'ShieldAlert'
+    icon: 'ShieldAlert',
+    defaultSeatId: 'f-1773354880309-yphd' // Cluster desk (col: 7, row: 16)
   },
   {
     id: 5,
     key: 'evaluator',
     name: 'Evaluator Bot',
+    shortRole: 'EVALUATOR • KPI',
     title: 'KPI & Leaderboard',
     role: 'คำนวณคะแนน Rubrics, สถิติปิดงาน และจัดอันดับ Leaderboard',
     palette: 4,
     themeColor: '#10b981',
     avatar: 'Scholar',
-    icon: 'Activity'
+    icon: 'Activity',
+    defaultSeatId: 'f-1773354881902-9m50' // Cluster desk (col: 7, row: 18)
   }
 ];
 
@@ -167,13 +191,16 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
   const [activeAreaLabel, setActiveAreaLabel] = useState(null);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [selectedAgentDetail, setSelectedAgentDetail] = useState(null);
+  const [seatAssigningBot, setSeatAssigningBot] = useState(null);
   const [showQuestsPanel, setShowQuestsPanel] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [jobStatusTasks, setJobStatusTasks] = useState([]);
   const [budgetForecast, setBudgetForecast] = useState(null);
+  const [charBreakMap, setCharBreakMap] = useState({});
 
-  // Bot live state mapped by key ('scout', 'utility', etc.)
+  // Bot live state mapped by key ('orchestrator', 'scout', 'utility', etc.)
   const [botLiveMap, setBotLiveMap] = useState({
+    orchestrator: { state: 'idle', activity: 'ควบคุมสั่งการ 5 บอท & LINE OA Webhook Router', lastRun: '-', ok: true },
     scout: { state: 'idle', activity: 'ลาดตระเวนระบบ LHAppServ', lastRun: '-', ok: true },
     utility: { state: 'idle', activity: 'สำรวจค่าน้ำ-ค่าไฟ 160 จุด', lastRun: '-', ok: true },
     wizard: { state: 'idle', activity: 'ตรวจยอดงบประมาณ B70 / Actual YTD', lastRun: '-', ok: true },
@@ -263,13 +290,27 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
         officeState.rebuildFromLayout(layoutToLoad);
 
-        // Load saved agent seats if available
+        // Spawn all 6 LH Agents (Orchestrator Boss + 5 Bots) at their default executive/cluster seats
+        LH_BOTS.forEach(b => {
+          if (!officeState.characters.has(b.id)) {
+            officeState.addAgent(b.id, b.palette, 0, b.defaultSeatId, true);
+          }
+          officeState.setTeamInfo(
+            b.id,
+            'LH HQ',
+            b.shortRole || b.name,
+            Boolean(b.isBoss),
+            b.isBoss ? undefined : 6
+          );
+        });
+
+        // Apply user-customized seat assignments from localStorage AFTER spawning characters
         try {
           const savedSeatsStr = localStorage.getItem('lh_pixel_agent_seats');
           if (savedSeatsStr) {
             const seats = JSON.parse(savedSeatsStr);
             Object.entries(seats).forEach(([agentId, meta]) => {
-              if (meta && meta.seatId) {
+              if (meta && meta.seatId && officeState.seats.has(meta.seatId)) {
                 officeState.reassignSeat(Number(agentId), meta.seatId);
               }
             });
@@ -277,13 +318,6 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
         } catch (e) {
           console.warn('Failed to load saved seats:', e);
         }
-
-        // Ensure all 5 LH bots are spawned in the office
-        LH_BOTS.forEach(b => {
-          if (!officeState.characters.has(b.id)) {
-            officeState.addAgent(b.id, b.palette, 0);
-          }
-        });
 
         setAssetsLoaded(true);
       } catch (err) {
@@ -299,6 +333,32 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
       isMounted = false;
     };
   }, [officeState]);
+
+  // Poll character off-screen break activities every 1s for UI badges
+  useEffect(() => {
+    if (!assetsLoaded || !officeStateRef.current) return;
+    const updateBreaks = () => {
+      const os = officeStateRef.current;
+      if (!os) return;
+      const next = {};
+      LH_BOTS.forEach(b => {
+        const ch = os.characters.get(b.id);
+        if (ch) {
+          next[b.key] = {
+            label: ch.idleActivityLabel || '🪑 ประจำโต๊ะทำงาน',
+            charState: ch.state,
+            seatId: ch.seatId
+          };
+        }
+      });
+      setCharBreakMap(next);
+      // Clear seatAssigningBot banner once user clicks a seat (which clears os.selectedAgentId)
+      setSeatAssigningBot(prev => (prev && os.selectedAgentId !== prev.id ? null : prev));
+    };
+    updateBreaks();
+    const timer = setInterval(updateBreaks, 1000);
+    return () => clearInterval(timer);
+  }, [assetsLoaded]);
 
   // 2. Real-time Firestore Subscriptions (100% Real Data — No Fake Movement)
   useEffect(() => {
@@ -442,14 +502,25 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
     return map;
   }, [botLiveMap]);
 
-  // Center camera on an agent
+  // Center camera on an agent (or swap seats if in seat-assignment mode)
   const focusAgent = useCallback((agentId) => {
     if (!officeStateRef.current) return;
-    officeStateRef.current.cameraFollowId = agentId;
-    officeStateRef.current.selectedAgentId = agentId;
+    const os = officeStateRef.current;
+    if (seatAssigningBot && seatAssigningBot.id !== agentId) {
+      const targetCh = os.characters.get(agentId);
+      if (targetCh && targetCh.seatId) {
+        os.reassignSeat(seatAssigningBot.id, targetCh.seatId);
+        os.selectedAgentId = null;
+        os.cameraFollowId = seatAssigningBot.id;
+        setSeatAssigningBot(null);
+        return;
+      }
+    }
+    os.cameraFollowId = agentId;
+    os.selectedAgentId = agentId;
     const bot = LH_BOTS.find(b => b.id === agentId);
     setSelectedAgentDetail(bot || null);
-  }, []);
+  }, [seatAssigningBot]);
 
   // Toggle Sound
   const handleToggleSound = useCallback(() => {
@@ -811,6 +882,64 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
           },
           logs: [{ timestamp: nowIso, state: 'success', message: msg }, ...existingLogs].slice(0, 30)
         };
+      } else if (botKey === 'orchestrator') {
+        // Real Executive Orchestrator Check: aggregates live status of all 5 operational bots + LINE OA Multi-Agent Router
+        const latestStatusSnap = await getDoc(statusDocRef);
+        const allStatus = latestStatusSnap.exists() ? latestStatusSnap.data() : {};
+        const subKeys = ['scout', 'utility', 'wizard', 'watcher', 'evaluator'];
+        let healthyBots = 0;
+        let alertBots = 0;
+        const botSummaries = [];
+
+        subKeys.forEach(k => {
+          const bDoc = allStatus[k] || {};
+          const st = bDoc.state || 'idle';
+          if (st === 'alert' || st === 'error' || bDoc.ok === false) {
+            alertBots++;
+          } else {
+            healthyBots++;
+          }
+          botSummaries.push({
+            key: k,
+            name: bDoc.name || k.toUpperCase(),
+            state: st,
+            summary: bDoc.currentActivity || bDoc.message || 'พร้อมทำงาน'
+          });
+        });
+
+        const waitJobsCount = allStatus.scout?.waiting_jobs ?? allStatus.scout?.metrics?.waitingJobs ?? jobStatusTasks.length;
+        const meterAnomalies = allStatus.utility?.metrics?.anomaliesCount ?? 0;
+        const slaOverdue = (allStatus.watcher?.metrics?.overdue48h ?? 0) + (allStatus.watcher?.metrics?.overdue5d ?? 0);
+        const totalTasksCount = Array.isArray(tasks) ? tasks.length : 0;
+
+        const msg = `👑 สรุปบัญชาการ HQ: บอทออนไลน์ 5/5 ตัว (ปกติ ${healthyBots}, แจ้งเตือน ${alertBots}) | งาน Wait ${waitJobsCount} งาน | มิเตอร์ผิดปกติ ${meterAnomalies} จุด | ใบงานระบบ ${totalTasksCount.toLocaleString()} งาน`;
+
+        finalPayload = {
+          ...existingBot,
+          id: 'orchestrator',
+          name: 'Master Orchestrator (Boss)',
+          role: 'HQ Commander & Multi-Agent Router',
+          schedule: 'Real-time Webhook & Daily Briefing',
+          state: 'idle',
+          ok: true,
+          lastRunAt: nowIso,
+          lastSuccessAt: nowIso,
+          durationMs: Date.now() - startTime,
+          currentActivity: msg,
+          message: msg,
+          metrics: {
+            managedBotsCount: 5,
+            healthyBots,
+            alertBots,
+            waitJobsCount,
+            meterAnomalies,
+            slaOverdue,
+            totalTasksCount,
+            lineWebhookModules: ['TaskAgent', 'BudgetAgent', 'FloodAgent', 'ManpowerAgent'],
+            botSummaries
+          },
+          logs: [{ timestamp: nowIso, state: 'success', message: msg }, ...existingLogs].slice(0, 30)
+        };
       }
 
       if (finalPayload) {
@@ -821,35 +950,56 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
     } finally {
       setSyncingBots(prev => ({ ...prev, [botKey]: false }));
     }
-  }, [db, tasks, sets]);
+  }, [db, tasks, sets, jobStatusTasks.length]);
 
   const syncAllBotsNow = useCallback(async () => {
-    for (const b of LH_BOTS) {
+    // Sync the 5 operational bots first, then have Orchestrator (Boss) summarize the latest status
+    const ordered = [...LH_BOTS.filter(b => b.key !== 'orchestrator'), ...LH_BOTS.filter(b => b.key === 'orchestrator')];
+    for (const b of ordered) {
       await executeRealBotSync(b.key);
     }
   }, [executeRealBotSync]);
 
+  // Enter interactive seat assignment mode for a specific agent (e.g. Boss)
+  const startSeatAssignment = useCallback((bot) => {
+    if (!officeStateRef.current || !bot) return;
+    if (editor.isEditMode) {
+      editor.handleToggleEditMode();
+    }
+    setSelectedAgentDetail(null);
+    setSeatAssigningBot(bot);
+    officeStateRef.current.selectedAgentId = bot.id;
+    officeStateRef.current.cameraFollowId = bot.id;
+  }, [editor]);
+
   // Reset Layout to default
   const handleResetLayout = async () => {
-    if (!window.confirm('คุณต้องการรีเซ็ตเลย์เอาต์สำนักงานกลับสู่ค่าเริ่มต้นของ LH หรือไม่?')) return;
+    if (!window.confirm('คุณต้องการรีเซ็ตเลย์เอาต์สำนักงานและที่นั่งกลับสู่ค่าเริ่มต้นของ LH หรือไม่?')) return;
     try {
       localStorage.removeItem('lh_pixel_office_layout');
+      localStorage.removeItem('lh_pixel_agent_seats');
       const layoutRes = await fetch('/pixel-agents-assets/default-layout-1.json').then(r => r.json());
       officeState.rebuildFromLayout(layoutRes);
+      LH_BOTS.forEach(b => {
+        if (b.defaultSeatId && officeState.seats.has(b.defaultSeatId)) {
+          officeState.reassignSeat(b.id, b.defaultSeatId);
+        }
+      });
       editor.setLastSavedLayout(layoutRes);
-      alert('รีเซ็ตเลย์เอาต์สำนักงานเรียบร้อยแล้ว');
+      alert('รีเซ็ตเลย์เอาต์สำนักงานและโต๊ะประจำตำแหน่งเรียบร้อยแล้ว');
     } catch (e) {
       console.error('Reset layout error:', e);
     }
   };
 
-  // Save current layout
+  // Save current layout & agent seats
   const handleSaveLayout = () => {
     try {
       const current = officeState.getLayout();
       localStorage.setItem('lh_pixel_office_layout', JSON.stringify(current));
+      localStorage.setItem('lh_pixel_agent_seats', JSON.stringify(officeState.getPersistableSeats()));
       editor.setLastSavedLayout(current);
-      alert('บันทึกเลย์เอาต์สำนักงานสำเร็จ!');
+      alert('บันทึกเลย์เอาต์สำนักงานและตำแหน่งโต๊ะทำงานสำเร็จ!');
     } catch (e) {
       console.error('Save layout error:', e);
     }
@@ -875,12 +1025,12 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                 FIRESTORE REAL-TIME
               </span>
             </div>
-            <p className="text-[10px] text-gray-400 leading-none">5 Autonomous Agents — ข้อมูลจริงจาก LHAppServ, LHIAS, LHServ & TaskFlow</p>
+            <p className="text-[10px] text-gray-400 leading-none">👑 1 Orchestrator Boss + 5 Operational Bots — ซิงค์ข้อมูลจริง & พักเบรกอัตโนมัติเมื่อว่าง</p>
           </div>
         </div>
 
         {/* Center quick bot statuses */}
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden xl:flex items-center gap-1.5">
           {LH_BOTS.map(b => {
             const status = botLiveMap[b.key]?.state || 'idle';
             const isRun = status === 'running' || syncingBots[b.key];
@@ -889,20 +1039,22 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               <button
                 key={b.id}
                 onClick={() => focusAgent(b.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs border transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1 text-xs border transition-all cursor-pointer ${
                   selectedAgentDetail?.id === b.id
                     ? 'border-[#746fff] bg-[#2c2b6d] text-white'
+                    : b.isBoss
+                    ? 'border-amber-500/70 bg-amber-950/30 text-amber-200 hover:border-amber-400'
                     : 'border-[#4a4a6a] bg-[#1e1e2e] text-gray-300 hover:border-[#6030ff]'
                 }`}
               >
                 <span
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{
-                    backgroundColor: isRun ? '#38bdf8' : isAlert ? '#ef4444' : '#10b981',
+                    backgroundColor: isRun ? '#38bdf8' : isAlert ? '#ef4444' : b.isBoss ? '#eab308' : '#10b981',
                     boxShadow: isRun ? '0 0 6px #38bdf8' : isAlert ? '0 0 6px #ef4444' : undefined
                   }}
                 />
-                <span className="text-[11px] font-mono">{b.name.split(' ')[0]}</span>
+                <span className="text-[11px] font-mono">{b.isBoss ? '👑 Boss' : b.name.split(' ')[0]}</span>
                 {isRun && <span className="text-[9px] text-cyan-300 animate-spin">⚙️</span>}
                 {!isRun && isAlert && <span className="text-[9px] text-red-400 font-bold">!</span>}
               </button>
@@ -912,7 +1064,20 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
         {/* Right HUD Controls */}
         <div className="flex items-center gap-2">
-          {/* Sync All 5 Bots Live */}
+          {/* Assign Boss Desk Shortcut */}
+          <button
+            onClick={() => startSeatAssignment(LH_BOTS[0])}
+            className={`px-2.5 py-1 text-xs flex items-center gap-1 border transition-all cursor-pointer ${
+              seatAssigningBot?.id === 6
+                ? 'bg-amber-600 border-amber-300 text-white animate-pulse'
+                : 'bg-amber-950/50 hover:bg-amber-900/60 border-amber-500/60 text-amber-200'
+            }`}
+            title="คลิกเพื่อเลือกเก้าอี้/โต๊ะทำงานประจำตำแหน่งของ Boss (Orchestrator)"
+          >
+            <span>👑 จัดโต๊ะ Boss</span>
+          </button>
+
+          {/* Sync All 6 Agents Live */}
           <button
             onClick={syncAllBotsNow}
             disabled={isAnyBotSyncing}
@@ -921,7 +1086,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                 ? 'bg-cyan-900/50 border-cyan-500 text-cyan-200 animate-pulse'
                 : 'bg-emerald-700/80 hover:bg-emerald-600 border-emerald-400 text-white'
             }`}
-            title="สั่งตรวจสอบและคำนวณข้อมูลจริงจาก Firestore ครบทั้ง 5 บอท"
+            title="สั่งตรวจสอบและคำนวณข้อมูลจริงจาก Firestore ครบทั้ง 6 Agent"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isAnyBotSyncing ? 'animate-spin' : ''}`} />
             <span>{isAnyBotSyncing ? 'กำลัง Sync...' : 'Sync ข้อมูลจริง'}</span>
@@ -984,7 +1149,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               <>
                 <div className="w-12 h-12 border-4 border-[#6030ff] border-t-transparent rounded-full animate-spin mb-4" />
                 <h3 className="text-lg font-bold">กำลังโหลด Pixel Office และ Asset พิกเซลอาร์ต...</h3>
-                <p className="text-xs text-gray-400 font-mono mt-1">Pre-decoded 38 Furniture & 6 Character Sprites</p>
+                <p className="text-xs text-gray-400 font-mono mt-1">Pre-decoded 38 Furniture & 6 Character Sprites (Boss + 5 Bots)</p>
               </>
             )}
           </div>
@@ -1010,7 +1175,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               tapSelectsFirst={false}
             />
 
-            {/* Tool & Permission Bubbles (Strictly driven by real running/alert states) */}
+            {/* Tool & Break Activity Bubbles */}
             <ToolOverlay
               officeState={officeState}
               agents={agentIds}
@@ -1020,9 +1185,36 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               containerRef={containerRef}
               zoom={editor.zoom}
               panRef={editor.panRef}
-              onCloseAgent={() => {}}
+              onCloseAgent={() => {
+                if (officeStateRef.current) {
+                  officeStateRef.current.selectedAgentId = null;
+                  officeStateRef.current.cameraFollowId = null;
+                }
+                setSeatAssigningBot(null);
+              }}
               alwaysShowOverlay={false}
             />
+
+            {/* Interactive Seat Assignment Banner */}
+            {seatAssigningBot && !editor.isEditMode && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-[#1e1e2e]/95 px-4 py-2 border-2 border-amber-400 shadow-2xl backdrop-blur-md text-white">
+                <span className="text-xs text-amber-300 font-bold">
+                  🪑 โหมดเลือกโต๊ะประจำตำแหน่งของ <u className="text-white">{seatAssigningBot.name}</u>: คลิกที่เก้าอี้ตัวใดก็ได้ในออฟฟิศ (หากมีบอทอื่นนั่งอยู่จะสลับเก้าอี้ให้อัตโนมัติ)
+                </span>
+                <button
+                  onClick={() => {
+                    if (officeStateRef.current) {
+                      officeStateRef.current.selectedAgentId = null;
+                      officeStateRef.current.cameraFollowId = null;
+                    }
+                    setSeatAssigningBot(null);
+                  }}
+                  className="px-2.5 py-0.5 bg-[#4a4a6a] hover:bg-[#5a5a7a] text-white text-xs border border-gray-400 cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
 
             {/* Zoom Controls Overlay */}
             <div className="absolute bottom-4 right-4 z-20">
@@ -1032,12 +1224,12 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
             {/* Layout Edit Action Bar */}
             {editor.isEditMode && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-[#1e1e2e]/95 p-2 border-2 border-amber-500 shadow-pixel backdrop-blur-md">
-                <span className="text-xs text-amber-300 font-bold px-2">🛠️ โหมดแก้ไขแปลนห้อง</span>
+                <span className="text-xs text-amber-300 font-bold px-2">🛠️ โหมดแก้ไขแปลนห้อง (วางโต๊ะหัวหน้า/โซฟา/ตู้กาแฟได้อิสระ)</span>
                 <button
                   onClick={handleSaveLayout}
                   className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs border border-emerald-400 cursor-pointer font-bold"
                 >
-                  💾 บันทึกเลย์เอาต์
+                  💾 บันทึกเลย์เอาต์ & โต๊ะ
                 </button>
                 <button
                   onClick={handleResetLayout}
@@ -1104,10 +1296,11 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
         )}
       </div>
 
-      {/* ─── Bottom Bar: 5 LH Agent Status Cards (100% Real Firestore State) ─── */}
-      <footer className="h-24 bg-[#181828]/95 border-t-2 border-[#4a4a6a] px-3 py-2 flex items-center gap-3 overflow-x-auto z-20 shrink-0 backdrop-blur-md">
+      {/* ─── Bottom Bar: 6 LH Agent Status Cards (Boss + 5 Operational Bots) ─── */}
+      <footer className="h-28 bg-[#181828]/95 border-t-2 border-[#4a4a6a] px-3 py-2 flex items-center gap-2.5 overflow-x-auto z-20 shrink-0 backdrop-blur-md">
         {LH_BOTS.map((bot) => {
           const live = botLiveMap[bot.key] || { state: 'idle', activity: bot.role, lastRun: '-' };
+          const breakInfo = charBreakMap[bot.key] || { label: '🪑 ประจำโต๊ะทำงาน' };
           const isSelected = selectedAgentDetail?.id === bot.id;
           const isRunning = live.state === 'running' || !!syncingBots[bot.key];
           const isAlert = live.state === 'alert';
@@ -1116,9 +1309,11 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
             <div
               key={bot.id}
               onClick={() => focusAgent(bot.id)}
-              className={`flex-1 min-w-[215px] max-w-[290px] h-full p-2 border-2 transition-all cursor-pointer flex items-center gap-2.5 ${
+              className={`flex-1 min-w-[205px] max-w-[265px] h-full p-2 border-2 transition-all cursor-pointer flex items-center gap-2 ${
                 isSelected
                   ? 'border-[#746fff] bg-[#222144] shadow-pixel'
+                  : bot.isBoss
+                  ? 'border-amber-500/80 bg-[#252015] hover:border-amber-400'
                   : isAlert
                   ? 'border-red-500/70 bg-[#261822] hover:border-red-400'
                   : 'border-[#3a3a52] bg-[#1e1e2e] hover:border-[#6030ff]/80 hover:bg-[#252538]'
@@ -1126,10 +1321,10 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
             >
               {/* Mugshot */}
               <div className="relative shrink-0">
-                <CharacterMugShot key={assetsLoaded ? 'ready' : 'pending'} palette={bot.palette} hueShift={0} size={46} />
+                <CharacterMugShot key={assetsLoaded ? 'ready' : 'pending'} palette={bot.palette} hueShift={0} size={44} />
                 <span
                   className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#1e1e2e] ${
-                    isRunning ? 'bg-cyan-400 animate-ping' : isAlert ? 'bg-red-500 animate-pulse' : 'bg-emerald-400'
+                    isRunning ? 'bg-cyan-400 animate-ping' : isAlert ? 'bg-red-500 animate-pulse' : bot.isBoss ? 'bg-amber-400' : 'bg-emerald-400'
                   }`}
                 />
               </div>
@@ -1137,34 +1332,59 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
               {/* Bot Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="font-bold text-xs text-white truncate">{bot.name}</span>
+                  <span className={`font-bold text-xs truncate ${bot.isBoss ? 'text-amber-300' : 'text-white'}`}>
+                    {bot.isBoss ? '👑 ' : ''}{bot.name}
+                  </span>
                   <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase ${
+                    className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase shrink-0 ${
                       isRunning
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                         : isAlert
                         ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                        : bot.isBoss
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     }`}
                   >
-                    {isRunning ? 'RUNNING' : isAlert ? 'ALERT' : 'SYNCED'}
+                    {isRunning ? 'RUNNING' : isAlert ? 'ALERT' : bot.isBoss ? 'BOSS' : 'SYNCED'}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-200 line-clamp-1 mt-0.5" title={live.activity}>
+
+                {/* Live Break / Office Activity Pill */}
+                <div className="mt-0.5 flex items-center gap-1">
+                  <span className="text-[10px] px-1.5 py-0.2 bg-[#141422] border border-[#3a3a52] text-amber-200 truncate block w-full font-mono">
+                    {isRunning ? '💻 นั่งทำงานหน้าคอมพิวเตอร์' : breakInfo.label}
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-gray-300 line-clamp-1 mt-0.5" title={live.activity}>
                   {live.activity}
                 </p>
-                <div className="flex items-center justify-between mt-1 text-[9px] text-gray-400 font-mono">
-                  <span className="truncate">อัปเดต: {live.lastRun}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      executeRealBotSync(bot.key);
-                    }}
-                    disabled={isRunning}
-                    className="text-[9px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer shrink-0 ml-1"
-                  >
-                    {isRunning ? 'กำลังซิงค์...' : 'Sync จริง'}
-                  </button>
+
+                <div className="flex items-center justify-between mt-0.5 text-[9px] text-gray-400 font-mono">
+                  <span className="truncate">{live.lastRun}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startSeatAssignment(bot);
+                      }}
+                      title="คลิกเพื่อเลือกเก้าอี้ประจำตำแหน่งในออฟฟิศ"
+                      className="text-[9px] text-amber-300 hover:text-amber-200 underline cursor-pointer"
+                    >
+                      ย้ายโต๊ะ
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        executeRealBotSync(bot.key);
+                      }}
+                      disabled={isRunning}
+                      className="text-[9px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer"
+                    >
+                      {isRunning ? 'ซิงค์...' : 'Sync'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1174,7 +1394,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
       {/* ─── Side Drawer: Live Jobs & Quests Feed ─── */}
       {showQuestsPanel && (
-        <aside className="absolute right-0 top-12 bottom-24 w-80 bg-[#1e1e2e]/95 border-l-2 border-[#4a4a6a] z-30 flex flex-col shadow-2xl backdrop-blur-md animate-in slide-in-from-right duration-200">
+        <aside className="absolute right-0 top-12 bottom-28 w-80 bg-[#1e1e2e]/95 border-l-2 border-[#4a4a6a] z-30 flex flex-col shadow-2xl backdrop-blur-md animate-in slide-in-from-right duration-200">
           <div className="p-3 border-b border-[#4a4a6a] flex items-center justify-between bg-[#2a2a3a]">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-cyan-400" />
@@ -1219,6 +1439,7 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
       {/* ─── Agent Inspector Modal (Shows Real Metrics & Real Execution Logs) ─── */}
       {selectedAgentDetail && (() => {
         const live = botLiveMap[selectedAgentDetail.key] || {};
+        const breakInfo = charBreakMap[selectedAgentDetail.key] || { label: '🪑 ประจำโต๊ะทำงาน' };
         const m = live.metrics || {};
         const logs = Array.isArray(live.logs) ? live.logs : [];
         const isRunning = live.state === 'running' || !!syncingBots[selectedAgentDetail.key];
@@ -1238,13 +1459,16 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                   <CharacterMugShot key={assetsLoaded ? 'ready' : 'pending'} palette={selectedAgentDetail.palette} hueShift={0} size={48} />
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-base text-white">{selectedAgentDetail.name}</h3>
+                      <h3 className="font-bold text-base text-white">
+                        {selectedAgentDetail.isBoss ? '👑 ' : ''}{selectedAgentDetail.name}
+                      </h3>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase ${
                         isRunning ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' :
                         live.state === 'alert' ? 'bg-red-500/20 text-red-300 border border-red-500/40' :
+                        selectedAgentDetail.isBoss ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
                         'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                       }`}>
-                        {isRunning ? 'RUNNING' : live.state === 'alert' ? 'ALERT' : 'SYNCED / OK'}
+                        {isRunning ? 'RUNNING' : live.state === 'alert' ? 'ALERT' : selectedAgentDetail.isBoss ? 'BOSS / ACTIVE HQ' : 'SYNCED / OK'}
                       </span>
                     </div>
                     <p className="text-xs text-gray-400">{selectedAgentDetail.title} • ตารางรัน: {live.schedule || 'Real-time'}</p>
@@ -1266,8 +1490,9 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                     <span className="text-gray-200 font-medium">{selectedAgentDetail.role}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-gray-400 block">ซิงค์ข้อมูลจริงล่าสุด:</span>
-                    <span className="font-mono text-emerald-300">{live.lastRun || '-'}</span>
+                    <span className="text-gray-400 block">อิริยาบถในออฟฟิศตอนนี้:</span>
+                    <span className="font-mono text-amber-300">{isRunning ? '💻 นั่งทำงานหน้าคอมพิวเตอร์' : breakInfo.label}</span>
+                    <span className="text-gray-500 block text-[10px] mt-0.5">ซิงค์ล่าสุด: {live.lastRun || '-'}</span>
                   </div>
                 </div>
 
@@ -1279,6 +1504,34 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                 </div>
 
                 {/* Bot-Specific Real Metrics */}
+                {selectedAgentDetail.key === 'orchestrator' && (
+                  <div className="bg-[#141420] p-3 border border-amber-500/40 space-y-2">
+                    <span className="text-amber-400 font-bold block">👑 ศูนย์บัญชาการ Master Orchestrator (LINE OA Webhook & 5 Sub-Agents):</span>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="bg-[#1e1e2e] p-2 border border-[#3a3a52]">
+                        <div className="text-gray-400 text-[10px]">บอทในสังกัด</div>
+                        <div className="text-base font-bold text-amber-300 font-mono">{m.managedBotsCount ?? 5} ตัว</div>
+                      </div>
+                      <div className="bg-[#1e1e2e] p-2 border border-[#3a3a52]">
+                        <div className="text-gray-400 text-[10px]">งาน Wait ค้าง</div>
+                        <div className="text-base font-bold text-cyan-300 font-mono">{m.waitJobsCount ?? jobStatusTasks.length}</div>
+                      </div>
+                      <div className="bg-[#1e1e2e] p-2 border border-[#3a3a52]">
+                        <div className="text-gray-400 text-[10px]">มิเตอร์ผิดปกติ</div>
+                        <div className="text-base font-bold text-orange-400 font-mono">{m.meterAnomalies ?? (botLiveMap.utility?.metrics?.anomaliesCount ?? 0)} จุด</div>
+                      </div>
+                      <div className="bg-[#1e1e2e] p-2 border border-[#3a3a52]">
+                        <div className="text-gray-400 text-[10px]">ใบงานในระบบ</div>
+                        <div className="text-base font-bold text-emerald-300 font-mono">{(m.totalTasksCount ?? tasks?.length ?? 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-gray-300 pt-1">
+                      <span className="text-gray-400">โมดูล LINE OA Router ที่ควบคุม: </span>
+                      <span className="font-mono text-amber-200">TaskAgent • BudgetAgent • FloodAgent • ManpowerAgent</span>
+                    </div>
+                  </div>
+                )}
+
                 {selectedAgentDetail.key === 'scout' && (
                   <div className="bg-[#141420] p-3 border border-[#3a3a52] space-y-2">
                     <span className="text-cyan-400 font-bold block">📊 สถิติงานซ่อมสถานะ Wait จริงจาก LHAppServ:</span>
@@ -1420,9 +1673,12 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
 
               {/* Modal Footer */}
               <div className="p-3 border-t border-[#4a4a6a] bg-[#252538] flex items-center justify-between shrink-0">
-                <span className="text-[10px] text-gray-400 font-mono">
-                  Firestore Doc: artifacts/default-app-id/public/data/lh_scraper/bot_status.{selectedAgentDetail.key}
-                </span>
+                <button
+                  onClick={() => startSeatAssignment(selectedAgentDetail)}
+                  className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold cursor-pointer border border-amber-400"
+                >
+                  🪑 เลือกเก้าอี้/โต๊ะประจำตำแหน่งในแผนผัง
+                </button>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => executeRealBotSync(selectedAgentDetail.key)}

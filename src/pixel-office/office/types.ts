@@ -254,6 +254,10 @@ export interface Character {
   contextTokens: number;
   /** Window `contextTokens` is measured against. */
   maxContextTokens: number;
+  /** Current off-screen break / lounge activity label when idle */
+  idleActivityLabel?: string | null;
+  /** Target facing direction upon arriving at a break activity spot */
+  idleTargetDir?: Direction | null;
 }
 
 export const PetState = { IDLE: 'idle', WALK: 'walk', FOLLOW: 'follow' } as const;

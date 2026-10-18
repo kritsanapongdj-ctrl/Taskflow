@@ -664,8 +664,8 @@ export function OfficeCanvas({
                   officeState.selectedAgentId = null;
                   officeState.cameraFollowId = null;
                   return;
-                } else if (!seat.assigned) {
-                  // Clicked available seat — reassign
+                } else {
+                  // Clicked any seat (free or occupied) — reassign / swap seat
                   officeState.reassignSeat(officeState.selectedAgentId, seatId);
                   officeState.selectedAgentId = null;
                   officeState.cameraFollowId = null;

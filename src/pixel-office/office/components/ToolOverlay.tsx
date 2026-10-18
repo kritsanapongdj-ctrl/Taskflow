@@ -57,8 +57,9 @@ function getActivityText(
   isActive: boolean,
   bubbleType: 'permission' | 'waiting' | null,
   waitingAwaitingInput: boolean,
+  idleActivityLabel?: string | null,
 ): string {
-  if (bubbleType === 'permission') return 'Needs approval';
+  if (bubbleType === 'permission') return '⚠️ พบรายการแจ้งเตือน (Alert)';
   // Only the idle case ("Waiting for input") gets a dedicated label. A finished
   // turn (Stop, waitingAwaitingInput=false) falls through so the checkmark alone
   // signals "done", same as the original behavior.
@@ -79,7 +80,11 @@ function getActivityText(
     }
   }
 
-  return 'Idle';
+  if (!isActive && idleActivityLabel) {
+    return idleActivityLabel;
+  }
+
+  return '🪑 ประจำโต๊ะทำงาน';
 }
 
 function getFuelColor(ratio: number): string {
@@ -197,9 +202,10 @@ export function ToolOverlay({
           );
         }
 
-        // Only show the label for hovered or selected agents (unless
-        // always-show is on) — the bubble renders regardless.
-        if (!alwaysShowOverlay && !isSelected && !isHovered) {
+        // Show label when hovered, selected, active, or away from desk on a break activity
+        const isAwayOnBreak =
+          !ch.isActive && ch.state !== CharacterState.TYPE && Boolean(ch.idleActivityLabel);
+        if (!alwaysShowOverlay && !isSelected && !isHovered && !ch.isActive && !isAwayOnBreak) {
           return bubbleNode && <Fragment key={id}>{bubbleNode}</Fragment>;
         }
 
@@ -256,6 +262,7 @@ export function ToolOverlay({
             ch.isActive,
             ch.bubbleType,
             ch.waitingAwaitingInput ?? false,
+            ch.idleActivityLabel,
           );
         }
 

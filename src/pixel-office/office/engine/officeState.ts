@@ -610,39 +610,90 @@ export class OfficeState {
     return null;
   }
 
-  /** Reassign an agent from their current seat to a new seat */
+  /** Reassign an agent from their current seat to a new seat (swaps if occupied) */
   reassignSeat(agentId: number, seatId: string): void {
     const ch = this.characters.get(agentId);
     if (!ch) return;
-    // Unassign old seat
-    if (ch.seatId) {
-      const old = this.seats.get(ch.seatId);
+    const targetSeat = this.seats.get(seatId);
+    if (!targetSeat) return;
+    if (ch.seatId === seatId) {
+      this.sendToSeat(agentId);
+      return;
+    }
+
+    const oldSeatId = ch.seatId;
+    // Check if another character currently owns targetSeat
+    let occupant: Character | undefined;
+    for (const other of this.characters.values()) {
+      if (other.id !== agentId && other.seatId === seatId) {
+        occupant = other;
+        break;
+      }
+    }
+
+    // Free old seat
+    if (oldSeatId) {
+      const old = this.seats.get(oldSeatId);
       if (old) old.assigned = false;
     }
-    // Assign new seat
-    const seat = this.seats.get(seatId);
-    if (!seat || seat.assigned) return;
-    seat.assigned = true;
+
+    // Assign targetSeat to ch
+    targetSeat.assigned = true;
     ch.seatId = seatId;
-    // Pathfind to new seat (unblock own seat tile for this query)
+
+    // If targetSeat had an occupant, move occupant to oldSeatId (or free seat)
+    if (occupant) {
+      if (oldSeatId && this.seats.has(oldSeatId)) {
+        const oldSeat = this.seats.get(oldSeatId)!;
+        oldSeat.assigned = true;
+        occupant.seatId = oldSeatId;
+        this.sendToSeat(occupant.id);
+      } else {
+        const freeId = this.findFreeSeat(occupant.directoryName);
+        if (freeId && this.seats.has(freeId)) {
+          this.seats.get(freeId)!.assigned = true;
+          occupant.seatId = freeId;
+          this.sendToSeat(occupant.id);
+        } else {
+          occupant.seatId = null;
+        }
+      }
+    }
+
+    // Pathfind ch to new seat (unblock own seat tile for this query)
     const path = this.withOwnSeatUnblocked(ch, () =>
-      findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, this.tileMap, this.blockedTiles),
+      findPath(ch.tileCol, ch.tileRow, targetSeat.seatCol, targetSeat.seatRow, this.tileMap, this.blockedTiles),
     );
     if (path.length > 0) {
       ch.path = path;
       ch.moveProgress = 0;
       ch.state = CharacterState.WALK;
+      ch.idleActivityLabel = '🪑 ย้ายไปโต๊ะประจำตำแหน่งใหม่';
+      ch.idleTargetDir = targetSeat.facingDir;
       ch.frame = 0;
       ch.frameTimer = 0;
     } else {
       // Already at seat or no path — sit down
+      ch.tileCol = targetSeat.seatCol;
+      ch.tileRow = targetSeat.seatRow;
+      ch.x = targetSeat.seatCol * TILE_SIZE + TILE_SIZE / 2;
+      ch.y = targetSeat.seatRow * TILE_SIZE + TILE_SIZE / 2;
       ch.state = CharacterState.TYPE;
-      ch.dir = seat.facingDir;
+      ch.dir = targetSeat.facingDir;
+      ch.idleActivityLabel = '🪑 ประจำโต๊ะทำงาน';
       ch.frame = 0;
       ch.frameTimer = 0;
       if (!ch.isActive) {
         ch.seatTimer = INACTIVE_SEAT_TIMER_MIN_SEC + Math.random() * INACTIVE_SEAT_TIMER_RANGE_SEC;
       }
+    }
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('lh_pixel_agent_seats', JSON.stringify(this.getPersistableSeats()));
+      }
+    } catch {
+      // ignore storage errors
     }
   }
 
@@ -687,12 +738,15 @@ export class OfficeState {
       ch.path = path;
       ch.moveProgress = 0;
       ch.state = CharacterState.WALK;
+      ch.idleActivityLabel = '🪑 เดินกลับโต๊ะทำงาน';
+      ch.idleTargetDir = seat.facingDir;
       ch.frame = 0;
       ch.frameTimer = 0;
     } else {
       // Already at seat — sit down
       ch.state = CharacterState.TYPE;
       ch.dir = seat.facingDir;
+      ch.idleActivityLabel = '🪑 ประจำโต๊ะทำงาน';
       ch.frame = 0;
       ch.frameTimer = 0;
       if (!ch.isActive) {
@@ -717,6 +771,7 @@ export class OfficeState {
     ch.path = path;
     ch.moveProgress = 0;
     ch.state = CharacterState.WALK;
+    ch.idleActivityLabel = '🚶 เดินไปยังจุดที่เลือก';
     ch.frame = 0;
     ch.frameTimer = 0;
     return true;
@@ -827,13 +882,15 @@ export class OfficeState {
   setAgentActive(id: number, active: boolean): void {
     const ch = this.characters.get(id);
     if (ch) {
+      if (ch.isActive === active) return;
       ch.isActive = active;
       if (!active) {
-        // Sentinel -1: signals turn just ended, skip next seat rest timer.
-        // Prevents the WALK handler from setting a 2-4 min rest on arrival.
-        ch.seatTimer = -1;
-        ch.path = [];
-        ch.moveProgress = 0;
+        // Finished active turn: rest briefly at desk (5-10s) before taking a coffee/sofa break
+        ch.seatTimer = 5 + Math.random() * 5;
+        ch.idleActivityLabel = '🪑 ประจำโต๊ะทำงาน';
+      } else {
+        ch.idleActivityLabel = null;
+        ch.idleTargetDir = null;
       }
       this.rebuildFurnitureInstances();
     }
@@ -1147,7 +1204,16 @@ export class OfficeState {
 
       // Temporarily unblock own seat so character can pathfind to it
       this.withOwnSeatUnblocked(ch, () =>
-        updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles),
+        updateCharacter(
+          ch,
+          dt,
+          this.walkableTiles,
+          this.seats,
+          this.tileMap,
+          this.blockedTiles,
+          this.layout.furniture,
+          this.characters,
+        ),
       );
 
       // Tick bubble timer for waiting bubbles
