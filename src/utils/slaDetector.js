@@ -241,20 +241,17 @@ export const SLA_RULES = [
 ];
 
 /**
- * ฟังก์ชันตรวจจับหมวด SLA จากข้อความรายละเอียดงาน
+ * ฟังก์ชันตรวจจับหมวด SLA ทั้งหมดที่เข้าข่าย (จัดอันดับความเกี่ยวข้องหลายรายการสำหรับแสดง Suggestion Chips)
  * @param {string} detailsText ข้อความรายละเอียดงาน (details)
  * @param {Array<string>} availableSlas รายการ SLA จากฐานข้อมูล (เช่น ['ท่อสปริงเกอร์แตก|5', ...])
- * @returns {Object} ผลลัพธ์การตรวจจับ
+ * @param {number} maxResults จำนวนผลลัพธ์สูงสุดที่ต้องการ (ค่าเริ่มต้น 3)
+ * @returns {Array<Object>} รายการหมวด SLA ที่เข้าข่ายทั้งหมด
  */
-export function detectSlaCategory(detailsText, availableSlas = []) {
-  if (!detailsText || typeof detailsText !== 'string') {
-    return { hasMatch: false, detectedCategory: null, slaDays: null, matchedKeyword: null, reason: '' };
-  }
+export function detectAllSlaCategories(detailsText, availableSlas = [], maxResults = 3) {
+  if (!detailsText || typeof detailsText !== 'string') return [];
 
   const cleanText = detailsText.trim();
-  if (!cleanText) {
-    return { hasMatch: false, detectedCategory: null, slaDays: null, matchedKeyword: null, reason: '' };
-  }
+  if (!cleanText) return [];
 
   // สร้าง Map ของ SLA วันจากฐานข้อมูล
   const slaDbMap = {};
@@ -269,7 +266,12 @@ export function detectSlaCategory(detailsText, availableSlas = []) {
     });
   }
 
+  const results = [];
+  const seenCategories = new Set();
+
   for (const rule of SLA_RULES) {
+    if (results.length >= maxResults) break;
+
     // 1. ตรวจสอบว่าตรงกับ Positive Patterns ใดๆ หรือไม่
     const isPos = rule.positivePatterns.some(pattern => pattern.test(cleanText));
     if (!isPos) continue;
@@ -295,15 +297,32 @@ export function detectSlaCategory(detailsText, availableSlas = []) {
       }
     }
 
-    return {
-      hasMatch: true,
-      detectedCategory: targetCat,
-      slaDays: days,
-      matchedKeyword: rule.matchedLabel,
-      reason: `ตรวจพบคีย์เวิร์ด "${rule.matchedLabel}" ซึ่งเข้าข่ายหมวด SLA: "${targetCat}" (${days} วัน)`
-    };
+    if (!seenCategories.has(targetCat)) {
+      seenCategories.add(targetCat);
+      results.push({
+        hasMatch: true,
+        detectedCategory: targetCat,
+        slaDays: days,
+        matchedKeyword: rule.matchedLabel,
+        reason: `ตรวจพบคีย์เวิร์ด "${rule.matchedLabel}" ซึ่งเข้าข่ายหมวด SLA: "${targetCat}" (${days} วัน)`
+      });
+    }
   }
 
+  return results;
+}
+
+/**
+ * ฟังก์ชันตรวจจับหมวด SLA จากข้อความรายละเอียดงาน (ดึงรายการที่ตรงมากที่สุด 1 รายการ)
+ * @param {string} detailsText ข้อความรายละเอียดงาน (details)
+ * @param {Array<string>} availableSlas รายการ SLA จากฐานข้อมูล (เช่น ['ท่อสปริงเกอร์แตก|5', ...])
+ * @returns {Object} ผลลัพธ์การตรวจจับ
+ */
+export function detectSlaCategory(detailsText, availableSlas = []) {
+  const matches = detectAllSlaCategories(detailsText, availableSlas, 1);
+  if (matches.length > 0) {
+    return matches[0];
+  }
   return { hasMatch: false, detectedCategory: null, slaDays: null, matchedKeyword: null, reason: '' };
 }
 
