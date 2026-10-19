@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { detectSlaCategory, isSlaMismatch } from '../../utils/slaDetector.js';
+import { detectSlaCategory, detectAllSlaCategories, isSlaMismatch } from '../../utils/slaDetector.js';
+import SearchableSlaSelect from '../ui/SearchableSlaSelect.jsx';
 
 export default function TaskFormModal({
   isOpen,
@@ -17,13 +18,33 @@ export default function TaskFormModal({
   setShowStartReason,
   sRsn,
   setSReason,
+  frequentCategories = [],
   Icon
 }) {
-  const detectedSla = useMemo(() => {
-    return detectSlaCategory(taskForm.details, sets.slas || []);
+  const detectedSlas = useMemo(() => {
+    return detectAllSlaCategories(taskForm.details, sets.slas || [], 3);
   }, [taskForm.details, sets.slas]);
 
-  const hasMismatch = isSlaMismatch(detectedSla, taskForm.slaCategory);
+  const primaryDetectedSla = detectedSlas[0] || { hasMatch: false };
+  const hasMismatch = isSlaMismatch(primaryDetectedSla, taskForm.slaCategory);
+
+  const handleSlaSelect = (catName, days) => {
+    let newEndDate = taskForm.endDate;
+    const numDays = typeof days === 'number' ? days : parseInt(days, 10);
+    if (!isNaN(numDays) && numDays > 0) {
+      const sDate = new Date(taskForm.startDate || new Date());
+      sDate.setDate(sDate.getDate() + (numDays - 1));
+      const y = sDate.getFullYear();
+      const m = String(sDate.getMonth() + 1).padStart(2, '0');
+      const d = String(sDate.getDate()).padStart(2, '0');
+      newEndDate = `${y}-${m}-${d}`;
+    }
+    setTaskForm({
+      ...taskForm,
+      slaCategory: catName,
+      endDate: newEndDate
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -66,68 +87,78 @@ export default function TaskFormModal({
             className="w-full border rounded p-2 text-sm outline-none"
           />
 
-          {/* Smart SLA Keyword Detection Banner */}
-          {detectedSla.hasMatch && (
+          {/* Smart SLA Keyword Detection Banner & Multi-Match Chips */}
+          {detectedSlas.length > 0 && (
             hasMismatch ? (
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-lg p-2.5 flex items-start justify-between gap-2 animate-in fade-in duration-200">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-lg p-2.5 space-y-2 animate-in fade-in duration-200">
                 <div className="flex items-start gap-2 text-xs text-amber-950">
                   <span className="text-amber-600 text-sm mt-0.5">💡</span>
-                  <div>
-                    <strong className="font-bold block text-amber-900">ตรวจพบคีย์เวิร์ดเข้าข่ายหมวด SLA:</strong>
-                    <span className="font-semibold text-[#0f2e4a]">"{detectedSla.detectedCategory}" ({detectedSla.slaDays} วัน)</span>
-                    <div className="text-[10px] text-amber-700 mt-0.5">คำที่พบ: "{detectedSla.matchedKeyword}"</div>
+                  <div className="flex-1">
+                    <strong className="font-bold block text-amber-900">
+                      ตรวจพบคีย์เวิร์ดเข้าข่ายหมวด SLA ({detectedSlas.length} รายการที่ตรง):
+                    </strong>
+                    <div className="text-[10px] text-amber-700 mt-0.5">
+                      คำที่พบ: "{primaryDetectedSla.matchedKeyword}"
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sDate = new Date(taskForm.startDate || new Date());
-                    sDate.setDate(sDate.getDate() + (detectedSla.slaDays - 1));
-                    const newEndDate = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
-                    setTaskForm({
-                      ...taskForm,
-                      slaCategory: detectedSla.detectedCategory,
-                      endDate: newEndDate
-                    });
-                  }}
-                  className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] px-2.5 py-1 rounded shadow-xs transition cursor-pointer"
-                >
-                  เลือกหมวดนี้
-                </button>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {detectedSlas.map((match) => (
+                    <button
+                      key={match.detectedCategory}
+                      type="button"
+                      onClick={() => handleSlaSelect(match.detectedCategory, match.slaDays)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-amber-300 hover:border-amber-500 hover:bg-amber-100/70 text-amber-950 shadow-2xs transition cursor-pointer"
+                    >
+                      <span>⚡ {match.detectedCategory}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">
+                        {match.slaDays} วัน
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 text-xs text-emerald-800 animate-in fade-in duration-200">
                 <span>✅</span>
-                <span>หมวด SLA ตรงกับคีย์เวิร์ดหน้างาน: <strong>{detectedSla.detectedCategory} ({detectedSla.slaDays} วัน)</strong></span>
+                <span>หมวด SLA ตรงกับคีย์เวิร์ดหน้างาน: <strong>{primaryDetectedSla.detectedCategory} ({primaryDetectedSla.slaDays} วัน)</strong></span>
               </div>
             )
           )}
 
-          <div className="flex gap-2">
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 mb-1 block">
+              ผู้แจ้ง <span className="text-red-500">*</span>
+            </label>
             <select
               required
               value={taskForm.requester}
               onChange={(e) => setTaskForm({ ...taskForm, requester: e.target.value })}
-              className="w-1/2 border rounded p-2 text-sm"
+              className="w-full border rounded p-2 text-sm bg-white"
             >
               <option value="">ผู้แจ้ง...</option>
               {REQ_TYPES.map((r) => (
                 <option key={r}>{r}</option>
               ))}
             </select>
-            <select
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-gray-500">
+                หมวดงาน SLA / กรอบเวลาส่งมอบ <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[9px] text-gray-400">เลือกเพื่อคำนวณวันเสร็จอัตโนมัติ</span>
+            </div>
+            <SearchableSlaSelect
               value={taskForm.slaCategory}
-              onChange={(e) => setTaskForm({ ...taskForm, slaCategory: e.target.value })}
-              className="w-1/2 border rounded p-2 text-sm"
-            >
-              <option value="">--- กรุณาเลือกหมวด SLA ---</option>
-              <option value="งานทั่วไป (ไม่มี SLA)">งานทั่วไป (ไม่มี SLA)</option>
-              {(sets.slas || []).map((s) => (
-                <option key={s} value={getProjName(s)}>
-                  {getProjName(s)} ({getProjArea(s)} วัน)
-                </option>
-              ))}
-            </select>
+              onChange={handleSlaSelect}
+              slas={sets.slas || []}
+              getProjName={getProjName}
+              getProjArea={getProjArea}
+              frequentCategories={frequentCategories}
+              placeholder="--- ค้นหาหรือเลือกหมวด SLA ---"
+            />
           </div>
 
           <div>
@@ -209,8 +240,24 @@ export default function TaskFormModal({
                 required
                 value={taskForm.startDate}
                 onChange={(e) => {
-                  setTaskForm({ ...taskForm, startDate: e.target.value });
-                  if (eTask) setShowStartReason(e.target.value !== eTask.startDate);
+                  const newStartDate = e.target.value;
+                  let newEndDate = taskForm.endDate;
+                  if (taskForm.slaCategory) {
+                    const slaItem = (sets.slas || []).find((s) => getProjName(s) === taskForm.slaCategory);
+                    if (slaItem) {
+                      const days = parseInt(getProjArea(slaItem), 10);
+                      if (!isNaN(days) && days > 0 && newStartDate) {
+                        const sDate = new Date(newStartDate);
+                        sDate.setDate(sDate.getDate() + (days - 1));
+                        const y = sDate.getFullYear();
+                        const m = String(sDate.getMonth() + 1).padStart(2, '0');
+                        const d = String(sDate.getDate()).padStart(2, '0');
+                        newEndDate = `${y}-${m}-${d}`;
+                      }
+                    }
+                  }
+                  setTaskForm({ ...taskForm, startDate: newStartDate, endDate: newEndDate });
+                  if (eTask) setShowStartReason(newStartDate !== eTask.startDate);
                 }}
                 className="w-full border rounded p-2 text-sm"
               />

@@ -168,6 +168,20 @@ export default function App() {
   const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [showMoreMobileMenu, setShowMoreMobileMenu] = useState(false);
 
+  // Compute top 5 most frequently used SLA categories from task history for quick pins
+  const frequentSlaCategories = useMemo(() => {
+    const counts = {};
+    (tasks || []).forEach(t => {
+      const cat = (t.slaCategory || '').trim();
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    });
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a])
+      .slice(0, 5);
+  }, [tasks]);
+
   // --- Supervisor Mode State & Forensic Handshake (RBAC) ---
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [supervisorSession, setSupervisorSession] = useState(null);
@@ -2207,6 +2221,7 @@ export default function App() {
               setShowStartReason={setShowStartReason}
               sRsn={sRsn}
               setSReason={setSReason}
+              frequentCategories={frequentSlaCategories}
               Icon={Icon}
             />
 
