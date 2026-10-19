@@ -42,18 +42,18 @@
 - Modify: `src/utils/slaDetector.js:240-335`
 - Test: `scripts/test_sla_detector.cjs`
 
-- [ ] **Step 1: Write test script `scripts/test_sla_detector.cjs`**
+- [x] **Step 1: Write test script `scripts/test_sla_detector.cjs`**
   Verify that multi-match returns top 1-3 matching categories ranked by keyword relevance, while `detectSlaCategory` still returns the exact primary match.
-- [ ] **Step 2: Run test to observe failure**
+- [x] **Step 2: Run test to observe failure**
   Run `node scripts/test_sla_detector.cjs` to confirm `detectAllSlaCategories` is undefined.
-- [ ] **Step 3: Implement `detectAllSlaCategories` in `src/utils/slaDetector.js`**
+- [x] **Step 3: Implement `detectAllSlaCategories` in `src/utils/slaDetector.js`**
   Iterate through all matching `SLA_RULES`, filter negatives, resolve `slaDbMap` days, and return an array of up to `maxResults` unique matches:
   ```js
   export function detectAllSlaCategories(detailsText, availableSlas = [], maxResults = 3)
   ```
-- [ ] **Step 4: Re-run test to verify GREEN**
+- [x] **Step 4: Re-run test to verify GREEN**
   Run `node scripts/test_sla_detector.cjs` and verify all test assertions pass.
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
   `git commit -m "feat(sla): add detectAllSlaCategories for multi-match recommendation chips"`
 
 ---
@@ -63,21 +63,21 @@
 **Files:**
 - Create: `src/components/ui/SearchableSlaSelect.jsx`
 
-- [ ] **Step 1: Design `SearchableSlaSelect.jsx` interface and state**
+- [x] **Step 1: Design `SearchableSlaSelect.jsx` interface and state**
   - Props: `value`, `onChange`, `slas`, `getProjName`, `getProjArea`, `frequentCategories`, `placeholder`, `disabled`.
   - State: `isOpen`, `searchTerm`, `highlightedIndex`.
-- [ ] **Step 2: Implement search filtering and keyboard navigation**
+- [x] **Step 2: Implement search filtering and keyboard navigation**
   - Case-insensitive, whitespace-trimmed search matching both category name and days.
   - Escape closes popover; Enter selects highlighted item.
   - Outside click listener to dismiss popover cleanly.
-- [ ] **Step 3: Implement Quick Pins (หมวดใช้งานบ่อย)**
+- [x] **Step 3: Implement Quick Pins (หมวดใช้งานบ่อย)**
   - Render top 3-5 frequent category chips directly beneath the search input for one-click access.
-- [ ] **Step 4: Implement clean UI styling with days badges**
+- [x] **Step 4: Implement clean UI styling with days badges**
   - Render badge e.g. `[5 วัน]` in amber/blue badge; "งานทั่วไป (ไม่มี SLA)" in gray badge.
   - Show active checkmark for currently selected item.
-- [ ] **Step 5: Verify build with test import**
+- [x] **Step 5: Verify build with test import**
   Run `cmd /c "npm run build"` to verify component syntax and bundle integration.
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
   `git commit -m "feat(ui): add SearchableSlaSelect combobox with live search and frequent pins"`
 
 ---
@@ -88,9 +88,9 @@
 - Modify: `src/components/modals/TaskFormModal.jsx:20-140`
 - Modify: `src/App.jsx:160-200, 770-830`
 
-- [ ] **Step 1: Compute dynamic frequent categories in `App.jsx` or pass `tasks` to modal**
+- [x] **Step 1: Compute dynamic frequent categories in `App.jsx` or pass `tasks` to modal**
   Derive top 5 most frequent `t.slaCategory` from `tasks` history (excluding blanks), fallback to standard pins if empty.
-- [ ] **Step 2: Replace native `<select>` in `TaskFormModal.jsx` with `<SearchableSlaSelect>`**
+- [x] **Step 2: Replace native `<select>` in `TaskFormModal.jsx` with `<SearchableSlaSelect>`**
   Wire `value={taskForm.slaCategory}` and `onChange={(cat, days) => ...}`.
   Auto-calculate `endDate` when an SLA with valid days is selected:
   ```js
@@ -104,14 +104,14 @@
     setTaskForm({ ...taskForm, slaCategory: catName, endDate: newEndDate });
   };
   ```
-- [ ] **Step 3: Enhance Smart SLA Auto-Suggest section with Multi-Recommendation Chips**
+- [x] **Step 3: Enhance Smart SLA Auto-Suggest section with Multi-Recommendation Chips**
   Use `detectAllSlaCategories(taskForm.details, sets.slas || [])`.
   If multiple categories match, render them as clickable recommendation chips right under details textarea:
   `💡 แนะนำจากรายละเอียดงาน: [⚡ ท่อสปริงเกอร์แตก (5 วัน)] [💧 หัวสปริงเกอร์แตก (3 วัน)]`
   Clicking any chip immediately selects it and calculates `endDate`.
-- [ ] **Step 4: Keep SLA Mismatch Warning Banner intact**
+- [x] **Step 4: Keep SLA Mismatch Warning Banner intact**
   Preserve warning banner when the selected category contradicts the detected keyword.
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
   `git commit -m "feat(task-form): integrate SearchableSlaSelect and multi-suggestion chips into TaskFormModal"`
 
 ---
@@ -122,9 +122,9 @@
 - Verify: Full manual simulation of opening a task, searching SLA, clicking suggestion chips, and testing form submission.
 - Build: `cmd /c "npm run build"`
 
-- [ ] **Step 1: Run production build verification**
+- [x] **Step 1: Run production build verification**
   Execute `cmd /c "npm run build"` and verify 0 errors.
-- [ ] **Step 2: Run test suite**
+- [x] **Step 2: Run test suite**
   Execute `node scripts/test_sla_detector.cjs` and verify clean execution.
-- [ ] **Step 3: Verify git status and commit final adjustments**
+- [x] **Step 3: Verify git status and commit final adjustments**
   `git push origin main`
