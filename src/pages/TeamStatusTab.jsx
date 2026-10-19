@@ -418,7 +418,7 @@ export default function TeamStatusTab({
         </span>
       );
 
-      const outerSummary = analyzeOuterLayer(u, statsObj);
+      const outerSummary = analyzeOuterLayer(u, statsObj, { telemetry });
       const outers = [
         { k: 'cx', n: 'Customer Exp.' },
         { k: 'tech', n: 'Tech. Expertise' },
@@ -428,6 +428,8 @@ export default function TeamStatusTab({
         { k: 'innovation', n: 'Innovation' }
       ].map(o => ({
         ...o,
+        penalty: outerSummary.penaltiesByAxis?.[o.k] || 0,
+        rawVal: outerSummary.rawValues?.[o.k],
         finalVal: outerSummary.isAssessed && outerSummary.actualValues[o.k] !== null && outerSummary.actualValues[o.k] !== undefined
           ? outerSummary.actualValues[o.k]
           : null
@@ -917,7 +919,7 @@ export default function TeamStatusTab({
 
                 {/* The Outer Layer Performance Intelligence */}
                 {(() => {
-                  const outerSummary = analyzeOuterLayer(u, statsObj);
+                  const outerSummary = analyzeOuterLayer(u, statsObj, { telemetry });
                   if (!outerSummary.isAssessed) {
                     return (
                       <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2.5">
@@ -1060,19 +1062,29 @@ export default function TeamStatusTab({
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-0.5">
                         {outers.map(o => {
                           const isHigh = o.finalVal >= 8;
+                          const hasPenalty = (o.penalty || 0) > 0;
                           const def = OUTER_DEFINITIONS[o.k] || {};
                           return (
                             <div 
                               key={o.k} 
-                              className={`rounded-md p-1.5 flex flex-col backdrop-blur-md border transition-all duration-200 ${
-                                isHigh 
+                              className={`rounded-md p-1.5 flex flex-col backdrop-blur-md border transition-all duration-200 relative ${
+                                hasPenalty
+                                  ? 'bg-rose-950/25 border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
+                                  : isHigh 
                                   ? 'bg-[#bca374]/15 border-[#bca374]/40 shadow-[0_0_10px_rgba(188,163,116,0.15)]' 
                                   : 'bg-white/5 border-white/10 hover:bg-white/10'
                               }`}
-                              title={def.desc || o.n}
+                              title={hasPenalty ? `${def.desc || o.n} (คะแนนประเมิน ${o.rawVal} - แต้มหักวินัยห้องตัดสิน ${o.penalty})` : (def.desc || o.n)}
                             >
-                              <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{def.short || o.n}</span>
-                              <span className={`font-black text-[11px] sm:text-xs leading-tight mt-0.5 ${isHigh ? 'text-[#e6d0a7]' : 'text-white'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{def.short || o.n}</span>
+                                {hasPenalty && (
+                                  <span className="text-[7px] font-bold px-1 rounded bg-rose-950/80 text-rose-300 border border-rose-500/50">
+                                    -{o.penalty}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`font-black text-[11px] sm:text-xs leading-tight mt-0.5 ${hasPenalty ? 'text-rose-200' : isHigh ? 'text-[#e6d0a7]' : 'text-white'}`}>
                                 {o.finalVal} <span className="text-slate-500 text-[8px] font-normal">/10</span>
                               </span>
                             </div>
@@ -1235,7 +1247,7 @@ export default function TeamStatusTab({
                     </div>
                     {(() => {
                       const m = analyzeRadarMorphology(statsObj);
-                      const o = analyzeOuterLayer(u, statsObj);
+                      const o = analyzeOuterLayer(u, statsObj, { telemetry });
                       return (
                         <div className="w-full mt-2 text-left space-y-1.5 text-[10px]">
                           <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">
@@ -2254,7 +2266,7 @@ function renderAnalysis() {
       const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(analysis.archetypeKey, mainStyle);
 
       const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
-      const outerSummary = analyzeOuterLayer(teamForm, statsObj);
+      const outerSummary = analyzeOuterLayer(teamForm, statsObj, { telemetry });
       const businessRisk = calculateBusinessRiskIndex(u, telemetry, outerSummary);
       const succession = calculateSuccessionReadiness(u, analysis, outerSummary);
 
@@ -2959,6 +2971,8 @@ function renderAnalysis() {
                    const isOverride = u[k] !== null && u[k] !== undefined && u[k] !== autoVal;
                    const gap = actualVal - autoVal;
                    const rubricText = getRubricText(k, actualVal);
+                   const penalty = outerSummary.penaltiesByAxis?.[k] || 0;
+                   const netVal = Math.max(1, Math.min(10, actualVal - penalty));
                    
                    return (
                      <div key={k} className={`p-3 sm:p-4 rounded-xl border transition-all duration-200 ${isOverride ? 'border-indigo-300 bg-indigo-50/30 shadow-sm' : 'border-slate-200 bg-white shadow-sm'}`}>
@@ -3028,6 +3042,19 @@ function renderAnalysis() {
                            <span>{rubricText}</span>
                         </div>
 
+                        {/* Audit Penalty Notice */}
+                        {penalty > 0 && (
+                           <div className="mt-1.5 text-[9.5px] text-rose-800 bg-rose-50/90 p-2 rounded-lg font-medium leading-tight border border-rose-200 flex items-center justify-between shadow-2xs">
+                              <span className="flex items-center gap-1">
+                                 <span>⚠️</span>
+                                 <span>มีแต้มหักวินัยจากห้องตัดสิน (Audit Penalty): -{penalty} แต้ม</span>
+                              </span>
+                              <span className="font-bold text-rose-900 bg-rose-200/80 px-2 py-0.5 rounded border border-rose-300">
+                                 คะแนนสุทธิ: {netVal}/10
+                              </span>
+                           </div>
+                        )}
+
                         {/* Gap Warning */}
                         {gap <= -2 && (
                            <div className="mt-1.5 text-[9.5px] text-rose-700 bg-rose-50 p-1.5 rounded font-medium leading-tight border border-rose-200">
@@ -3046,7 +3073,7 @@ function renderAnalysis() {
 
               {/* Outer Layer Executive Performance Summary */}
               {(() => {
-                const outerSummary = analyzeOuterLayer(teamForm, statsObj);
+                const outerSummary = analyzeOuterLayer(teamForm, statsObj, { telemetry });
                 if (!outerSummary.isAssessed) {
                   return (
                     <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-dashed border-slate-300 text-center space-y-2">
@@ -3260,6 +3287,8 @@ function renderAnalysis() {
           onClose={() => setStaffReportModalOpen(false)} 
           staff={teamForm?.id ? teamForm : selTeam} 
           sets={sets} 
+          tasks={tasks}
+          evalMonth={evalMonth}
           Icon={Icon} 
         />
         <AITalentAdvisorModal
@@ -3267,6 +3296,8 @@ function renderAnalysis() {
           onClose={() => setAiAdvisorModalOpen(false)}
           staff={teamForm?.id ? teamForm : selTeam}
           sets={sets}
+          tasks={tasks}
+          evalMonth={evalMonth}
           archetypesData={archetypesData}
           initialViewMode={talentViewMode}
         />

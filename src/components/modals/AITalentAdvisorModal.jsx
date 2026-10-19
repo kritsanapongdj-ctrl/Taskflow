@@ -7,7 +7,8 @@ import {
   getRoleTargetProfile, 
   analyzeOuterLayer,
   getStatDisplay,
-  getCorporateArchetypePersona
+  getCorporateArchetypePersona,
+  aggregateStaffTaskTelemetry
 } from '../../utils/archetypeEngine';
 
 const Icon = ({ name, ...props }) => {
@@ -16,7 +17,17 @@ const Icon = ({ name, ...props }) => {
   return <LucideIcon {...props} />;
 };
 
-export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}, archetypesData, initialViewMode = 'rpg' }) {
+export default function AITalentAdvisorModal({ 
+  isOpen, 
+  onClose, 
+  staff, 
+  sets = {}, 
+  tasks = [],
+  evalMonth = '',
+  telemetry: propTelemetry = null,
+  archetypesData, 
+  initialViewMode = 'rpg' 
+}) {
   const [loading, setLoading] = useState(false);
   const [diagnostic, setDiagnostic] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -54,7 +65,8 @@ export default function AITalentAdvisorModal({ isOpen, onClose, staff, sets = {}
           sen: Number(staff.sen) || 5
         };
 
-        const outerSummary = analyzeOuterLayer(staff, stats);
+        const telemetry = propTelemetry || (staff && tasks && tasks.length ? aggregateStaffTaskTelemetry(staff, tasks, sets, evalMonth) : null);
+        const outerSummary = analyzeOuterLayer(staff, stats, { telemetry });
         const featurePacket = {
           subInsights: heuristic?.subInsights || archAnalysis.subInsights,
           statInteractions: archAnalysis.statInteractions,

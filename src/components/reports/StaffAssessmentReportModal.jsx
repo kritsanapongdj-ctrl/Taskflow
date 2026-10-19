@@ -8,7 +8,8 @@ import {
   analyzeArchetype, 
   getArchetypeIdentity,
   UNIVERSAL_BASELINE,
-  getRoleTargetProfile
+  getRoleTargetProfile,
+  aggregateStaffTaskTelemetry
 } from '../../utils/archetypeEngine';
 
 export default function StaffAssessmentReportModal({
@@ -16,6 +17,9 @@ export default function StaffAssessmentReportModal({
   onClose,
   staff,
   sets = {},
+  tasks = [],
+  evalMonth = '',
+  telemetry: propTelemetry = null,
   Icon
 }) {
   const reportRef = useRef(null);
@@ -48,8 +52,10 @@ export default function StaffAssessmentReportModal({
   const styleDesc = archAnalysis.styleDesc || '';
   const weaknessText = archAnalysis.dynamicWeakness || '';
 
+  const telemetry = propTelemetry || (staff && tasks && tasks.length ? aggregateStaffTaskTelemetry(staff, tasks, sets, evalMonth) : null);
+
   // Outer Layer & 9-Box analysis
-  const outerSummary = analyzeOuterLayer(staff, statsObj);
+  const outerSummary = analyzeOuterLayer(staff, statsObj, { telemetry });
 
   const handlePrint = () => {
     document.body.classList.add('printing-staff-sheet');
@@ -417,29 +423,45 @@ export default function StaffAssessmentReportModal({
                   {/* 6 Outer Axes Grid */}
                   <div className="grid grid-cols-3 gap-1.5 text-[8.5px]">
                     {[
-                      { key: 'cx', name: 'รับมือลูกบ้าน & เจรจา', val: outerSummary.actualValues.cx },
-                      { key: 'tech', name: 'วินิจฉัยเชิงช่าง & ระบบ', val: outerSummary.actualValues.tech },
-                      { key: 'sla', name: 'วินัยเวลา & ปิดงาน SLA', val: outerSummary.actualValues.sla },
-                      { key: 'crisis', name: 'ระงับเหตุฉุกเฉินโครงการ', val: outerSummary.actualValues.crisis },
-                      { key: 'resource', name: 'คุมงบ & ผู้รับเหมา/อะไหล่', val: outerSummary.actualValues.resource },
-                      { key: 'innovation', name: 'งานเชิงรุก PM & ดิจิทัล', val: outerSummary.actualValues.innovation }
-                    ].map((m) => (
-                      <div key={m.key} className="p-1.5 rounded-lg bg-white border border-slate-200 flex flex-col justify-between">
-                        <div className="text-[8px] font-medium text-slate-500 truncate mb-0.5">
-                          {m.name}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="w-10 h-1 bg-slate-100 rounded-full overflow-hidden mr-1">
-                            <div
-                              className="h-full bg-indigo-500 rounded-full"
-                              style={{ width: `${(m.val / 10) * 100}%` }}
-                            ></div>
+                      { key: 'cx', name: 'รับมือลูกบ้าน & เจรจา', val: outerSummary.actualValues.cx, penalty: outerSummary.penaltiesByAxis?.cx || 0 },
+                      { key: 'tech', name: 'วินิจฉัยเชิงช่าง & ระบบ', val: outerSummary.actualValues.tech, penalty: outerSummary.penaltiesByAxis?.tech || 0 },
+                      { key: 'sla', name: 'วินัยเวลา & ปิดงาน SLA', val: outerSummary.actualValues.sla, penalty: outerSummary.penaltiesByAxis?.sla || 0 },
+                      { key: 'crisis', name: 'ระงับเหตุฉุกเฉินโครงการ', val: outerSummary.actualValues.crisis, penalty: outerSummary.penaltiesByAxis?.crisis || 0 },
+                      { key: 'resource', name: 'คุมงบ & ผู้รับเหมา/อะไหล่', val: outerSummary.actualValues.resource, penalty: outerSummary.penaltiesByAxis?.resource || 0 },
+                      { key: 'innovation', name: 'งานเชิงรุก PM & ดิจิทัล', val: outerSummary.actualValues.innovation, penalty: outerSummary.penaltiesByAxis?.innovation || 0 }
+                    ].map((m) => {
+                      const hasPenalty = m.penalty > 0;
+                      return (
+                        <div key={m.key} className={`p-1.5 rounded-lg bg-white border flex flex-col justify-between ${hasPenalty ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'}`}>
+                          <div className="flex items-center justify-between text-[8px] font-medium text-slate-500 truncate mb-0.5">
+                            <span className="truncate">{m.name}</span>
+                            {hasPenalty && (
+                              <span className="text-[7px] font-bold text-rose-700 bg-rose-100 px-1 rounded border border-rose-200 shrink-0 ml-1">
+                                -{m.penalty}
+                              </span>
+                            )}
                           </div>
-                          <span className="font-bold text-[#0f2e4a] text-[9px]">{m.val}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="w-10 h-1 bg-slate-100 rounded-full overflow-hidden mr-1">
+                              <div
+                                className={`h-full ${hasPenalty ? 'bg-rose-500' : 'bg-indigo-500'} rounded-full`}
+                                style={{ width: `${(m.val / 10) * 100}%` }}
+                              ></div>
+                            </div>
+                            <span className={`font-bold text-[9px] ${hasPenalty ? 'text-rose-700' : 'text-[#0f2e4a]'}`}>{m.val}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
+
+                  {outerSummary.totalPenalties > 0 && (
+                    <div className="p-1.5 rounded-lg bg-rose-50 border border-rose-200 text-[8px] text-rose-900 flex items-center justify-between">
+                      <span className="flex items-center gap-1 font-medium">
+                        <span>⚠️</span> ผลคะแนนสะท้อนการหักแต้มวินัยงาน (Decision Room Audit): รวม -{outerSummary.totalPenalties} แต้ม
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Box 4: HOW vs WHAT Gap & 9-Box Grid */}

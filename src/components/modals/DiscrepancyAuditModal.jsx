@@ -116,11 +116,11 @@ export default function DiscrepancyAuditModal({
 
       const timeline = Array.isArray(updatedTask.timeline) ? [...updatedTask.timeline] : [];
       const roleLabel = auditRole === 'foreman' 
-        ? '🛠️ Foreman (100%)' 
+        ? '🛠️ Foreman (รับผิดชอบเต็ม 100%)' 
         : auditRole === 'admin' 
-        ? '📋 Admin (100%)' 
+        ? '📋 Admin (รับผิดชอบเต็ม 100%)' 
         : auditRole === 'waived' 
-        ? '🛡️ ยกเว้น (Waived)' 
+        ? '🛡️ ยกเว้น (Waived - เหตุสุดวิสัย)' 
         : '🤝 รับผิดชอบร่วม (Shared)';
 
       timeline.push({
@@ -317,8 +317,8 @@ export default function DiscrepancyAuditModal({
                               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                               : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
                           }`}>
-                            {attr.role === 'foreman' && '🛠️ Foreman (100%)'}
-                            {attr.role === 'admin' && '📋 Admin (100%)'}
+                            {attr.role === 'foreman' && '🛠️ Foreman (รับผิดชอบ 100%)'}
+                            {attr.role === 'admin' && '📋 Admin (รับผิดชอบ 100%)'}
                             {attr.role === 'shared' && '🤝 ร่วมกัน (Shared)'}
                             {attr.role === 'waived' && '🛡️ ได้รับการยกเว้น (Waived)'}
                             {!attr.role && '⏳ ยังไม่ระบุ'}
@@ -380,10 +380,10 @@ export default function DiscrepancyAuditModal({
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[
-                            { id: 'foreman', label: '🛠️ Foreman', sub: 'ตัดคะแนนโฟร์แมน 100%' },
-                            { id: 'admin', label: '📋 Admin', sub: 'ตัดคะแนนแอดมิน 100%' },
-                            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งสัดส่วนทั้งคู่' },
-                            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย ไม่หักคะแนน' }
+                            { id: 'foreman', label: '🛠️ Foreman', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนโฟร์แมน)' },
+                            { id: 'admin', label: '📋 Admin', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนแอดมิน)' },
+                            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งสัดส่วนรับผิดชอบคู่หู' },
+                            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย (ไม่หักคะแนน)' }
                           ].map(opt => (
                             <button
                               key={opt.id}

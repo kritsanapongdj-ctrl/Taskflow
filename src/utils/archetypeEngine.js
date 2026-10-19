@@ -841,7 +841,7 @@ export const analyzeSubCriteria = (staff, rubrics = rubricsData) => {
   return subInsights;
 };
 
-export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesData = defaultArchetypesData, roleInput = null) => {
+export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesData = defaultArchetypesData, roleInput = null, options = {}) => {
   const analysis = analyzeArchetype(staff, sets, archetypesData, roleInput);
   if (!analysis) return null;
 
@@ -868,7 +868,7 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
     sen: Number(staff.sen) || 5
   };
 
-  const outerAnalysis = analyzeOuterLayer(staff, statsObj);
+  const outerAnalysis = analyzeOuterLayer(staff, statsObj, options?.telemetry ? options : { telemetry: staff?.telemetry });
 
   const staffName = staff.name || 'พนักงาน';
   const roleName = roleProfile.name || 'เจ้าหน้าที่ปฏิบัติการ';
@@ -1232,9 +1232,50 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
 
   const howLevel = getGridLevel(avgInner);
 
+  // Extract penalties from options or u (Live Auto-Deduct from Decision Room)
+  const penalties = options.penalties || options.telemetry?.penalties || u.telemetry?.penalties || [];
+  const penaltiesByAxis = {
+    cx: 0,
+    tech: 0,
+    sla: 0,
+    crisis: 0,
+    resource: 0,
+    innovation: 0
+  };
+  penalties.forEach(p => {
+    if (p.axis && penaltiesByAxis[p.axis] !== undefined) {
+      penaltiesByAxis[p.axis] += (Number(p.points) || 0);
+    }
+  });
+
+  const totalPenalties = Object.values(penaltiesByAxis).reduce((a, b) => a + b, 0);
+
+  // Base raw values assessed by managers or default neutral baseline
+  const rawValues = {
+    cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : 5,
+    tech: (u.tech !== null && u.tech !== undefined) ? Number(u.tech) : 5,
+    sla: (u.sla !== null && u.sla !== undefined) ? Number(u.sla) : 5,
+    crisis: (u.crisis !== null && u.crisis !== undefined) ? Number(u.crisis) : 5,
+    resource: (u.resource !== null && u.resource !== undefined) ? Number(u.resource) : 5,
+    innovation: (u.innovation !== null && u.innovation !== undefined) ? Number(u.innovation) : 5
+  };
+
+  // Pure decoupled WHAT assessment values with live penalty deduction (bounded between 1.0 and 10.0)
+  const actualValues = {
+    cx: Math.max(1, Math.min(10, Math.round((rawValues.cx - penaltiesByAxis.cx) * 10) / 10)),
+    tech: Math.max(1, Math.min(10, Math.round((rawValues.tech - penaltiesByAxis.tech) * 10) / 10)),
+    sla: Math.max(1, Math.min(10, Math.round((rawValues.sla - penaltiesByAxis.sla) * 10) / 10)),
+    crisis: Math.max(1, Math.min(10, Math.round((rawValues.crisis - penaltiesByAxis.crisis) * 10) / 10)),
+    resource: Math.max(1, Math.min(10, Math.round((rawValues.resource - penaltiesByAxis.resource) * 10) / 10)),
+    innovation: Math.max(1, Math.min(10, Math.round((rawValues.innovation - penaltiesByAxis.innovation) * 10) / 10))
+  };
+
   if (!isAssessed) {
     return {
       isAssessed: false,
+      rawValues,
+      penaltiesByAxis,
+      totalPenalties,
       actualValues: {
         cx: null,
         tech: null,
@@ -1273,16 +1314,6 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
       pairingRecommendation: 'รอการประเมินสมรรถนะหน้างานเพื่อวิเคราะห์การจับคู่คู่หู'
     };
   }
-
-  // Pure decoupled WHAT assessment values: Explicit field scores with 5 as neutral baseline
-  const actualValues = {
-    cx: (u.cx !== null && u.cx !== undefined) ? Number(u.cx) : 5,
-    tech: (u.tech !== null && u.tech !== undefined) ? Number(u.tech) : 5,
-    sla: (u.sla !== null && u.sla !== undefined) ? Number(u.sla) : 5,
-    crisis: (u.crisis !== null && u.crisis !== undefined) ? Number(u.crisis) : 5,
-    resource: (u.resource !== null && u.resource !== undefined) ? Number(u.resource) : 5,
-    innovation: (u.innovation !== null && u.innovation !== undefined) ? Number(u.innovation) : 5
-  };
 
   const autoValues = {
     cx: Math.round((con + sen) / 2),
@@ -1697,8 +1728,26 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
     };
   }).filter(g => g.isSignificantGap);
 
+  // 5. Operational Audit Penalty Alert (Live connection from Decision Room)
+  if (totalPenalties > 0) {
+    const penaltySummaryText = Object.entries(penaltiesByAxis)
+      .filter(([_, pts]) => pts > 0)
+      .map(([axisKey, pts]) => `${axisKey.toUpperCase()} -${pts}`)
+      .join(', ');
+    riskAlerts.unshift({
+      type: 'audit_penalty',
+      level: 'danger',
+      title: '🚨 คะแนนสมรรถนะถูกปรับลดจากผลการตัดสินห้องตัดสิน (Audit Penalties)',
+      desc: `พนักงานมีแต้มหักสะสมรวม ${totalPenalties} แต้ม (ส่งผลกระทบต่อ: ${penaltySummaryText})`,
+      advice: 'ตรวจสอบรายละเอียดงานผิดเงื่อนไขในห้องตัดสิน และเร่งรัดแก้ไขข้อบกพร่องหน้างาน'
+    });
+  }
+
   return {
     isAssessed: true,
+    rawValues,
+    penaltiesByAxis,
+    totalPenalties,
     autoValues,
     actualValues,
     avgInner: Math.round(avgInner * 10) / 10,
@@ -2551,28 +2600,28 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     if (lateCompleted.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(3, Math.ceil(lateCompleted.length * 0.5)),
+        points: Math.min(5, lateCompleted.length),
         reason: `จบงานช้ากว่ากำหนดจำนวน ${lateCompleted.length} งาน (หักคะแนน SLA Speed)`
       });
     }
     if (retroactiveStartPostpones.length > 0) {
       penalties.push({
         axis: 'tech',
-        points: Math.min(2, retroactiveStartPostpones.length),
+        points: Math.min(4, retroactiveStartPostpones.length),
         reason: `ขอเลื่อนวันเริ่มย้อนหลังจำนวน ${retroactiveStartPostpones.length} ครั้ง (หักคะแนนการวางแผนเชิงรุก)`
       });
     }
     if (retroactiveEndPostpones.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(2, retroactiveEndPostpones.length),
+        points: Math.min(4, retroactiveEndPostpones.length),
         reason: `ขอเลื่อนวันจบหลังเลยกำหนดเดิมเกิน 1 วัน จำนวน ${retroactiveEndPostpones.length} ครั้ง (หักคะแนนวินัยเวลา)`
       });
     }
     if (lateWOForemanAttributed.length > 0) {
       penalties.push({
         axis: 'tech',
-        points: Math.min(2, lateWOForemanAttributed.length),
+        points: Math.min(4, lateWOForemanAttributed.length),
         reason: `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา จำนวน ${lateWOForemanAttributed.length} รายการ (หักคะแนนความเร็วทำราคา)`
       });
     }
@@ -2581,14 +2630,14 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     if (activeUnwaivedStale.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(3, Math.ceil(activeUnwaivedStale.length * 0.7)),
+        points: Math.min(5, activeUnwaivedStale.length),
         reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 70% ด้านการขับเคลื่อนงาน)`
       });
     }
     if (penaltySparePartsTasks.length > 0) {
       penalties.push({
         axis: 'crisis',
-        points: Math.min(4, penaltySparePartsTasks.length * 2),
+        points: Math.min(6, penaltySparePartsTasks.length * 2),
         reason: `🚨 ถูกผู้ดูแลลงโทษสถานะ "ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)" จำนวน ${penaltySparePartsTasks.length} รายการ (หักคะแนนวินัยวิกฤต)`
       });
       alerts.push({
@@ -2609,14 +2658,14 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     if (lateCompletedAdminAttributed.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(2, lateCompletedAdminAttributed.length),
+        points: Math.min(4, lateCompletedAdminAttributed.length),
         reason: `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร จำนวน ${lateCompletedAdminAttributed.length} งาน (คำวินิจฉัยผู้ดูแล)`
       });
     }
     if (lateWOAdminAttributed.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(3, Math.ceil(lateWOAdminAttributed.length * 0.5)),
+        points: Math.min(5, lateWOAdminAttributed.length),
         reason: `ออกใบงานช้าเกิน 3 วัน SLA จำนวน ${lateWOAdminAttributed.length} รายการ (หักคะแนนความเร็วระบบเอกสาร)`
       });
     }
@@ -2625,21 +2674,21 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     if (activeUnwaivedStale.length > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(2, Math.ceil(activeUnwaivedStale.length * 0.3)),
+        points: Math.min(3, activeUnwaivedStale.length),
         reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 30% ด้านการติดตามระบบ)`
       });
     }
     if (duplicateCancellations.length > 0) {
       penalties.push({
         axis: 'innovation',
-        points: Math.min(2, duplicateCancellations.length),
+        points: Math.min(4, duplicateCancellations.length),
         reason: `เปิดใบงานซ้ำซ้อนจนต้องยกเลิกจำนวน ${duplicateCancellations.length} รายการ (หักคะแนนความถูกต้องของระบบ)`
       });
     }
     if (billingViolations.length > 0) {
       penalties.push({
         axis: 'resource',
-        points: Math.min(3, Math.ceil(billingViolations.length * 0.5)),
+        points: Math.min(5, billingViolations.length),
         reason: `ไม่ส่งเบิกงานที่จบก่อนวันที่ 15 ภายในรอบเดือน จำนวน ${billingViolations.length} รายการ (หักคะแนนวินัยการเงิน)`
       });
       alerts.push({
