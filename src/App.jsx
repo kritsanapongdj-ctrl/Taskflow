@@ -514,7 +514,8 @@ export default function App() {
     const staffEntries = (sets.emails || []).filter(e => {
       const parts = e.split('|');
       const eName = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
-      return eName === clean;
+      const splitNames = eName.split(/[,/]/).map(x => x.trim());
+      return eName === clean || splitNames.includes(clean);
     });
     return staffEntries.flatMap(e => (e.split('|')[1] || '').split(',').map(p => p.trim())).filter(Boolean);
   };

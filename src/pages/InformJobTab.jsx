@@ -141,27 +141,43 @@ export default function InformJobTab({
               }
               className="border border-slate-200 focus:border-[#7A1C28] focus:ring-2 focus:ring-[#7A1C28]/15 rounded-xl px-3.5 py-2.5 w-full text-xs outline-none bg-slate-50/60 shadow-2xs"
             >
-              <option value="">ทุกเจ้าหน้าที่ (ไม่กรอง)</option>
+              <option value="">ทุกเจ้าหน้าที่ LH (ไม่กรอง)</option>
               {Array.from(
-                new Set([
-                  ...(sets.emails || []).flatMap(e => {
+                new Set(
+                  (sets.emails || []).flatMap(e => {
                     const parts = e.split('|');
                     const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
                     return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
-                  }),
-                  ...(sets.staffStats || []).flatMap(s => {
-                    const rawName = (s.name || '').trim();
-                    return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
                   })
-                ])
+                )
               )
                 .filter(Boolean)
                 .sort((a, b) => a.localeCompare('th'))
-                .map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
+                .map((n) => {
+                  const assignedCount = (sets.emails || []).reduce((acc, e) => {
+                    const parts = e.split('|');
+                    const rawName = (parts[2] || parts[0].split('@')[0] || '').trim().toLowerCase();
+                    const names = rawName.split(/[,/]/).map(x => x.trim());
+                    if (names.includes(n.toLowerCase())) {
+                      const projs = (parts[1] || '').split(',').map(p => p.trim()).filter(Boolean);
+                      if (projs.includes('ทั้งหมด') || projs.includes('ทุกโครงการ')) return 'ทุกโครงการ';
+                      return typeof acc === 'number' ? acc + projs.length : acc;
+                    }
+                    return acc;
+                  }, 0);
+
+                  const countLabel = assignedCount === 'ทุกโครงการ' 
+                    ? '(ทุกโครงการ)' 
+                    : typeof assignedCount === 'number' && assignedCount > 0 
+                    ? `(${assignedCount} โครงการ)` 
+                    : '';
+
+                  return (
+                    <option key={n} value={n}>
+                      {n} {countLabel}
+                    </option>
+                  );
+                })}
             </select>
           </div>
           <div>
