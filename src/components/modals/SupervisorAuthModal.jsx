@@ -6,6 +6,8 @@ export default function SupervisorAuthModal({
   onClose,
   onAuthenticated,
   authorizedStaff = [],
+  sets = {},
+  defaultSupervisor = '',
   Icon
 }) {
   const [pin, setPin] = useState('');
@@ -15,19 +17,40 @@ export default function SupervisorAuthModal({
   const [coords, setCoords] = useState(null);
   const [authError, setAuthError] = useState(null);
 
-  // Auto-select first supervisor if available
+  // Derive list of authorized supervisors strictly from email recipients (LH Officers)
+  const staffList = React.useMemo(() => {
+    if (sets && Array.isArray(sets.emails) && sets.emails.length > 0) {
+      const emailStaff = Array.from(
+        new Set(
+          sets.emails.flatMap(e => {
+            const parts = e.split('|');
+            const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+            return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+          })
+        )
+      ).filter(Boolean).sort((a, b) => a.localeCompare('th'));
+      if (emailStaff.length > 0) return emailStaff;
+    }
+    return authorizedStaff;
+  }, [authorizedStaff, sets?.emails]);
+
+  // Auto-select supervisor if available
   useEffect(() => {
     if (isOpen) {
       setPin('');
       setAuthError(null);
       setGpsError(null);
-      if (authorizedStaff.length > 0 && !selectedSupervisor) {
-        setSelectedSupervisor(authorizedStaff[0]);
+      if (staffList.length > 0) {
+        if (defaultSupervisor && staffList.includes(defaultSupervisor)) {
+          setSelectedSupervisor(defaultSupervisor);
+        } else if (!selectedSupervisor || !staffList.includes(selectedSupervisor)) {
+          setSelectedSupervisor(staffList[0]);
+        }
       }
       // Trigger GPS detection when modal opens
       requestGeolocation();
     }
-  }, [isOpen, authorizedStaff]);
+  }, [isOpen, staffList, defaultSupervisor]);
 
   const requestGeolocation = () => {
     if (!navigator.geolocation) {
@@ -165,7 +188,7 @@ export default function SupervisorAuthModal({
               required
             >
               <option value="">-- กรุณาเลือกชื่อผู้ดูแล --</option>
-              {authorizedStaff.map((name) => (
+              {staffList.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>

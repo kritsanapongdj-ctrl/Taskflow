@@ -644,6 +644,15 @@ export default function App() {
     return Array.from(new Set([...fromEmails, ...fromStats])).filter(Boolean).sort((a, b) => a.localeCompare('th'));
   }, [sets.emails, sets.staffStats]);
 
+  const emailStaffNames = useMemo(() => {
+    const fromEmails = (sets.emails || []).flatMap(e => {
+      const parts = e.split('|');
+      const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+    });
+    return Array.from(new Set(fromEmails)).filter(Boolean).sort((a, b) => a.localeCompare('th'));
+  }, [sets.emails]);
+
   const availableRoles = useMemo(() => {
     const rolesMap = new Map();
     allStaffNames.forEach(name => {
@@ -2243,7 +2252,9 @@ export default function App() {
               isOpen={supervisorAuthModalOpen}
               onClose={() => setSupervisorAuthModalOpen(false)}
               onAuthenticated={handleSupervisorAuthenticated}
-              authorizedStaff={allStaffNames}
+              authorizedStaff={emailStaffNames.length > 0 ? emailStaffNames : allStaffNames}
+              defaultSupervisor={gFilt.staffName && gFilt.staffName !== 'ทั้งหมด' ? gFilt.staffName : ''}
+              sets={sets}
               Icon={Icon}
             />
 
