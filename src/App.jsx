@@ -1479,10 +1479,10 @@ export default function App() {
           <aside className="w-64 bg-[#0F2E4A] text-white hidden md:flex flex-col shadow-lg z-20 relative border-r border-slate-800/40">
             <div className="p-5 border-b border-white/10 flex items-center justify-between">
               <div>
-                <div className="text-base font-bold tracking-wider text-white">
+                <div className="font-serif tracking-[0.16em] text-white text-[15px] font-normal leading-tight">
                   LAND &amp; HOUSES
                 </div>
-                <div className="text-[11px] font-medium text-rose-300/90 tracking-wide mt-0.5">
+                <div className="text-[10px] font-medium text-[#A8996E] tracking-[0.14em] uppercase mt-1">
                   TaskFlow Management
                 </div>
               </div>
@@ -1549,9 +1549,9 @@ export default function App() {
           <main className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC] relative">
             <header className="bg-white h-15 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 shadow-xs border-b border-slate-200/80">
               <div className="flex items-center gap-3">
-                <div className="font-bold text-[#0F2E4A] text-sm md:text-base tracking-tight flex items-center gap-2">
-                  <span className="w-1.5 h-4 bg-[#7A1C28] rounded-full inline-block"></span>
-                  <span>LH TASKFLOW</span>
+                <div className="text-[#003C71] text-sm md:text-base flex items-center gap-2">
+                  <span className="w-1.5 h-4 bg-[#A8996E] rounded-xs inline-block"></span>
+                  <span className="font-serif tracking-[0.12em] font-bold text-sm md:text-[15px]">LH TASKFLOW</span>
                 </div>
                 <button
                   type="button"

@@ -109,3 +109,27 @@ body {
   @page { margin: 8mm; size: A4 portrait; }
   .print-break { page-break-inside: avoid; }
 }
+/* Land & Houses Signature Typography & Palette Utilities */
+.font-lh-serif {
+  font-family: 'EB Garamond', Georgia, serif;
+}
+.font-lh-noto {
+  font-family: 'Noto Sans Thai', 'Prompt', sans-serif;
+}
+.lh-gold-accent {
+  color: #A8996E;
+}
+.lh-gold-border {
+  border-color: #A8996E;
+}
+.lh-luxury-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 60, 113, 0.03);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.lh-luxury-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 8px 24px -4px rgba(0, 60, 113, 0.07);
+}

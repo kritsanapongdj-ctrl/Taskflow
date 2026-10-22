@@ -7,11 +7,14 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Prompt', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Prompt', 'Inter', 'sans-serif'],
-        body: ['Prompt', 'Inter', 'sans-serif'],
+        sans: ['Prompt', '"Noto Sans Thai"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"EB Garamond"', 'Georgia', 'serif'],
+        garamond: ['"EB Garamond"', 'Georgia', 'serif'],
+        display: ['"EB Garamond"', 'Prompt', 'Inter', 'serif'],
+        noto: ['"Noto Sans Thai"', 'Prompt', 'sans-serif'],
+        body: ['"Noto Sans Thai"', 'Prompt', 'Inter', 'sans-serif'],
         tech: ['Inter', 'system-ui', 'sans-serif'],
-        numeric: ['Inter', 'Prompt', 'sans-serif'],
+        numeric: ['"EB Garamond"', 'Inter', 'sans-serif'],
       },
       colors: {
         burgundy: {
@@ -38,14 +41,19 @@ export default {
           DEFAULT: '#0F2E4A',
         },
         lh: {
-          burgundy: '#7A1C28',
-          navy: '#0F2E4A',
+          blue: '#003C71',        // LH Signature Royal Deep Blue
+          navy: '#0F2E4A',        // LH Executive Slate Navy
           navyLight: '#184368',
-          gold: '#C5A869',
+          gold: '#A8996E',        // LH Champagne Gold
+          goldDark: '#B08731',    // LH Heritage Brass
           goldLight: '#F5EEDC',
+          burgundy: '#7A1C28',    // LH Heritage Crimson
+          charcoal: '#3A3A36',    // LH Refined Charcoal
+          olive: '#5F604B',       // LH Warm Olive
           paper: '#F8FAFC',
           surface: '#FFFFFF',
           slate: '#0F172A',
+          border: '#E2E8F0',
         },
         bg: '#1e1e2e',
         'bg-dark': '#181828',
