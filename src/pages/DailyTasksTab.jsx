@@ -80,14 +80,14 @@ export default function DailyTasksTab({
     if (status?.startsWith('จบงาน')) {
       if (status === 'จบงาน(รอใบงาน)') {
         return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 shrink-0">
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             จบงาน (รอใบงาน)
           </span>
         );
       }
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           จบงาน
         </span>
@@ -95,7 +95,7 @@ export default function DailyTasksTab({
     }
     if (status === 'กำลังดำเนินการ' || status === 'อยู่ระหว่างดำเนินการ') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
           กำลังดำเนินการ
         </span>
@@ -103,7 +103,7 @@ export default function DailyTasksTab({
     }
     if (status === 'ติดปัญหา/รออะไหล่' || status === 'รออะไหล่/ติดปัญหา') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
           ติดปัญหา/รออะไหล่
         </span>
@@ -111,15 +111,15 @@ export default function DailyTasksTab({
     }
     if (status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shrink-0 animate-pulse" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shrink-0 animate-pulse" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-          🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)
+          🚨 ผิดเงื่อนไขรออะไหล่
         </span>
       );
     }
     if (status === 'เลื่อนวันเริ่ม') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
           เลื่อนวันเริ่ม
         </span>
@@ -127,14 +127,14 @@ export default function DailyTasksTab({
     }
     if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
           เลื่อนวันจบ
         </span>
       );
     }
     return (
-      <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 shrink-0">
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 shrink-0">
         <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
         {status || 'รอดำเนินการ'}
       </span>
@@ -431,22 +431,29 @@ export default function DailyTasksTab({
       {/* 2. Desktop Table View (width >= 768px) */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse table-fixed min-w-[680px]">
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[17%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[23%]" />
+            </colgroup>
             <thead>
               <tr className="bg-[#0F2E4A] text-white border-b border-slate-200">
-                <th className="py-3 px-3 w-[35%] min-w-[180px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-2.5 px-2.5 text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   รายละเอียด
                 </th>
-                <th className="py-3 px-3 w-[18%] min-w-[110px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-2.5 px-2 text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   โครงการ
                 </th>
-                <th className="py-3 px-3 w-[17%] min-w-[125px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-2.5 px-2 text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   ระยะเวลา
                 </th>
-                <th className="py-3 px-3 w-[14%] min-w-[110px] text-xs font-semibold tracking-wider text-slate-100 uppercase">
+                <th className="py-2.5 px-2 text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   สถานะ & SLA
                 </th>
-                <th className="py-3 px-2 w-[16%] min-w-[145px] text-xs font-semibold tracking-wider text-slate-100 uppercase text-center">
+                <th className="py-2.5 px-1 text-xs font-semibold tracking-wider text-slate-100 uppercase text-center">
                   จัดการ
                 </th>
               </tr>
@@ -478,7 +485,7 @@ export default function DailyTasksTab({
                         : 'hover:bg-gray-50/80'
                     }`}
                   >
-                    <td className="py-3 px-3 align-top">
+                    <td className="py-2.5 px-2.5 align-top">
                       <div className="font-medium text-slate-800 break-words leading-snug">
                         <span>{t.details}</span>
                         {info.isOverdue && (
@@ -564,11 +571,11 @@ export default function DailyTasksTab({
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 font-bold text-[#0F2E4A] align-top text-xs sm:text-sm break-words">
+                    <td className="py-2.5 px-2 font-bold text-[#0F2E4A] align-top text-xs break-words">
                       <div>{getStdProj(t.project)}</div>
                       <div className="text-[11px] text-gray-400 font-normal mt-0.5">{t.area}</div>
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-600 align-top">
+                    <td className="py-2.5 px-2 text-xs text-slate-600 align-top">
                       <div className="flex items-center gap-1 font-tech">
                         <span className="text-slate-400 font-sans text-[10px] shrink-0">เริ่ม:</span>
                         <span className="font-semibold text-slate-700 whitespace-nowrap text-[11px]">{fDate(t.startDate)}</span>
@@ -599,7 +606,7 @@ export default function DailyTasksTab({
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 align-top">
+                    <td className="py-2.5 px-2 align-top">
                       <div className="flex flex-col items-start gap-1">
                         <div>{getStatusBadge(t.status)}</div>
                         {info.isOverdue && (
@@ -609,12 +616,12 @@ export default function DailyTasksTab({
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-2 text-center align-top">
+                    <td className="py-2.5 px-1 text-center align-top">
                       <div className="flex justify-center items-center gap-1">
                         <select
                           value={currentSelectVal}
                           onChange={(e) => initSt(t.id, e.target.value)}
-                          className="w-24 sm:w-28 max-w-[115px] truncate border border-slate-200 rounded-md text-[11px] py-1 px-1 outline-none bg-slate-50 hover:bg-white font-medium focus:border-[#0f2e4a] focus:ring-1 focus:ring-[#bca374]/30 transition-all cursor-pointer shadow-2xs tactile-select"
+                          className="w-[82px] sm:w-[92px] max-w-[95px] truncate border border-slate-200 rounded text-[10.5px] py-1 px-1 outline-none bg-slate-50 hover:bg-white font-medium focus:border-[#0f2e4a] focus:ring-1 focus:ring-[#bca374]/30 transition-all cursor-pointer shadow-2xs tactile-select"
                           title={currentSelectVal}
                         >
                           <option value="รอดำเนินการ">รอดำเนินการ</option>
