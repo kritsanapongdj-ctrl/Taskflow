@@ -214,12 +214,14 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#0f2e4a] p-4 text-white flex justify-between items-center shrink-0 border-b border-white/10">
-          <div className="flex items-center gap-2">
+        <div className="bg-[#003C71] p-4 text-white flex justify-between items-center shrink-0 border-b border-[#A8996E]/30">
+          <div className="flex items-center gap-2.5">
             <span className="text-xl">📜</span>
             <div>
+              <div className="font-serif tracking-[0.16em] text-[10px] text-[#A8996E] uppercase">
+                JOB LIFECYCLE &amp; ACTIVITY TRAIL
+              </div>
               <h3 className="font-bold text-base leading-tight">ไทม์ไลน์บันทึกประวัติงาน</h3>
-              <p className="text-[11px] text-slate-300">Job Lifecycle & Activity Trail</p>
             </div>
           </div>
           <button
@@ -351,12 +353,7 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
                         </div>
                       )}
 
-                      {/* Actor / Staff */}
-                      {item.actor && (
-                        <div className="text-[10px] text-slate-400 text-right pt-0.5">
-                          บันทึกโดย: <span className="font-medium text-slate-600">{item.actor}</span>
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 );
@@ -390,7 +387,7 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2 bg-[#0f2e4a] text-white rounded-xl text-xs font-bold shadow hover:bg-[#1a3f63] transition"
+            className="w-full sm:w-auto px-5 py-2 bg-[#003C71] text-white rounded-xl text-xs font-bold shadow hover:bg-[#002D56] transition cursor-pointer"
           >
             ปิดหน้าต่าง
           </button>
