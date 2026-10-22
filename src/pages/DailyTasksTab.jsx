@@ -144,13 +144,23 @@ export default function DailyTasksTab({
   return (
     <div className="space-y-6 animate-in">
       {/* Top Header & Quick Overdue Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#A8996E]/25">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
-            <h2 className="text-xl sm:text-2xl font-bold text-[#0F2E4A] tracking-tight">งานประจำวัน</h2>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-3.5 bg-[#A8996E] inline-block rounded-xs" />
+              <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#A8996E] uppercase">
+                DAILY FIELD DISPATCH
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#003C71] tracking-tight flex items-baseline gap-2">
+              <span>งานประจำวัน</span>
+              <span className="font-serif text-sm font-normal text-[#A8996E]">
+                ({gFilt.date || today})
+              </span>
+            </h1>
           </div>
-          <span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2.5 py-0.5 rounded-full border border-slate-200">
+          <span className="text-xs bg-slate-100 text-[#003C71] font-semibold px-2.5 py-0.5 rounded-full border border-slate-200 self-center">
             {displayTasks.length} รายการ
           </span>
 
@@ -440,7 +450,7 @@ export default function DailyTasksTab({
               <col className="w-[23%]" />
             </colgroup>
             <thead>
-              <tr className="bg-[#0F2E4A] text-white border-b border-slate-200">
+              <tr className="bg-[#003C71] text-white border-b border-[#A8996E]/30">
                 <th className="py-2.5 px-2.5 text-xs font-semibold tracking-wider text-slate-100 uppercase">
                   รายละเอียด
                 </th>

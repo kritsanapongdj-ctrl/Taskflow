@@ -30,15 +30,22 @@ export default function KanbanBillingTab({
 
   return (
     <div className="space-y-6 animate-in">
-      <div className="flex justify-between items-center pb-3 border-b border-slate-200">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2E4A] flex items-center gap-2">
-          <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
-          <span>บอร์ดส่งเบิกงาน</span>
-          <span className="text-sm font-normal text-slate-500">
-            (รอบเดือน {gFilt.month})
-          </span>
-        </h2>
-        <span className="text-xs font-semibold text-[#0F2E4A] bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+      <div className="flex justify-between items-end pb-3 border-b border-[#A8996E]/20">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-1.5 h-3.5 bg-[#A8996E] inline-block rounded-xs" />
+            <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#A8996E] uppercase">
+              BILLING &amp; DISPATCH WORKFLOW
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#003C71] tracking-tight flex items-baseline gap-2">
+            <span>บอร์ดส่งเบิกงาน</span>
+            <span className="font-serif text-sm font-normal text-[#A8996E]">
+              (รอบเดือน {gFilt.month})
+            </span>
+          </h1>
+        </div>
+        <span className="text-xs font-semibold text-[#003C71] bg-white border border-[#A8996E]/30 px-3 py-1 rounded-full shadow-2xs">
           รวม {ubGrp.length + biGrp.length} ใบงาน
         </span>
       </div>

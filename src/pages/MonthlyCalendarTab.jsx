@@ -24,13 +24,22 @@ export default function MonthlyCalendarTab({
 
   return (
     <div className="bg-white rounded-2xl shadow-card border border-slate-200 p-6 animate-in space-y-5">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h2 className="text-xl font-bold text-[#0F2E4A] flex items-center gap-2">
-          <span className="w-2 h-6 bg-[#7A1C28] rounded-full inline-block" />
-          <Icon name="calendar" size={20} className="text-[#7A1C28]" />
-          <span>ปฏิทินงานประจำเดือน {gFilt.month}</span>
-        </h2>
-        <span className="text-xs font-semibold text-[#0F2E4A] bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+      <div className="flex items-center justify-between pb-3 border-b border-[#A8996E]/20">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-1.5 h-3.5 bg-[#A8996E] inline-block rounded-xs" />
+            <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#A8996E] uppercase">
+              MONTHLY DISPATCH SCHEDULE
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#003C71] tracking-tight flex items-baseline gap-2">
+            <span>ปฏิทินงานประจำเดือน</span>
+            <span className="font-serif text-sm font-normal text-[#A8996E]">
+              ({gFilt.month})
+            </span>
+          </h1>
+        </div>
+        <span className="text-xs font-semibold text-[#003C71] bg-white border border-[#A8996E]/30 px-3 py-1 rounded-full shadow-2xs">
           รอบเดือน {gFilt.month}
         </span>
       </div>

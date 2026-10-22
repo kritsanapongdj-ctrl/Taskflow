@@ -63,29 +63,29 @@ export default function InformJobTab({
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Top Switcher Bar */}
-      <div className="bg-white p-2 rounded-2xl shadow-card border border-slate-200 flex gap-2">
+      {/* Top Switcher Bar (LH Luxury Architectural Tabs) */}
+      <div className="bg-white p-1.5 rounded-xl shadow-2xs border border-[#A8996E]/30 flex gap-2">
         <button
           type="button"
           onClick={() => setITab('form')}
-          className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             iTab === 'form'
-              ? 'bg-[#7A1C28] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-600 hover:text-[#0F2E4A] hover:bg-slate-100'
+              ? 'bg-[#003C71] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-600 hover:text-[#003C71] hover:bg-slate-100'
           }`}
         >
-          แจ้งเปิดงานใหม่
+          <span className="font-serif tracking-wider">แจ้งเปิดงานใหม่ (CREATE JOB)</span>
         </button>
         <button
           type="button"
           onClick={() => setITab('manage')}
-          className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+          className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             iTab === 'manage'
-              ? 'bg-[#7A1C28] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-600 hover:text-[#0F2E4A] hover:bg-slate-100'
+              ? 'bg-[#003C71] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-600 hover:text-[#003C71] hover:bg-slate-100'
           }`}
         >
-          จัดการสถานะ ({ft.length})
+          <span className="font-serif tracking-wider">จัดการสถานะงาน ({ft.length})</span>
         </button>
       </div>
 
