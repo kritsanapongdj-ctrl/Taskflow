@@ -1573,18 +1573,38 @@ function PixelAgentsOfficeInner({ tasks, sets, setTab, db }) {
                     </div>
                     {Array.isArray(m.anomaliesList) && m.anomaliesList.length > 0 && (
                       <div className="space-y-1 pt-1">
-                        <span className="text-red-300 text-[11px] font-bold">รายการมิเตอร์ที่ยอดพุ่งสูงผิดปกติจริง:</span>
-                        {m.anomaliesList.map((a, i) => (
-                          <div key={i} className="bg-red-950/40 border border-red-500/40 p-2 flex items-center justify-between text-[11px]">
-                            <div>
-                              <span className="font-bold text-white">{a.project}</span>
-                              <span className="text-gray-300 ml-2">({a.usageType} • มิเตอร์ {a.meter})</span>
-                            </div>
-                            <span className="font-mono text-red-300 font-bold shrink-0">
-                              {Math.round(a.actual).toLocaleString()} บ. ({a.ratio})
-                            </span>
-                          </div>
-                        ))}
+                        <span className="text-red-300 text-[11px] font-bold">รายการมิเตอร์ที่พบความผิดปกติจริง ({m.anomaliesList.length} จุด):</span>
+                        <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                          {m.anomaliesList.map((a, i) => {
+                            const isSpike = (a.category === 'spike') || String(a.ratio || a.pct || '').startsWith('+');
+                            const meterNum = a.meter || a.meterNo || '-';
+                            const valNum = Math.round(a.actual ?? a.val ?? 0);
+                            const ratioStr = a.ratio || a.pct || '';
+                            return (
+                              <div key={i} className={`p-2 flex items-center justify-between text-[11px] border ${isSpike ? 'bg-red-950/40 border-red-500/40' : 'bg-amber-950/40 border-amber-500/40'}`}>
+                                <div>
+                                  <div className="font-bold text-white flex items-center gap-1.5">
+                                    <span>{a.project}</span>
+                                    <span className={`text-[9px] px-1 py-0.5 rounded font-mono ${isSpike ? 'bg-red-900/60 text-red-200' : 'bg-amber-900/60 text-amber-200'}`}>
+                                      {isSpike ? 'พุ่งสูง' : 'ลดลง'}
+                                    </span>
+                                  </div>
+                                  <div className="text-gray-300 text-[10px] mt-0.5">
+                                    {a.type ? `${a.type} • ` : ''}{a.usageType || ''} {a.location ? `(${a.location})` : ''} • มิเตอร์ {meterNum}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 ml-2">
+                                  <span className={`font-mono font-bold block ${isSpike ? 'text-red-300' : 'text-amber-300'}`}>
+                                    {valNum.toLocaleString()} บ.
+                                  </span>
+                                  <span className="text-[10px] font-mono text-gray-400">
+                                    ({ratioStr})
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
