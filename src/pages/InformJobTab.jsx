@@ -15,6 +15,7 @@ export default function InformJobTab({
   checkStaffMatch,
   fDate,
   openInfModal,
+  openInfEdit,
   setInfView,
   deleteInform,
   Icon
@@ -298,7 +299,7 @@ export default function InformJobTab({
                     <th className="p-3.5 w-32 font-semibold">วันที่/ID</th>
                     <th className="p-3.5 font-semibold">ข้อมูลเบื้องต้น</th>
                     <th className="p-3.5 w-32 font-semibold">สถานะ</th>
-                    <th className="p-3.5 w-28 font-semibold text-center">จัดการ</th>
+                    <th className="p-3.5 w-36 font-semibold text-center">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -401,6 +402,16 @@ export default function InformJobTab({
                                   <Icon name="xCircle" size={14} />
                                 </button>
                               </>
+                            )}
+                            {openInfEdit && (
+                              <button
+                                type="button"
+                                onClick={() => openInfEdit(j)}
+                                className="text-slate-500 hover:text-[#003C71] p-1.5 bg-slate-100 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                                title="แก้ไขข้อมูล"
+                              >
+                                <Icon name="edit2" size={14} />
+                              </button>
                             )}
                             <button
                               type="button"

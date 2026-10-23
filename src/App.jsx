@@ -146,7 +146,8 @@ export default function App() {
 
   const [iTab, setITab] = useState('form');
   const [iMod, setIMod] = useState({ isOpen: false, type: '', id: null, val: '' });
-  const [infView, setInfView] = useState(null); 
+  const [infView, setInfView] = useState(null);
+  const [infEditMode, setInfEditMode] = useState(false);
   const [tMod, setTMod] = useState(false);
   const [eTask, setETask] = useState(null);
   const [sRsn, setSReason] = useState('');
@@ -375,6 +376,14 @@ export default function App() {
           }
           return item;
         }));
+      } else if (t === 'informJob' && cleanData?.id) {
+        setInforms(prev => {
+          const exists = prev.some(item => String(item.id) === String(cleanData.id));
+          if (exists) {
+            return prev.map(item => String(item.id) === String(cleanData.id) ? { ...item, ...cleanData } : item);
+          }
+          return [cleanData, ...prev];
+        });
       }
 
       if (t === 'task') await setDoc(getDocRef('Tasks', cleanData.id), cleanData);
@@ -1455,9 +1464,31 @@ export default function App() {
     }
   };
 
+  const openInfEdit = (j) => {
+    const pwd = prompt('กรุณาใส่รหัสผู้ดูแลเพื่อแก้ไขข้อมูล:');
+    if (pwd === null) return;
+    if (pwd !== '13121993') return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
+    setInfEditMode(true);
+    setInfView(j);
+  };
+
   const deleteInform = async (j) => {
-    if (confirm('ต้องการลบรายการนี้?')) {
+    const pwd = prompt('กรุณาใส่รหัสผู้ดูแลเพื่อลบข้อมูล:');
+    if (pwd === null) return;
+    if (pwd !== '13121993') return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
+    if (confirm('ต้องการลบรายการแจ้งเปิดงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) {
       try {
+        setInforms(prev => prev.filter(item => String(item.id) !== String(j.id)));
+        if (infView && String(infView.id) === String(j.id)) {
+          setInfView(null);
+          setInfEditMode(false);
+        }
+        fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ type: 'deleteInform', data: { id: j.id } })
+        }).catch(() => {});
         await deleteDoc(getDocRef('InformJobs', j.id));
       } catch (e) {
         alert('ลบข้อมูลไม่สำเร็จ: ' + e.message);
@@ -1912,7 +1943,11 @@ export default function App() {
                     checkStaffMatch={checkStaffMatch}
                     fDate={fDate}
                     openInfModal={(id, type) => setIMod({ isOpen: true, type, id, val: '' })}
-                    setInfView={setInfView}
+                    openInfEdit={openInfEdit}
+                    setInfView={(j) => {
+                      setInfEditMode(false);
+                      setInfView(j);
+                    }}
                     deleteInform={deleteInform}
                     Icon={Icon}
                   />
@@ -2261,7 +2296,22 @@ export default function App() {
             {infView && (
               <InformDetailModal
                 inform={infView}
-                onClose={() => setInfView(null)}
+                initialEditMode={infEditMode}
+                onClose={() => {
+                  setInfView(null);
+                  setInfEditMode(false);
+                }}
+                onSave={(updated) => {
+                  saveD('informJob', updated);
+                  setInfView(null);
+                  setInfEditMode(false);
+                  alert('บันทึกการแก้ไขข้อมูลเรียบร้อยแล้ว');
+                }}
+                onDelete={deleteInform}
+                sets={sets}
+                getProjName={getProjName}
+                getProjArea={getProjArea}
+                getTStr={getTStr}
                 fDate={fDate}
                 Icon={Icon}
               />
