@@ -33,6 +33,10 @@ export default async function handler(req, res) {
       });
     }
 
+    if (!upstreamRes.ok) {
+      return res.status(upstreamRes.status).send(`Upstream radar error: ${upstreamRes.status}`);
+    }
+
     const contentType = upstreamRes.headers.get('content-type') || 'image/jpeg';
     const arrayBuf = await upstreamRes.arrayBuffer();
 
