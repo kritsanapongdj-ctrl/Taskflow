@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, doc, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { verifyAdminPin } from '../utils/security.js';
 
 export default function SettingsTab({
   setUnlk,
@@ -314,13 +315,18 @@ export default function SettingsTab({
           className="border-2 border-gray-200 focus:border-[#bca374] p-3 rounded-xl w-full mb-4 text-center tracking-widest text-xl font-bold outline-none transition"
           value={pwd}
           onChange={(e) => setPwd(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && pwd === '1312' && setSetUnlk(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (verifyAdminPin(pwd, 'settings')) setSetUnlk(true);
+              else alert('รหัสผ่านไม่ถูกต้อง');
+            }
+          }}
           autoFocus
         />
         <button
           type="button"
           onClick={() => {
-            if (pwd === '1312') setSetUnlk(true);
+            if (verifyAdminPin(pwd, 'settings')) setSetUnlk(true);
             else alert('รหัสผ่านไม่ถูกต้อง');
           }}
           className="bg-[#0f2e4a] hover:bg-[#1a3f63] text-white px-5 py-3 rounded-xl w-full font-bold shadow-md hover:shadow-lg transition cursor-pointer active:scale-95 text-sm"

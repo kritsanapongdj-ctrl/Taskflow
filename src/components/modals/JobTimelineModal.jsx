@@ -1,5 +1,6 @@
 import React from 'react';
 import { getTaskOverdueInfo } from '../../utils/overdueHelper';
+import { getBangkokDateStr } from '../../utils/dateUtils.js';
 
 // Helper แปลงวันเวลาเป็นรูปแบบภาษาไทย
 const formatDateTimeThai = (isoString) => {
@@ -29,7 +30,7 @@ const formatDateThai = (ds) => {
 export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
   if (!isOpen || !task) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getBangkokDateStr();
   const overdueInfo = getTaskOverdueInfo(task, today);
 
   // รวบรวมหรือสังเคราะห์ Timeline Events (รองรับทั้งงานใหม่และงานเก่า)

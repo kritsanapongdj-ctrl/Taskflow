@@ -1,5 +1,6 @@
 // src/utils/overdueHelper.js
 // ระบบวิเคราะห์และจำแนกสถานะงานล่าช้า/เกินกำหนดแบบรวมศูนย์ (Centralized Overdue & SLA Helper)
+import { getBangkokDateStr, getBangkokTime } from './dateUtils.js';
 
 /**
  * คำนวณข้อมูลสถานะความล่าช้า/เกินกำหนดของงาน (Active Overdue, Completed Late, Late WO)
@@ -27,7 +28,7 @@ export function getTaskOverdueInfo(task, today, sets = {}) {
     };
   }
 
-  const currentDate = today || new Date().toISOString().split('T')[0];
+  const currentDate = today || getBangkokDateStr();
   const isCompleted = task.status?.startsWith('จบงาน');
 
   // 1. กรณี: งานจบแล้ว (Completed) แต่จบช้ากว่ากำหนด หรือออกใบงานช้า
@@ -112,9 +113,7 @@ export function getTaskOverdueInfo(task, today, sets = {}) {
     isCurrentlyOverdue = true;
     daysLate = Math.max(Math.floor((new Date(currentDate).getTime() - new Date(task.endDate).getTime()) / 86400000), 1);
   } else if (currentDate === task.endDate) {
-    const now = new Date();
-    const cH = now.getHours();
-    const cM = now.getMinutes();
+    const { hour: cH, minute: cM } = getBangkokTime();
     const tP = (sets?.overdueTime || '17:30').split(':');
     const tH = parseInt(tP[0] || 17, 10);
     const tM = parseInt(tP[1] || 30, 10);

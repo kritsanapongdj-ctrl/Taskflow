@@ -127,7 +127,7 @@ export default async function handler(req, res) {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-secret');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -135,6 +135,13 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  // Security Check: Verify internal application token to prevent open-relay abuse
+  const clientSecret = req.headers['x-app-secret'];
+  const expectedSecret = process.env.INTERNAL_API_SECRET || 'lh-taskflow-auth-token-2026';
+  if (clientSecret !== expectedSecret) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing API secret' });
   }
 
   try {

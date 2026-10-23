@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTaskOverdueInfo } from '../utils/overdueHelper';
+import { getBangkokDateStr } from '../utils/dateUtils.js';
+import { verifyAdminPin } from '../utils/security.js';
 
 export default function DailyTasksTab({
   tasks = [],
@@ -21,7 +23,7 @@ export default function DailyTasksTab({
 }) {
   const [onlyOverdueFilter, setOnlyOverdueFilter] = useState(false);
   const tD = gFilt.date;
-  const today = getTStr ? getTStr() : new Date().toISOString().split('T')[0];
+  const today = getTStr ? getTStr() : getBangkokDateStr();
 
   // Auto-scroll และ Highlight เมื่อมี highlightTaskId ถูกส่งเข้ามาจาก Overdue Modal
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function DailyTasksTab({
 
   const handleEdit = (t) => {
     const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');
-    if (pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');
+    if (!verifyAdminPin(pwd, 'task_action')) return alert('รหัสผ่านไม่ถูกต้อง!');
     openTaskModal(t);
   };
 

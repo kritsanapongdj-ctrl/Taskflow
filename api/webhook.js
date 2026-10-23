@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { MasterOrchestrator } from './_agents/orchestrator.js';
 
 /**
@@ -11,6 +12,27 @@ import { MasterOrchestrator } from './_agents/orchestrator.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  // Verify LINE Webhook Signature if LINE_CHANNEL_SECRET is configured
+  const channelSecret = process.env.LINE_CHANNEL_SECRET;
+  if (channelSecret) {
+    const signature = req.headers['x-line-signature'];
+    if (!signature) {
+      return res.status(401).json({ error: 'Unauthorized: Missing x-line-signature header' });
+    }
+    const rawBody = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    const expectedSignature = crypto
+      .createHmac('SHA256', channelSecret)
+      .update(rawBody)
+      .digest('base64');
+    
+    const sigBuf = Buffer.from(signature, 'utf8');
+    const expBuf = Buffer.from(expectedSignature, 'utf8');
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      console.warn('[Webhook] Invalid LINE signature rejected');
+      return res.status(401).json({ error: 'Unauthorized: Invalid signature' });
+    }
   }
 
   try {

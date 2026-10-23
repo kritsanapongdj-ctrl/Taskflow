@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getTaskOverdueInfo } from '../../utils/overdueHelper';
+import { getBangkokDateStr } from '../../utils/dateUtils.js';
 
 export default function OverdueTasksModal({
   isOpen,
@@ -9,7 +10,7 @@ export default function OverdueTasksModal({
   onManageTask,
   onOpenTimeline,
   fDate,
-  getTStr = () => new Date().toISOString().split('T')[0],
+  getTStr = () => getBangkokDateStr(),
   sets = {},
   Icon
 }) {

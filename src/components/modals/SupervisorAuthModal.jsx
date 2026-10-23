@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { verifyAdminPin } from '../../utils/security.js';
 
 export default function SupervisorAuthModal({
   isOpen,
@@ -104,9 +105,8 @@ export default function SupervisorAuthModal({
       return;
     }
 
-    // Validate PIN (Accept standard management pins 1312, 131236, SV2569)
-    const validPins = ['1312', '131236', 'SV2569'];
-    if (!validPins.includes(pin.trim())) {
+    // Validate PIN with SHA-256 (Accepts authorized management pins)
+    if (!verifyAdminPin(pin, 'supervisor')) {
       setAuthError('รหัสผ่านผู้ดูแลไม่ถูกต้อง');
       return;
     }

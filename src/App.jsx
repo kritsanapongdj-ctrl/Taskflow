@@ -11,6 +11,8 @@ import DailyTasksTab from './pages/DailyTasksTab.jsx';
 import PrintReport from './components/reports/PrintReport.jsx';
 import ChangelogModal, { CURRENT_VERSION } from './components/modals/ChangelogModal.jsx';
 import { detectSlaCategory, isSlaMismatch } from './utils/slaDetector.js';
+import { getBangkokDateStr, getBangkokMonthStr } from './utils/dateUtils.js';
+import { verifyAdminPin } from './utils/security.js';
 
 const PixelAgentsOffice = React.lazy(() => import('./PixelAgentsOffice.jsx'));
 const TeamStatusTab = React.lazy(() => import('./pages/TeamStatusTab.jsx'));
@@ -108,8 +110,8 @@ const getCleanVal = (r, keys) => {
   return null;
 };
 
-const getTStr = () => new Date().toISOString().split('T')[0];
-const getMStr = () => getTStr().slice(0, 7);
+const getTStr = () => getBangkokDateStr();
+const getMStr = () => getBangkokMonthStr();
 const fDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return isNaN(d.getTime()) ? String(ds) : d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); };
 const pYMD = (v) => { if(!v) return ''; const d = new Date(v); return isNaN(d.getTime()) ? String(v).trim().substring(0,10) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const extM = (v) => v ? String(v).slice(0, 7) : '';
@@ -391,15 +393,18 @@ export default function App() {
         });
       }
 
-      if (t === 'task') await setDoc(getDocRef('Tasks', cleanData.id), cleanData);
-      else if (t === 'informJob') await setDoc(getDocRef('InformJobs', cleanData.id), cleanData);
-      else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), cleanData);
+      if (t === 'task') await setDoc(getDocRef('Tasks', cleanData.id), cleanData, { merge: true });
+      else if (t === 'informJob') await setDoc(getDocRef('InformJobs', cleanData.id), cleanData, { merge: true });
+      else if (t === 'settings') await setDoc(getDocRef('Settings', 'main'), cleanData, { merge: true });
       
       // ส่งอีเมลแจ้งเตือนผ่าน Brevo Serverless API เฉพาะเมื่อมี action ส่งเข้ามาใหม่ในรอบนี้เท่านั้น (ไม่ดึงจากของเดิม)
       if (alertToSend && alertToSend.emails && alertToSend.emails.length > 0) {
         fetch('/api/send-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-app-secret': 'lh-taskflow-auth-token-2026'
+          },
           body: JSON.stringify({
             alert: alertToSend,
             task: {
@@ -774,8 +779,8 @@ export default function App() {
   };
 
   const handleClearData = async () => {
-    const confirmCode = prompt('⚠️ พิมพ์รหัส "1312" เพื่อยืนยันการล้างข้อมูลทั้งหมดใน Firebase:');
-    if (confirmCode !== '1312') return;
+    const confirmCode = prompt('⚠️ กรุณาพิมพ์รหัสยืนยันเพื่อล้างข้อมูลทั้งหมดใน Firebase:');
+    if (!verifyAdminPin(confirmCode, 'settings')) return alert('รหัสผ่านไม่ถูกต้อง!');
     setLoading(true);
     try {
         const tasksSnap = await getDocs(getColRef('Tasks'));
@@ -1454,7 +1459,7 @@ export default function App() {
 
   const deleteTask = async (t) => {
     const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อลบข้อมูล:');
-    if (pwd !== '131236') return alert('รหัสผ่านไม่ถูกต้อง!');
+    if (!verifyAdminPin(pwd, 'task_action')) return alert('รหัสผ่านไม่ถูกต้อง!');
     if (confirm('ต้องการลบงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) {
       try {
         fetch(API_URL, {
@@ -1473,7 +1478,7 @@ export default function App() {
   const openInfEdit = (j) => {
     const pwd = prompt('กรุณาใส่รหัสผู้ดูแลเพื่อแก้ไขข้อมูล:');
     if (pwd === null) return;
-    if (pwd !== '13121993') return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
+    if (!verifyAdminPin(pwd, 'inform_admin')) return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
     setInfEditMode(true);
     setInfView(j);
   };
@@ -1481,7 +1486,7 @@ export default function App() {
   const deleteInform = async (j) => {
     const pwd = prompt('กรุณาใส่รหัสผู้ดูแลเพื่อลบข้อมูล:');
     if (pwd === null) return;
-    if (pwd !== '13121993') return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
+    if (!verifyAdminPin(pwd, 'inform_admin')) return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
     if (confirm('ต้องการลบรายการแจ้งเปิดงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) {
       try {
         setInforms(prev => prev.filter(item => String(item.id) !== String(j.id)));

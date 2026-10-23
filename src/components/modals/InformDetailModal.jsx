@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getBangkokDateStr } from '../../utils/dateUtils.js';
+import { verifyAdminPin } from '../../utils/security.js';
 
 export default function InformDetailModal({
   inform,
@@ -9,7 +11,7 @@ export default function InformDetailModal({
   sets = {},
   getProjName = (p) => (typeof p === 'string' ? p.split('|')[0] : p?.name || ''),
   getProjArea = (p) => (typeof p === 'string' ? p.split('|')[1] || '' : p?.area || ''),
-  getTStr = () => new Date().toISOString().split('T')[0],
+  getTStr = () => getBangkokDateStr(),
   fDate,
   Icon
 }) {
@@ -56,7 +58,7 @@ export default function InformDetailModal({
   const handleUnlockEdit = () => {
     const pwd = prompt('กรุณาใส่รหัสผู้ดูแลเพื่อแก้ไขข้อมูล:');
     if (pwd === null) return;
-    if (pwd !== '13121993') return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
+    if (!verifyAdminPin(pwd, 'inform_admin')) return alert('รหัสผู้ดูแลไม่ถูกต้อง!');
     setIsEditing(true);
   };
 
