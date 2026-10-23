@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import TaskFormModal from './components/modals/TaskFormModal.jsx';
 import StatusChangeModal from './components/modals/StatusChangeModal.jsx';
@@ -154,7 +154,7 @@ export default function App() {
   const [eTask, setETask] = useState(null);
   const [sRsn, setSReason] = useState('');
   const [showStartReason, setShowStartReason] = useState(false);
-  const [sList, setSList] = useState({ tasks: [], informs: [] });
+
   const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด', staffName: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
   const [sModState, setSMod] = useState({ isOpen: false, taskId: null, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false });
@@ -1507,6 +1507,8 @@ export default function App() {
     }
   };
 
+  const isMoreTabActive = ['simulation', 'monthly', 'team', 'settings'].includes(tab) || showMoreMobileMenu;
+
   return (
     <React.Fragment>
       <GlobalStyles />
@@ -2066,29 +2068,24 @@ export default function App() {
             })}
 
             {/* ปุ่มเมนูเพิ่มเติม (More) */}
-            {(() => {
-              const isMoreActive = ['simulation', 'monthly', 'team', 'settings'].includes(tab) || showMoreMobileMenu;
-              return (
-                <button
-                  type="button"
-                  onClick={() => setShowMoreMobileMenu(!showMoreMobileMenu)}
-                  className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
-                >
-                  <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
-                    isMoreActive ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-slate-600'
-                  }`}>
-                    <Icon name={showMoreMobileMenu ? "x" : "grid"} size={18} className={isMoreActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-                  </div>
-                  <span className={`text-[10px] mt-1 tracking-tight ${
-                    isMoreActive ? 'text-[#7A1C28] font-bold' : 'text-slate-500 font-medium'
-                  }`}>
-                    {['simulation', 'monthly', 'team', 'settings'].includes(tab)
-                      ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
-                      : 'เพิ่มเติม'}
-                  </span>
-                </button>
-              );
-            })()}
+            <button
+              type="button"
+              onClick={() => setShowMoreMobileMenu(!showMoreMobileMenu)}
+              className="flex-1 flex flex-col items-center justify-center py-1 h-14 transition-all duration-150 active:scale-90 cursor-pointer snap-spring"
+            >
+              <div className={`flex items-center justify-center w-11 h-7 rounded-full transition-all duration-200 ${
+                isMoreTabActive ? 'bg-[#7A1C28] text-white shadow-xs' : 'text-slate-400 hover:text-slate-600'
+              }`}>
+                <Icon name={showMoreMobileMenu ? "x" : "grid"} size={18} className={isMoreTabActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              </div>
+              <span className={`text-[10px] mt-1 tracking-tight ${
+                isMoreTabActive ? 'text-[#7A1C28] font-bold' : 'text-slate-500 font-medium'
+              }`}>
+                {['simulation', 'monthly', 'team', 'settings'].includes(tab)
+                  ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
+                  : 'เพิ่มเติม'}
+              </span>
+            </button>
           </nav>
 
           {/* Mobile "More" Drawer / Bottom Sheet */}

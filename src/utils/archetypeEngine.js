@@ -580,9 +580,9 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
   }
 
   // --- Dynamic Strengths Calculation (Eliminating False Strengths) ---
-  let dynamicStrengthLabel = 'จุดเด่นของสายอาชีพ:';
-  let dynamicStrengthColor = 'text-emerald-400';
-  let dynamicStrength = '';
+  let dynamicStrengthLabel;
+  let dynamicStrengthColor;
+  let dynamicStrength;
 
   if (maxStat < 5) {
     dynamicStrengthLabel = 'สถานะสมรรถนะ:';
@@ -884,7 +884,7 @@ export const generateHeuristicTalentDiagnostic = (staff, sets = {}, archetypesDa
     : 'Tier 1: Developing Associate (ระดับพัฒนาสมรรถนะ)';
 
   // 1. Overall Verdict (Personalized with Role-Fit & Primary Work Style)
-  let overallVerdict = '';
+  let overallVerdict;
   if (competencyTier.level === 4) {
     overallVerdict = `${staffName} แสดงความพร้อมต่อบทบาท ${roleName} สูงถึง ${roleFitPct}% จัดอยู่ในระดับต้นแบบขององค์กร (Benchmark) มีทักษะหลักโดดเด่นสมบูรณ์แบบ สามารถปฏิบัติงานได้อย่างอิสระและเป็นเสาหลักถ่ายทอดองค์ความรู้ให้ทีม`;
   } else if (competencyTier.level === 3) {
@@ -1708,7 +1708,7 @@ export const analyzeOuterLayer = (u = {}, statsObj = {}, options = {}) => {
     const act = actualValues[m.key];
     const base = autoValues[m.key];
     const diff = act - base;
-    let text = '';
+    let text;
     if (diff >= 2) {
       text = `ผลงานจริง (${act}/10) โดดเด่นแซงศักยภาพคำนวณ (${base}/10) สะท้อนความขยัน/ประสบการณ์หน้างานเข้มข้น`;
     } else if (diff <= -2) {
@@ -1993,7 +1993,7 @@ export const calculateSuccessionReadiness = (staff, archAnalysis = {}, outerSumm
   const avgInner = rawList.length > 0 ? (rawList.reduce((a, b) => a + b, 0) / rawList.length) : 5;
   const avgOuter = outerSummary?.isAssessed && outerSummary?.avgOuter !== null ? outerSummary.avgOuter : null;
 
-  let score = 0;
+  let score;
   if (avgOuter !== null) {
     score = Math.round((roleFit * 0.4) + (avgInner * 3) + (avgOuter * 3));
   } else {

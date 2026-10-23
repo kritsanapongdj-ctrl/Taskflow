@@ -37,7 +37,7 @@ export function getTaskOverdueInfo(task, today, sets = {}) {
     const isLateWO = task.overdueStatus === 'ออกใบงานช้า' || task.lateWorkOrder === true;
 
     if (isCompletedLate) {
-      let daysLate = 0;
+      let daysLate;
       if (task.completedDate && task.endDate) {
         const diff = Math.floor((new Date(task.completedDate).getTime() - new Date(task.endDate).getTime()) / 86400000);
         daysLate = Math.max(diff, 1);
@@ -64,7 +64,7 @@ export function getTaskOverdueInfo(task, today, sets = {}) {
     }
 
     if (isLateWO) {
-      let daysLate = 0;
+      let daysLate;
       if (task.completedDate) {
         const diff = Math.floor((new Date(currentDate).getTime() - new Date(task.completedDate).getTime()) / 86400000);
         daysLate = diff > 3 ? diff - 3 : 0;

@@ -28,6 +28,7 @@ dist-ssr
 scripts/archive/
 *.cjs
 output.json
+scratch/
 
 # Heavy media assets (hosted on Supabase Storage CDN)
 public/*.mp4
