@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, getFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
@@ -188,16 +188,20 @@ export default function App() {
   const [supervisorSession, setSupervisorSession] = useState(null);
   const [supervisorAuthModalOpen, setSupervisorAuthModalOpen] = useState(false);
 
-  // 15-Minute Inactivity Auto-Logout for Supervisor Mode
+  // 15-Minute Inactivity Auto-Logout for Supervisor Mode (uses Ref to prevent root App re-renders on keystrokes)
+  const supervisorLastActiveRef = useRef(Date.now());
+
   useEffect(() => {
     if (!isSupervisor) return;
 
+    supervisorLastActiveRef.current = Date.now();
+
     const resetInactivity = () => {
-      setSupervisorSession(prev => prev ? ({ ...prev, lastActive: Date.now() }) : null);
+      supervisorLastActiveRef.current = Date.now();
     };
 
     const checkInterval = setInterval(() => {
-      if (supervisorSession?.lastActive && (Date.now() - supervisorSession.lastActive > 15 * 60 * 1000)) {
+      if (Date.now() - supervisorLastActiveRef.current > 15 * 60 * 1000) {
         setIsSupervisor(false);
         setSupervisorSession(null);
         alert('⏰ เซสชันผู้ดูแลหมดอายุเนื่องจากไม่มีการใช้งานเกิน 15 นาที ระบบสลับกลับสู่โหมดผู้ใช้งานทั่วไปแล้ว');
@@ -211,7 +215,7 @@ export default function App() {
       clearInterval(checkInterval);
       events.forEach(e => window.removeEventListener(e, resetInactivity));
     };
-  }, [isSupervisor, supervisorSession?.lastActive]);
+  }, [isSupervisor]);
 
   const handleSupervisorAuthenticated = ({ supervisorName, coords, authenticatedAt }) => {
     setIsSupervisor(true);
