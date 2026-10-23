@@ -19,6 +19,8 @@ export default function DiscrepancyAuditModal({
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING' | 'PRIOR_RESOLVED'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [savingTaskId, setSavingTaskId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const formatMonthThai = (mStr) => {
     if (!mStr) return 'กันยายน 2569 เป็นต้นไป';
@@ -32,22 +34,27 @@ export default function DiscrepancyAuditModal({
   };
 
   useEffect(() => {
-    if (isOpen && initialTaskId) {
-      const allItems = [...discrepancyTasks, ...priorResolvedTasks];
-      const targetItem = allItems.find(i => String(i.task.id) === String(initialTaskId));
-      if (targetItem) {
-        if (targetItem.type === 'RESOLVED_PRIOR_MONTH') setActiveTab('PRIOR_RESOLVED');
-        else if (targetItem.type === 'LATE_COMPLETED') setActiveTab('LATE_COMPLETED');
-        else if (targetItem.type === 'LATE_WO') setActiveTab('LATE_WO');
-        else if (targetItem.type === 'STALE_TASK') setActiveTab('STALE_TASK');
-        else if (targetItem.type === 'SPARE_PARTS_45D') setActiveTab('SPARE_PARTS_45D');
-        else if (targetItem.type && targetItem.type.startsWith('RETROACTIVE')) setActiveTab('RETROACTIVE');
-        else if (targetItem.type === 'PENALTY_SPARE_PART') setActiveTab('PENALTY_SPARE_PART');
-        else if (targetItem.type === 'BILLING_CUTOFF') setActiveTab('BILLING');
-        else setActiveTab('ALL');
+    if (isOpen) {
+      setCurrentPage(1);
+      if (initialTaskId) {
+        const allItems = [...discrepancyTasks, ...priorResolvedTasks];
+        const targetItem = allItems.find(i => String(i.task.id) === String(initialTaskId));
+        if (targetItem) {
+          if (targetItem.type === 'RESOLVED_PRIOR_MONTH') setActiveTab('PRIOR_RESOLVED');
+          else if (targetItem.type === 'LATE_COMPLETED') setActiveTab('LATE_COMPLETED');
+          else if (targetItem.type === 'LATE_WO') setActiveTab('LATE_WO');
+          else if (targetItem.type === 'STALE_TASK') setActiveTab('STALE_TASK');
+          else if (targetItem.type === 'SPARE_PARTS_45D') setActiveTab('SPARE_PARTS_45D');
+          else if (targetItem.type && targetItem.type.startsWith('RETROACTIVE')) setActiveTab('RETROACTIVE');
+          else if (targetItem.type === 'PENALTY_SPARE_PART') setActiveTab('PENALTY_SPARE_PART');
+          else if (targetItem.type === 'BILLING_CUTOFF') setActiveTab('BILLING');
+          else setActiveTab('ALL');
 
-        setEditingTaskId(targetItem.task.id);
+          setEditingTaskId(targetItem.task.id);
+        }
       }
+    } else {
+      setEditingTaskId(null);
     }
   }, [isOpen, initialTaskId, discrepancyTasks, priorResolvedTasks]);
 
@@ -79,12 +86,31 @@ export default function DiscrepancyAuditModal({
 
   const { lateCompleted: lateCompletedCount, lateWO: lateWOCount, stale: staleCount, parts: partsCount, retro: retroCount, penalty: penaltyCount, billing: billingCount } = counts;
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredItems.slice(start, start + PAGE_SIZE);
+  }, [filteredItems, currentPage]);
+
+  const editingItem = useMemo(() => {
+    if (!editingTaskId) return null;
+    return filteredItems.find(i => String(i.task.id) === String(editingTaskId)) ||
+      (priorResolvedTasks || []).find(i => String(i.task.id) === String(editingTaskId)) ||
+      (discrepancyTasks || []).find(i => String(i.task.id) === String(editingTaskId)) || null;
+  }, [editingTaskId, filteredItems, priorResolvedTasks, discrepancyTasks]);
+
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setCurrentPage(1);
+    setEditingTaskId(null);
+  };
+
   const handleStartEdit = (item) => {
     if (String(editingTaskId) === String(item.task.id)) {
-      setEditingTaskId(null); // Toggle off if already editing
+      setEditingTaskId(null);
       return;
     }
     if (!isSupervisor) {
@@ -153,7 +179,7 @@ export default function DiscrepancyAuditModal({
 
   return createPortal(
     <div 
-      className="fixed inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-5 z-[100000] backdrop-blur-md animate-in"
+      className="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-3 sm:p-5 z-[100000]"
       onClick={onClose}
     >
       <div 
@@ -206,184 +232,262 @@ export default function DiscrepancyAuditModal({
           </div>
         </div>
 
-        {/* Tab Filters */}
-        <div className="bg-slate-950/60 p-2 sm:p-3 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs shrink-0 overflow-x-auto">
-          {[
-            { id: 'ALL', label: 'ทั้งหมดรอบเดือนนี้', count: discrepancyTasks.length },
-            { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: lateCompletedCount },
-            { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: lateWOCount },
-            { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: staleCount },
-            { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: partsCount },
-            { id: 'RETROACTIVE', label: 'เลื่อนวันย้อนหลัง', count: retroCount },
-            { id: 'PENALTY_SPARE_PART', label: '🚨 ผิดวินัยอะไหล่', count: penaltyCount },
-            { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: billingCount },
-            ...(priorResolvedTasks.length > 0 ? [{ id: 'PRIOR_RESOLVED', label: '🏛️ ตัดสินแล้วในเดือนก่อนหน้า', count: priorResolvedTasks.length }] : [])
-          ].map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
-                activeTab === tab.id
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                activeTab === tab.id ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
-              }`}>
-                {tab.count}
+        {/* Tab Filters (Hidden during Single-Task Focus View for clean, distraction-free typing) */}
+        {!editingItem && (
+          <div className="bg-slate-950/60 p-2 sm:p-3 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs shrink-0 overflow-x-auto">
+            {[
+              { id: 'ALL', label: 'ทั้งหมดรอบเดือนนี้', count: discrepancyTasks.length },
+              { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: lateCompletedCount },
+              { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: lateWOCount },
+              { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: staleCount },
+              { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: partsCount },
+              { id: 'RETROACTIVE', label: 'เลื่อนวันย้อนหลัง', count: retroCount },
+              { id: 'PENALTY_SPARE_PART', label: '🚨 ผิดวินัยอะไหล่', count: penaltyCount },
+              { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: billingCount },
+              ...(priorResolvedTasks.length > 0 ? [{ id: 'PRIOR_RESOLVED', label: '🏛️ ตัดสินแล้วในเดือนก่อนหน้า', count: priorResolvedTasks.length }] : [])
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === tab.id
+                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                    : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  activeTab === tab.id ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Main Body: Conditional View (Single-Task Focus vs Paginated List) */}
+        {editingItem ? (
+          /* ========================================================
+             SINGLE-TASK FOCUS ADJUDICATION VIEW (Zero Layout Churn)
+             ======================================================== */
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            {/* Back Button & Target Title */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditingTaskId(null)}
+                className="text-xs font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition cursor-pointer"
+              >
+                <Icon name="arrowLeft" size={14} />
+                <span>← กลับไปหน้ารายการ ({filteredItems.length} งาน)</span>
+              </button>
+              <span className="text-[11px] text-slate-400 font-mono">
+                กำลังวินิจฉัยใบงาน: <strong className="text-amber-300">{editingItem.task.id}</strong>
               </span>
-            </button>
-          ))}
-        </div>
-
-        {/* List of Discrepancy Items */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3">
-          {filteredItems.length === 0 ? (
-            <div className="p-8 text-center bg-slate-900/40 rounded-xl border border-slate-800">
-              <Icon name="checkCircle" size={36} className="text-emerald-400 mx-auto mb-2 opacity-80" />
-              <h4 className="text-white font-bold text-sm">ไม่พบรายการงานผิดเงื่อนไขในหมวดหมู่นี้</h4>
-              <p className="text-slate-400 text-xs mt-1">
-                {activeTab === 'PRIOR_RESOLVED' 
-                  ? 'ไม่มีรายการที่ได้รับการตัดสินในเดือนก่อนหน้า' 
-                  : 'งานในขอบเขตรอบเดือนนี้ปฏิบัติตามมาตรฐาน SLA และ RACI เรียบร้อยดี'}
-              </p>
             </div>
-          ) : (
-            filteredItems.map((item, idx) => {
-              const isEditing = String(editingTaskId) === String(item.task.id);
-              const attr = item.attribution || {};
-              const isWaived = attr.role === 'waived';
-              const isExplicit = attr.isExplicit;
 
-              return (
-                <div 
-                  key={`${item.task.id}-${idx}`}
-                  className={`bg-slate-900/90 rounded-xl border p-4 transition ${
-                    isWaived 
-                      ? 'border-emerald-500/30 bg-emerald-950/10' 
-                      : item.type === 'PENALTY_SPARE_PART'
-                      ? 'border-rose-500/50 bg-rose-950/20'
-                      : isEditing
-                      ? 'border-amber-400/80 bg-amber-950/20 shadow-lg'
-                      : 'border-slate-800 hover:border-slate-600'
-                  }`}
-                >
-                  <div 
-                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 cursor-pointer group"
-                    onClick={() => handleStartEdit(item)}
-                    title="คลิกเพื่อวินิจฉัย/ปรับสิทธิ์งานนี้"
-                  >
-                    {/* Left: Task Info & Trigger Violation */}
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-amber-300 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                          {item.task.id}
-                        </span>
-                        <span className="text-white font-semibold text-xs truncate max-w-[220px]">
-                          {item.task.project}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          • สถานะ: <strong className="text-slate-200">{item.task.status}</strong>
-                        </span>
-                      </div>
+            {/* Target Task Summary Card */}
+            <div className="bg-slate-900/90 rounded-xl border border-amber-400/50 p-4 space-y-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono font-bold text-amber-300 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                  {editingItem.task.id}
+                </span>
+                <span className="text-white font-semibold text-xs truncate max-w-[280px]">
+                  {editingItem.task.project}
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  • สถานะ: <strong className="text-slate-200">{editingItem.task.status}</strong>
+                </span>
+              </div>
 
-                      <div className="text-sm font-bold text-white leading-snug">
-                        {item.task.details}
-                      </div>
+              <div className="text-sm font-bold text-white leading-snug">
+                {editingItem.task.details}
+              </div>
 
-                      <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
-                        <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10.5px] font-bold">
-                          ⚠️ {item.title}
-                        </span>
-                        <span className="text-slate-400 text-[11px]">
-                          {item.desc}
-                        </span>
-                      </div>
+              <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
+                <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10.5px] font-bold">
+                  ⚠️ {editingItem.title}
+                </span>
+                <span className="text-slate-400 text-[11px]">
+                  {editingItem.desc}
+                </span>
+              </div>
+            </div>
 
-                      {/* Current Attribution Box */}
-                      <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 text-xs flex flex-wrap items-center justify-between gap-2 mt-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-400 text-[11px]">การกำหนดความรับผิดชอบ RACI:</span>
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
-                            attr.role === 'foreman'
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                              : attr.role === 'admin'
-                              ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                              : attr.role === 'waived'
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                              : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                          }`}>
-                            {attr.role === 'foreman' && '🛠️ Foreman (รับผิดชอบ 100%)'}
-                            {attr.role === 'admin' && '📋 Admin (รับผิดชอบ 100%)'}
-                            {attr.role === 'shared' && '🤝 ร่วมกัน (Shared)'}
-                            {attr.role === 'waived' && '🛡️ ได้รับการยกเว้น (Waived)'}
-                            {!attr.role && '⏳ ยังไม่ระบุ'}
-                          </span>
-                          {isExplicit ? (
-                            <span className="text-[10px] text-emerald-400 bg-emerald-950/50 px-1.5 py-0.2 rounded border border-emerald-800">
-                              ✓ มีการวินิจฉัยโดย {attr.by || 'ผู้ดูแล'}
+            {/* Isolated Adjudication Form (Zero competing DOM nodes, 100% native typing) */}
+            <AdjudicationForm
+              item={editingItem}
+              initialRole={editingItem.attribution?.role || editingItem.task?.slaAuditResolution?.responsibleRole || 'foreman'}
+              initialReason={editingItem.attribution?.reason || editingItem.task?.slaAuditResolution?.reason || ''}
+              supervisorSession={supervisorSession}
+              onSave={handleSaveResolution}
+              onCancel={() => setEditingTaskId(null)}
+              isSaving={savingTaskId === editingItem.task.id}
+              Icon={Icon}
+            />
+          </div>
+        ) : (
+          /* ========================================================
+             PAGINATED LIST VIEW (20 Items Per Page)
+             ======================================================== */
+          <>
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3">
+              {filteredItems.length === 0 ? (
+                <div className="p-8 text-center bg-slate-900/40 rounded-xl border border-slate-800">
+                  <Icon name="checkCircle" size={36} className="text-emerald-400 mx-auto mb-2 opacity-80" />
+                  <h4 className="text-white font-bold text-sm">ไม่พบรายการงานผิดเงื่อนไขในหมวดหมู่นี้</h4>
+                  <p className="text-slate-400 text-xs mt-1">
+                    {activeTab === 'PRIOR_RESOLVED' 
+                      ? 'ไม่มีรายการที่ได้รับการตัดสินในเดือนก่อนหน้า' 
+                      : 'งานในขอบเขตรอบเดือนนี้ปฏิบัติตามมาตรฐาน SLA และ RACI เรียบร้อยดี'}
+                  </p>
+                </div>
+              ) : (
+                paginatedItems.map((item, idx) => {
+                  const attr = item.attribution || {};
+                  const isWaived = attr.role === 'waived';
+                  const isExplicit = attr.isExplicit;
+
+                  return (
+                    <div 
+                      key={`${item.task.id}-${idx}`}
+                      className={`bg-slate-900/90 rounded-xl border p-4 transition ${
+                        isWaived 
+                          ? 'border-emerald-500/30 bg-emerald-950/10' 
+                          : item.type === 'PENALTY_SPARE_PART'
+                          ? 'border-rose-500/50 bg-rose-950/20'
+                          : 'border-slate-800 hover:border-slate-600'
+                      }`}
+                    >
+                      <div 
+                        className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 cursor-pointer group"
+                        onClick={() => handleStartEdit(item)}
+                        title="คลิกเพื่อวินิจฉัย/ปรับสิทธิ์งานนี้"
+                      >
+                        {/* Left: Task Info & Trigger Violation */}
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-amber-300 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                              {item.task.id}
                             </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800">
-                              (ระบบจัดสรรอัตโนมัติ)
+                            <span className="text-white font-semibold text-xs truncate max-w-[220px]">
+                              {item.task.project}
                             </span>
-                          )}
+                            <span className="text-[10px] text-slate-400">
+                              • สถานะ: <strong className="text-slate-200">{item.task.status}</strong>
+                            </span>
+                          </div>
+
+                          <div className="text-sm font-bold text-white leading-snug">
+                            {item.task.details}
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10.5px] font-bold">
+                              ⚠️ {item.title}
+                            </span>
+                            <span className="text-slate-400 text-[11px]">
+                              {item.desc}
+                            </span>
+                          </div>
+
+                          {/* Current Attribution Box */}
+                          <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 text-xs flex flex-wrap items-center justify-between gap-2 mt-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400 text-[11px]">การกำหนดความรับผิดชอบ RACI:</span>
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                                attr.role === 'foreman'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : attr.role === 'admin'
+                                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                  : attr.role === 'waived'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                  : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                              }`}>
+                                {attr.role === 'foreman' && '🛠️ Foreman (รับผิดชอบ 100%)'}
+                                {attr.role === 'admin' && '📋 Admin (รับผิดชอบ 100%)'}
+                                {attr.role === 'shared' && '🤝 ร่วมกัน (Shared)'}
+                                {attr.role === 'waived' && '🛡️ ได้รับการยกเว้น (Waived)'}
+                                {!attr.role && '⏳ ยังไม่ระบุ'}
+                              </span>
+                              {isExplicit ? (
+                                <span className="text-[10px] text-emerald-400 bg-emerald-950/50 px-1.5 py-0.2 rounded border border-emerald-800">
+                                  ✓ มีการวินิจฉัยโดย {attr.by || 'ผู้ดูแล'}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800">
+                                  (ระบบจัดสรรอัตโนมัติ)
+                                </span>
+                              )}
+                            </div>
+
+                            {attr.reason && (
+                              <div className="text-[11px] text-slate-300 italic w-full">
+                                "{attr.reason}"
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        {attr.reason && (
-                          <div className="text-[11px] text-slate-300 italic w-full">
-                            "{attr.reason}"
-                          </div>
-                        )}
+                        {/* Right: Actions */}
+                        <div className="shrink-0 flex items-center sm:flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartEdit(item);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"
+                          >
+                            <Icon name="scale" size={13} />
+                            <span>วินิจฉัย/ปรับสิทธิ์</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
+                  );
+                })
+              )}
+            </div>
 
-                    {/* Right: Actions */}
-                    <div className="shrink-0 flex items-center sm:flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartEdit(item);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                          isEditing
-                            ? 'bg-slate-700 text-white'
-                            : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
-                        }`}
-                      >
-                        <Icon name="scale" size={13} />
-                        <span>{isEditing ? 'ยกเลิกแก้ไข' : 'วินิจฉัย/ปรับสิทธิ์'}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Inline Attribution Form for Supervisor (Isolated local state to prevent lag on 100+ items) */}
-                  {isEditing && (
-                    <AdjudicationForm
-                      item={item}
-                      initialRole={item.attribution?.role || item.task?.slaAuditResolution?.responsibleRole || 'foreman'}
-                      initialReason={item.attribution?.reason || item.task?.slaAuditResolution?.reason || ''}
-                      supervisorSession={supervisorSession}
-                      onSave={handleSaveResolution}
-                      onCancel={() => setEditingTaskId(null)}
-                      isSaving={savingTaskId === item.task.id}
-                      Icon={Icon}
-                    />
-                  )}
+            {/* Pagination Controls */}
+            {filteredItems.length > PAGE_SIZE && (
+              <div className="p-3 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300 shrink-0">
+                <span className="text-slate-400 text-[11px]">
+                  แสดง {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredItems.length)} จากทั้งหมด {filteredItems.length} รายการ
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition cursor-pointer"
+                  >
+                    ก่อนหน้า
+                  </button>
+                  <span className="px-2 font-mono text-amber-300 font-bold">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition cursor-pointer"
+                  >
+                    ถัดไป
+                  </button>
                 </div>
-              );
-            })
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Footer */}
         <div className="p-3 sm:p-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
             <span>การปรับเปลี่ยนคำวินิจฉัยจะส่งผลต่อการคำนวณคะแนน SLA และเกณฑ์ BARS ของบุคลากรทันที</span>
           </div>
           <button
@@ -423,7 +527,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
   };
 
   return (
-    <div className="mt-4 pt-3 border-t border-slate-800 space-y-3 bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30">
+    <div className="space-y-4 bg-slate-950/90 p-4 sm:p-5 rounded-xl border border-amber-500/40">
       <div className="flex items-center justify-between text-xs font-bold text-amber-300">
         <span>⚖️ บันทึกคำวินิจฉัยความรับผิดชอบโดยผู้ดูแล (Supervisor Adjudication):</span>
         {supervisorSession?.supervisorName && (
@@ -448,37 +552,37 @@ const AdjudicationForm = memo(function AdjudicationForm({
               key={opt.id}
               type="button"
               onClick={() => setRole(opt.id)}
-              className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+              className={`p-2.5 rounded-lg border text-center transition cursor-pointer ${
                 role === opt.id
                   ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-md'
                   : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
               }`}
             >
-              <div className="text-xs leading-tight">{opt.label}</div>
-              <div className="text-[9.5px] opacity-80 mt-0.5">{opt.sub}</div>
+              <div className="text-xs font-bold leading-tight">{opt.label}</div>
+              <div className="text-[10px] opacity-80 mt-0.5">{opt.sub}</div>
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="text-xs text-slate-300 block mb-1 font-bold">
+        <label className="text-xs text-slate-300 block mb-1.5 font-bold">
           เหตุผลประกอบคำวินิจฉัย (Audit Notes & Justification) *
         </label>
         <textarea
           ref={reasonRef}
-          rows="2"
+          rows="3"
           defaultValue={initialReason || ''}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none"
+          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none leading-relaxed"
           placeholder="ระบุข้อเท็จจริง เช่น ช่างแจ้งราคา BOQ ล่าช้าจริง, หรือ ลูกค้ารอตัดสินใจ เป็นเหตุสุดวิสัย..."
         />
       </div>
 
-      <div className="flex items-center justify-end gap-2 pt-1">
+      <div className="flex items-center justify-end gap-2.5 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+          className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
         >
           ยกเลิก
         </button>
@@ -486,7 +590,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
           type="button"
           disabled={isSaving}
           onClick={handleSubmit}
-          className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
+          className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
         >
           {isSaving ? (
             <span>กำลังบันทึก...</span>
