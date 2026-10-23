@@ -84,6 +84,12 @@ export default function TeamStatusTab({
   const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [evalMonth, setEvalMonth] = useState(currentMonth || currentSystemMonth);
 
+  const modalTelemetry = React.useMemo(() => {
+    const targetStaff = teamForm?.id ? teamForm : selTeam;
+    if (!targetStaff || !discrepancyModalOpen) return { discrepancyTasks: [], priorResolvedDiscrepancies: [] };
+    return aggregateStaffTaskTelemetry(targetStaff, tasks, sets, evalMonth);
+  }, [teamForm, selTeam, tasks, sets, evalMonth, discrepancyModalOpen]);
+
   useEffect(() => {
     if (currentMonth) setEvalMonth(currentMonth);
   }, [currentMonth]);
@@ -3180,12 +3186,6 @@ function renderAnalysis() {
         </div>
       );
     };
-
-    const modalTelemetry = React.useMemo(() => {
-      const targetStaff = teamForm?.id ? teamForm : selTeam;
-      if (!targetStaff || !discrepancyModalOpen) return { discrepancyTasks: [], priorResolvedDiscrepancies: [] };
-      return aggregateStaffTaskTelemetry(targetStaff, tasks, sets, evalMonth);
-    }, [teamForm, selTeam, tasks, sets, evalMonth, discrepancyModalOpen]);
 
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">

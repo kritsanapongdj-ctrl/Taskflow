@@ -51,10 +51,8 @@ export default function DiscrepancyAuditModal({
     }
   }, [isOpen, initialTaskId, discrepancyTasks, priorResolvedTasks]);
 
-  if (!isOpen) return null;
-  if (typeof document === 'undefined') return null;
-
   const filteredItems = useMemo(() => {
+    if (!isOpen) return [];
     if (activeTab === 'PRIOR_RESOLVED') return priorResolvedTasks;
     return discrepancyTasks.filter(item => {
       if (activeTab === 'ALL') return true;
@@ -67,7 +65,7 @@ export default function DiscrepancyAuditModal({
       if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
       return true;
     });
-  }, [activeTab, priorResolvedTasks, discrepancyTasks]);
+  }, [isOpen, activeTab, priorResolvedTasks, discrepancyTasks]);
 
   const counts = useMemo(() => ({
     lateCompleted: discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length,
@@ -80,6 +78,9 @@ export default function DiscrepancyAuditModal({
   }), [discrepancyTasks]);
 
   const { lateCompleted: lateCompletedCount, lateWO: lateWOCount, stale: staleCount, parts: partsCount, retro: retroCount, penalty: penaltyCount, billing: billingCount } = counts;
+
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const handleStartEdit = (item) => {
     if (String(editingTaskId) === String(item.task.id)) {
