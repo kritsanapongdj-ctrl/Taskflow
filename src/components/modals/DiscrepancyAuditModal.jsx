@@ -18,8 +18,6 @@ export default function DiscrepancyAuditModal({
 }) {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING' | 'PRIOR_RESOLVED'
   const [editingTaskId, setEditingTaskId] = useState(null);
-  const [auditRole, setAuditRole] = useState('foreman');
-  const [auditReason, setAuditReason] = useState('');
   const [savingTaskId, setSavingTaskId] = useState(null);
 
   const formatMonthThai = (mStr) => {
@@ -49,8 +47,6 @@ export default function DiscrepancyAuditModal({
         else setActiveTab('ALL');
 
         setEditingTaskId(targetItem.task.id);
-        setAuditRole(targetItem.attribution?.role || 'foreman');
-        setAuditReason(targetItem.attribution?.reason || targetItem.task?.slaAuditResolution?.reason || '');
       }
     }
   }, [isOpen, initialTaskId, discrepancyTasks, priorResolvedTasks]);
@@ -91,12 +87,10 @@ export default function DiscrepancyAuditModal({
       return;
     }
     setEditingTaskId(item.task.id);
-    setAuditRole(item.attribution?.role || item.task?.slaAuditResolution?.responsibleRole || 'foreman');
-    setAuditReason(item.attribution?.reason || item.task?.slaAuditResolution?.reason || '');
   };
 
-  const handleSaveResolution = async (item) => {
-    if (!auditReason.trim()) {
+  const handleSaveResolution = async (item, role, reason) => {
+    if (!reason || !reason.trim()) {
       return alert('กรุณาระบุเหตุผลหรือคำวินิจฉัยประกอบการตัดสินใจ');
     }
 
@@ -107,19 +101,19 @@ export default function DiscrepancyAuditModal({
       const supervisorName = supervisorSession?.supervisorName || 'ผู้ดูแลระบบ';
 
       updatedTask.slaAuditResolution = {
-        responsibleRole: auditRole, // 'foreman' | 'admin' | 'shared' | 'waived'
-        reason: auditReason.trim(),
+        responsibleRole: role, // 'foreman' | 'admin' | 'shared' | 'waived'
+        reason: reason.trim(),
         supervisorName,
         coords: supervisorSession?.coords || null,
         timestamp: nowIso
       };
 
       const timeline = Array.isArray(updatedTask.timeline) ? [...updatedTask.timeline] : [];
-      const roleLabel = auditRole === 'foreman' 
+      const roleLabel = role === 'foreman' 
         ? '🛠️ Foreman (รับผิดชอบเต็ม 100%)' 
-        : auditRole === 'admin' 
+        : role === 'admin' 
         ? '📋 Admin (รับผิดชอบเต็ม 100%)' 
-        : auditRole === 'waived' 
+        : role === 'waived' 
         ? '🛡️ ยกเว้น (Waived - เหตุสุดวิสัย)' 
         : '🤝 รับผิดชอบร่วม (Shared)';
 
@@ -127,7 +121,7 @@ export default function DiscrepancyAuditModal({
         timestamp: nowIso,
         action: 'SLA_AUDIT_RESOLUTION',
         title: '⚖️ วินิจฉัยความรับผิดชอบ RACI',
-        note: `ผู้ดูแล (${supervisorName}) วินิจฉัยให้: ${roleLabel} | เหตุผล: ${auditReason.trim()}`,
+        note: `ผู้ดูแล (${supervisorName}) วินิจฉัยให้: ${roleLabel} | เหตุผล: ${reason.trim()}`,
         actor: supervisorName,
         securityAudit: supervisorSession?.coords ? {
           lat: supervisorSession.coords.lat,
@@ -143,7 +137,6 @@ export default function DiscrepancyAuditModal({
       }
 
       setEditingTaskId(null);
-      setAuditReason('');
     } catch (err) {
       console.error('Save Audit Resolution Error:', err);
       alert('เกิดข้อผิดพลาดในการบันทึกคำวินิจฉัย');
@@ -362,84 +355,18 @@ export default function DiscrepancyAuditModal({
                     </div>
                   </div>
 
-                  {/* Inline Attribution Form for Supervisor */}
+                  {/* Inline Attribution Form for Supervisor (Isolated local state to prevent lag on 100+ items) */}
                   {isEditing && (
-                    <div className="mt-4 pt-3 border-t border-slate-800 space-y-3 bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30 animate-fadeIn">
-                      <div className="flex items-center justify-between text-xs font-bold text-amber-300">
-                        <span>⚖️ บันทึกคำวินิจฉัยความรับผิดชอบโดยผู้ดูแล (Supervisor Adjudication):</span>
-                        {supervisorSession?.supervisorName && (
-                          <span className="text-[11px] text-slate-400">
-                            🛡️ ผู้ลงนาม: <strong>{supervisorSession.supervisorName}</strong>
-                          </span>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-slate-300 block mb-1.5 font-bold">
-                          เลือกผลการวินิจฉัยความรับผิดชอบ (Responsible Entity):
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {[
-                            { id: 'foreman', label: '🛠️ Foreman', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนโฟร์แมน)' },
-                            { id: 'admin', label: '📋 Admin', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนแอดมิน)' },
-                            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งสัดส่วนรับผิดชอบคู่หู' },
-                            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย (ไม่หักคะแนน)' }
-                          ].map(opt => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setAuditRole(opt.id)}
-                              className={`p-2 rounded-lg border text-center transition cursor-pointer ${
-                                auditRole === opt.id
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-md'
-                                  : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
-                              }`}
-                            >
-                              <div className="text-xs leading-tight">{opt.label}</div>
-                              <div className="text-[9.5px] opacity-80 mt-0.5">{opt.sub}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-slate-300 block mb-1 font-bold">
-                          เหตุผลประกอบคำวินิจฉัย (Audit Notes & Justification) *
-                        </label>
-                        <textarea
-                          rows="2"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none"
-                          placeholder="ระบุข้อเท็จจริง เช่น ช่างแจ้งราคา BOQ ล่าช้าจริง, หรือ ลูกค้ารอตัดสินใจ เป็นเหตุสุดวิสัย..."
-                          value={auditReason}
-                          onChange={(e) => setAuditReason(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setEditingTaskId(null)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
-                        >
-                          ยกเลิก
-                        </button>
-                        <button
-                          type="button"
-                          disabled={savingTaskId === item.task.id}
-                          onClick={() => handleSaveResolution(item)}
-                          className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
-                        >
-                          {savingTaskId === item.task.id ? (
-                            <span>กำลังบันทึก...</span>
-                          ) : (
-                            <>
-                              <Icon name="check" size={14} />
-                              <span>บันทึกคำวินิจฉัย (Audit Stamp)</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
+                    <AdjudicationForm
+                      item={item}
+                      initialRole={item.attribution?.role || item.task?.slaAuditResolution?.responsibleRole || 'foreman'}
+                      initialReason={item.attribution?.reason || item.task?.slaAuditResolution?.reason || ''}
+                      supervisorSession={supervisorSession}
+                      onSave={handleSaveResolution}
+                      onCancel={() => setEditingTaskId(null)}
+                      isSaving={savingTaskId === item.task.id}
+                      Icon={Icon}
+                    />
                   )}
                 </div>
               );
@@ -464,5 +391,98 @@ export default function DiscrepancyAuditModal({
       </div>
     </div>,
     document.body
+  );
+}
+
+function AdjudicationForm({
+  item,
+  initialRole,
+  initialReason,
+  supervisorSession,
+  onSave,
+  onCancel,
+  isSaving,
+  Icon
+}) {
+  const [role, setRole] = useState(initialRole || 'foreman');
+  const [reason, setReason] = useState(initialReason || '');
+
+  return (
+    <div className="mt-4 pt-3 border-t border-slate-800 space-y-3 bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30 animate-fadeIn">
+      <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+        <span>⚖️ บันทึกคำวินิจฉัยความรับผิดชอบโดยผู้ดูแล (Supervisor Adjudication):</span>
+        {supervisorSession?.supervisorName && (
+          <span className="text-[11px] text-slate-400">
+            🛡️ ผู้ลงนาม: <strong>{supervisorSession.supervisorName}</strong>
+          </span>
+        )}
+      </div>
+
+      <div>
+        <label className="text-xs text-slate-300 block mb-1.5 font-bold">
+          เลือกผลการวินิจฉัยความรับผิดชอบ (Responsible Entity):
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { id: 'foreman', label: '🛠️ Foreman', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนโฟร์แมน)' },
+            { id: 'admin', label: '📋 Admin', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนแอดมิน)' },
+            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งสัดส่วนรับผิดชอบคู่หู' },
+            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย (ไม่หักคะแนน)' }
+          ].map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setRole(opt.id)}
+              className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                role === opt.id
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-md'
+                  : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+              }`}
+            >
+              <div className="text-xs leading-tight">{opt.label}</div>
+              <div className="text-[9.5px] opacity-80 mt-0.5">{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-slate-300 block mb-1 font-bold">
+          เหตุผลประกอบคำวินิจฉัย (Audit Notes & Justification) *
+        </label>
+        <textarea
+          rows="2"
+          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none"
+          placeholder="ระบุข้อเท็จจริง เช่น ช่างแจ้งราคา BOQ ล่าช้าจริง, หรือ ลูกค้ารอตัดสินใจ เป็นเหตุสุดวิสัย..."
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+        >
+          ยกเลิก
+        </button>
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={() => onSave(item, role, reason)}
+          className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
+        >
+          {isSaving ? (
+            <span>กำลังบันทึก...</span>
+          ) : (
+            <>
+              <Icon name="check" size={14} />
+              <span>บันทึกคำวินิจฉัย (Audit Stamp)</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
