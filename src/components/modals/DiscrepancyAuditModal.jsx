@@ -203,6 +203,9 @@ export default function DiscrepancyAuditModal({
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300">
                   ✓ ก.ย. 2569 เป็นต้นไป
                 </span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-400 text-slate-950 shadow-xs" title="เอนจินประมวลผลพิมพ์ลื่นไหล ไม่กระตุก">
+                  ⚡ v2.5 Zero-Lag Engine
+                </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 {staff ? `บุคลากร: ${staff.name} (${staff.role || staff.classId || 'ทีมงาน'})` : 'ภาพรวมทีมงาน'} • รายการรอตรวจรอบนี้ {discrepancyTasks.length} รายการ (คลิกที่รายการเพื่อปรับผลการตัดสิน)
@@ -211,6 +214,19 @@ export default function DiscrepancyAuditModal({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.reload(true);
+                }
+              }}
+              className="px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+              title="กดเมื่อต้องการรีเฟรชหน้าต่างเพื่อโหลดโค้ดเวอร์ชันล่าสุดจากเซิร์ฟเวอร์ทันที"
+            >
+              <Icon name="refreshCw" size={12} />
+              <span className="hidden sm:inline">รีโหลดเวอร์ชัน</span>
+            </button>
             {!isSupervisor && (
               <button
                 type="button"
@@ -318,6 +334,7 @@ export default function DiscrepancyAuditModal({
 
             {/* Isolated Adjudication Form (Zero competing DOM nodes, 100% native typing) */}
             <AdjudicationForm
+              key={editingItem.task.id}
               item={editingItem}
               initialRole={editingItem.attribution?.role || editingItem.task?.slaAuditResolution?.responsibleRole || 'foreman'}
               initialReason={editingItem.attribution?.reason || editingItem.task?.slaAuditResolution?.reason || ''}
@@ -575,6 +592,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
           defaultValue={initialReason || ''}
           onKeyDown={(e) => e.stopPropagation()}
           onKeyUp={(e) => e.stopPropagation()}
+          onInput={(e) => e.stopPropagation()}
           className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none leading-relaxed"
           placeholder="ระบุข้อเท็จจริง เช่น ช่างแจ้งราคา BOQ ล่าช้าจริง, หรือ ลูกค้ารอตัดสินใจ เป็นเหตุสุดวิสัย..."
         />

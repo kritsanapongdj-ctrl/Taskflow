@@ -1,17 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function StatusChangeModal({
   isOpen,
   onClose,
   onConfirm,
-  sMod,
-  setSMod,
+  sMod: propSMod,
+  setSMod: propSetSMod,
   getTStr,
   staffList = [],
   task = null,
   isSupervisor = false,
   supervisorSession = null
 }) {
+  // Isolate form state locally so that typing never triggers root App.jsx re-renders
+  const [sMod, setSMod] = useState(propSMod || {});
+
+  useEffect(() => {
+    if (isOpen) {
+      setSMod(propSMod || {});
+    }
+  }, [isOpen, propSMod?.taskId, propSMod?.type]);
+
   if (!isOpen) return null;
 
   const handleConfirmClick = () => {
@@ -52,7 +61,8 @@ export default function StatusChangeModal({
         }
       }
     }
-    onConfirm();
+    if (propSetSMod) propSetSMod(sMod);
+    if (onConfirm) onConfirm(sMod);
   };
 
   const isCustom = sMod.isCustomStaff || (!staffList.includes(sMod.recordedBy) && !!sMod.recordedBy);
@@ -466,17 +476,19 @@ export default function StatusChangeModal({
             type="button"
             onClick={() => {
               onClose();
-              setSMod({
-                ...sMod,
-                isOpen: false,
-                noWO: false,
-                forceWO: false,
-                isOverdue: false,
-                overdueReason: '',
-                postponeDate: getTStr ? getTStr() : '',
-                recordedBy: '',
-                isCustomStaff: false
-              });
+              if (propSetSMod) {
+                propSetSMod({
+                  ...propSMod,
+                  isOpen: false,
+                  noWO: false,
+                  forceWO: false,
+                  isOverdue: false,
+                  overdueReason: '',
+                  postponeDate: getTStr ? getTStr() : '',
+                  recordedBy: '',
+                  isCustomStaff: false
+                });
+              }
             }}
             className="flex-1 bg-gray-100 hover:bg-gray-200 p-2 text-xs font-bold rounded transition cursor-pointer"
           >

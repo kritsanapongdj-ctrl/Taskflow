@@ -26,7 +26,8 @@ export default function AITalentAdvisorModal({
   evalMonth = '',
   telemetry: propTelemetry = null,
   archetypesData, 
-  initialViewMode = 'rpg' 
+  initialViewMode = 'rpg',
+  onSaveDiagnostic
 }) {
   const [loading, setLoading] = useState(false);
   const [diagnostic, setDiagnostic] = useState(null);
@@ -93,17 +94,28 @@ export default function AITalentAdvisorModal({
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
-            setDiagnostic(prev => ({
-              ...prev,
-              ...json.data,
-              // Preserve BARS anchors if AI omitted them
-              subInsights: prev?.subInsights || heuristic?.subInsights,
-              primaryBarsStrength: prev?.primaryBarsStrength || heuristic?.primaryBarsStrength,
-              primaryBarsDevelopment: prev?.primaryBarsDevelopment || heuristic?.primaryBarsDevelopment,
-              primaryBarsNextMilestone: prev?.primaryBarsNextMilestone || heuristic?.primaryBarsNextMilestone,
-              corporatePersona: prev?.corporatePersona || heuristic?.corporatePersona,
-              corporateTierName: prev?.corporateTierName || heuristic?.corporateTierName
-            }));
+            setDiagnostic(prev => {
+              const merged = {
+                ...prev,
+                ...json.data,
+                // Preserve BARS anchors if AI omitted them
+                subInsights: prev?.subInsights || heuristic?.subInsights,
+                primaryBarsStrength: prev?.primaryBarsStrength || heuristic?.primaryBarsStrength,
+                primaryBarsDevelopment: prev?.primaryBarsDevelopment || heuristic?.primaryBarsDevelopment,
+                primaryBarsNextMilestone: prev?.primaryBarsNextMilestone || heuristic?.primaryBarsNextMilestone,
+                corporatePersona: prev?.corporatePersona || heuristic?.corporatePersona,
+                corporateTierName: prev?.corporateTierName || heuristic?.corporateTierName,
+                updatedAt: new Date().toISOString()
+              };
+              if (typeof onSaveDiagnostic === 'function') {
+                try {
+                  onSaveDiagnostic(merged);
+                } catch (e) {
+                  console.warn('onSaveDiagnostic error:', e);
+                }
+              }
+              return merged;
+            });
           }
         }
       } catch (err) {

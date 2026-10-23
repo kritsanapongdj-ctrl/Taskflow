@@ -465,8 +465,20 @@ export default function TeamStatusTab({
                   saveD('settings', newSets);
                   setTeamForm(updatedStaff);
                   setSelTeam(updatedStaff);
+                  // Automated AI Talent Diagnostic Trigger: Compute immediate BARS heuristic
+                  try {
+                     const heuristic = generateHeuristicTalentDiagnostic(updatedStaff, sets, archetypesData);
+                     if (heuristic) {
+                        updatedStaff.aiDiagnostic = heuristic;
+                        if (idx >= 0) ns[idx] = updatedStaff;
+                     }
+                  } catch (diagErr) {
+                     console.warn('Heuristic talent diagnostic err:', diagErr);
+                  }
+
                   setAssessMode(false);
-                  alert('บันทึกผลการประเมินเรียบร้อยแล้ว!\n\nพนักงานได้รับการอัปเดตสเตตัสเรียบร้อย');
+                  // Automated Pipeline Trigger: Open AI Talent Advisor immediately with fresh evaluation
+                  setAiAdvisorModalOpen(true);
                }}
             />
         <div key={u.id || 'new'} className={`animate-fade-in-up flex-1 w-full bg-[#060A14] relative flex flex-col ${isFocusMode ? 'rounded-none h-screen' : 'rounded-xl h-full'} overflow-hidden shadow-2xl min-h-[450px]`}>
@@ -3306,6 +3318,23 @@ function renderAnalysis() {
           evalMonth={evalMonth}
           archetypesData={archetypesData}
           initialViewMode={talentViewMode}
+          onSaveDiagnostic={(newDiag) => {
+            if (!newDiag) return;
+            const currentTarget = (teamForm?.id ? teamForm : selTeam) || {};
+            const targetId = String(currentTarget.id || '');
+            if (!targetId) return;
+            const ns = [...(sets.staffStats || [])];
+            const idx = ns.findIndex(x => String(x.id) === targetId);
+            if (idx >= 0) {
+              const updated = { ...ns[idx], aiDiagnostic: newDiag };
+              ns[idx] = updated;
+              const newSets = { ...sets, staffStats: ns };
+              setSets(newSets);
+              saveD('settings', newSets);
+              setTeamForm(updated);
+              setSelTeam(updated);
+            }
+          }}
         />
         <TeamCalibrationModal
           isOpen={calibrationModalOpen}

@@ -155,7 +155,8 @@ export default function App() {
   const [sList, setSList] = useState({ tasks: [], informs: [] });
   const [rCfg, setRConfig] = useState({ topic: 'task', type: 'month', val: getMStr(), area: 'ทั้งหมด', project: 'ทั้งหมด', staffName: 'ทั้งหมด' });
   const [sDate, setSDate] = useState({ from: getMStr() + '-01', to: getMStr() + '-28' });
-  const [sMod, setSMod] = useState({ isOpen: false, taskId: null, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false });
+  const [sModState, setSMod] = useState({ isOpen: false, taskId: null, type: '', targetStatus: '', reason: '', workOrderNo: '', noWO: false, forceWO: false, isOverdue: false, overdueReason: '', postponeDate: getTStr(), postponeStartDate: '', recordedBy: '', isCustomStaff: false });
+  const sMod = sModState;
   const [cPop, setCPop] = useState({ isOpen: false, date: null, tasks: [] });
   const [bMod, setBMod] = useState({ isOpen: false, group: null, type: '' });
   const [oPop, setOPop] = useState({isOpen: false, tasks: []});
@@ -1031,7 +1032,8 @@ export default function App() {
     }
   };
 
-  const cfSt = () => {
+  const cfSt = (overrideMod) => {
+    const sMod = overrideMod || sModState;
     let cleanWo = '';
     const recorder = sMod.recordedBy?.trim() || 'ผู้ปฏิบัติงาน';
 
