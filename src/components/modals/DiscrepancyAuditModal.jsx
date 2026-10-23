@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function DiscrepancyAuditModal({
@@ -54,27 +54,32 @@ export default function DiscrepancyAuditModal({
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  const filteredItems = activeTab === 'PRIOR_RESOLVED' 
-    ? priorResolvedTasks 
-    : discrepancyTasks.filter(item => {
-        if (activeTab === 'ALL') return true;
-        if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
-        if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
-        if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
-        if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
-        if (activeTab === 'RETROACTIVE') return item.type === 'RETROACTIVE_START' || item.type === 'RETROACTIVE_END';
-        if (activeTab === 'PENALTY_SPARE_PART') return item.type === 'PENALTY_SPARE_PART';
-        if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
-        return true;
-      });
+  const filteredItems = useMemo(() => {
+    if (activeTab === 'PRIOR_RESOLVED') return priorResolvedTasks;
+    return discrepancyTasks.filter(item => {
+      if (activeTab === 'ALL') return true;
+      if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
+      if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
+      if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
+      if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
+      if (activeTab === 'RETROACTIVE') return item.type === 'RETROACTIVE_START' || item.type === 'RETROACTIVE_END';
+      if (activeTab === 'PENALTY_SPARE_PART') return item.type === 'PENALTY_SPARE_PART';
+      if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
+      return true;
+    });
+  }, [activeTab, priorResolvedTasks, discrepancyTasks]);
 
-  const lateCompletedCount = discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length;
-  const lateWOCount = discrepancyTasks.filter(i => i.type === 'LATE_WO').length;
-  const staleCount = discrepancyTasks.filter(i => i.type === 'STALE_TASK').length;
-  const partsCount = discrepancyTasks.filter(i => i.type === 'SPARE_PARTS_45D').length;
-  const retroCount = discrepancyTasks.filter(i => i.type === 'RETROACTIVE_START' || i.type === 'RETROACTIVE_END').length;
-  const penaltyCount = discrepancyTasks.filter(i => i.type === 'PENALTY_SPARE_PART').length;
-  const billingCount = discrepancyTasks.filter(i => i.type === 'BILLING_CUTOFF').length;
+  const counts = useMemo(() => ({
+    lateCompleted: discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length,
+    lateWO: discrepancyTasks.filter(i => i.type === 'LATE_WO').length,
+    stale: discrepancyTasks.filter(i => i.type === 'STALE_TASK').length,
+    parts: discrepancyTasks.filter(i => i.type === 'SPARE_PARTS_45D').length,
+    retro: discrepancyTasks.filter(i => i.type === 'RETROACTIVE_START' || i.type === 'RETROACTIVE_END').length,
+    penalty: discrepancyTasks.filter(i => i.type === 'PENALTY_SPARE_PART').length,
+    billing: discrepancyTasks.filter(i => i.type === 'BILLING_CUTOFF').length,
+  }), [discrepancyTasks]);
+
+  const { lateCompleted: lateCompletedCount, lateWO: lateWOCount, stale: staleCount, parts: partsCount, retro: retroCount, penalty: penaltyCount, billing: billingCount } = counts;
 
   const handleStartEdit = (item) => {
     if (String(editingTaskId) === String(item.task.id)) {
@@ -394,7 +399,7 @@ export default function DiscrepancyAuditModal({
   );
 }
 
-function AdjudicationForm({
+const AdjudicationForm = memo(function AdjudicationForm({
   item,
   initialRole,
   initialReason,
@@ -405,10 +410,19 @@ function AdjudicationForm({
   Icon
 }) {
   const [role, setRole] = useState(initialRole || 'foreman');
-  const [reason, setReason] = useState(initialReason || '');
+  const reasonRef = useRef(null);
+
+  const handleSubmit = (e) => {
+    e?.preventDefault?.();
+    const reasonText = (reasonRef.current?.value || '').trim();
+    if (!reasonText) {
+      return alert('กรุณาระบุเหตุผลหรือคำวินิจฉัยประกอบการตัดสินใจ');
+    }
+    onSave(item, role, reasonText);
+  };
 
   return (
-    <div className="mt-4 pt-3 border-t border-slate-800 space-y-3 bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30 animate-fadeIn">
+    <div className="mt-4 pt-3 border-t border-slate-800 space-y-3 bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30">
       <div className="flex items-center justify-between text-xs font-bold text-amber-300">
         <span>⚖️ บันทึกคำวินิจฉัยความรับผิดชอบโดยผู้ดูแล (Supervisor Adjudication):</span>
         {supervisorSession?.supervisorName && (
@@ -451,11 +465,11 @@ function AdjudicationForm({
           เหตุผลประกอบคำวินิจฉัย (Audit Notes & Justification) *
         </label>
         <textarea
+          ref={reasonRef}
           rows="2"
+          defaultValue={initialReason || ''}
           className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none resize-none"
           placeholder="ระบุข้อเท็จจริง เช่น ช่างแจ้งราคา BOQ ล่าช้าจริง, หรือ ลูกค้ารอตัดสินใจ เป็นเหตุสุดวิสัย..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
         />
       </div>
 
@@ -470,7 +484,7 @@ function AdjudicationForm({
         <button
           type="button"
           disabled={isSaving}
-          onClick={() => onSave(item, role, reason)}
+          onClick={handleSubmit}
           className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
         >
           {isSaving ? (
@@ -485,4 +499,4 @@ function AdjudicationForm({
       </div>
     </div>
   );
-}
+});

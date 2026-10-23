@@ -3181,6 +3181,12 @@ function renderAnalysis() {
       );
     };
 
+    const modalTelemetry = React.useMemo(() => {
+      const targetStaff = teamForm?.id ? teamForm : selTeam;
+      if (!targetStaff || !discrepancyModalOpen) return { discrepancyTasks: [], priorResolvedDiscrepancies: [] };
+      return aggregateStaffTaskTelemetry(targetStaff, tasks, sets, evalMonth);
+    }, [teamForm, selTeam, tasks, sets, evalMonth, discrepancyModalOpen]);
+
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
         <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
@@ -3321,8 +3327,8 @@ function renderAnalysis() {
           }}
           staff={teamForm?.id ? teamForm : selTeam}
           tasks={tasks}
-          discrepancyTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets, evalMonth).discrepancyTasks || []}
-          priorResolvedTasks={aggregateStaffTaskTelemetry(teamForm?.id ? teamForm : selTeam, tasks, sets, evalMonth).priorResolvedDiscrepancies || []}
+          discrepancyTasks={modalTelemetry.discrepancyTasks || []}
+          priorResolvedTasks={modalTelemetry.priorResolvedDiscrepancies || []}
           currentMonth={evalMonth}
           initialTaskId={auditInitialTaskId}
           saveD={saveD}
