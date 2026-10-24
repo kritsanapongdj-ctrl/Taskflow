@@ -130,8 +130,8 @@ export default function SupervisorAuthModal({
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100010] animate-fade-in font-sans">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-amber-200 animate-in zoom-in-95 duration-200">
+    <div role="presentation" className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100010] animate-fade-in font-sans">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden overscroll-contain border border-amber-200 animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-[#0f2e4a] via-[#163a5d] to-[#0f2e4a] p-5 text-white flex items-center justify-between border-b border-amber-400/30">
           <div className="flex items-center gap-2.5">
@@ -153,6 +153,7 @@ export default function SupervisorAuthModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="ปิด"
             className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
           >
             <Icon name="x" size={20} />
@@ -207,12 +208,12 @@ export default function SupervisorAuthModal({
             </label>
             <input
               type="password"
+              inputMode="numeric"
               placeholder="••••"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               maxLength={8}
               className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-center tracking-[0.3em] font-mono text-lg font-bold text-[#0f2e4a] focus:ring-2 focus:ring-[#bca374] focus:border-[#0f2e4a] outline-none shadow-2xs"
-              autoFocus
               required
             />
           </div>

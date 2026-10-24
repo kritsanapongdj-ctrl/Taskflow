@@ -32,7 +32,7 @@ const JobTimelineModal = React.lazy(() => import('./components/modals/JobTimelin
 const TabLoadingSpinner = () => (
   <div className="flex-1 flex flex-col items-center justify-center p-16 text-slate-400">
     <div className="w-8 h-8 border-3 border-[#0f2e4a] border-t-transparent rounded-full animate-spin mb-3"></div>
-    <span className="text-xs font-semibold text-slate-500">กำลังโหลดโมดูล...</span>
+    <span className="text-xs font-semibold text-slate-500">กำลังโหลดโมดูล…</span>
   </div>
 );
 
@@ -70,6 +70,8 @@ const getDocRef = (colName, docId) => {
 const GlobalStyles = () => (
   <style>{`
     body, input, textarea, select, button { font-family: 'Prompt', sans-serif; }
+    button, a, input, select, textarea { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .overscroll-contain { overscroll-behavior: contain; }
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .animate-in { animation: fadeIn 0.2s ease-out forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -99,7 +101,7 @@ const THEME = {
 const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
   const iconName = Object.keys(LucideIcons).find(k => k.toLowerCase() === name.toLowerCase().replace(/[-_]/g, ''));
   const Comp = LucideIcons[iconName] || LucideIcons.CircleCheck;
-  return <Comp size={size} color={color} className={className} />;
+  return <Comp size={size} color={color} className={className} aria-hidden="true" />;
 };
 
 const getCleanVal = (r, keys) => {
@@ -1657,6 +1659,7 @@ export default function App() {
                   onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 800); }}
                   className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-[#0F2E4A] transition cursor-pointer"
                   title="รีเฟรชข้อมูล"
+                  aria-label="รีเฟรชข้อมูล"
                 >
                   {loading ? <Icon name="loader2" size={16} className="animate-spin"/> : <Icon name="database" size={16}/>}
                 </button>
@@ -2094,11 +2097,13 @@ export default function App() {
               {/* Backdrop */}
               <div 
                 className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity cursor-pointer"
+                role="presentation"
+                aria-label="ปิดเมนู"
                 onClick={() => setShowMoreMobileMenu(false)}
               />
               
               {/* Sheet Container */}
-              <div className="relative bg-white rounded-t-3xl shadow-2xl p-5 border-t border-slate-200/80 z-10 max-h-[80vh] overflow-y-auto pb-[max(5rem,calc(env(safe-area-inset-bottom)+4.5rem))]">
+              <div className="relative bg-white rounded-t-3xl shadow-2xl p-5 border-t border-slate-200/80 z-10 max-h-[80vh] overflow-y-auto overscroll-contain pb-[max(5rem,calc(env(safe-area-inset-bottom)+4.5rem))]">
                 {/* Drag handle / pill indicator */}
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
                 
@@ -2110,6 +2115,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setShowMoreMobileMenu(false)}
+                    aria-label="ปิดเมนู"
                     className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition cursor-pointer"
                   >
                     <Icon name="x" size={18} />

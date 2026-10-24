@@ -103,10 +103,11 @@ export default function InformDetailModal({
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]"
+      role="presentation"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in border border-slate-200"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in border border-slate-200 overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#003C71] p-4 flex justify-between items-center text-white border-b-2 border-[#A8996E]">
@@ -117,6 +118,7 @@ export default function InformDetailModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="ปิด"
             className="text-white/80 hover:text-white cursor-pointer"
           >
             <Icon name="x" size={18} />

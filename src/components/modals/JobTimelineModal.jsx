@@ -208,10 +208,11 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm animate-in"
+      role="presentation"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -228,6 +229,7 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
           <button
             type="button"
             onClick={onClose}
+            aria-label="ปิด"
             className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
           >
             {Icon ? <Icon name="x" size={18} /> : '✕'}

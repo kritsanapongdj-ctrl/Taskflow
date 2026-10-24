@@ -55,6 +55,7 @@ export default function TaskFormModal({
           <h3 className="font-bold">{eTask ? 'แก้ไข' : 'เพิ่ม'}งานประจำวัน</h3>
           <button
             type="button"
+            aria-label="ปิด"
             onClick={() => {
               onClose();
               setSReason('');
@@ -64,7 +65,7 @@ export default function TaskFormModal({
             <Icon name="x" size={18} />
           </button>
         </div>
-        <form onSubmit={onSubmit} className="p-5 space-y-3 max-h-[70vh] overflow-auto">
+        <form onSubmit={onSubmit} className="p-5 space-y-3 max-h-[70vh] overflow-auto overscroll-contain">
           <div>
             <label className="text-[10px] font-bold text-gray-500">
               วันที่รับเรื่อง (ห้ามแก้ไขย้อนหลัง)

@@ -69,7 +69,7 @@ export default function StatusChangeModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-      <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain">
         {/* Header Title */}
         <h3
           className={`font-bold text-lg mb-2 flex items-center gap-1.5 ${
@@ -157,7 +157,6 @@ export default function StatusChangeModal({
             {isCustom && (
               <input
                 type="text"
-                autoFocus={sMod.isCustomStaff}
                 placeholder="ระบุชื่อผู้บันทึก..."
                 value={sMod.recordedBy || ''}
                 onChange={(e) => setSMod({ ...sMod, recordedBy: e.target.value })}

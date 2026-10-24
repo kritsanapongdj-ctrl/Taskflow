@@ -52,10 +52,11 @@ export default function OverdueTasksModal({
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center p-3 sm:p-4 z-[9999] backdrop-blur-xs animate-in"
+      role="presentation"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-slate-100"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden overscroll-contain border border-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -81,6 +82,7 @@ export default function OverdueTasksModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="ปิด"
             className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer snap-spring"
           >
             <Icon name="x" size={18} />

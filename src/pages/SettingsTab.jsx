@@ -311,8 +311,9 @@ export default function SettingsTab({
         <p className="text-xs text-gray-500 mb-5">กรุณาระบุรหัสผ่านเพื่อเข้าถึงการตั้งค่าระบบ</p>
         <input
           type="password"
+          inputMode="numeric"
           placeholder="••••"
-          className="border-2 border-gray-200 focus:border-[#bca374] p-3 rounded-xl w-full mb-4 text-center tracking-widest text-xl font-bold outline-none transition"
+          className="border-2 border-gray-200 focus:border-[#bca374] focus-visible:ring-2 focus-visible:ring-[#bca374]/30 p-3 rounded-xl w-full mb-4 text-center tracking-widest text-xl font-bold outline-none transition"
           value={pwd}
           onChange={(e) => setPwd(e.target.value)}
           onKeyDown={(e) => {
@@ -321,7 +322,6 @@ export default function SettingsTab({
               else alert('รหัสผ่านไม่ถูกต้อง');
             }
           }}
-          autoFocus
         />
         <button
           type="button"
