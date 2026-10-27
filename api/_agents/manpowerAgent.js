@@ -318,7 +318,7 @@ ${rawText}
 
   async handleCommand({ event, cleanText, upperClean, replyToken, isGroup }) {
     if (isGroup) {
-      await replyToLine(replyToken, "🔒 เพื่อความปลอดภัยของข้อมูล กรุณาเรียกดูรายงานยอดคนงานในแชทส่วนตัวกับบอทเท่านั้นครับ");
+      // อยู่ในกลุ่ม: ห้ามตอบกลับใดๆ เด็ดขาด เพื่อไม่ให้เปิดเผยตัวตนบอทและไม่ส่งเสียงรบกวนในกลุ่ม
       return true;
     }
 
