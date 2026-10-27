@@ -128,6 +128,19 @@ const LH_BOTS = [
     avatar: 'Scholar',
     icon: 'Activity',
     defaultSeatId: 'f-1773354881902-9m50' // Cluster desk (col: 7, row: 18)
+  },
+  {
+    id: 7,
+    key: 'billing',
+    name: 'Auditor Bot',
+    shortRole: 'AUDITOR • BILLING',
+    title: 'Work Order & Cost Auditor',
+    role: 'กวาดค่าใช้จ่ายจริงรายใบสั่งซ่อม (WO) จาก LHServ เชื่อมระบบส่งเบิก TaskFlow',
+    palette: 1,
+    themeColor: '#059669',
+    avatar: 'Scholar',
+    icon: 'Activity',
+    defaultSeatId: null
   }
 ];
 
