@@ -152,12 +152,11 @@ export const ManpowerAgent = {
   name: 'ManpowerAgent',
   description: 'ผู้ช่วยสอดแนมและกวาดข้อมูลยอดคนงานประจำวันของแต่ละโครงการและผู้รับเหมาอย่างเงียบๆ (Zero LINE Quota) เพื่อนำไปกระทบยอดเบิกเงินรายเดือน',
 
-  // ตรวจจับข้อความสอดแนมในกลุ่ม
+  // ตรวจจับข้อความรายงานคนงาน (ทั้งในกลุ่มแบบเงียบ และในแชทส่วนตัวที่ Forward มา)
   isManpowerSurveillance(event) {
     if (event.type !== 'message' || event.message?.type !== 'text') return false;
-    const isGroup = event.source?.type === 'group' || event.source?.type === 'room';
     const text = event.message.text || '';
-    return isGroup && isManpowerReportText(text);
+    return isManpowerReportText(text);
   },
 
   // ดักจับและบันทึกข้อมูลลง Firestore อย่างเงียบกริบ (ห้าม Reply เพื่อไม่เปลืองโควต้า)
@@ -304,6 +303,27 @@ ${rawText}
       });
 
       console.log(`[ManpowerAgent] Silently captured manpower report: ${logId} (${processedRecords.length} projects, contractor: ${contractorName})`);
+      
+      const isGroup = event.source?.type === 'group' || event.source?.type === 'room';
+      if (!isGroup && event.replyToken) {
+        // หากส่งต่อมาในแชทส่วนตัวกับบอท ให้ส่งข้อความยืนยันการบันทึกกลับไปให้อุ่นใจ
+        let confirmMsg = `✅ บันทึกรายงานคนงานประจำวันเรียบร้อยครับ\n`;
+        confirmMsg += `• วันที่: ${finalDate}\n`;
+        confirmMsg += `• ผู้รับเหมา: ${contractorName}\n`;
+        confirmMsg += `• โครงการที่พบ: ${processedRecords.length} โครงการ\n`;
+        confirmMsg += `──────────────────\n`;
+        processedRecords.slice(0, 5).forEach(r => {
+          const act = r.actualHeadcount ?? '-';
+          const tgt = r.targetHeadcount ? `/${r.targetHeadcount}` : '';
+          const comp = r.compensation ? ` (${r.compensation})` : '';
+          confirmMsg += `• ${r.projectCode}: ${act}${tgt} คน [${r.status}]${comp}\n`;
+        });
+        if (processedRecords.length > 5) {
+          confirmMsg += `...และอีก ${processedRecords.length - 5} โครงการ\n`;
+        }
+        await replyToLine(event.replyToken, confirmMsg);
+      }
+
       return true;
     } catch (err) {
       console.error("[ManpowerAgent] Error recording silent log:", err);
