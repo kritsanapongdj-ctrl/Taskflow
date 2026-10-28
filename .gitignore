@@ -36,3 +36,6 @@ public/agent*.webp
 
 .vercel
 skill-observations/
+
+graphify-out/
+src/graphify-out/

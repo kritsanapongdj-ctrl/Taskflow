@@ -18,6 +18,7 @@ const PixelAgentsOffice = React.lazy(() => import('./PixelAgentsOffice.jsx'));
 const TeamStatusTab = React.lazy(() => import('./pages/TeamStatusTab.jsx'));
 const MonthlyCalendarTab = React.lazy(() => import('./pages/MonthlyCalendarTab.jsx'));
 const KanbanBillingTab = React.lazy(() => import('./pages/KanbanBillingTab.jsx'));
+const BudgetTab = React.lazy(() => import('./pages/BudgetTab.jsx'));
 const InformJobTab = React.lazy(() => import('./pages/InformJobTab.jsx'));
 const SettingsTab = React.lazy(() => import('./pages/SettingsTab.jsx'));
 
@@ -1388,7 +1389,50 @@ export default function App() {
   const cfInf = () => { const j = informs.find(x => x.id === iMod.id); if(j) { let n = {...j}; if(iMod.type === 'open'){ n.status = 'เปิด Inform Job แล้ว'; n.informNo = iMod.val; n.openedDate = getTStr(); n.openedMonth = getTStr().slice(0, 7); }else{ n.status = 'ยกเลิก'; n.cancelReason = iMod.val; } saveD('informJob', n); } setIMod({ isOpen: false, type: '', id: null, val: '' }); };
   const moveGroup = (groupId, st) => { tasks.forEach(t => { const k = (t.workOrderNo||'').trim() ? `WO_${t.workOrderNo.trim()}` : `ID_${t.id}`; if (k === groupId && t.billingStatus !== st) { const nT = { ...t, billingStatus: st, billingMonth: st === 'ส่งเบิกแล้ว' ? getMStr() : '' }; delete nT.emailAlert; saveD('task', nT); } }); };
   
-  const groupTasks = (tList) => { const grp = {}; const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/; tList.forEach(t => { const no = (t.workOrderNo||'').trim(); const isWO = woRegex.test(no); const k = isWO ? `WO_${no}` : `ID_${t.id}`; if (!grp[k]) grp[k] = { id: k, isWO: isWO, woNo: no, project: t.project, tasks: [] }; grp[k].tasks.push(t); }); return Object.values(grp); };
+  const groupTasks = (tList) => {
+    const grp = {};
+    const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/;
+    tList.forEach(t => {
+      const no = (t.workOrderNo || '').trim();
+      const isWO = woRegex.test(no);
+      const k = isWO ? `WO_${no}` : `ID_${t.id}`;
+      if (!grp[k]) {
+        grp[k] = {
+          id: k,
+          isWO: isWO,
+          woNo: no,
+          project: t.project,
+          costAmount: 0,
+          costBreakdown: [],
+          costAccounts: [],
+          costContractor: '',
+          costSyncedAt: '',
+          costStatus: '',
+          tasks: []
+        };
+      }
+      grp[k].tasks.push(t);
+      if (t.costAmount && Number(t.costAmount) > 0) {
+        grp[k].costAmount = Number(t.costAmount);
+      }
+      if (t.costBreakdown && Array.isArray(t.costBreakdown) && t.costBreakdown.length > 0) {
+        grp[k].costBreakdown = t.costBreakdown;
+      }
+      if (t.costAccounts && Array.isArray(t.costAccounts) && t.costAccounts.length > 0) {
+        grp[k].costAccounts = t.costAccounts;
+      }
+      if (t.costContractor) {
+        grp[k].costContractor = t.costContractor;
+      }
+      if (t.costSyncedAt) {
+        grp[k].costSyncedAt = t.costSyncedAt;
+      }
+      if (t.costStatus) {
+        grp[k].costStatus = t.costStatus;
+      }
+    });
+    return Object.values(grp);
+  };
 
 
   const saveCroppedImage = () => {
@@ -1509,7 +1553,7 @@ export default function App() {
     }
   };
 
-  const isMoreTabActive = ['simulation', 'monthly', 'team', 'settings'].includes(tab) || showMoreMobileMenu;
+  const isMoreTabActive = ['simulation', 'monthly', 'budget', 'team', 'settings'].includes(tab) || showMoreMobileMenu;
 
   return (
     <React.Fragment>
@@ -1541,6 +1585,7 @@ export default function App() {
                 { i: 'daily', l: 'งานรายวัน', icon: 'listTodo' },
                 { i: 'monthly', l: 'ปฏิทิน', icon: 'calendar' },
                 { i: 'kanban', l: 'ส่งเบิก', icon: 'fileText' },
+                { i: 'budget', l: 'งบประมาณ 2570', icon: 'wallet' },
                 { i: 'inform', l: 'แจ้งเปิดงาน', icon: 'bell' },
                 { i: 'team', l: 'สถานะทีม', icon: 'users' },
                 { i: 'settings', l: 'ตั้งค่า', icon: 'settings' }
@@ -1943,6 +1988,16 @@ export default function App() {
                     Icon={Icon}
                   />
                 )}
+                {tab === 'budget' && (
+                  <BudgetTab
+                    tasks={tasks}
+                    gFilt={gFilt}
+                    getStdProj={getStdProj}
+                    checkStaffMatch={checkStaffMatch}
+                    db={db}
+                    Icon={Icon}
+                  />
+                )}
                 {tab === 'inform' && (
                   <InformJobTab
                     informs={informs}
@@ -2084,8 +2139,8 @@ export default function App() {
               <span className={`text-[10px] mt-1 tracking-tight ${
                 isMoreTabActive ? 'text-[#7A1C28] font-bold' : 'text-slate-500 font-medium'
               }`}>
-                {['simulation', 'monthly', 'team', 'settings'].includes(tab)
-                  ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
+                {['simulation', 'monthly', 'budget', 'team', 'settings'].includes(tab)
+                  ? (tab === 'simulation' ? 'กิลด์' : tab === 'monthly' ? 'ปฏิทิน' : tab === 'budget' ? 'งบประมาณ' : tab === 'team' ? 'ทีม' : 'ตั้งค่า')
                   : 'เพิ่มเติม'}
               </span>
             </button>
@@ -2144,6 +2199,13 @@ export default function App() {
                       subtitle: 'สมรรถนะและสถิติทีม',
                       icon: 'users',
                       color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200/60'
+                    },
+                    {
+                      id: 'budget',
+                      title: 'งบประมาณ 2570',
+                      subtitle: 'ควบคุมงบ 11 โครงการ',
+                      icon: 'wallet',
+                      color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200/60'
                     },
                     {
                       id: 'flood-map',

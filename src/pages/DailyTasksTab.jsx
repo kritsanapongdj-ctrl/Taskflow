@@ -275,8 +275,13 @@ export default function DailyTasksTab({
                     </span>
                   )}
                   {t.workOrderNo && (
-                    <span className="bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
-                      WO: {t.workOrderNo}
+                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
+                      <span>WO: {t.workOrderNo}</span>
+                      {t.costAmount && Number(t.costAmount) > 0 ? (
+                        <span className="bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-semibold text-[9.5px]">
+                          ฿{Number(t.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      ) : null}
                     </span>
                   )}
                   {onOpenTimeline && (
@@ -511,8 +516,13 @@ export default function DailyTasksTab({
                           {t.id} | {t.requester}
                         </span>
                         {t.workOrderNo && (
-                          <span className="bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded border border-blue-200">
-                            WO:{t.workOrderNo}
+                          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-200">
+                            <span>WO:{t.workOrderNo}</span>
+                            {t.costAmount && Number(t.costAmount) > 0 ? (
+                              <span className="bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded text-[9.5px]">
+                                ฿{Number(t.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            ) : null}
                           </span>
                         )}
                         {onOpenTimeline && (
