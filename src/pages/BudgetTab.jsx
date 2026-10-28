@@ -48,6 +48,12 @@ const ACCOUNT_COLORS = [
   '#6366F1', '#EC4899', '#06B6D4', '#84CC16', '#8B5CF6', '#14B8A6'
 ];
 
+// แปลงหน่วยตัวเลขจากพันบาท (kTHB) ใน forecastData เป็นบาท (THB)
+const kThbToBaht = (val, fallback = 0) => {
+  if (val === undefined || val === null || isNaN(Number(val))) return fallback;
+  return Number(val) * 1000;
+};
+
 export default function BudgetTab({
   tasks = [],
   gFilt = {},
@@ -124,13 +130,11 @@ export default function BudgetTab({
 
     filteredProjects.forEach((prj) => {
       // 1. งบจัดสรรปี 2570
-      const prjBudget = forecastData?.projects?.[prj.code]?.totalBudget || prj.baseBudget70 || 0;
+      const prjBudget = forecastData?.projects?.[prj.code]?.totalBudget != null ? kThbToBaht(forecastData.projects[prj.code].totalBudget) : (prj.baseBudget70 || 0);
       totalBudget70 += prjBudget;
 
       // 2. ใช้จริงแล้ว (Actual)
-      const prjActual = forecastData?.projects?.[prj.code]?.totalYtdActual || 
-                        woExpensesData?.projectSummaries?.[prj.code]?.totalCost || 
-                        (prj.baseBudget70 * 0.42); // Fallback estimate
+      const prjActual = forecastData?.projects?.[prj.code]?.totalYtdActual != null ? kThbToBaht(forecastData.projects[prj.code].totalYtdActual) : (woExpensesData?.projectSummaries?.[prj.code]?.totalCost || (prj.baseBudget70 * 0.42)); // Fallback estimate
       totalActualSpent += prjActual;
 
       // 3. งบผูกพัน (Committed)
@@ -154,10 +158,8 @@ export default function BudgetTab({
   // ข้อมูลสำหรับกราฟเปรียบเทียบแท่งรายโครงการ
   const barChartData = useMemo(() => {
     return filteredProjects.map((prj) => {
-      const budget = forecastData?.projects?.[prj.code]?.totalBudget || prj.baseBudget70;
-      const actual = forecastData?.projects?.[prj.code]?.totalYtdActual || 
-                     woExpensesData?.projectSummaries?.[prj.code]?.totalCost || 
-                     Math.round(prj.baseBudget70 * 0.42);
+      const budget = forecastData?.projects?.[prj.code]?.totalBudget != null ? kThbToBaht(forecastData.projects[prj.code].totalBudget) : prj.baseBudget70;
+      const actual = forecastData?.projects?.[prj.code]?.totalYtdActual != null ? kThbToBaht(forecastData.projects[prj.code].totalYtdActual) : (woExpensesData?.projectSummaries?.[prj.code]?.totalCost || Math.round(prj.baseBudget70 * 0.42));
       const stdName = getStdProj(prj.name);
       const committed = projectCommittedMap[stdName]?.total || 0;
       const remaining = Math.max(0, budget - actual - committed);
@@ -187,7 +189,7 @@ export default function BudgetTab({
       if (Array.isArray(pExpenses)) {
         pExpenses.forEach((exp) => {
           if (map[exp.code]) {
-            map[exp.code].value += Number(exp.ytdActual || 0);
+            map[exp.code].value += kThbToBaht(exp.ytdActual || 0);
           }
         });
       } else {
@@ -448,7 +450,7 @@ export default function BudgetTab({
                   // Actual from forecastData if exists
                   const pExp = forecastData?.projects?.[prj.code]?.expenses?.find(e => e.code === ac.code);
                   if (pExp) {
-                    acActual += Number(pExp.ytdActual || 0);
+                    acActual += kThbToBaht(pExp.ytdActual || 0);
                   } else {
                     acActual += Math.round(bPerAccount * 0.38);
                   }
