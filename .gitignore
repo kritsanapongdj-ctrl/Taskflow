@@ -27,6 +27,8 @@ dist-ssr
 *.xlsx
 scripts/archive/
 *.cjs
+!scripts/test_penalty_engine.cjs
+!scripts/test_sla_detector.cjs
 output.json
 scratch/
 
