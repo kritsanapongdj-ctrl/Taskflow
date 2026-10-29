@@ -1,6 +1,7 @@
 import React from 'react';
 import { getTaskOverdueInfo } from '../../utils/overdueHelper';
 import { getBangkokDateStr } from '../../utils/dateUtils.js';
+import ResponsiveDrawer from '../ui/ResponsiveDrawer.jsx';
 
 // Helper แปลงวันเวลาเป็นรูปแบบภาษาไทย
 const formatDateTimeThai = (isoString) => {
@@ -27,7 +28,7 @@ const formatDateThai = (ds) => {
   });
 };
 
-export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
+export default function JobTimelineModal({ isOpen, task, onClose, _Icon }) {
   if (!isOpen || !task) return null;
 
   const today = getBangkokDateStr();
@@ -178,7 +179,7 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
     (e) => e.action === 'ISSUE_HOLD' || e.status === 'ติดปัญหา/รออะไหล่'
   ) || !!task.issueReason;
 
-  const getActionColor = (action, status) => {
+  const getActionColor = (action, _status) => {
     switch (action) {
       case 'CREATED':
         return { dot: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' };
@@ -205,37 +206,26 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
     }
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm animate-in"
-      role="presentation"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] overscroll-contain"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-[#003C71] p-4 text-white flex justify-between items-center shrink-0 border-b border-[#A8996E]/30">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">📜</span>
-            <div>
-              <div className="font-serif tracking-[0.16em] text-[10px] text-[#A8996E] uppercase">
-                JOB LIFECYCLE &amp; ACTIVITY TRAIL
-              </div>
-              <h3 className="font-bold text-base leading-tight">ไทม์ไลน์บันทึกประวัติงาน</h3>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="ปิด"
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
-          >
-            {Icon ? <Icon name="x" size={18} /> : '✕'}
-          </button>
+  const modalTitle = (
+    <div className="flex items-center gap-2.5">
+      <span className="text-xl">📜</span>
+      <div>
+        <div className="font-serif tracking-[0.16em] text-[10px] text-[#A8996E] uppercase font-semibold">
+          JOB LIFECYCLE &amp; ACTIVITY TRAIL
         </div>
+        <h3 className="font-bold text-base text-[#003C71] leading-tight">ไทม์ไลน์บันทึกประวัติงาน</h3>
+      </div>
+    </div>
+  );
 
+  return (
+    <ResponsiveDrawer
+      isOpen={true}
+      onClose={onClose}
+      title={modalTitle}
+      maxWidth="max-w-lg"
+    >
+      <div className="space-y-4">
         {/* Task Info Bar */}
         <div className="bg-slate-50 p-3.5 border-b text-xs space-y-1.5 shrink-0">
           <div className="flex justify-between items-start gap-2">
@@ -396,6 +386,6 @@ export default function JobTimelineModal({ isOpen, task, onClose, Icon }) {
           </button>
         </div>
       </div>
-    </div>
+    </ResponsiveDrawer>
   );
 }

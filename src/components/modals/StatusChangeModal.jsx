@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SwipeButton from '../ui/SwipeButton.jsx';
+import ResponsiveDrawer from '../ui/ResponsiveDrawer.jsx';
 
 export default function StatusChangeModal({
   isOpen,
@@ -83,49 +84,71 @@ export default function StatusChangeModal({
     return true;
   };
 
+  const handleClose = () => {
+    onClose();
+    if (propSetSMod) {
+      propSetSMod({
+        ...propSMod,
+        isOpen: false,
+        noWO: false,
+        forceWO: false,
+        isOverdue: false,
+        overdueReason: '',
+        postponeDate: getTStr ? getTStr() : '',
+        recordedBy: '',
+        isCustomStaff: false
+      });
+    }
+  };
+
   const isCustom = sMod.isCustomStaff || (!staffList.includes(sMod.recordedBy) && !!sMod.recordedBy);
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999]">
-      <div className="bg-white rounded-xl shadow-xl p-5 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain">
-        {/* Header Title */}
-        <h3
-          className={`font-bold text-lg mb-2 flex items-center gap-1.5 ${
-            sMod.type === 'penalty_spare_part'
-              ? 'text-rose-700'
-              : sMod.type === 'cancel'
-              ? 'text-red-500'
-              : sMod.type === 'postpone_start'
-              ? 'text-sky-600'
-              : sMod.type === 'postpone'
-              ? 'text-amber-600'
-              : sMod.type === 'issue'
-              ? 'text-rose-600'
-              : sMod.type === 'progress'
-              ? 'text-indigo-600'
-              : sMod.type === 'pending'
-              ? 'text-slate-600'
-              : 'text-green-600'
-          }`}
-        >
-          {sMod.type === 'penalty_spare_part'
-            ? '🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนนวินัย)'
-            : sMod.type === 'cancel'
-            ? '❌ ยกเลิกงาน'
-            : sMod.type === 'postpone_start'
-            ? '📅 เลื่อนวันเริ่มงาน'
-            : sMod.type === 'postpone'
-            ? '📅 เลื่อนวันจบงาน'
-            : sMod.type === 'issue'
-            ? '⚠️ รออะไหล่ / ติดปัญหา'
-            : sMod.type === 'progress'
-            ? (sMod.isHoldResume ? '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ' : '⚙️ เปลี่ยนสถานะเป็น: กำลังดำเนินการ')
-            : sMod.type === 'pending'
-            ? '⏳ เปลี่ยนสถานะเป็น: รอดำเนินการ'
-            : '✅ ยืนยันจบงาน'}
-        </h3>
+  const modalTitle = (
+    <div
+      className={`font-bold text-base flex items-center gap-1.5 ${
+        sMod.type === 'penalty_spare_part'
+          ? 'text-rose-700'
+          : sMod.type === 'cancel'
+          ? 'text-red-500'
+          : sMod.type === 'postpone_start'
+          ? 'text-sky-600'
+          : sMod.type === 'postpone'
+          ? 'text-amber-600'
+          : sMod.type === 'issue'
+          ? 'text-rose-600'
+          : sMod.type === 'progress'
+          ? 'text-indigo-600'
+          : sMod.type === 'pending'
+          ? 'text-slate-600'
+          : 'text-emerald-700'
+      }`}
+    >
+      {sMod.type === 'penalty_spare_part'
+        ? '🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนนวินัย)'
+        : sMod.type === 'cancel'
+        ? '❌ ยกเลิกงาน'
+        : sMod.type === 'postpone_start'
+        ? '📅 เลื่อนวันเริ่มงาน'
+        : sMod.type === 'postpone'
+        ? '📅 เลื่อนวันจบงาน'
+        : sMod.type === 'issue'
+        ? '⚠️ รออะไหล่ / ติดปัญหา'
+        : sMod.type === 'progress'
+        ? (sMod.isHoldResume ? '⚙️ ได้รับอะไหล่ / ดำเนินการต่อ' : '⚙️ เปลี่ยนสถานะเป็น: กำลังดำเนินการ')
+        : sMod.type === 'pending'
+        ? '⏳ เปลี่ยนสถานะเป็น: รอดำเนินการ'
+        : '✅ ยืนยันจบงาน'}
+    </div>
+  );
 
-        {/* Task Info Summary */}
+  return (
+    <ResponsiveDrawer
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={modalTitle}
+      maxWidth="max-w-md"
+    >
+      {/* Task Info Summary */}
         {task && (
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-3 text-xs">
             <div className="flex items-center justify-between gap-1 mb-1">
@@ -518,25 +541,10 @@ export default function StatusChangeModal({
             }
           />
 
-          <div className="flex items-center justify-between px-1 text-xs">
+          <div className="flex items-center justify-between px-1 text-xs pt-1">
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                if (propSetSMod) {
-                  propSetSMod({
-                    ...propSMod,
-                    isOpen: false,
-                    noWO: false,
-                    forceWO: false,
-                    isOverdue: false,
-                    overdueReason: '',
-                    postponeDate: getTStr ? getTStr() : '',
-                    recordedBy: '',
-                    isCustomStaff: false
-                  });
-                }
-              }}
+              onClick={handleClose}
               className="text-slate-400 hover:text-slate-700 py-1 transition cursor-pointer font-medium"
             >
               ยกเลิก / ปิดหน้าต่าง
@@ -546,7 +554,6 @@ export default function StatusChangeModal({
             </span>
           </div>
         </div>
-      </div>
-    </div>
+    </ResponsiveDrawer>
   );
 }
