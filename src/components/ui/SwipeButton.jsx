@@ -1,6 +1,37 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronsRight, Check } from 'lucide-react';
 
+const THEMES = {
+  primary: {
+    track: 'bg-slate-100/90 border-slate-300/80 text-slate-700',
+    fill: 'bg-gradient-to-r from-[#0f2e4a]/10 via-[#0f2e4a]/25 to-[#0f2e4a]/40',
+    thumb: 'bg-[#0f2e4a] text-white hover:bg-[#1a3f63]',
+    text: 'text-slate-700',
+    arrow: 'text-[#0f2e4a]'
+  },
+  success: {
+    track: 'bg-emerald-50/90 border-emerald-300/80 text-emerald-800',
+    fill: 'bg-gradient-to-r from-emerald-500/15 via-emerald-500/30 to-emerald-500/45',
+    thumb: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    text: 'text-emerald-800',
+    arrow: 'text-emerald-600'
+  },
+  danger: {
+    track: 'bg-rose-50/90 border-rose-300/80 text-rose-800',
+    fill: 'bg-gradient-to-r from-rose-500/15 via-rose-500/30 to-rose-500/45',
+    thumb: 'bg-rose-600 text-white hover:bg-rose-700',
+    text: 'text-rose-800',
+    arrow: 'text-rose-600'
+  },
+  warning: {
+    track: 'bg-amber-50/90 border-amber-300/80 text-amber-800',
+    fill: 'bg-gradient-to-r from-amber-500/15 via-amber-500/30 to-amber-500/45',
+    thumb: 'bg-amber-600 text-white hover:bg-amber-700',
+    text: 'text-amber-800',
+    arrow: 'text-amber-600'
+  }
+};
+
 /**
  * SwipeButton - Modern 21st.dev inspired Swipe-to-Action / Hold-to-Confirm component
  * Optimized for mobile touchscreens & desktop mouse gestures.
@@ -27,33 +58,40 @@ export default function SwipeButton({
   const updateMaxDrag = useCallback(() => {
     if (trackRef.current && thumbRef.current) {
       const trackWidth = trackRef.current.clientWidth;
-      const thumbWidth = thumbRef.current.clientWidth;
-      // 8px = 4px padding on each side (p-1)
-      setMaxDrag(Math.max(0, trackWidth - thumbWidth - 8));
+      const thumbWidth = thumbRef.current.clientWidth || 40;
+      const available = trackWidth - thumbWidth - 8;
+      if (available > 0) {
+        setMaxDrag(available);
+        return available;
+      }
     }
+    return 0;
   }, []);
 
   useEffect(() => {
     updateMaxDrag();
     window.addEventListener('resize', updateMaxDrag);
-    return () => window.removeEventListener('resize', updateMaxDrag);
-  }, [updateMaxDrag]);
 
-  // Reset confirmation state if disabled changes
-  useEffect(() => {
-    if (disabled) {
-      setDragOffset(0);
-      setIsConfirmed(false);
-      setIsDragging(false);
+    let ro = null;
+    if (trackRef.current && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        updateMaxDrag();
+      });
+      ro.observe(trackRef.current);
     }
-  }, [disabled]);
+
+    return () => {
+      window.removeEventListener('resize', updateMaxDrag);
+      if (ro) ro.disconnect();
+    };
+  }, [updateMaxDrag]);
 
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate([30, 40, 50]);
       } catch {
-        // ignore if not permitted
+        /* ignore haptic failure */
       }
     }
   };
@@ -61,7 +99,8 @@ export default function SwipeButton({
   const executeConfirm = useCallback(async () => {
     triggerHaptic();
     setIsConfirmed(true);
-    setDragOffset(maxDrag);
+    const targetDrag = maxDrag > 0 ? maxDrag : (trackRef.current?.clientWidth || 300) - 48;
+    setDragOffset(targetDrag);
 
     try {
       const result = await onConfirm?.();
@@ -78,20 +117,28 @@ export default function SwipeButton({
 
   // Pointer event handlers (handles both Touch and Mouse seamlessly)
   const handlePointerDown = (e) => {
-    if (disabled || isConfirmed || maxDrag <= 0) return;
+    if (disabled || isConfirmed) return;
+
+    let currentMax = maxDrag;
+    if (currentMax <= 0) {
+      currentMax = updateMaxDrag();
+    }
+    if (currentMax <= 0) return;
+
     setIsDragging(true);
     startXRef.current = e.clientX - dragOffset;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // ignore
+      /* ignore */
     }
   };
 
   const handlePointerMove = (e) => {
     if (!isDragging || isConfirmed) return;
     const currentX = e.clientX;
-    const newOffset = Math.max(0, Math.min(currentX - startXRef.current, maxDrag));
+    const effectiveMax = maxDrag > 0 ? maxDrag : updateMaxDrag();
+    const newOffset = Math.max(0, Math.min(currentX - startXRef.current, effectiveMax));
     setDragOffset(newOffset);
   };
 
@@ -104,11 +151,12 @@ export default function SwipeButton({
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
     } catch {
-      // ignore
+      /* ignore */
     }
 
+    const effectiveMax = maxDrag > 0 ? maxDrag : updateMaxDrag();
     // Threshold: 80% of track length triggers confirm
-    if (dragOffset >= maxDrag * 0.8) {
+    if (effectiveMax > 0 && dragOffset >= effectiveMax * 0.8) {
       executeConfirm();
     } else {
       // Snap back smoothly
@@ -124,7 +172,7 @@ export default function SwipeButton({
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
     } catch {
-      // ignore
+      /* ignore */
     }
     setDragOffset(0);
   };
@@ -138,38 +186,7 @@ export default function SwipeButton({
     }
   };
 
-  // Color theme definitions
-  const theme = {
-    primary: {
-      track: 'bg-slate-100/90 border-slate-300/80 text-slate-700',
-      fill: 'bg-gradient-to-r from-[#0f2e4a]/10 via-[#0f2e4a]/25 to-[#0f2e4a]/40',
-      thumb: 'bg-[#0f2e4a] text-white hover:bg-[#1a3f63]',
-      text: 'text-slate-700',
-      arrow: 'text-[#0f2e4a]'
-    },
-    success: {
-      track: 'bg-emerald-50/90 border-emerald-300/80 text-emerald-800',
-      fill: 'bg-gradient-to-r from-emerald-500/15 via-emerald-500/30 to-emerald-500/45',
-      thumb: 'bg-emerald-600 text-white hover:bg-emerald-700',
-      text: 'text-emerald-800',
-      arrow: 'text-emerald-600'
-    },
-    danger: {
-      track: 'bg-rose-50/90 border-rose-300/80 text-rose-800',
-      fill: 'bg-gradient-to-r from-rose-500/15 via-rose-500/30 to-rose-500/45',
-      thumb: 'bg-rose-600 text-white hover:bg-rose-700',
-      text: 'text-rose-800',
-      arrow: 'text-rose-600'
-    },
-    warning: {
-      track: 'bg-amber-50/90 border-amber-300/80 text-amber-800',
-      fill: 'bg-gradient-to-r from-amber-500/15 via-amber-500/30 to-amber-500/45',
-      thumb: 'bg-amber-600 text-white hover:bg-amber-700',
-      text: 'text-amber-800',
-      arrow: 'text-amber-600'
-    }
-  }[variant] || theme.primary;
-
+  const theme = THEMES[variant] || THEMES.primary;
   const dragRatio = maxDrag > 0 ? dragOffset / maxDrag : 0;
 
   return (

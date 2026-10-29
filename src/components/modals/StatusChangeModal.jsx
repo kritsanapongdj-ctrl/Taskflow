@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import SwipeButton from '../ui/SwipeButton.jsx';
 
 export default function StatusChangeModal({
@@ -10,17 +10,18 @@ export default function StatusChangeModal({
   getTStr,
   staffList = [],
   task = null,
-  isSupervisor = false,
+  _isSupervisor = false,
   supervisorSession = null
 }) {
   // Isolate form state locally so that typing never triggers root App.jsx re-renders
   const [sMod, setSMod] = useState(propSMod || {});
+  const [prevSyncKey, setPrevSyncKey] = useState(`${propSMod?.taskId}_${propSMod?.type}_${isOpen}`);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSMod(propSMod || {});
-    }
-  }, [isOpen, propSMod?.taskId, propSMod?.type]);
+  const currentSyncKey = `${propSMod?.taskId}_${propSMod?.type}_${isOpen}`;
+  if (isOpen && prevSyncKey !== currentSyncKey) {
+    setPrevSyncKey(currentSyncKey);
+    setSMod(propSMod || {});
+  }
 
   if (!isOpen) return null;
 

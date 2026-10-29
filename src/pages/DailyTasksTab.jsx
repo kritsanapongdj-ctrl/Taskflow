@@ -458,6 +458,17 @@ export default function DailyTasksTab({
                     )}
                   </select>
                 </div>
+                {!t.status?.startsWith('จบงาน') && (
+                  <button
+                    type="button"
+                    onClick={() => initSt(t.id, 'จบงาน')}
+                    className="px-3 h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer shrink-0"
+                    title="เปิดสไลด์ยืนยันจบงาน"
+                  >
+                    <Icon name="checkCircle2" size={15} />
+                    <span>จบงาน</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleEdit(t)}
@@ -694,6 +705,17 @@ export default function DailyTasksTab({
                             <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
                           )}
                         </select>
+                        {!t.status?.startsWith('จบงาน') && (
+                          <button
+                            type="button"
+                            onClick={() => initSt(t.id, 'จบงาน')}
+                            className="text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 p-1 rounded-md transition-all cursor-pointer snap-spring shadow-2xs shrink-0 font-bold text-[10.5px] px-1.5 flex items-center gap-0.5"
+                            title="เปิดสไลด์ยืนยันจบงาน"
+                          >
+                            <Icon name="check" size={11} />
+                            <span>จบงาน</span>
+                          </button>
+                        )}
                         {onOpenTimeline && (
                           <button
                             type="button"
