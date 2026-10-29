@@ -219,7 +219,7 @@ export default function DailyTasksTab({
                   isMobile ? 'bottom-full mb-2' : 'top-full mt-1.5'
                 } w-48 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-50 animate-in fade-in zoom-in-95 text-left divide-y divide-slate-100 font-sans`}
               >
-                {/* กลุ่ม 1: แก้ไขงาน */}
+                {/* กลุ่ม 1: แก้ไขงาน & ไทม์ไลน์ */}
                 <div className="py-1">
                   <button
                     type="button"
@@ -232,6 +232,22 @@ export default function DailyTasksTab({
                     <Icon name="edit2" size={13} className="text-slate-400" />
                     <span>แก้ไขข้อมูลงาน</span>
                   </button>
+                  {onOpenTimeline && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        onOpenTimeline(t);
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-[#003C71] hover:bg-slate-50 font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
+                      </span>
+                      <span>ประวัติไทม์ไลน์ 4 มิติ</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* กลุ่ม 2: เปลี่ยนสถานะ */}
@@ -339,64 +355,159 @@ export default function DailyTasksTab({
     if (status?.startsWith('จบงาน')) {
       if (status === 'จบงาน(รอใบงาน)') {
         return (
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            จบงาน (รอใบงาน)
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+            </span>
+            <span>จบงาน (รอใบงาน)</span>
           </span>
         );
       }
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          จบงาน
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>จบงาน</span>
         </span>
       );
     }
     if (status === 'กำลังดำเนินการ' || status === 'อยู่ระหว่างดำเนินการ') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
-          กำลังดำเนินการ
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
+          </span>
+          <span>กำลังดำเนินการ</span>
         </span>
       );
     }
     if (status === 'ติดปัญหา/รออะไหล่' || status === 'รออะไหล่/ติดปัญหา') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-          ติดปัญหา/รออะไหล่
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+          </span>
+          <span>ติดปัญหา/รออะไหล่</span>
         </span>
       );
     }
     if (status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shrink-0 animate-pulse" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-          🚨 ผิดเงื่อนไขรออะไหล่
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1.5 shrink-0 animate-pulse shadow-2xs" title="ถูกผู้ดูแลลงโทษตัดคะแนนวินัยและ SLA">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-90" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600" />
+          </span>
+          <span>🚨 ผิดเงื่อนไขรออะไหล่</span>
         </span>
       );
     }
     if (status === 'เลื่อนวันเริ่ม') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-          เลื่อนวันเริ่ม
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span>เลื่อนวันเริ่ม</span>
         </span>
       );
     }
     if (status === 'เลื่อนวันจบ' || status === 'เลื่อนงาน') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-          เลื่อนวันจบ
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          <span>เลื่อนวันจบ</span>
         </span>
       );
     }
     return (
-      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 shrink-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-        {status || 'รอดำเนินการ'}
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span>{status || 'รอดำเนินการ'}</span>
       </span>
+    );
+  };
+
+  // แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle Stepper) บนการ์ด/ตาราง
+  const renderLifecycleStepper = (t, isMobile = false) => {
+    const isDone = t.status?.startsWith('จบงาน');
+    const isStarted = !!t.startDate;
+    const isHandling = t.status === 'กำลังดำเนินการ' || t.status === 'อยู่ระหว่างดำเนินการ' || !!t.issueReason;
+    const isHold = t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา';
+    const isOverdue = t.status === 'เกินกำหนด' || (t.endDate && t.endDate < today && !isDone);
+
+    const steps = [
+      { key: 'report', label: 'แจ้ง', done: true, active: false },
+      { key: 'start', label: 'เริ่ม', done: isStarted, active: !isDone && isStarted && !isHandling },
+      { key: 'action', label: 'ดำเนินการ', done: isDone, active: !isDone && isHandling, alert: isOverdue || isHold },
+      { key: 'done', label: 'ปิดงาน', done: isDone, active: isDone }
+    ];
+
+    return (
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onOpenTimeline) onOpenTimeline(t);
+        }}
+        className={`inline-flex items-center gap-1.5 ${
+          isMobile ? 'mt-2 py-1 px-2 w-full justify-between' : 'mt-1 py-0.5 px-1.5'
+        } bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-lg cursor-pointer transition-all group shadow-2xs`}
+        title="แถบสรุป 4 มิติวงจรชีวิตงาน - คลิกเพื่อดูประวัติไทม์ไลน์ฉบับเต็ม"
+      >
+        <div className="flex items-center gap-1">
+          {steps.map((st, idx) => (
+            <React.Fragment key={st.key}>
+              <div className="flex items-center gap-1">
+                <span
+                  className={`relative flex items-center justify-center ${
+                    isMobile ? 'w-4 h-4 text-[9px]' : 'w-3.5 h-3.5 text-[8.5px]'
+                  } rounded-full font-bold transition-all ${
+                    st.alert
+                      ? 'bg-rose-500 text-white'
+                      : st.done
+                      ? 'bg-emerald-500 text-white'
+                      : st.active
+                      ? 'bg-[#003C71] text-white ring-2 ring-[#003C71]/20'
+                      : 'bg-slate-200 text-slate-400'
+                  }`}
+                >
+                  {st.active && !st.done && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                  )}
+                  {st.done ? '✓' : idx + 1}
+                </span>
+                <span
+                  className={`text-[9.5px] font-semibold ${
+                    st.alert
+                      ? 'text-rose-600 font-bold'
+                      : st.done
+                      ? 'text-emerald-700'
+                      : st.active
+                      ? 'text-[#003C71] font-bold'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  {st.label}
+                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <span
+                  className={`${isMobile ? 'w-2 sm:w-3.5' : 'w-1.5 sm:w-2.5'} h-0.5 ${
+                    steps[idx + 1].done || (st.done && steps[idx + 1].active)
+                      ? 'bg-emerald-400'
+                      : 'bg-slate-200'
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        <Icon
+          name="chevronRight"
+          size={isMobile ? 12 : 10}
+          className="text-slate-400 group-hover:text-[#003C71] group-hover:translate-x-0.5 transition-transform shrink-0"
+        />
+      </div>
     );
   };
 
@@ -518,7 +629,7 @@ export default function DailyTasksTab({
                     <button
                       type="button"
                       onClick={() => onOpenTimeline(t)}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer snap-spring font-sans"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer snap-spring font-sans shadow-2xs border border-slate-200/60"
                       title="ดูประวัติไทม์ไลน์ของงานนี้"
                     >
                       <Icon name="clock" size={11} className="text-[#0f2e4a]" />
@@ -526,6 +637,9 @@ export default function DailyTasksTab({
                     </button>
                   )}
                 </div>
+
+                {/* แถบสรุป 4 มิติวงจรชีวิตงาน (Mobile Card) */}
+                {renderLifecycleStepper(t, true)}
 
                 {/* Sub-reason banners */}
                 {info.reason && (
@@ -712,10 +826,10 @@ export default function DailyTasksTab({
                           <button
                             type="button"
                             onClick={() => onOpenTimeline(t)}
-                            className="text-slate-400 hover:text-[#0f2e4a] inline-flex items-center gap-0.5 font-bold cursor-pointer ml-1"
-                            title="ดูประวัติไทม์ไลน์"
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[9.5px] font-bold inline-flex items-center gap-1 cursor-pointer ml-1 border border-slate-200/80 shadow-2xs transition"
+                            title="ดูประวัติไทม์ไลน์ 4 มิติ"
                           >
-                            <Icon name="clock" size={10} />
+                            <Icon name="clock" size={10} className="text-[#003C71]" />
                             <span>ไทม์ไลน์</span>
                           </button>
                         )}
@@ -815,10 +929,16 @@ export default function DailyTasksTab({
                       <div className="flex flex-col items-start gap-1">
                         <div>{getStatusBadge(t.status)}</div>
                         {info.isOverdue && (
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold border ${info.badgeClass}`}>
-                            {info.label}
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold border ${info.badgeClass}`}>
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+                            </span>
+                            <span>{info.label}</span>
                           </span>
                         )}
+                        {/* แถบสรุป 4 มิติวงจรชีวิตงาน */}
+                        {renderLifecycleStepper(t, false)}
                       </div>
                     </td>
                     <td className="py-2.5 px-2 text-center align-top">

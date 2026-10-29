@@ -371,36 +371,73 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
             )}
           </div>
 
-          {/* 4-Stage Lifecycle Stepper (21st.dev inspired) */}
-          <div className="pt-2">
-            <div className="grid grid-cols-4 gap-1.5 text-center">
-              {stages.map((stage, _sIdx) => {
+          {/* แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle Stepper) */}
+          <div className="pt-2.5 pb-1 border-t border-slate-200/60 mt-2.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 font-tech">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#003C71]" />
+                แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle)
+              </span>
+              <span className="text-[10px] font-bold text-[#003C71] bg-[#003C71]/10 px-2 py-0.5 rounded-full font-mono">
+                {isDone ? 'ปิดงานสมบูรณ์' : overdueInfo.isActiveOverdue ? 'เกินกำหนด SLA' : isHandling ? 'กำลังปฏิบัติงาน' : 'รับเรื่องแล้ว'}
+              </span>
+            </div>
+
+            <div className="relative flex items-center justify-between px-3 sm:px-6 py-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+              {/* Connecting progress track background */}
+              <div className="absolute left-7 right-7 top-5 h-1 bg-slate-100 -z-0" />
+              {/* Connecting active fill */}
+              <div
+                className="absolute left-7 top-5 h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-500 -z-0 transition-all duration-500"
+                style={{
+                  width: isDone ? 'calc(100% - 56px)' : isHandling ? 'calc(66% - 38px)' : isStarted ? 'calc(33% - 19px)' : '0%'
+                }}
+              />
+
+              {stages.map((stage, sIdx) => {
                 return (
-                  <div key={stage.label} className="flex flex-col items-center">
+                  <div key={stage.label} className="relative z-10 flex flex-col items-center">
+                    {/* Circle Node */}
                     <div
-                      className={`w-full h-1.5 rounded-full mb-1 transition-all ${
+                      className={`relative w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-sm ${
                         stage.alert
-                          ? 'bg-rose-500 animate-pulse'
+                          ? 'bg-rose-500 text-white ring-4 ring-rose-100 animate-pulse'
                           : stage.done
-                          ? 'bg-emerald-500'
+                          ? 'bg-emerald-500 text-white ring-3 ring-emerald-100'
                           : stage.active
-                          ? 'bg-[#003C71]'
-                          : 'bg-slate-200'
+                          ? 'bg-[#003C71] text-white ring-4 ring-sky-100'
+                          : 'bg-slate-100 text-slate-400 border border-slate-200'
                       }`}
-                    />
+                    >
+                      {/* Pulse beacon for active stage */}
+                      {stage.active && !stage.done && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                      )}
+                      {stage.done ? (
+                        <Check size={14} className="stroke-[3]" />
+                      ) : (
+                        <span>{sIdx + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Stage Label */}
                     <span
-                      className={`text-[10px] font-semibold flex items-center gap-0.5 ${
+                      className={`text-[10px] sm:text-[11px] font-bold mt-1.5 transition-colors whitespace-nowrap ${
                         stage.alert
-                          ? 'text-rose-600 font-bold'
+                          ? 'text-rose-600'
                           : stage.done
                           ? 'text-emerald-700'
                           : stage.active
-                          ? 'text-[#003C71] font-bold'
+                          ? 'text-[#003C71]'
                           : 'text-slate-400'
                       }`}
                     >
-                      {stage.done && !stage.alert && <Check size={10} className="text-emerald-600" />}
-                      <span>{stage.label}</span>
+                      {stage.label}
+                    </span>
+
+                    {/* Stage Sub-label */}
+                    <span className="text-[8.5px] font-medium text-slate-400 hidden sm:block">
+                      {sIdx === 0 ? 'รับเรื่อง' : sIdx === 1 ? 'กำหนดเริ่ม' : sIdx === 2 ? 'ลงมือซ่อม' : 'ส่งมอบ'}
                     </span>
                   </div>
                 );
@@ -444,6 +481,27 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
           )}
         </div>
 
+        {/* Live Pulse Activity Monitor Banner */}
+        <div className="bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-indigo-500/10 border border-emerald-500/25 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-600" />
+            </span>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 font-tech">
+                LIVE PULSE STATUS BEACON
+              </div>
+              <div className="text-xs font-semibold text-slate-800">
+                สถานะปัจจุบัน: <strong className="text-[#003C71] font-bold">{task.status || 'กำลังดำเนินการ'}</strong>
+              </div>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs">
+            {timelineEvents.length} เหตุการณ์
+          </span>
+        </div>
+
         {/* Living Timeline Events Stream */}
         <div className="p-2 sm:p-3 overflow-y-auto flex-1">
           {timelineEvents.length === 0 ? (
@@ -472,18 +530,22 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
                     )}
 
                     {/* Timeline Node with Live Pulse Beacon */}
-                    <div className="absolute -left-6 top-1.5 flex items-center justify-center">
+                    <div className="absolute -left-6 top-1 flex items-center justify-center">
                       {isLatest ? (
-                        <div className="relative flex items-center justify-center w-6 h-6">
+                        <div className="relative flex items-center justify-center w-7 h-7">
                           <span
-                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${theme.pingBg}`}
+                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                              isDone ? 'bg-emerald-400' : overdueInfo.isActiveOverdue ? 'bg-rose-400' : 'bg-sky-400'
+                            }`}
                           />
                           <span
-                            className={`relative inline-flex items-center justify-center rounded-full h-6 w-6 text-white font-bold text-[10px] shadow-sm ring-2 ring-white ${theme.dotBg}`}
+                            className={`relative inline-flex items-center justify-center rounded-full h-7 w-7 text-white font-bold text-[11px] shadow-sm ring-4 ring-white ${
+                              isDone ? 'bg-emerald-600' : overdueInfo.isActiveOverdue ? 'bg-rose-600' : 'bg-[#003C71]'
+                            }`}
                           >
                             {isDone ? (
-                              <Check size={13} className="text-white" />
-                            ) : item.action === 'CURRENT_OVERDUE' ? (
+                              <Check size={14} className="text-white stroke-[3]" />
+                            ) : overdueInfo.isActiveOverdue ? (
                               '!'
                             ) : (
                               idx + 1
