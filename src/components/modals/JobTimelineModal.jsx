@@ -298,20 +298,39 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
     }
   };
 
-  // 4-Stage Lifecycle Stepper calculation
+  // 4-Stage Lifecycle Stepper calculation (ตรงตามกระบวนการจริง 100%)
   const isDone = task.status?.startsWith('จบงาน');
-  const isStarted = !!task.startDate;
-  const isHandling = task.status === 'กำลังดำเนินการ' || task.status === 'อยู่ระหว่างดำเนินการ' || hasHoldHistory;
+  const isFieldDone = isDone || !!task.completedDate;
+  const hasWO = !!task.workOrderNo;
+  const isHold = task.status === 'ติดปัญหา/รออะไหล่' || task.status === 'รออะไหล่/ติดปัญหา' || hasHoldHistory;
+
   const stages = [
-    { label: 'แจ้งงาน', done: true, active: false },
-    { label: 'เริ่มงาน', done: isStarted, active: !isDone && isStarted && !isHandling },
     {
-      label: 'ดำเนินการ',
-      done: isDone,
-      active: !isDone && isHandling,
-      alert: overdueInfo.isActiveOverdue
+      label: 'รับเรื่อง',
+      sublabel: formatDateThai(task.receivedDate || task.startDate),
+      done: true,
+      active: false
     },
-    { label: 'ปิดงาน', done: isDone, active: isDone }
+    {
+      label: 'ปฏิบัติงาน',
+      sublabel: isHold ? 'ติดปัญหา/รออะไหล่' : 'กำลังดำเนินการ',
+      done: isFieldDone,
+      active: !isFieldDone,
+      alert: overdueInfo.isActiveOverdue || isHold
+    },
+    {
+      label: 'หน้างานเสร็จ',
+      sublabel: task.completedDate ? formatDateThai(task.completedDate) : 'รอช่างเสร็จงาน',
+      done: isFieldDone,
+      active: isFieldDone && !hasWO
+    },
+    {
+      label: 'ใบงาน WO',
+      sublabel: task.workOrderNo ? `WO: ${task.workOrderNo}` : 'รอเลข WO',
+      done: isDone && hasWO,
+      active: isFieldDone && !hasWO,
+      alert: overdueInfo.isLateWO
+    }
   ];
 
   const modalTitle = (
@@ -351,6 +370,14 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
           </div>
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-500 text-[11px] pt-1.5 border-t border-slate-200/60 font-sans">
+            {task.receivedDate && (
+              <span className="inline-flex items-center gap-1">
+                <Calendar size={12} className="text-sky-600" /> รับเรื่อง:{' '}
+                <strong className="text-sky-900 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/80 font-bold">
+                  {formatDateThai(task.receivedDate)}
+                </strong>
+              </span>
+            )}
             <span className="inline-flex items-center gap-1">
               <User size={12} className="text-slate-400" /> ผู้แจ้ง:{' '}
               <strong className="text-slate-700">{task.requester || '-'}</strong>
@@ -371,15 +398,21 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
             )}
           </div>
 
-          {/* แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle Stepper) */}
+          {/* แถบสรุป 4 มิติวงจรชีวิตงานจริง (4-Stage Lifecycle Stepper) */}
           <div className="pt-2.5 pb-1 border-t border-slate-200/60 mt-2.5">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 font-tech">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#003C71]" />
-                แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle)
+                แถบสรุป 4 มิติวงจรชีวิตงานจริง (4-Stage Lifecycle)
               </span>
               <span className="text-[10px] font-bold text-[#003C71] bg-[#003C71]/10 px-2 py-0.5 rounded-full font-mono">
-                {isDone ? 'ปิดงานสมบูรณ์' : overdueInfo.isActiveOverdue ? 'เกินกำหนด SLA' : isHandling ? 'กำลังปฏิบัติงาน' : 'รับเรื่องแล้ว'}
+                {isDone && hasWO
+                  ? 'ปิดงานสมบูรณ์ (มี WO)'
+                  : isFieldDone
+                  ? 'หน้างานเสร็จ (รอเลข WO)'
+                  : overdueInfo.isActiveOverdue
+                  ? 'เกินกำหนด SLA'
+                  : 'กำลังปฏิบัติงาน'}
               </span>
             </div>
 
@@ -390,7 +423,7 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
               <div
                 className="absolute left-7 top-5 h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-500 -z-0 transition-all duration-500"
                 style={{
-                  width: isDone ? 'calc(100% - 56px)' : isHandling ? 'calc(66% - 38px)' : isStarted ? 'calc(33% - 19px)' : '0%'
+                  width: isDone && hasWO ? 'calc(100% - 56px)' : isFieldDone ? 'calc(66% - 38px)' : 'calc(33% - 19px)'
                 }}
               />
 
@@ -405,13 +438,19 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
                           : stage.done
                           ? 'bg-emerald-500 text-white ring-3 ring-emerald-100'
                           : stage.active
-                          ? 'bg-[#003C71] text-white ring-4 ring-sky-100'
+                          ? stage.label === 'ใบงาน WO'
+                            ? 'bg-amber-500 text-white ring-4 ring-amber-100'
+                            : 'bg-[#003C71] text-white ring-4 ring-sky-100'
                           : 'bg-slate-100 text-slate-400 border border-slate-200'
                       }`}
                     >
                       {/* Pulse beacon for active stage */}
                       {stage.active && !stage.done && (
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                        <span
+                          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            stage.alert ? 'bg-rose-400' : stage.label === 'ใบงาน WO' ? 'bg-amber-400' : 'bg-sky-400'
+                          }`}
+                        />
                       )}
                       {stage.done ? (
                         <Check size={14} className="stroke-[3]" />
@@ -428,7 +467,9 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
                           : stage.done
                           ? 'text-emerald-700'
                           : stage.active
-                          ? 'text-[#003C71]'
+                          ? stage.label === 'ใบงาน WO'
+                            ? 'text-amber-700'
+                            : 'text-[#003C71]'
                           : 'text-slate-400'
                       }`}
                     >
@@ -436,8 +477,8 @@ export default function JobTimelineModal({ isOpen, task, onClose }) {
                     </span>
 
                     {/* Stage Sub-label */}
-                    <span className="text-[8.5px] font-medium text-slate-400 hidden sm:block">
-                      {sIdx === 0 ? 'รับเรื่อง' : sIdx === 1 ? 'กำหนดเริ่ม' : sIdx === 2 ? 'ลงมือซ่อม' : 'ส่งมอบ'}
+                    <span className="text-[8.5px] font-medium text-slate-400 hidden sm:block truncate max-w-[85px]">
+                      {stage.sublabel}
                     </span>
                   </div>
                 );

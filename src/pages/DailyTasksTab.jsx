@@ -428,19 +428,20 @@ export default function DailyTasksTab({
     );
   };
 
-  // แถบสรุป 4 มิติวงจรชีวิตงาน (4-Stage Lifecycle Stepper) บนการ์ด/ตาราง
+  // แถบสรุป 4 มิติวงจรชีวิตงานจริง (4-Stage Lifecycle Stepper) บนการ์ด/ตาราง
   const renderLifecycleStepper = (t, isMobile = false) => {
     const isDone = t.status?.startsWith('จบงาน');
-    const isStarted = !!t.startDate;
-    const isHandling = t.status === 'กำลังดำเนินการ' || t.status === 'อยู่ระหว่างดำเนินการ' || !!t.issueReason;
+    const isFieldDone = isDone || !!t.completedDate;
+    const hasWO = !!t.workOrderNo;
     const isHold = t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา';
     const isOverdue = t.status === 'เกินกำหนด' || (t.endDate && t.endDate < today && !isDone);
+    const isLateWO = t.overdueInfo?.isLateWO;
 
     const steps = [
-      { key: 'report', label: 'แจ้ง', done: true, active: false },
-      { key: 'start', label: 'เริ่ม', done: isStarted, active: !isDone && isStarted && !isHandling },
-      { key: 'action', label: 'ดำเนินการ', done: isDone, active: !isDone && isHandling, alert: isOverdue || isHold },
-      { key: 'done', label: 'ปิดงาน', done: isDone, active: isDone }
+      { key: 'received', label: 'รับเรื่อง', done: true, active: false },
+      { key: 'progress', label: 'ปฏิบัติงาน', done: isFieldDone, active: !isFieldDone, alert: isOverdue || isHold },
+      { key: 'fieldDone', label: 'หน้างานเสร็จ', done: isFieldDone, active: isFieldDone && !hasWO },
+      { key: 'wo', label: 'ใบงาน WO', done: isDone && hasWO, active: isFieldDone && !hasWO, alert: isLateWO }
     ];
 
     return (
@@ -452,7 +453,7 @@ export default function DailyTasksTab({
         className={`inline-flex items-center gap-1.5 ${
           isMobile ? 'mt-2 py-1 px-2 w-full justify-between' : 'mt-1 py-0.5 px-1.5'
         } bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-lg cursor-pointer transition-all group shadow-2xs`}
-        title="แถบสรุป 4 มิติวงจรชีวิตงาน - คลิกเพื่อดูประวัติไทม์ไลน์ฉบับเต็ม"
+        title="วงจรชีวิตงานจริง: รับเรื่อง ➔ ปฏิบัติงาน ➔ หน้างานเสร็จ ➔ ใบงาน WO (คลิกดูประวัติฉบับเต็ม)"
       >
         <div className="flex items-center gap-1">
           {steps.map((st, idx) => (
@@ -467,12 +468,18 @@ export default function DailyTasksTab({
                       : st.done
                       ? 'bg-emerald-500 text-white'
                       : st.active
-                      ? 'bg-[#003C71] text-white ring-2 ring-[#003C71]/20'
+                      ? st.key === 'wo'
+                        ? 'bg-amber-500 text-white ring-2 ring-amber-200'
+                        : 'bg-[#003C71] text-white ring-2 ring-[#003C71]/20'
                       : 'bg-slate-200 text-slate-400'
                   }`}
                 >
                   {st.active && !st.done && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                    <span
+                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                        st.alert ? 'bg-rose-400' : st.key === 'wo' ? 'bg-amber-400' : 'bg-sky-400'
+                      }`}
+                    />
                   )}
                   {st.done ? '✓' : idx + 1}
                 </span>
@@ -483,7 +490,9 @@ export default function DailyTasksTab({
                       : st.done
                       ? 'text-emerald-700'
                       : st.active
-                      ? 'text-[#003C71] font-bold'
+                      ? st.key === 'wo'
+                        ? 'text-amber-700 font-bold'
+                        : 'text-[#003C71] font-bold'
                       : 'text-slate-400'
                   }`}
                 >
@@ -615,6 +624,11 @@ export default function DailyTasksTab({
                       ผู้แจ้ง: {t.requester}
                     </span>
                   )}
+                  {t.receivedDate && (
+                    <span className="text-sky-800 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60 font-tech font-semibold text-[10px]" title="วันที่รับเรื่อง (ห้ามแก้ไขย้อนหลัง)">
+                      รับ: {fDate(t.receivedDate)}
+                    </span>
+                  )}
                   {t.workOrderNo && (
                     <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
                       <span>WO: {t.workOrderNo}</span>
@@ -714,6 +728,14 @@ export default function DailyTasksTab({
               <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between text-xs text-slate-600 border border-slate-200/60 font-tech">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Icon name="calendar" size={14} className="text-[#bca374] shrink-0" />
+                  {t.receivedDate && (
+                    <>
+                      <span className="text-[11px] text-sky-800 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60 font-semibold">
+                        รับ: <strong className="whitespace-nowrap">{fDate(t.receivedDate)}</strong>
+                      </span>
+                      <span className="text-slate-300">|</span>
+                    </>
+                  )}
                   <span>
                     เริ่ม: <strong className="text-slate-800 whitespace-nowrap">{fDate(t.startDate)}</strong>
                   </span>
@@ -812,6 +834,11 @@ export default function DailyTasksTab({
                         <span>
                           {t.id} | {t.requester}
                         </span>
+                        {t.receivedDate && (
+                          <span className="text-sky-800 bg-sky-50 px-1 py-0.2 rounded border border-sky-200/60 font-tech font-semibold" title="วันที่รับเรื่อง (ห้ามแก้ไขย้อนหลัง)">
+                            รับ: {fDate(t.receivedDate)}
+                          </span>
+                        )}
                         {t.workOrderNo && (
                           <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-200">
                             <span>WO:{t.workOrderNo}</span>
@@ -895,6 +922,14 @@ export default function DailyTasksTab({
                       <div className="text-[11px] text-gray-400 font-normal mt-0.5">{t.area}</div>
                     </td>
                     <td className="py-2.5 px-2 text-xs text-slate-600 align-top">
+                      {t.receivedDate && (
+                        <div className="flex items-center gap-1 font-tech mb-1">
+                          <span className="text-slate-400 font-sans text-[10px] shrink-0">รับ:</span>
+                          <span className="font-semibold text-sky-800 whitespace-nowrap text-[11px] bg-sky-50 px-1 py-0.2 rounded border border-sky-200/60" title="วันที่รับเรื่อง (ห้ามแก้ไขย้อนหลัง)">
+                            {fDate(t.receivedDate)}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 font-tech">
                         <span className="text-slate-400 font-sans text-[10px] shrink-0">เริ่ม:</span>
                         <span className="font-semibold text-slate-700 whitespace-nowrap text-[11px]">{fDate(t.startDate)}</span>
