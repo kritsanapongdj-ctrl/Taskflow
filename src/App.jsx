@@ -675,6 +675,37 @@ export default function App() {
     return Array.from(new Set(fromEmails)).filter(Boolean).sort((a, b) => a.localeCompare('th'));
   }, [sets.emails]);
 
+  // รายชื่อเจ้าหน้าที่สำหรับบันทึกเปลี่ยนสถานะงาน (เฉพาะ Foreman, Admin, Officer ที่มีชื่อผูกกับอีเมลไว้)
+  const statusStaffList = useMemo(() => {
+    const emailLinkedNames = new Set();
+
+    (sets.emails || []).forEach(e => {
+      const parts = e.split('|');
+      const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+      rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean).forEach(n => {
+        emailLinkedNames.add(n);
+      });
+    });
+
+    (sets.staffStats || []).forEach(s => {
+      if (s.name && s.email && s.email.includes('@')) {
+        emailLinkedNames.add(s.name.trim());
+      }
+    });
+
+    const allowedRoles = new Set(['foreman', 'admin', 'officer', 'supervisor']);
+
+    const filtered = Array.from(emailLinkedNames)
+      .filter(name => {
+        if (!name) return false;
+        const role = getStaffRole(name);
+        return allowedRoles.has(role.key);
+      })
+      .sort((a, b) => a.localeCompare('th'));
+
+    return filtered.length > 0 ? filtered : emailStaffNames;
+  }, [sets.emails, sets.staffStats, sets.staffClasses, emailStaffNames]);
+
   const availableRoles = useMemo(() => {
     const rolesMap = new Map();
     allStaffNames.forEach(name => {
@@ -896,7 +927,9 @@ export default function App() {
     if (!t) return;
     if (val === t.status) return;
 
-    const defaultRecorder = (gFilt.staffName !== 'ทั้งหมด' ? gFilt.staffName : '') || getStaffForTask(t) || '';
+    const defaultRecorder = (gFilt.staffName !== 'ทั้งหมด' && statusStaffList.includes(gFilt.staffName) ? gFilt.staffName : '') ||
+      (statusStaffList.includes(getStaffForTask(t)) ? getStaffForTask(t) : '') ||
+      (statusStaffList.length > 0 ? statusStaffList[0] : '');
 
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
@@ -2353,7 +2386,7 @@ export default function App() {
               sMod={sMod}
               setSMod={setSMod}
               getTStr={getTStr}
-              staffList={allStaffNames}
+              staffList={statusStaffList}
               task={tasks.find(x => String(x.id) === String(sMod.taskId))}
               isSupervisor={isSupervisor}
               supervisorSession={supervisorSession}

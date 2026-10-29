@@ -204,6 +204,11 @@ export default function StatusChangeModal({
                 className="w-full border border-blue-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500 outline-none"
               />
             )}
+
+            <div className="flex items-center justify-between text-[10.5px] text-slate-500 pt-0.5">
+              <span>🔒 เฉพาะ Foreman, Admin และ Officer ที่มีอีเมล</span>
+              <span className="font-mono text-slate-400">({staffList.length} ท่าน)</span>
+            </div>
           </div>
 
           {/* Action-specific fields */}
