@@ -1,7 +1,6 @@
 import { db, collection, getDocs, doc, getDoc } from '../_services/firebase.js';
 import { GROUP_A, GROUP_B, GROUP_A2, ALL_PROJECTS } from '../_services/projectsConfig.js';
 import { replyToLine } from '../_services/lineService.js';
-import { askGemini } from '../_services/geminiService.js';
 
 // Helper Formatters
 const fDateThai = (ds) => {
@@ -103,34 +102,10 @@ async function handleSummary(projectList, groupName) {
   const postponedCount = todaysTasks.filter(t => t.status === 'เลื่อนวันจบ' || t.status === 'เลื่อนงาน').length;
   const pendingCount = todaysTasks.filter(t => t.status === 'รอดำเนินการ').length;
   
-  const prompt = `ทำหน้าที่เป็นผู้ช่วยสรุปงานประจำวัน (Daily Tasks Report)
-ข้อมูล:
-ทีม: กลุ่ม ${groupName} ประจำวันที่ ${fDateThai(todayStr)}
-ภาพรวม: ทั้งหมด ${todaysTasks.length} งาน (จบงานแล้ว: ${doneCount}, จบงานรอใบงาน: ${waitWoCount}, กำกำลังดำเนินการ: ${inProgCount}, ติดปัญหา/รออะไหล่: ${blockedCount}${postponedStartCount > 0 ? `, เลื่อนวันเริ่ม: ${postponedStartCount}` : ''}${postponedCount > 0 ? `, เลื่อนวันจบ: ${postponedCount}` : ''}, รอดำเนินการ: ${pendingCount})
-รายการงานวันนี้:
-${todaysTasks.map((t, i) => {
-  const isWaitWo = (t.status === 'จบงาน(รอใบงาน)' || (t.status || '').includes('รอใบงาน')) && !t.workOrderNo;
-  const woCountdown = isWaitWo ? ` ${getWorkOrderCountdownText(t, todayStr)}` : '';
-  return `${i+1}. โครงการ: ${t.project}, งาน: ${t.details || t.task_name || 'ไม่ระบุ'}, สถานะ: ${t.status || 'อยู่ระหว่างดำเนินการ'}${woCountdown}${t.workOrderNo ? ' (WO: ' + t.workOrderNo + ')' : ''}${t.issueReason ? ' [สาเหตุ: ' + t.issueReason + ']' : ''}${t.startPostponeReason ? ' [เลื่อนเริ่ม: ' + t.startPostponeReason + ']' : ''}${t.postponeReason ? ' [เลื่อนจบ: ' + t.postponeReason + ']' : ''}`;
-}).join('\n')}
-
-ข้อกำหนด:
-1. สรุปรายงานประจำวันของวันนี้ โดยแสดงสถานะจริงของทุกงาน (ทั้งที่จบแล้ว, รอใบงาน, กำลังทำ, หรือติดปัญหา) ไม่ต้องตัดงานที่จบแล้วออก
-2. สำหรับงานที่สถานะเป็น "จบงาน(รอใบงาน)" ที่ยังไม่มีเลข WO ให้คงข้อความแจ้งเตือนระยะเวลาออกใบงานที่ระบุไว้ด้วยเสมอ เช่น (⏳ เหลือเวลาอีก X วัน), (⚠️ วันนี้วันสุดท้าย!), หรือ (🚨 เกินกำหนดมา X วัน!)
-3. สรุปแยกตามโครงการอย่างชัดเจน
-4. ใช้ Emoji ประกอบให้น่าอ่าน เช่น ✅ จบงาน, 📋 จบงาน(รอใบงาน), ⚙️ กำลังดำเนินการ, ⚠️ รออะไหล่, 📅 เลื่อนวันเริ่ม, 📅 เลื่อนวันจบ, ⏳ รอดำเนินการ
-5. กระชับ ชัดเจน ไม่ต้องเกริ่นนำหรือลงท้ายยาวเกินไป
-6. ลงท้ายด้วยประโยคให้กำลังใจทีมงานสั้นๆ`;
-
-  const geminiResponse = await askGemini(prompt);
-  if (geminiResponse && !geminiResponse.includes('Error')) {
-    return geminiResponse;
-  }
-  
-  let fallbackMsg = `📋 สรุปงานประจำวัน กลุ่ม ${groupName}\n`;
-  fallbackMsg += `📅 ประจำวันที่: ${fDateThai(todayStr)}\n`;
-  fallbackMsg += `📊 ภาพรวม: ${todaysTasks.length} งาน (✅ จบ ${doneCount} | 📋 รอใบงาน ${waitWoCount} | ⚙️ กำลังทำ ${inProgCount} | ⚠️ รออะไหล่ ${blockedCount}${postponedStartCount > 0 ? ` | 📅 เลื่อนเริ่ม ${postponedStartCount}` : ''}${postponedCount > 0 ? ` | 📅 เลื่อนจบ ${postponedCount}` : ''} | ⏳ รอดำเนินการ ${pendingCount})\n`;
-  fallbackMsg += `─────────────────────────\n`;
+  let summaryMsg = `📋 สรุปงานประจำวัน กลุ่ม ${groupName}\n`;
+  summaryMsg += `📅 ประจำวันที่: ${fDateThai(todayStr)}\n`;
+  summaryMsg += `📊 ภาพรวม: ${todaysTasks.length} งาน (✅ จบ ${doneCount} | 📋 รอใบงาน ${waitWoCount} | ⚙️ กำลังทำ ${inProgCount} | ⚠️ รออะไหล่ ${blockedCount}${postponedStartCount > 0 ? ` | 📅 เลื่อนเริ่ม ${postponedStartCount}` : ''}${postponedCount > 0 ? ` | 📅 เลื่อนจบ ${postponedCount}` : ''} | ⏳ รอดำเนินการ ${pendingCount})\n`;
+  summaryMsg += `─────────────────────────\n`;
 
   const byProject = {};
   todaysTasks.forEach(t => {
@@ -140,19 +115,23 @@ ${todaysTasks.map((t, i) => {
   });
   
   for (const proj in byProject) {
-    fallbackMsg += `\n📌 ${proj} (${byProject[proj].length} งาน)\n`;
+    summaryMsg += `\n📌 ${proj} (${byProject[proj].length} งาน)\n`;
     byProject[proj].forEach((t, idx) => {
       const icon = getEmoji(t.details || t.task_name);
       const st = getStatusBadge(t.status || 'อยู่ระหว่างดำเนินการ');
       const isWaitWo = (t.status === 'จบงาน(รอใบงาน)' || (t.status || '').includes('รอใบงาน')) && !t.workOrderNo;
       const woCountdown = isWaitWo ? ` ${getWorkOrderCountdownText(t, todayStr)}` : '';
       const woTag = t.workOrderNo ? ` [WO: ${t.workOrderNo}]` : '';
-      fallbackMsg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'} ${icon}\n   สถานะ: ${st}${woCountdown}${woTag}\n`;
+      const reasonTag = t.issueReason ? ` [สาเหตุ: ${t.issueReason}]`
+        : t.startPostponeReason ? ` [เลื่อนเริ่ม: ${t.startPostponeReason}]`
+        : t.postponeReason ? ` [เลื่อนจบ: ${t.postponeReason}]`
+        : '';
+      summaryMsg += `${idx + 1}. ${t.details?.replace(/\n/g, ' ') || 'ไม่ระบุ'} ${icon}\n   สถานะ: ${st}${woCountdown}${woTag}${reasonTag}\n`;
     });
   }
 
-  fallbackMsg += `\n─────────────────────────\n💪 เป็นกำลังใจให้ทีมงานทุกคนครับ!`;
-  return fallbackMsg;
+  summaryMsg += `\n─────────────────────────\n💪 เป็นกำลังใจให้ทีมงานทุกคนครับ!`;
+  return summaryMsg;
 }
 
 // 2. คำสั่ง !รอใบงาน (กวาดงานค้างสถานะ จบงาน(รอใบงาน) คั่นด้วยเดือน -> โครงการ)

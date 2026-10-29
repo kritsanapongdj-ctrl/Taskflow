@@ -1,4 +1,5 @@
 import React from 'react';
+import SegmentedPills from '../components/ui/SegmentedPills.jsx';
 
 export default function InformJobTab({
   informs = [],
@@ -64,31 +65,15 @@ export default function InformJobTab({
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Top Switcher Bar (LH Luxury Architectural Tabs) */}
-      <div className="bg-white p-1.5 rounded-xl shadow-2xs border border-[#A8996E]/30 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setITab('form')}
-          className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-            iTab === 'form'
-              ? 'bg-[#003C71] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-600 hover:text-[#003C71] hover:bg-slate-100'
-          }`}
-        >
-          <span className="font-serif tracking-wider">แจ้งเปิดงานใหม่ (CREATE JOB)</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setITab('manage')}
-          className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-            iTab === 'manage'
-              ? 'bg-[#003C71] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-600 hover:text-[#003C71] hover:bg-slate-100'
-          }`}
-        >
-          <span className="font-serif tracking-wider">จัดการสถานะงาน ({ft.length})</span>
-        </button>
-      </div>
+      {/* Top Switcher Bar with 21st.dev Sliding SegmentedPills */}
+      <SegmentedPills
+        items={[
+          { id: 'form', label: 'แจ้งเปิดงานใหม่ (CREATE JOB)' },
+          { id: 'manage', label: 'จัดการสถานะงาน', count: ft.length }
+        ]}
+        activeId={iTab}
+        onChange={setITab}
+      />
 
       {iTab === 'form' ? (
         <form
@@ -153,7 +138,7 @@ export default function InformJobTab({
                 )
               )
                 .filter(Boolean)
-                .sort((a, b) => a.localeCompare('th'))
+                .sort((a, b) => a.localeCompare(b, 'th'))
                 .map((n) => {
                   const assignedCount = (sets.emails || []).reduce((acc, e) => {
                     const parts = e.split('|');

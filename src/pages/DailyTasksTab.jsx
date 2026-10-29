@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import SegmentedPills from '../components/ui/SegmentedPills.jsx';
 import { getTaskOverdueInfo } from '../utils/overdueHelper';
 import { getBangkokDateStr } from '../utils/dateUtils.js';
 import { verifyAdminPin } from '../utils/security.js';
@@ -66,11 +67,62 @@ export default function DailyTasksTab({
     overdueInfo: getTaskOverdueInfo(t, today, sets)
   }));
 
-  const overdueCount = tasksWithOverdue.filter((t) => t.overdueInfo.isOverdue).length;
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const displayTasks = onlyOverdueFilter
-    ? tasksWithOverdue.filter((t) => t.overdueInfo.isOverdue)
-    : tasksWithOverdue;
+  const counts = useMemo(() => {
+    let inProgress = 0;
+    let issue = 0;
+    let overdue = 0;
+    let done = 0;
+
+    tasksWithOverdue.forEach((t) => {
+      if (t.overdueInfo?.isOverdue) overdue++;
+      if (t.status?.startsWith('จบงาน')) {
+        done++;
+      } else if (
+        t.status === 'ติดปัญหา/รออะไหล่' ||
+        t.status === 'รออะไหล่/ติดปัญหา' ||
+        t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)'
+      ) {
+        issue++;
+      } else {
+        inProgress++;
+      }
+    });
+
+    return {
+      all: tasksWithOverdue.length,
+      inProgress,
+      issue,
+      overdue,
+      done
+    };
+  }, [tasksWithOverdue]);
+
+  const displayTasks = useMemo(() => {
+    return tasksWithOverdue.filter((t) => {
+      if (statusFilter === 'overdue') return t.overdueInfo?.isOverdue;
+      if (statusFilter === 'inProgress') {
+        return (
+          !t.status?.startsWith('จบงาน') &&
+          t.status !== 'ติดปัญหา/รออะไหล่' &&
+          t.status !== 'รออะไหล่/ติดปัญหา' &&
+          t.status !== 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)'
+        );
+      }
+      if (statusFilter === 'issue') {
+        return (
+          t.status === 'ติดปัญหา/รออะไหล่' ||
+          t.status === 'รออะไหล่/ติดปัญหา' ||
+          t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)'
+        );
+      }
+      if (statusFilter === 'done') {
+        return t.status?.startsWith('จบงาน');
+      }
+      return true;
+    });
+  }, [tasksWithOverdue, statusFilter]);
 
   const handleEdit = (t) => {
     const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');
@@ -144,9 +196,9 @@ export default function DailyTasksTab({
   };
 
   return (
-    <div className="space-y-6 animate-in">
-      {/* Top Header & Quick Overdue Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#A8996E]/25">
+    <div className="space-y-4 animate-in">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#A8996E]/25">
         <div className="flex items-center gap-2.5 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -165,40 +217,6 @@ export default function DailyTasksTab({
           <span className="text-xs bg-slate-100 text-[#003C71] font-semibold px-2.5 py-0.5 rounded-full border border-slate-200 self-center">
             {displayTasks.length} รายการ
           </span>
-
-          {/* Quick Overdue Filter Pill */}
-          {overdueCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setOnlyOverdueFilter(!onlyOverdueFilter)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                onlyOverdueFilter
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-white border border-rose-200 text-rose-700 hover:bg-rose-50'
-              }`}
-              title="กรองแสดงเฉพาะงานที่เกินกำหนดหรือปิดงานช้า"
-            >
-              <Icon name="alertTriangle" size={13} />
-              <span>เฉพาะงานเกินกำหนด/ปิดช้า</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                  onlyOverdueFilter ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
-                }`}
-              >
-                {overdueCount}
-              </span>
-            </button>
-          )}
-
-          {onlyOverdueFilter && (
-            <button
-              type="button"
-              onClick={() => setOnlyOverdueFilter(false)}
-              className="text-xs text-[#7A1C28] hover:underline font-semibold cursor-pointer"
-            >
-              แสดงทั้งหมด
-            </button>
-          )}
         </div>
 
         <button
@@ -209,6 +227,23 @@ export default function DailyTasksTab({
           <Icon name="plus" size={15} className="mr-1.5 text-white" /> เพิ่มงานใหม่
         </button>
       </div>
+
+      {/* 21st.dev Animated Sliding Segmented Filter Control */}
+      <SegmentedPills
+        items={[
+          { id: 'all', label: 'ทั้งหมด', count: counts.all },
+          { id: 'inProgress', label: 'กำลังทำ', count: counts.inProgress },
+          { id: 'issue', label: 'รออะไหล่/ติดปัญหา', count: counts.issue },
+          { id: 'overdue', label: 'เกินกำหนด/ปิดช้า', count: counts.overdue, alert: true },
+          { id: 'done', label: 'จบงานแล้ว', count: counts.done }
+        ]}
+        activeId={statusFilter}
+        onChange={(newId) => {
+          setStatusFilter(newId);
+          if (onlyOverdueFilter && newId !== 'overdue') setOnlyOverdueFilter(false);
+        }}
+        className="pt-0.5 pb-1"
+      />
 
       {/* 1. Mobile View: Responsive Task Cards (width < 768px) */}
       <div className="block md:hidden space-y-3.5 pb-24">

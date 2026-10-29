@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SwipeButton from '../ui/SwipeButton.jsx';
 
 export default function StatusChangeModal({
   isOpen,
@@ -25,44 +26,60 @@ export default function StatusChangeModal({
 
   const handleConfirmClick = () => {
     if (!sMod.recordedBy?.trim()) {
-      return alert('กรุณาเลือกหรือระบุชื่อผู้บันทึก');
+      alert('กรุณาเลือกหรือระบุชื่อผู้บันทึก');
+      return false;
     }
     if (sMod.type === 'penalty_spare_part' && !sMod.reason?.trim()) {
-      return alert('กรุณาระบุหลักฐานหรือเหตุผลที่ตรวจพบว่าผิดเงื่อนไขรออะไหล่ (เช่น ตรวจพบอะไหล่ส่งถึงหน้างานแล้ว แต่งานไม่มีความคืบหน้า)');
+      alert('กรุณาระบุหลักฐานหรือเหตุผลที่ตรวจพบว่าผิดเงื่อนไขรออะไหล่ (เช่น ตรวจพบอะไหล่ส่งถึงหน้างานแล้ว แต่งานไม่มีความคืบหน้า)');
+      return false;
     }
     if (sMod.type === 'cancel' && !sMod.reason?.trim()) {
-      return alert('กรุณาระบุเหตุผลในการยกเลิกงาน');
+      alert('กรุณาระบุเหตุผลในการยกเลิกงาน');
+      return false;
     }
     if (sMod.type === 'postpone_start' && !sMod.postponeStartDate) {
-      return alert('กรุณาระบุวันที่เริ่มงานใหม่');
+      alert('กรุณาระบุวันที่เริ่มงานใหม่');
+      return false;
     }
     if (sMod.type === 'issue' && !sMod.reason?.trim()) {
-      return alert('กรุณาระบุสาเหตุที่ติดปัญหา หรืออะไหล่ที่รอ');
+      alert('กรุณาระบุสาเหตุที่ติดปัญหา หรืออะไหล่ที่รอ');
+      return false;
     }
     if (sMod.type === 'postpone') {
-      if (!sMod.postponeDate) return alert('กรุณาระบุวันที่ขอเลื่อนจบไปใหม่');
-      if (!sMod.reason?.trim()) return alert('กรุณาระบุสาเหตุที่ขอเลื่อนวันจบงาน');
+      if (!sMod.postponeDate) {
+        alert('กรุณาระบุวันที่ขอเลื่อนจบไปใหม่');
+        return false;
+      }
+      if (!sMod.reason?.trim()) {
+        alert('กรุณาระบุสาเหตุที่ขอเลื่อนวันจบงาน');
+        return false;
+      }
     }
     if (sMod.type === 'complete') {
       if (sMod.isOverdue && !sMod.overdueReason?.trim()) {
-        return alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
+        alert('กรุณาระบุสาเหตุที่จบงานช้ากว่ากำหนด');
+        return false;
       }
       if (sMod.isLateWO && !sMod.noWO && !sMod.lateWOReason?.trim()) {
-        return alert('กรุณาระบุสาเหตุที่เปิดใบงานล่าช้ากว่ากำหนดเกิน 3 วัน');
+        alert('กรุณาระบุสาเหตุที่เปิดใบงานล่าช้ากว่ากำหนดเกิน 3 วัน');
+        return false;
       }
       if (!sMod.noWO && !sMod.workOrderNo?.trim()) {
-        return alert('กรุณาระบุเลขที่ใบงาน (เช่น LH-123-1234567) หรือ ติ๊กเลือก "ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน" ด้านล่าง');
+        alert('กรุณาระบุเลขที่ใบงาน (เช่น LH-123-1234567) หรือ ติ๊กเลือก "ขอจบงานโดยยังไม่ใส่เลขที่ใบงาน" ด้านล่าง');
+        return false;
       }
       if (!sMod.noWO) {
         const woRegex = /^[A-Za-z]{2}-\d{3}-\d{7}$/;
         const cleanWo = (sMod.workOrderNo || '').trim().toUpperCase();
         if (!woRegex.test(cleanWo)) {
-          return alert('รูปแบบเลขที่ใบงานไม่ถูกต้อง!\nต้องเป็น: อักษร 2 ตัว - เลข 3 ตัว - เลข 7 ตัว\nตัวอย่าง: LH-123-1234567');
+          alert('รูปแบบเลขที่ใบงานไม่ถูกต้อง!\nต้องเป็น: อักษร 2 ตัว - เลข 3 ตัว - เลข 7 ตัว\nตัวอย่าง: LH-123-1234567');
+          return false;
         }
       }
     }
     if (propSetSMod) propSetSMod(sMod);
     if (onConfirm) onConfirm(sMod);
+    return true;
   };
 
   const isCustom = sMod.isCustomStaff || (!staffList.includes(sMod.recordedBy) && !!sMod.recordedBy);
@@ -469,37 +486,64 @@ export default function StatusChangeModal({
           )}
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-2 mt-5">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              if (propSetSMod) {
-                propSetSMod({
-                  ...propSMod,
-                  isOpen: false,
-                  noWO: false,
-                  forceWO: false,
-                  isOverdue: false,
-                  overdueReason: '',
-                  postponeDate: getTStr ? getTStr() : '',
-                  recordedBy: '',
-                  isCustomStaff: false
-                });
-              }
-            }}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 p-2 text-xs font-bold rounded transition cursor-pointer"
-          >
-            ปิด
-          </button>
-          <button
-            type="button"
-            onClick={handleConfirmClick}
-            className="flex-1 bg-[#0f2e4a] hover:bg-[#1a3f63] text-white p-2 text-xs font-bold rounded shadow-sm active:scale-95 transition-all cursor-pointer"
-          >
-            ยืนยัน
-          </button>
+        {/* Actions with 21st.dev Swipe-to-Confirm */}
+        <div className="mt-5 space-y-2">
+          <SwipeButton
+            onConfirm={handleConfirmClick}
+            text={
+              sMod.type === 'complete'
+                ? 'สไลด์เพื่อยืนยันจบงาน'
+                : sMod.type === 'cancel'
+                ? 'สไลด์เพื่อยืนยันยกเลิกงาน'
+                : sMod.type === 'penalty_spare_part'
+                ? 'สไลด์เพื่อตัดคะแนนวินัย'
+                : sMod.type === 'issue'
+                ? 'สไลด์เพื่อบันทึกรออะไหล่'
+                : sMod.type === 'postpone' || sMod.type === 'postpone_start'
+                ? 'สไลด์เพื่อยืนยันเลื่อนวัน'
+                : sMod.type === 'progress'
+                ? (sMod.isHoldResume ? 'สไลด์เพื่อดำเนินการต่อ' : 'สไลด์เพื่อเริ่มดำเนินการ')
+                : 'สไลด์เพื่อยืนยัน'
+            }
+            successText="บันทึกข้อมูลเรียบร้อย..."
+            variant={
+              sMod.type === 'complete'
+                ? 'success'
+                : sMod.type === 'cancel' || sMod.type === 'penalty_spare_part'
+                ? 'danger'
+                : sMod.type === 'issue'
+                ? 'warning'
+                : 'primary'
+            }
+          />
+
+          <div className="flex items-center justify-between px-1 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (propSetSMod) {
+                  propSetSMod({
+                    ...propSMod,
+                    isOpen: false,
+                    noWO: false,
+                    forceWO: false,
+                    isOverdue: false,
+                    overdueReason: '',
+                    postponeDate: getTStr ? getTStr() : '',
+                    recordedBy: '',
+                    isCustomStaff: false
+                  });
+                }
+              }}
+              className="text-slate-400 hover:text-slate-700 py-1 transition cursor-pointer font-medium"
+            >
+              ยกเลิก / ปิดหน้าต่าง
+            </button>
+            <span className="text-[11px] text-slate-400 font-normal">
+              ลากไปขวา หรือ Spacebar
+            </span>
+          </div>
         </div>
       </div>
     </div>
