@@ -23,6 +23,7 @@ export default function DailyTasksTab({
   isSupervisor = false
 }) {
   const [onlyOverdueFilter, setOnlyOverdueFilter] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const tD = gFilt.date;
   const today = getTStr ? getTStr() : getBangkokDateStr();
 
@@ -128,6 +129,210 @@ export default function DailyTasksTab({
     const pwd = prompt('กรุณาใส่รหัสผ่านเพื่อแก้ไขข้อมูล:');
     if (!verifyAdminPin(pwd, 'task_action')) return alert('รหัสผ่านไม่ถูกต้อง!');
     openTaskModal(t);
+  };
+
+  const renderActionHub = (t, isMobile = false) => {
+    const isMenuOpen = openActionMenuId === t.id;
+    const isDone = t.status?.startsWith('จบงาน');
+    const isWaitWO = t.status === 'จบงาน(รอใบงาน)';
+
+    return (
+      <div className={`relative ${isMobile ? 'flex items-center gap-2 pt-2 border-t border-slate-100' : 'inline-flex items-center justify-center gap-1.5'}`}>
+        {/* 1. Primary Action */}
+        {!isDone ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpenActionMenuId(null);
+              initSt(t.id, 'จบงาน');
+            }}
+            className={`${
+              isMobile
+                ? 'flex-1 h-11 text-xs'
+                : 'px-3 py-1.5 text-[11px]'
+            } bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap`}
+            title="เปิดสไลด์ยืนยันจบงาน"
+          >
+            <Icon name="checkCircle2" size={isMobile ? 15 : 13} />
+            <span>จบงาน</span>
+          </button>
+        ) : isWaitWO && !t.workOrderNo ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpenActionMenuId(null);
+              initSt(t.id, 'จบงาน');
+            }}
+            className={`${
+              isMobile
+                ? 'flex-1 h-11 text-xs'
+                : 'px-2.5 py-1.5 text-[11px]'
+            } bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap`}
+            title="ระบุเลขที่ใบงาน"
+          >
+            <Icon name="fileText" size={isMobile ? 15 : 12} />
+            <span>ใส่เลข WO</span>
+          </button>
+        ) : (
+          <div
+            className={`${
+              isMobile
+                ? 'flex-1 h-11 text-xs'
+                : 'px-2.5 py-1 text-[10.5px]'
+            } bg-emerald-50 border border-emerald-200/70 text-emerald-700 font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 whitespace-nowrap`}
+          >
+            <Icon name="checkCheck" size={isMobile ? 15 : 13} className="text-emerald-600" />
+            <span>เรียบร้อย</span>
+          </div>
+        )}
+
+        {/* 2. More Actions Button (•••) */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenActionMenuId(isMenuOpen ? null : t.id);
+            }}
+            className={`${
+              isMobile ? 'w-11 h-11' : 'w-8 h-8'
+            } rounded-xl border border-slate-200 flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+              isMenuOpen
+                ? 'bg-slate-200 text-[#003C71] ring-2 ring-[#003C71]/20'
+                : 'text-slate-500 bg-white hover:bg-slate-100 hover:text-slate-800 shadow-2xs'
+            }`}
+            title="ตัวเลือกเพิ่มเติม"
+            aria-expanded={isMenuOpen}
+          >
+            <Icon name="moreHorizontal" size={isMobile ? 18 : 16} />
+          </button>
+
+          {/* Popover Dropdown */}
+          {isMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setOpenActionMenuId(null)}
+              />
+              <div
+                className={`absolute right-0 ${
+                  isMobile ? 'bottom-full mb-2' : 'top-full mt-1.5'
+                } w-48 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-50 animate-in fade-in zoom-in-95 text-left divide-y divide-slate-100 font-sans`}
+              >
+                {/* กลุ่ม 1: แก้ไขงาน */}
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      handleEdit(t);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#003C71] font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Icon name="edit2" size={13} className="text-slate-400" />
+                    <span>แก้ไขข้อมูลงาน</span>
+                  </button>
+                </div>
+
+                {/* กลุ่ม 2: เปลี่ยนสถานะ */}
+                <div className="py-1">
+                  <div className="px-3 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    เปลี่ยนสถานะ
+                  </div>
+                  {t.status !== 'กำลังดำเนินการ' && !isDone && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        initSt(t.id, 'กำลังดำเนินการ');
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <span>⚙️</span>
+                      <span>เริ่มดำเนินการ</span>
+                    </button>
+                  )}
+                  {t.status !== 'ติดปัญหา/รออะไหล่' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        initSt(t.id, 'รออะไหล่/ติดปัญหา');
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-amber-600 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <span>⚠️</span>
+                      <span>รออะไหล่ / ติดปัญหา</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      initSt(t.id, 'เลื่อนวันเริ่ม');
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-sky-600 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <span>📅</span>
+                    <span>เลื่อนวันเริ่มงาน</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      initSt(t.id, 'เลื่อนวันจบ');
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <span>📅</span>
+                    <span>เลื่อนวันจบงาน</span>
+                  </button>
+                  {(isSupervisor || t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenActionMenuId(null);
+                        initSt(t.id, 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)');
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <span>🚨</span>
+                      <span>ผิดเงื่อนไขรออะไหล่</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      initSt(t.id, 'ยกเลิก');
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 hover:text-rose-600 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <span>❌</span>
+                    <span>ยกเลิกงานนี้</span>
+                  </button>
+                </div>
+
+                {/* กลุ่ม 3: ลบงาน */}
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenActionMenuId(null);
+                      deleteTask(t);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Icon name="trash" size={13} className="text-rose-500" />
+                    <span>ลบงาน</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const getStatusBadge = (status) => {
@@ -250,16 +455,6 @@ export default function DailyTasksTab({
         {displayTasks.map((t) => {
           const info = t.overdueInfo;
           const isHighlighted = highlightTaskId === t.id;
-          const currentSelectVal =
-            t.status === 'อยู่ระหว่างดำเนินการ'
-              ? 'กำลังดำเนินการ'
-              : t.status === 'เลื่อนวันเริ่ม'
-              ? 'เลื่อนวันเริ่ม'
-              : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
-              ? 'เลื่อนวันจบ'
-              : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
-              ? 'รออะไหล่/ติดปัญหา'
-              : t.status;
 
           return (
             <div
@@ -436,56 +631,8 @@ export default function DailyTasksTab({
                 )}
               </div>
 
-              {/* Mobile Bottom Action Bar (Thumb-friendly >= 44px) */}
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                <div className="flex-1">
-                  <select
-                    value={currentSelectVal}
-                    onChange={(e) => initSt(t.id, e.target.value)}
-                    className="w-full h-11 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white focus:border-[#0f2e4a] focus:ring-2 focus:ring-[#bca374]/20 outline-none shadow-2xs transition-all tactile-select"
-                  >
-                    <option value="รอดำเนินการ">⏳ รอดำเนินการ</option>
-                    <option value="กำลังดำเนินการ">⚙️ กำลังดำเนินการ</option>
-                    <option value="รออะไหล่/ติดปัญหา">⚠️ รออะไหล่/ติดปัญหา</option>
-                    {(isSupervisor || t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') && (
-                      <option value="ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)">🚨 ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)</option>
-                    )}
-                    <option value="เลื่อนวันเริ่ม">📅 เลื่อนวันเริ่ม</option>
-                    <option value="เลื่อนวันจบ">📅 เลื่อนวันจบ</option>
-                    <option value="จบงาน">✅ จบงาน</option>
-                    {t.status === 'จบงาน(รอใบงาน)' && (
-                      <option value="จบงาน(รอใบงาน)">📋 จบงาน (รอใบงาน)</option>
-                    )}
-                  </select>
-                </div>
-                {!t.status?.startsWith('จบงาน') && (
-                  <button
-                    type="button"
-                    onClick={() => initSt(t.id, 'จบงาน')}
-                    className="px-3 h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer shrink-0"
-                    title="เปิดสไลด์ยืนยันจบงาน"
-                  >
-                    <Icon name="checkCircle2" size={15} />
-                    <span>จบงาน</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleEdit(t)}
-                  className="w-11 h-11 border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-100 hover:text-[#0f2e4a] transition-all snap-spring cursor-pointer shadow-2xs"
-                  title="แก้ไขงาน"
-                >
-                  <Icon name="edit2" size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteTask(t)}
-                  className="w-11 h-11 border border-rose-200 rounded-xl flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-100 transition-all snap-spring cursor-pointer shadow-2xs"
-                  title="ลบงาน"
-                >
-                  <Icon name="trash" size={16} />
-                </button>
-              </div>
+              {/* Mobile Bottom Action Bar */}
+              {renderActionHub(t, true)}
             </div>
           );
         })}
@@ -496,11 +643,11 @@ export default function DailyTasksTab({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse table-fixed min-w-[680px]">
             <colgroup>
-              <col className="w-[30%]" />
+              <col className="w-[33%]" />
+              <col className="w-[18%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
               <col className="w-[17%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
-              <col className="w-[23%]" />
             </colgroup>
             <thead>
               <tr className="bg-[#003C71] text-white border-b border-[#A8996E]/30">
@@ -525,16 +672,6 @@ export default function DailyTasksTab({
               {displayTasks.map((t) => {
                 const info = t.overdueInfo;
                 const isHighlighted = highlightTaskId === t.id;
-                const currentSelectVal =
-                  t.status === 'อยู่ระหว่างดำเนินการ'
-                    ? 'กำลังดำเนินการ'
-                    : t.status === 'เลื่อนวันเริ่ม'
-                    ? 'เลื่อนวันเริ่ม'
-                    : t.status === 'เลื่อนงาน' || t.status === 'เลื่อนวันจบ'
-                    ? 'เลื่อนวันจบ'
-                    : t.status === 'ติดปัญหา/รออะไหล่' || t.status === 'รออะไหล่/ติดปัญหา'
-                    ? 'รออะไหล่/ติดปัญหา'
-                    : t.status;
 
                 return (
                   <tr
@@ -684,65 +821,8 @@ export default function DailyTasksTab({
                         )}
                       </div>
                     </td>
-                    <td className="py-2.5 px-1 text-center align-top">
-                      <div className="flex justify-center items-center gap-1">
-                        <select
-                          value={currentSelectVal}
-                          onChange={(e) => initSt(t.id, e.target.value)}
-                          className="w-[82px] sm:w-[92px] max-w-[95px] truncate border border-slate-200 rounded text-[10.5px] py-1 px-1 outline-none bg-slate-50 hover:bg-white font-medium focus:border-[#0f2e4a] focus:ring-1 focus:ring-[#bca374]/30 transition-all cursor-pointer shadow-2xs tactile-select"
-                          title={currentSelectVal}
-                        >
-                          <option value="รอดำเนินการ">รอดำเนินการ</option>
-                          <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                          <option value="รออะไหล่/ติดปัญหา">รออะไหล่/ติดปัญหา</option>
-                          {(isSupervisor || t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)') && (
-                            <option value="ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)">🚨 ผิดเงื่อนไขรออะไหล่</option>
-                          )}
-                          <option value="เลื่อนวันเริ่ม">เลื่อนวันเริ่ม</option>
-                          <option value="เลื่อนวันจบ">เลื่อนวันจบ</option>
-                          <option value="จบงาน">จบงาน</option>
-                          {t.status === 'จบงาน(รอใบงาน)' && (
-                            <option value="จบงาน(รอใบงาน)">จบงาน (รอใบงาน)</option>
-                          )}
-                        </select>
-                        {!t.status?.startsWith('จบงาน') && (
-                          <button
-                            type="button"
-                            onClick={() => initSt(t.id, 'จบงาน')}
-                            className="text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 p-1 rounded-md transition-all cursor-pointer snap-spring shadow-2xs shrink-0 font-bold text-[10.5px] px-1.5 flex items-center gap-0.5"
-                            title="เปิดสไลด์ยืนยันจบงาน"
-                          >
-                            <Icon name="check" size={11} />
-                            <span>จบงาน</span>
-                          </button>
-                        )}
-                        {onOpenTimeline && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenTimeline(t)}
-                            className="text-slate-500 hover:text-[#0f2e4a] p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-all cursor-pointer snap-spring shadow-2xs shrink-0"
-                            title="ดูประวัติไทม์ไลน์งาน"
-                          >
-                            <Icon name="clock" size={13} />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(t)}
-                          className="text-slate-500 hover:text-[#0f2e4a] p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-all cursor-pointer snap-spring shadow-2xs shrink-0"
-                          title="แก้ไขงาน"
-                        >
-                          <Icon name="edit2" size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteTask(t)}
-                          className="text-rose-500 hover:text-rose-700 p-1 bg-rose-50 hover:bg-rose-100 rounded-md transition-all cursor-pointer snap-spring shadow-2xs shrink-0"
-                          title="ลบงาน"
-                        >
-                          <Icon name="trash" size={13} />
-                        </button>
-                      </div>
+                    <td className="py-2.5 px-2 text-center align-top">
+                      {renderActionHub(t, false)}
                     </td>
                 </tr>
               );
