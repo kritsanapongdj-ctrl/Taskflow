@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SimplePieChart from '../components/charts/SimplePieChart';
+import Sparkline from '../components/charts/Sparkline';
 import { getTaskOverdueInfo } from '../utils/overdueHelper';
 
 // Palette aligned with Land & Houses Corporate Identity
@@ -15,7 +16,7 @@ const FALLBACK_COLORS = ['#B08731', '#10B981', '#3A3A36', '#64748B', '#0284C7', 
 export default function DashboardTab({
   tasks = [],
   gFilt,
-  THEME,
+  THEME: _THEME,
   getTStr,
   getStdProj,
   checkStaffMatch,
@@ -128,6 +129,111 @@ export default function DashboardTab({
     : 100;
   const activeProjectsCount = new Set(aT.map((t) => getStdProj(t.project))).size;
 
+  // 7-Day Trend Telemetry for SLA Sparklines
+  const sparkline7Days = (() => {
+    if (!tS) return [];
+    const days = [];
+    const [y, m, d] = tS.split('-').map(Number);
+    const base = new Date(y, m - 1, d, 12, 0, 0);
+
+    for (let i = 6; i >= 0; i--) {
+      const cur = new Date(base);
+      cur.setDate(base.getDate() - i);
+      const cy = cur.getFullYear();
+      const cm = String(cur.getMonth() + 1).padStart(2, '0');
+      const cd = String(cur.getDate()).padStart(2, '0');
+      const dateStr = `${cy}-${cm}-${cd}`;
+      const shortLabel = `${cur.getDate()} ${cur.toLocaleDateString('th-TH', { month: 'short' })}`;
+
+      // 1. Completed tasks on this day
+      const completedCount = aT.filter((t) => {
+        if (!t.status?.startsWith('จบงาน')) return false;
+        return t.completedDate === dateStr || (!t.completedDate && t.endDate === dateStr);
+      }).length;
+
+      // 2. Active / Scheduled work load spanning this day
+      const activeCount = aT.filter((t) => {
+        const s = t.startDate || t.receivedDate || t.endDate;
+        const e = t.endDate || t.startDate;
+        if (!s || !e) return false;
+        return dateStr >= s && dateStr <= e;
+      }).length;
+
+      // 3. Overdue tasks on this day
+      const overdueCount = aT.filter((t) => {
+        if (t.status === 'ยกเลิก') return false;
+        if (t.status?.startsWith('จบงาน') && t.completedDate && t.completedDate < dateStr) return false;
+        const targetEnd = t.endDate;
+        if (targetEnd && targetEnd < dateStr) return true;
+        if (dateStr === tS && chkOvdTimeAware(t, tS)) return true;
+        return false;
+      }).length;
+
+      // 4. SLA Health on this day
+      const totalDayTasks = Math.max(activeCount, completedCount);
+      const slaRate = totalDayTasks > 0
+        ? Math.max(0, Math.round(((totalDayTasks - overdueCount) / totalDayTasks) * 100))
+        : 100;
+
+      days.push({
+        dateStr,
+        shortLabel,
+        completedCount,
+        activeCount,
+        overdueCount,
+        slaRate
+      });
+    }
+    return days;
+  })();
+
+  const total7DayCompleted = sparkline7Days.reduce((sum, d) => sum + d.completedCount, 0);
+
+  const avg7DaySla = sparkline7Days.length > 0
+    ? Math.round(sparkline7Days.reduce((acc, d) => acc + d.slaRate, 0) / sparkline7Days.length)
+    : 100;
+
+  const slaStatusConfig = (() => {
+    if (slaIntegrity >= 90) {
+      return {
+        label: 'HEALTHY · เสถียรภาพสูง',
+        badgeClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+        dotClass: 'bg-emerald-500',
+        sparkColor: '#10B981',
+        desc: 'การส่งมอบและกรอบเวลาอยู่ในเกณฑ์ดีเยี่ยม'
+      };
+    }
+    if (slaIntegrity >= 75) {
+      return {
+        label: 'AT RISK · พึงเฝ้าระวัง',
+        badgeClass: 'text-amber-800 bg-amber-50 border-amber-200',
+        dotClass: 'bg-amber-500',
+        sparkColor: '#B08731',
+        desc: 'มีงานสุ่มเสี่ยงเกินกำหนด ควรติดตามเร่งรัด'
+      };
+    }
+    return {
+      label: 'CRITICAL · จุดวิกฤต',
+      badgeClass: 'text-rose-800 bg-rose-50 border-rose-200',
+      dotClass: 'bg-rose-500',
+      sparkColor: '#7A1C28',
+      desc: 'อัตรางานล่าช้าสูง จำเป็นต้องเข้าบริหารจัดการทันที'
+    };
+  })();
+
+  const topProjects = (() => {
+    const counts = {};
+    aT.forEach((t) => {
+      const proj = getStdProj(t.project) || 'ไม่ระบุโครงการ';
+      counts[proj] = (counts[proj] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  })();
+
+  const topRequestersMonth = getRequesterChartData(mt).slice(0, 3);
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* 1. Executive Briefing Header (LH Architectural Luxury) */}
@@ -167,97 +273,88 @@ export default function DashboardTab({
         </div>
       </div>
 
-      {/* 2. Strategic Executive Ribbon (4 High-Level Key Indicators) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-2xs flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#A8996E]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500">ดัชนีการรักษา SLA</span>
-            <span className="text-[10px] font-bold text-[#A8996E] bg-[#A8996E]/10 px-1.5 py-0.2 rounded">SLA</span>
+      {/* 2. 21st.dev Bento Grid KPI Cards & SLA Sparklines Architecture */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-5">
+        {/* Cell 1: Hero Card — SLA Integrity & Telemetry (Col-span 12 on mobile, Col-span 7 on lg) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl p-6 sm:p-7 border border-[#A8996E]/30 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:border-[#A8996E]/60 transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#A8996E] via-[#003C71] to-[#A8996E]" />
+
+          <div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-[#A8996E] inline-block rounded-xs" />
+                <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#003C71] uppercase">
+                  SLA INTEGRITY &amp; OPERATIONAL HEALTH
+                </span>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs ${slaStatusConfig.badgeClass}`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${slaStatusConfig.dotClass}`} />
+                {slaStatusConfig.label}
+              </span>
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-serif text-5xl sm:text-6xl font-normal text-[#003C71] tracking-tight">
+                    {slaIntegrity}%
+                  </span>
+                  <span className="text-xs sm:text-sm font-medium text-slate-500">
+                    ดัชนีเสถียรภาพ SLA
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 max-w-md">
+                  {slaStatusConfig.desc} ({ov.length === 0 ? 'ส่งมอบตรงเวลา 100%' : `งานล่าช้าสะสม ${ov.length} รายการ`})
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 bg-[#A8996E]/10 border border-[#A8996E]/20 px-3 py-1.5 rounded-xl">
+                <span className="text-[10.5px] font-semibold text-[#003C71]">เฉลี่ย 7 วัน:</span>
+                <span className="font-serif font-bold text-sm text-[#003C71]">{avg7DaySla}%</span>
+              </div>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-serif text-3xl sm:text-4xl font-normal text-[#003C71] tracking-tight">
-              {slaIntegrity}%
-            </span>
-            <span className="text-[11px] text-slate-400">เสถียรภาพ</span>
+
+          {/* Interactive 7-Day SLA Trend Sparkline */}
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: slaStatusConfig.sparkColor }} />
+                แนวโน้มการรักษา SLA ย้อนหลัง 7 วัน (7-Day Compliance Velocity)
+              </span>
+              <span className="text-[11px] font-serif text-slate-400">Bangkok Timezone</span>
+            </div>
+            <Sparkline
+              data={sparkline7Days.map((d) => ({ value: d.slaRate, label: d.shortLabel }))}
+              color={slaStatusConfig.sparkColor}
+              unit="%"
+              height={44}
+              className="w-full"
+            />
+            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 font-mono">
+              <span>{sparkline7Days[0]?.shortLabel || ''}</span>
+              <span className="text-slate-500 font-medium font-sans">
+                {ov.length === 0 ? '✨ ส่งมอบงานตรงเวลา 100%' : `⚠️ ตรวจพบงานเกินกำหนด ${ov.length} รายการ`}
+              </span>
+              <span>{sparkline7Days[sparkline7Days.length - 1]?.shortLabel || ''}</span>
+            </div>
           </div>
-          <p className="text-[10.5px] text-slate-500 mt-1 truncate">
-            {ov.length === 0 ? 'ส่งมอบตรงเวลา 100%' : `พบงานล่าช้า ${ov.length} รายการ`}
-          </p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-2xs flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#003C71]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500">โครงการที่มีภารกิจ</span>
-            <span className="text-[10px] font-bold text-[#003C71] bg-blue-50 px-1.5 py-0.2 rounded">ACTIVE</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-serif text-3xl sm:text-4xl font-normal text-[#003C71] tracking-tight">
-              {activeProjectsCount}
-            </span>
-            <span className="text-[11px] text-slate-400">โครงการ</span>
-          </div>
-          <p className="text-[10.5px] text-slate-500 mt-1 truncate">
-            {gFilt.area === 'ทั้งหมด' ? 'ครอบคลุมทุกโซน' : `โซน ${gFilt.area}`}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-2xs flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#10B981]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500">ปิดงานสะสมเดือนนี้</span>
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">CLOSED</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-serif text-3xl sm:text-4xl font-normal text-[#003C71] tracking-tight">
-              {monthDone}
-            </span>
-            <span className="text-[11px] text-slate-400">/ {mt.length} รายการ</span>
-          </div>
-          <p className="text-[10.5px] text-slate-500 mt-1 truncate">
-            อัตราความสำเร็จ {monthRate}%
-          </p>
-        </div>
-
-        <div className={`rounded-xl p-4 border shadow-2xs flex flex-col justify-between relative overflow-hidden ${
-          ov.length > 0 ? 'bg-rose-50/40 border-rose-200' : 'bg-white border-slate-200/90'
-        }`}>
-          <div className={`absolute top-0 left-0 right-0 h-0.5 ${ov.length > 0 ? 'bg-[#7A1C28]' : 'bg-emerald-500'}`} />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500">เฝ้าระวังจุดวิกฤต</span>
-            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-              ov.length > 0 ? 'text-[#7A1C28] bg-rose-100' : 'text-emerald-700 bg-emerald-50'
-            }`}>
-              {ov.length > 0 ? 'ALERT' : 'OPTIMAL'}
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className={`font-serif text-3xl sm:text-4xl font-normal tracking-tight ${
-              ov.length > 0 ? 'text-[#7A1C28]' : 'text-[#003C71]'
-            }`}>
-              {ov.length}
-            </span>
-            <span className="text-[11px] text-slate-400">รายการ</span>
-          </div>
-          <p className="text-[10.5px] text-slate-500 mt-1 truncate">
-            {ov.length > 0 ? `ค้างส่งมอบ ${activeOvdCount} รายการ` : 'การส่งมอบตรงตามมาตรฐาน'}
-          </p>
-        </div>
-      </div>
-
-      {/* 3. Tripartite Architectural Focus Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Card 1: ภารกิจส่งมอบวันนี้ (Today's Operations) */}
-        <div className="lh-luxury-card p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#A8996E]" />
+        {/* Cell 2: Today's Dispatch (Col-span 12 on mobile, Col-span 5 on lg) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:border-[#003C71]/50 transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#003C71]" />
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#003C71] uppercase">
-                TODAY'S OPERATIONS · ภารกิจวันนี้
-              </span>
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200/80 px-2.5 py-0.5 rounded-full">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-[#003C71] inline-block rounded-xs" />
+                <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#003C71] uppercase">
+                  TODAY'S OPERATIONS · ภารกิจวันนี้
+                </span>
+              </div>
+              <span className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200/80 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {gFilt.date || tS}
               </span>
             </div>
@@ -268,12 +365,12 @@ export default function DashboardTab({
                   <span className="font-serif text-5xl sm:text-6xl font-normal text-[#003C71] tracking-tight">
                     {dy.length}
                   </span>
-                  <span className="text-sm font-medium text-slate-500">
+                  <span className="text-xs sm:text-sm font-medium text-slate-500">
                     รายการ
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  เป้าหมายงานที่ต้องปฏิบัติการในรอบวัน
+                  อัตราความสำเร็จวันนี้ {todayRate}%
                 </p>
               </div>
 
@@ -283,60 +380,75 @@ export default function DashboardTab({
             </div>
           </div>
 
-          {/* Segmented Delivery Gauge */}
-          <div className="mt-6 pt-5 border-t border-slate-100 space-y-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">ความคืบหน้าการส่งมอบวันนี้</span>
-              <span className="font-serif font-bold text-sm text-[#003C71]">{todayRate}% สำเร็จ</span>
-            </div>
+          {/* Segmented Status Gauge + Sparkline */}
+          <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+            <div className="space-y-1.5">
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div
+                  className="bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${dy.length > 0 ? (todayDone / dy.length) * 100 : 0}%` }}
+                  title={`เสร็จสิ้น: ${todayDone}`}
+                />
+                <div
+                  className="bg-[#003C71] transition-all duration-500"
+                  style={{ width: `${dy.length > 0 ? (todayActive / dy.length) * 100 : 0}%` }}
+                  title={`กำลังดำเนินการ: ${todayActive}`}
+                />
+                <div
+                  className="bg-[#E11D48] transition-all duration-500"
+                  style={{ width: `${dy.length > 0 ? (todayOverdue / dy.length) * 100 : 0}%` }}
+                  title={`เกินกำหนด: ${todayOverdue}`}
+                />
+              </div>
 
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-              <div
-                className="bg-emerald-500 transition-all duration-500"
-                style={{ width: `${dy.length > 0 ? (todayDone / dy.length) * 100 : 0}%` }}
-                title={`เสร็จสิ้น: ${todayDone}`}
-              />
-              <div
-                className="bg-[#003C71] transition-all duration-500"
-                style={{ width: `${dy.length > 0 ? (todayActive / dy.length) * 100 : 0}%` }}
-                title={`กำลังดำเนินการ: ${todayActive}`}
-              />
-              <div
-                className="bg-[#E11D48] transition-all duration-500"
-                style={{ width: `${dy.length > 0 ? (todayOverdue / dy.length) * 100 : 0}%` }}
-                title={`เกินกำหนด: ${todayOverdue}`}
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-[11px] text-slate-600">
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                เสร็จ {todayDone}
-              </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-50 text-[#003C71] px-2 py-0.5 rounded border border-slate-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#003C71]" />
-                กำลังทำ {todayActive}
-              </span>
-              {todayOverdue > 0 && (
-                <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 font-bold px-2 py-0.5 rounded border border-rose-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                  เกินกำหนด {todayOverdue}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+                <span className="inline-flex items-center gap-1 text-emerald-800 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  เสร็จ {todayDone}
                 </span>
-              )}
+                <span className="inline-flex items-center gap-1 text-[#003C71] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#003C71]" />
+                  กำลังทำ {todayActive}
+                </span>
+                {todayOverdue > 0 && (
+                  <span className="inline-flex items-center gap-1 text-rose-700 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    เกินกำหนด {todayOverdue}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Daily Active Tasks Sparkline */}
+            <div>
+              <div className="text-[10.5px] text-slate-400 font-medium flex items-center justify-between mb-1">
+                <span>ปริมาณภารกิจรายวัน 7 วันล่าสุด</span>
+                <span className="text-[#003C71] font-semibold">{dy.length} งานวันนี้</span>
+              </div>
+              <Sparkline
+                data={sparkline7Days.map((d) => ({ value: d.activeCount, label: d.shortLabel }))}
+                color="#003C71"
+                unit="งาน"
+                height={32}
+                className="w-full"
+              />
             </div>
           </div>
         </div>
 
-        {/* Card 2: พันธกิจประจำเดือน (Monthly Strategic Dispatch) */}
-        <div className="lh-luxury-card p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#003C71]" />
+        {/* Cell 3: Monthly Strategic Dispatch (Col-span 12 md:col-span-1 lg:col-span-6) */}
+        <div className="lg:col-span-6 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:border-[#10B981]/50 transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#10B981]" />
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#003C71] uppercase">
-                MONTHLY DISPATCH · พันธกิจประจำเดือน
-              </span>
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200/80 px-2.5 py-0.5 rounded-full">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-[#10B981] inline-block rounded-xs" />
+                <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#003C71] uppercase">
+                  MONTHLY DISPATCH · พันธกิจสะสมประจำเดือน
+                </span>
+              </div>
+              <span className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200/80 px-2.5 py-0.5 rounded-full">
                 รอบเดือน {gFilt.month}
               </span>
             </div>
@@ -347,73 +459,93 @@ export default function DashboardTab({
                   <span className="font-serif text-5xl sm:text-6xl font-normal text-[#003C71] tracking-tight">
                     {mt.length}
                   </span>
-                  <span className="text-sm font-medium text-slate-500">
+                  <span className="text-xs sm:text-sm font-medium text-slate-500">
                     รายการ
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  ปิดงานสำเร็จแล้ว {monthDone} รายการ
+                  ปิดงานสำเร็จแล้ว {monthDone} รายการ (คิดเป็น {monthRate}%)
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-100 text-[#003C71] shrink-0 border border-slate-200/60">
+              <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">
                 <Icon name="listTodo" size={24} />
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 space-y-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">สัดส่วนปิดงานประจำเดือน</span>
-              <span className="font-serif font-bold text-sm text-[#003C71]">{monthRate}% สำเร็จ</span>
+          <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">สัดส่วนปิดงานประจำเดือน</span>
+                <span className="font-serif font-bold text-sm text-[#003C71]">{monthRate}% สำเร็จ</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${monthRate}%` }}
+                />
+              </div>
             </div>
 
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="bg-[#003C71] h-full transition-all duration-500 rounded-full"
-                style={{ width: `${monthRate}%` }}
+            {/* Daily Closed Velocity Sparkline */}
+            <div>
+              <div className="text-[10.5px] text-slate-400 font-medium flex items-center justify-between mb-1">
+                <span>ความเร็วการปิดงาน 7 วันล่าสุด (Closed Velocity)</span>
+                <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2 py-0.2 rounded-full">
+                  7 วัน: {total7DayCompleted} งาน
+                </span>
+              </div>
+              <Sparkline
+                data={sparkline7Days.map((d) => ({ value: d.completedCount, label: d.shortLabel }))}
+                color="#10B981"
+                unit="งาน"
+                height={36}
+                className="w-full"
               />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-              <span>กำลังดำเนินการ: {mt.length - monthDone}</span>
-              <span className="font-semibold text-slate-700">ปิดแล้ว: {monthDone}</span>
             </div>
           </div>
         </div>
 
-        {/* Card 3: จุดวิกฤตที่ต้องเร่งรัด & SLA (SLA Escalation & Watchlist) */}
+        {/* Cell 4: SLA Surveillance & Overdue Escalation (Col-span 12 md:col-span-1 lg:col-span-6) */}
         <div
           onClick={() => onOpenOverdueModal && onOpenOverdueModal(ov)}
-          className={`lh-luxury-card p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden group cursor-pointer transition-all duration-300 ${
+          className={`lg:col-span-6 rounded-2xl p-6 sm:p-7 border shadow-xs relative overflow-hidden flex flex-col justify-between group cursor-pointer transition-all duration-300 ${
             ov.length > 0
-              ? 'border-rose-300 hover:border-rose-400 hover:shadow-md bg-gradient-to-br from-white to-rose-50/30'
-              : 'hover:border-slate-300 hover:shadow-md'
+              ? 'bg-gradient-to-br from-white via-rose-50/20 to-rose-50/40 border-rose-200 hover:border-rose-400 hover:shadow-md'
+              : 'bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-md'
           }`}
         >
           <div
             className={`absolute top-0 left-0 right-0 h-1 ${
-              ov.length > 0 ? 'bg-[#7A1C28]' : 'bg-emerald-600'
+              ov.length > 0 ? 'bg-[#7A1C28]' : 'bg-emerald-500'
             }`}
           />
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <span
-                className={`font-serif tracking-[0.16em] text-[10.5px] font-semibold uppercase ${
-                  ov.length > 0 ? 'text-[#7A1C28]' : 'text-slate-600'
-                }`}
-              >
-                SLA SURVEILLANCE · งานเกินกำหนด/ปิดช้า
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-1.5 h-3.5 inline-block rounded-xs ${
+                    ov.length > 0 ? 'bg-[#7A1C28]' : 'bg-emerald-500'
+                  }`}
+                />
+                <span
+                  className={`font-serif tracking-[0.16em] text-[10.5px] font-semibold uppercase ${
+                    ov.length > 0 ? 'text-[#7A1C28]' : 'text-[#003C71]'
+                  }`}
+                >
+                  SLA SURVEILLANCE · งานเกินกำหนด/ปิดช้า
+                </span>
+              </div>
               {ov.length > 0 ? (
-                <span className="text-[10px] font-bold text-[#7A1C28] bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold text-[#7A1C28] bg-rose-100 border border-rose-200">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
                   SLA ALERT
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  OPTIMAL SLA
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                  ✓ OPTIMAL SLA
                 </span>
               )}
             </div>
@@ -428,14 +560,14 @@ export default function DashboardTab({
                   >
                     {ov.length}
                   </span>
-                  <span className="text-sm font-medium text-slate-500">
+                  <span className="text-xs sm:text-sm font-medium text-slate-500">
                     รายการ
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
                   {ov.length > 0
-                    ? `ค้างส่งมอบ ${activeOvdCount} | ปิดช้า ${completedLateCount}`
-                    : 'ทุกรายการอยู่ในกรอบเวลามาตรฐาน'}
+                    ? `ค้างส่งมอบ ${activeOvdCount} รายการ | ปิดช้ากว่ากำหนด ${completedLateCount} รายการ`
+                    : 'ทุกรายการอยู่ในกรอบเวลามาตรฐาน ไม่มีงานค้างวิกฤต'}
                 </p>
               </div>
 
@@ -454,20 +586,138 @@ export default function DashboardTab({
             </div>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs">
-            {ov.length > 0 ? (
-              <span className="text-[#7A1C28] font-bold flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
-                <span>เปิดห้องกำกับดูแลและเร่งรัดงาน</span>
-                <span className="text-base leading-none">➔</span>
+          <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+            {/* Overdue Incidents Trend Sparkline */}
+            <div>
+              <div className="text-[10.5px] text-slate-400 font-medium flex items-center justify-between mb-1">
+                <span>แนวโน้มงานเกินกำหนด 7 วันล่าสุด (Incident Trend)</span>
+                <span className={`font-semibold ${ov.length > 0 ? 'text-[#7A1C28]' : 'text-emerald-700'}`}>
+                  {ov.length > 0 ? `พบ ${ov.length} จุดวิกฤต` : 'ไร้งานตกค้าง'}
+                </span>
+              </div>
+              <Sparkline
+                data={sparkline7Days.map((d) => ({ value: d.overdueCount, label: d.shortLabel }))}
+                color={ov.length > 0 ? '#7A1C28' : '#10B981'}
+                unit="งาน"
+                height={36}
+                className="w-full"
+              />
+            </div>
+
+            {/* Interactive Action Prompt */}
+            <div className="flex items-center justify-between text-xs pt-1">
+              {ov.length > 0 ? (
+                <span className="text-[#7A1C28] font-bold flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                  <span>เปิดห้องกำกับดูแลและเร่งรัดงาน ({ov.length} รายการ)</span>
+                  <span className="text-base leading-none">➔</span>
+                </span>
+              ) : (
+                <span className="text-emerald-700 font-medium flex items-center gap-1">
+                  <span>✓ ทุกรายการปฏิบัติการตรงเวลา</span>
+                </span>
+              )}
+              <span className="text-[10px] font-serif text-slate-400 tracking-wider uppercase">
+                SLA MONITOR
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Cell 5: Active Footprint & Zone Coverage (Col-span 12 md:col-span-6 lg:col-span-6) */}
+        <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-[#003C71] inline-block rounded-xs" />
+                <span className="font-serif tracking-[0.14em] text-[10px] font-semibold text-slate-500 uppercase">
+                  PORTFOLIO FOOTPRINT · ขอบเขตโครงการ
+                </span>
+              </div>
+              <span className="text-[10.5px] font-bold text-[#003C71] bg-blue-50 px-2 py-0.5 rounded-md">
+                ACTIVE PROJECTS
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between mt-3">
+              <div className="flex items-baseline gap-2">
+                <span className="font-serif text-3xl sm:text-4xl font-normal text-[#003C71] tracking-tight">
+                  {activeProjectsCount}
+                </span>
+                <span className="text-xs text-slate-500">โครงการที่มีภารกิจ</span>
+              </div>
+              <span className="text-xs text-slate-400">
+                รวม {aT.length} รายการ ({gFilt.area === 'ทั้งหมด' ? 'ทุกโซน' : `โซน ${gFilt.area}`})
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap text-xs">
+            <span className="text-[11px] text-slate-400 font-medium">โครงการหลัก:</span>
+            {topProjects.length > 0 ? (
+              topProjects.map(([proj, count], idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-slate-700 text-[11px]"
+                >
+                  <span className="font-semibold text-[#003C71]">{proj}</span>
+                  <span className="text-slate-400 text-[10px]">({count})</span>
+                </span>
+              ))
             ) : (
-              <span className="text-emerald-700 font-medium flex items-center gap-1">
-                <span>✓ ไม่มีงานตกค้างเกินกำหนด</span>
-              </span>
+              <span className="text-slate-400 text-[11px]">- ไม่มีภารกิจในตัวกรองนี้ -</span>
             )}
-            <span className="text-[10px] font-serif text-slate-400 tracking-wider uppercase">
-              SLA MONITOR
-            </span>
+          </div>
+        </div>
+
+        {/* Cell 6: Top Requester Telemetry (Col-span 12 md:col-span-6 lg:col-span-6) */}
+        <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-[#A8996E] inline-block rounded-xs" />
+                <span className="font-serif tracking-[0.14em] text-[10px] font-semibold text-slate-500 uppercase">
+                  STAKEHOLDER TELEMETRY · ผู้แจ้งงานหลัก
+                </span>
+              </div>
+              <span className="text-[10.5px] font-bold text-[#A8996E] bg-[#A8996E]/10 px-2 py-0.5 rounded-md">
+                REQUESTERS
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between mt-3">
+              <div className="flex items-baseline gap-2">
+                <span className="font-serif text-3xl sm:text-4xl font-normal text-[#003C71] tracking-tight">
+                  {topRequestersMonth[0]?.name || 'ไม่ระบุ'}
+                </span>
+                {topRequestersMonth[0] && (
+                  <span className="text-xs text-slate-500">
+                    ({topRequestersMonth[0].value} งาน / {mt.length > 0 ? Math.round((topRequestersMonth[0].value / mt.length) * 100) : 0}%)
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-slate-400">สัดส่วนแจ้งงานสะสม</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap text-xs">
+            <span className="text-[11px] text-slate-400 font-medium">ลำดับผู้แจ้ง:</span>
+            {topRequestersMonth.length > 0 ? (
+              topRequestersMonth.map((req, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-slate-700 text-[11px]"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: req.color }}
+                  />
+                  <span className="font-medium">{req.name}</span>
+                  <span className="text-slate-400 text-[10px]">({req.value})</span>
+                </span>
+              ))
+            ) : (
+              <span className="text-slate-400 text-[11px]">- ไม่มีข้อมูลผู้แจ้ง -</span>
+            )}
           </div>
         </div>
       </div>
