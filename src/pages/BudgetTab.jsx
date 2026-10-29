@@ -30,17 +30,17 @@ const TARGET_ACCOUNT_CODES = [
 
 // 11 ไซต์โครงการหลักที่เราดูแลจริง
 const CORE_11_PROJECTS = [
-  { code: 'LA-025', name: 'PRUEKLADA ทางด่วนรามอินทรา-จตุโชติ', area: 'รามอินทรา', baseBudget70: 1650000 },
-  { code: 'LH-402', name: 'vie ทางด่วนรามอินทรา-วงแหวน', area: 'รามอินทรา', baseBudget70: 1250000 },
-  { code: 'LH-410', name: 'CHAIYAPRUEK 2 รังสิต คลอง4', area: 'รังสิต', baseBudget70: 890000 },
-  { code: 'LH-415', name: 'Villaggio ลำลูกกา-วงแหวน', area: 'รังสิต', baseBudget70: 520000 },
-  { code: 'NE-419', name: 'Villaggio รังสิตคลอง 4', area: 'รังสิต', baseBudget70: 640000 },
-  { code: 'LH-377', name: 'VIVE กรุงเทพกรีฑา', area: 'พระราม 9', baseBudget70: 1450000 },
-  { code: 'LH-379', name: 'นันทวัน พระราม9 กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget70: 3100000 },
-  { code: 'LH-392', name: 'VIVE กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget70: 950000 },
-  { code: 'LH-395', name: 'NANTAWAN POOL VILLA พระราม9 กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget70: 1180000 },
-  { code: 'NE-416', name: 'VIVE พระราม 9', area: 'พระราม 9', baseBudget70: 580000 },
-  { code: 'LH-329', name: 'สีวลี ศรีนครินทร์-ร่มเกล้า', area: 'ศรีนครินทร์', baseBudget70: 1350000 }
+  { code: 'LA-025', name: 'PRUEKLADA ทางด่วนรามอินทรา-จตุโชติ', area: 'รามอินทรา', baseBudget69: 3612600, baseBudget70: 1650000 },
+  { code: 'LH-402', name: 'vie ทางด่วนรามอินทรา-วงแหวน', area: 'รามอินทรา', baseBudget69: 2323300, baseBudget70: 1250000 },
+  { code: 'LH-410', name: 'CHAIYAPRUEK 2 รังสิต คลอง4', area: 'รังสิต', baseBudget69: 3653700, baseBudget70: 890000 },
+  { code: 'LH-415', name: 'Villaggio ลำลูกกา-วงแหวน', area: 'รังสิต', baseBudget69: 3873000, baseBudget70: 520000 },
+  { code: 'NE-419', name: 'Villaggio รังสิตคลอง 4', area: 'รังสิต', baseBudget69: 3148000, baseBudget70: 640000 },
+  { code: 'LH-377', name: 'VIVE กรุงเทพกรีฑา', area: 'พระราม 9', baseBudget69: 1450000, baseBudget70: 1450000 },
+  { code: 'LH-379', name: 'นันทวัน พระราม9 กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget69: 4181000, baseBudget70: 3100000 },
+  { code: 'LH-392', name: 'VIVE กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget69: 2822700, baseBudget70: 950000 },
+  { code: 'LH-395', name: 'NANTAWAN POOL VILLA พระราม9 กรุงเทพกรีฑาตัดใหม่', area: 'พระราม 9', baseBudget69: 2768100, baseBudget70: 1180000 },
+  { code: 'NE-416', name: 'VIVE พระราม 9', area: 'พระราม 9', baseBudget69: 580000, baseBudget70: 580000 },
+  { code: 'LH-329', name: 'สีวลี ศรีนครินทร์-ร่มเกล้า', area: 'ศรีนครินทร์', baseBudget69: 4023100, baseBudget70: 1350000 }
 ];
 
 const ACCOUNT_COLORS = [
@@ -48,10 +48,42 @@ const ACCOUNT_COLORS = [
   '#6366F1', '#EC4899', '#06B6D4', '#84CC16', '#8B5CF6', '#14B8A6'
 ];
 
-// แปลงหน่วยตัวเลขจากพันบาท (kTHB) ใน forecastData เป็นบาท (THB)
+const THAI_MONTH_NAMES = [
+  '', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const THAI_MONTH_SHORT = [
+  '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+];
+
+// แปลงหน่วยตัวเลขจากพันบาท (kTHB) ในตาราง LH เป็นบาท (THB)
 const kThbToBaht = (val, fallback = 0) => {
   if (val === undefined || val === null || isNaN(Number(val))) return fallback;
   return Number(val) * 1000;
+};
+
+// คำนวณเดือนจ่ายจริง: เดือนที่ส่งเบิก M -> เงินออกจริงเดือน M+2
+const getPaymentMonth = (billingMonthStr) => {
+  if (!billingMonthStr || !billingMonthStr.includes('-')) return '2026-12';
+  const [y, m] = billingMonthStr.split('-').map(Number);
+  let payM = m + 2;
+  let payY = y;
+  if (payM > 12) {
+    payM -= 12;
+    payY += 1;
+  }
+  return `${payY}-${String(payM).padStart(2, '0')}`;
+};
+
+const formatThaiMonthStr = (mStr, short = false) => {
+  if (!mStr || !mStr.includes('-')) return mStr;
+  const [y, m] = mStr.split('-').map(Number);
+  const thaiY = (y + 543) % 100;
+  const fullThaiY = y + 543;
+  const list = short ? THAI_MONTH_SHORT : THAI_MONTH_NAMES;
+  return short ? `${list[m]} ${thaiY}` : `${list[m]} ${fullThaiY}`;
 };
 
 export default function BudgetTab({
@@ -62,13 +94,16 @@ export default function BudgetTab({
   db,
   Icon
 }) {
-  // ฟิลเตอร์ละเอียดภายในหน้า (เจาะลึกรายโครงการ และงวดเดือน)
+  // สลับมุมมองปีงบประมาณ: ปี 2569 (ปีดำเนินงานจริง) vs ปี 2570 (แผนจัดสรรล่วงหน้า)
+  const [fiscalYear, setFiscalYear] = useState('2569');
+
+  // ฟิลเตอร์เจาะลึก
   const [selectedProj, setSelectedProj] = useState(gFilt.project !== 'ทั้งหมด' ? gFilt.project : 'ALL');
-  const [selectedPeriod, setSelectedPeriod] = useState('ALL'); // 'ALL' | '2026-10' | '2026-11'
-  const [accountFilter, setAccountFilter] = useState('ALL'); // 'ALL' | 'VARIABLE' | 'FIXED'
+  const [selectedBillingMonth, setSelectedBillingMonth] = useState('2026-10'); // เดือนปัจจุบันที่ทำ/ส่งเบิก
+  const [accountFilter, setAccountFilter] = useState('ALL');
   const [woSearch, setWoSearch] = useState('');
-  const [viewMode, setViewMode] = useState('summary'); // 'summary' (ภาพรวม) | 'wos' (เจาะลึกใบสั่งซ่อม)
-  const [expandedWOs, setExpandedWOs] = useState({}); // { [woNo]: boolean }
+  const [viewMode, setViewMode] = useState('cycle'); // 'cycle' (วงจร +2 เดือน) | 'trend' (แนวโน้มรายเดือน) | 'wos' (เจาะลึกใบสั่งซ่อม)
+  const [expandedWOs, setExpandedWOs] = useState({});
 
   const [forecastData, setForecastData] = useState(null);
   const [woExpensesData, setWoExpensesData] = useState(null);
@@ -104,17 +139,6 @@ export default function BudgetTab({
     }
   }, [gFilt.project, getStdProj]);
 
-  // สกัดรายการงวดเดือนที่มีข้อมูลในระบบ
-  const availablePeriods = useMemo(() => {
-    const set = new Set();
-    if (woExpensesData?.workOrders) {
-      Object.values(woExpensesData.workOrders).forEach((w) => {
-        if (w.approvalPeriod) set.add(w.approvalPeriod);
-      });
-    }
-    return Array.from(set).sort();
-  }, [woExpensesData]);
-
   // แผนที่จับคู่เลขที่ WO กับ Tasks ใน TaskFlow
   const taskByWO = useMemo(() => {
     const map = {};
@@ -126,7 +150,7 @@ export default function BudgetTab({
     return map;
   }, [tasks]);
 
-  // โครงการที่กำลังแสดงผล (พิจารณาจาก selectedProj และฟิลเตอร์สายงาน)
+  // โครงการที่กำลังแสดงผล
   const activeProjects = useMemo(() => {
     if (selectedProj !== 'ALL') {
       return CORE_11_PROJECTS.filter((p) => p.code === selectedProj);
@@ -140,20 +164,32 @@ export default function BudgetTab({
     });
   }, [selectedProj, gFilt, getStdProj, checkStaffMatch]);
 
-  // คำนวณงบผูกพัน (Committed) จาก Tasks ใน TaskFlow
-  const projectCommittedMap = useMemo(() => {
-    const map = {};
+  // คำนวณเดือนทำจ่ายจริงตามกฎ +2 เดือน
+  const paymentMonth = useMemo(() => {
+    return getPaymentMonth(selectedBillingMonth);
+  }, [selectedBillingMonth]);
+
+  // คำนวณยอดเงินผูกพัน (Committed) ใน Taskflow แยกตามเดือนที่ส่งเบิก (Billing Month)
+  const taskCommittedByMonth = useMemo(() => {
+    const map = {}; // { [monthKey]: { total: 0, byProject: {}, byAccount: {} } }
     tasks.forEach((t) => {
-      if (t.status?.startsWith('จบงาน') || t.billingStatus === 'รอส่งเบิก') {
-        const pName = getStdProj(t.project);
+      // พิจารณาเฉพาะงานที่จบงาน หรือรอส่งเบิก หรือส่งเบิกแล้ว
+      if (t.status?.startsWith('จบงาน') || t.billingStatus === 'รอส่งเบิก' || t.billingStatus === 'ส่งเบิกแล้ว') {
+        // เดือนที่ส่งเบิก: อิงจาก billingMonth หรือ completedDate หรือ openedMonth
+        const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.slice(0, 7) : '') || (t.openedDate ? t.openedDate.slice(0, 7) : '2026-10');
+        if (!bMonth) return;
+        if (!map[bMonth]) map[bMonth] = { total: 0, byProject: {}, byAccount: {} };
+
         const cost = Number(t.costAmount || 0);
-        if (!map[pName]) map[pName] = { total: 0, byAccount: {} };
-        map[pName].total += cost;
+        map[bMonth].total += cost;
+
+        const pStd = getStdProj(t.project);
+        map[bMonth].byProject[pStd] = (map[bMonth].byProject[pStd] || 0) + cost;
 
         if (Array.isArray(t.costBreakdown)) {
           t.costBreakdown.forEach((item) => {
             const ac = item.accountCode || '54012';
-            map[pName].byAccount[ac] = (map[pName].byAccount[ac] || 0) + Number(item.feeCost || 0);
+            map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + Number(item.feeCost || 0);
           });
         }
       }
@@ -161,67 +197,119 @@ export default function BudgetTab({
     return map;
   }, [tasks, getStdProj]);
 
-  // คำนวณยอดรวมระดับมหภาค (Macro Financial KPI) ตามฟิลเตอร์ปัจจุบัน
-  const macroKPIs = useMemo(() => {
-    let totalBudget70 = 0;
-    let totalActualSpent = 0;
-    let totalCommitted = 0;
+  // ดึงเพดานงบประมาณ (Budget) และยอดจ่ายจริง (Actual) รายเดือนจาก Firestore
+  const getMonthlyFinances = (monthKey, projCode = 'ALL') => {
+    let budget = 0;
+    let actual = 0;
 
-    activeProjects.forEach((prj) => {
-      // 1. งบจัดสรรปี 2570
-      const prjBudget = forecastData?.projects?.[prj.code]?.totalBudget != null
-        ? kThbToBaht(forecastData.projects[prj.code].totalBudget)
-        : (prj.baseBudget70 || 0);
-      totalBudget70 += prjBudget;
-
-      // 2. ใช้จริงแล้ว (Actual)
-      if (selectedPeriod !== 'ALL') {
-        // ถ้าระบุงวดเดือน ให้รวมยอดจ่ายจริงเฉพาะงวดนั้นจาก work_order_expenses
-        const periodCost = Object.values(woExpensesData?.workOrders || {})
-          .filter((w) => w.projectCode === prj.code && w.approvalPeriod === selectedPeriod)
-          .reduce((sum, w) => sum + (w.totalCost || 0), 0);
-        totalActualSpent += periodCost;
+    if (projCode === 'ALL') {
+      if (forecastData?.totalMonthly?.[monthKey]) {
+        budget = kThbToBaht(forecastData.totalMonthly[monthKey].budget);
+        actual = kThbToBaht(forecastData.totalMonthly[monthKey].actual);
       } else {
-        // ถ้าดูสะสมรวม
-        const prjActual = forecastData?.projects?.[prj.code]?.totalYtdActual != null
-          ? kThbToBaht(forecastData.projects[prj.code].totalYtdActual)
-          : (woExpensesData?.projectSummaries?.[prj.code]?.totalCost || (prj.baseBudget70 * 0.42));
-        totalActualSpent += prjActual;
+        // Fallback จากฐานงบประมาณ 9 โครงการ
+        const fullYr = CORE_11_PROJECTS.reduce((s, p) => s + (p.baseBudget69 || 0), 0);
+        budget = Math.round(fullYr / 12);
+        actual = Math.round(budget * 0.85);
+      }
+    } else {
+      if (forecastData?.projects?.[projCode]?.monthly?.[monthKey]) {
+        budget = kThbToBaht(forecastData.projects[projCode].monthly[monthKey].budget);
+        actual = kThbToBaht(forecastData.projects[projCode].monthly[monthKey].actual);
+      } else {
+        const prj = CORE_11_PROJECTS.find(p => p.code === projCode);
+        const base = prj ? prj.baseBudget69 : 2500000;
+        budget = Math.round(base / 12);
+        actual = Math.round(budget * 0.85);
+      }
+    }
+
+    return { budget, actual };
+  };
+
+  // ตารางสรุป 12 เดือน วงจรเบิกจ่าย +2 เดือน (The 2-Month Rolling Payment Table)
+  const rollingPaymentCycleTable = useMemo(() => {
+    const list = [];
+    for (let m = 1; m <= 12; m++) {
+      const mStr = String(m).padStart(2, '0');
+      const bMonth = `2026-${mStr}`;
+      const pMonth = getPaymentMonth(bMonth);
+
+      // 1. งบผูกพันที่ส่งเบิกในเดือน bMonth
+      let committedInBilling = 0;
+      if (selectedProj === 'ALL') {
+        committedInBilling = taskCommittedByMonth[bMonth]?.total || 0;
+      } else {
+        const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
+        const std = singleP ? getStdProj(singleP.name) : '';
+        committedInBilling = taskCommittedByMonth[bMonth]?.byProject?.[std] || 0;
       }
 
-      // 3. งบผูกพัน (Committed)
-      const stdName = getStdProj(prj.name);
-      const prjCommitted = projectCommittedMap[stdName]?.total || 0;
-      totalCommitted += prjCommitted;
-    });
+      // 2. เพดานงบประมาณของเดือนจ่าย (pMonth)
+      const payFinances = getMonthlyFinances(pMonth, selectedProj);
+      const budgetInPayment = payFinances.budget;
+      const actualInPayment = payFinances.actual;
 
-    const totalAvailable = Math.max(0, totalBudget70 - (totalActualSpent + totalCommitted));
-    const burnRatePct = totalBudget70 > 0 ? ((totalActualSpent + totalCommitted) / totalBudget70) * 100 : 0;
+      // 3. ยอดคงเหลือในกระเป๋าเดือนจ่าย
+      const availableInPayment = budgetInPayment - committedInBilling - actualInPayment;
+      const burnRate = budgetInPayment > 0 ? ((committedInBilling + actualInPayment) / budgetInPayment) * 100 : 0;
+
+      list.push({
+        billingMonth: bMonth,
+        billingLabel: formatThaiMonthStr(bMonth, true),
+        paymentMonth: pMonth,
+        paymentLabel: formatThaiMonthStr(pMonth, true),
+        committedInBilling,
+        budgetInPayment,
+        actualInPayment,
+        availableInPayment,
+        burnRate,
+        isCurrent: bMonth === selectedBillingMonth
+      });
+    }
+    return list;
+  }, [selectedProj, taskCommittedByMonth, forecastData, selectedBillingMonth, getStdProj]);
+
+  // คำนวณ Macro KPIs สำหรับเดือนที่เลือก ปฏิบัติตามกฎ +2 เดือน
+  const macroCycleKPIs = useMemo(() => {
+    // เดือนทำจ่ายจริง
+    const payFinances = getMonthlyFinances(paymentMonth, selectedProj);
+    const targetBudget = payFinances.budget;
+    const actualSpent = payFinances.actual;
+
+    // ยอดส่งเบิกในเดือนที่ทำ
+    let committed = 0;
+    if (selectedProj === 'ALL') {
+      committed = taskCommittedByMonth[selectedBillingMonth]?.total || 0;
+    } else {
+      const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
+      const std = singleP ? getStdProj(singleP.name) : '';
+      committed = taskCommittedByMonth[selectedBillingMonth]?.byProject?.[std] || 0;
+    }
+
+    const available = Math.max(0, targetBudget - (committed + actualSpent));
+    const burnRatePct = targetBudget > 0 ? ((committed + actualSpent) / targetBudget) * 100 : 0;
 
     return {
-      totalBudget70,
-      totalActualSpent,
-      totalCommitted,
-      totalAvailable,
+      targetBudget,
+      committed,
+      actualSpent,
+      available,
       burnRatePct
     };
-  }, [activeProjects, forecastData, woExpensesData, projectCommittedMap, getStdProj, selectedPeriod]);
+  }, [paymentMonth, selectedBillingMonth, selectedProj, forecastData, taskCommittedByMonth, getStdProj]);
 
-  // ข้อมูลใบสั่งซ่อมที่ผ่านการกรอง (Work Orders Drill-down)
+  // กรองรายการใบสั่งซ่อมจริง (WOs)
   const filteredWorkOrders = useMemo(() => {
     if (!woExpensesData?.workOrders) return [];
     const list = Object.values(woExpensesData.workOrders).filter((w) => {
-      // Match Project
       const matchProj = selectedProj === 'ALL' || w.projectCode === selectedProj;
-      // Match Period
-      const matchPeriod = selectedPeriod === 'ALL' || w.approvalPeriod === selectedPeriod;
-      // Match Account Group
+      const matchPeriod = selectedBillingMonth === 'ALL' || w.approvalPeriod === selectedBillingMonth;
       let matchAccount = true;
       if (accountFilter !== 'ALL') {
         const targetCodes = TARGET_ACCOUNT_CODES.filter((ac) => ac.group === accountFilter).map((ac) => ac.code);
         matchAccount = Array.isArray(w.accounts) && w.accounts.some((code) => targetCodes.includes(code));
       }
-      // Match Search
       const q = woSearch.trim().toLowerCase();
       const matchSearch = !q ||
         w.woNo.toLowerCase().includes(q) ||
@@ -232,120 +320,25 @@ export default function BudgetTab({
     });
 
     return list.sort((a, b) => (b.totalCost || 0) - (a.totalCost || 0));
-  }, [woExpensesData, selectedProj, selectedPeriod, accountFilter, woSearch]);
+  }, [woExpensesData, selectedProj, selectedBillingMonth, accountFilter, woSearch]);
 
   const filteredWOsTotalCost = useMemo(() => {
     return filteredWorkOrders.reduce((sum, w) => sum + (w.totalCost || 0), 0);
   }, [filteredWorkOrders]);
 
-  // ข้อมูลสำหรับกราฟแท่ง (Bar Chart)
-  // - ถ้าดูทุกโครงการ: เปรียบเทียบ 11 ไซต์
-  // - ถ้าเลือกไซต์เดี่ยว: เจาะลึกรายหมวดบัญชีของไซต์นั้น
-  const barChartData = useMemo(() => {
-    if (selectedProj === 'ALL') {
-      return activeProjects.map((prj) => {
-        const budget = forecastData?.projects?.[prj.code]?.totalBudget != null
-          ? kThbToBaht(forecastData.projects[prj.code].totalBudget)
-          : prj.baseBudget70;
-
-        let actual = 0;
-        if (selectedPeriod !== 'ALL') {
-          actual = Object.values(woExpensesData?.workOrders || {})
-            .filter((w) => w.projectCode === prj.code && w.approvalPeriod === selectedPeriod)
-            .reduce((sum, w) => sum + (w.totalCost || 0), 0);
-        } else {
-          actual = forecastData?.projects?.[prj.code]?.totalYtdActual != null
-            ? kThbToBaht(forecastData.projects[prj.code].totalYtdActual)
-            : (woExpensesData?.projectSummaries?.[prj.code]?.totalCost || Math.round(prj.baseBudget70 * 0.42));
-        }
-
-        const stdName = getStdProj(prj.name);
-        const committed = projectCommittedMap[stdName]?.total || 0;
-        const remaining = Math.max(0, budget - actual - committed);
-
-        return {
-          code: prj.code,
-          name: prj.code,
-          fullName: prj.name,
-          'งบจัดสรรปี 70': budget,
-          'จ่ายจริงแล้ว (Actual)': actual,
-          'งบผูกพันรอจ่าย (Committed)': committed,
-          'งบคงเหลือ (Available)': remaining
-        };
-      });
-    }
-
-    // กรณีเลือกโครงการเดี่ยว: แจกแจงตาม 11 หมวดบัญชีของโครงการนั้น
-    const singlePrj = activeProjects[0] || CORE_11_PROJECTS.find(p => p.code === selectedProj);
-    const stdName = singlePrj ? getStdProj(singlePrj.name) : '';
-    return TARGET_ACCOUNT_CODES.filter(ac => accountFilter === 'ALL' || ac.group === accountFilter).map((ac) => {
-      const bPerAccount = singlePrj ? Math.round(singlePrj.baseBudget70 * 0.09) : 0;
-      let actual = 0;
-      if (selectedPeriod !== 'ALL') {
-        Object.values(woExpensesData?.workOrders || {}).forEach((w) => {
-          if (w.projectCode === singlePrj?.code && w.approvalPeriod === selectedPeriod && Array.isArray(w.lineItems)) {
-            w.lineItems.forEach((li) => {
-              if (li.accountCode === ac.code) actual += Number(li.feeCost || 0);
-            });
-          }
-        });
-      } else {
-        const pExp = forecastData?.projects?.[singlePrj?.code]?.expenses?.find(e => e.code === ac.code);
-        actual = pExp && pExp.ytdActual != null ? kThbToBaht(pExp.ytdActual) : Math.round(bPerAccount * 0.38);
-      }
-      const committed = projectCommittedMap[stdName]?.byAccount?.[ac.code] || 0;
-
+  // ข้อมูลสำหรับกราฟแท่งแนวโน้ม 12 เดือน (Monthly Trend: Budget vs Actual)
+  const monthlyTrendChartData = useMemo(() => {
+    return rollingPaymentCycleTable.map((row) => {
       return {
-        code: ac.code,
-        name: ac.code,
-        fullName: ac.name,
-        'งบประมาณจัดสรร': bPerAccount,
-        'จ่ายจริงแล้ว (Actual)': actual,
-        'งบผูกพัน (Committed)': committed
+        month: row.billingLabel,
+        'เพดานงบเดือนจ่าย (+2M)': row.budgetInPayment,
+        'ยอดส่งเบิกในมือ (Committed)': row.committedInBilling,
+        'ตัดจ่ายจริง (Actual)': row.actualInPayment
       };
     });
-  }, [activeProjects, selectedProj, selectedPeriod, forecastData, woExpensesData, projectCommittedMap, getStdProj, accountFilter]);
+  }, [rollingPaymentCycleTable]);
 
-  // ข้อมูลสำหรับกราฟวงกลม (Pie Chart)
-  const pieChartData = useMemo(() => {
-    const map = {};
-    TARGET_ACCOUNT_CODES.forEach((ac) => {
-      if (accountFilter !== 'ALL' && ac.group !== accountFilter) return;
-      map[ac.code] = { name: `${ac.code} ${ac.name}`, value: 0 };
-    });
-
-    if (selectedPeriod !== 'ALL' || selectedProj !== 'ALL') {
-      filteredWorkOrders.forEach((w) => {
-        if (Array.isArray(w.lineItems)) {
-          w.lineItems.forEach((li) => {
-            if (map[li.accountCode]) {
-              map[li.accountCode].value += Number(li.feeCost || 0);
-            }
-          });
-        }
-      });
-    } else {
-      activeProjects.forEach((prj) => {
-        const pExpenses = forecastData?.projects?.[prj.code]?.expenses;
-        if (Array.isArray(pExpenses)) {
-          pExpenses.forEach((exp) => {
-            if (map[exp.code]) {
-              map[exp.code].value += kThbToBaht(exp.ytdActual || 0);
-            }
-          });
-        } else {
-          if (map['54014']) map['54014'].value += Math.round(prj.baseBudget70 * 0.18);
-          if (map['54011']) map['54011'].value += Math.round(prj.baseBudget70 * 0.12);
-          if (map['54012']) map['54012'].value += Math.round(prj.baseBudget70 * 0.08);
-          if (map['54015']) map['54015'].value += Math.round(prj.baseBudget70 * 0.04);
-        }
-      });
-    }
-
-    return Object.values(map).filter((item) => item.value > 0);
-  }, [activeProjects, forecastData, accountFilter, selectedPeriod, selectedProj, filteredWorkOrders]);
-
-  // Export ตารางเจาะลึกเป็นไฟล์ CSV
+  // Export ตารางเจาะลึกเป็น CSV
   const exportWOsToCSV = () => {
     if (!filteredWorkOrders.length) return alert('ไม่มีรายการใบสั่งซ่อมที่ตรงตามเงื่อนไข');
     const headers = ['เลขที่ใบสั่งซ่อม (WO)', 'รหัสโครงการ', 'ชื่อโครงการ', 'งวดอนุมัติ', 'ผู้รับเหมาตัดเงิน', 'รหัสบัญชี', 'ค่าแรง (บาท)', 'ค่าของ (บาท)', 'รวมค่าดำเนินการ 20% (บาท)', 'สถานะใน TaskFlow'];
@@ -369,7 +362,7 @@ export default function BudgetTab({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `LH_WorkOrders_DrillDown_${selectedProj}_${selectedPeriod}.csv`;
+    a.download = `LH_WorkOrders_${selectedProj}_${selectedBillingMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -386,28 +379,54 @@ export default function BudgetTab({
           <div className="flex items-center gap-2 mb-1">
             <span className="w-1.5 h-3.5 bg-[#A8996E] inline-block rounded-xs" />
             <span className="font-serif tracking-[0.16em] text-[10.5px] font-semibold text-[#A8996E] uppercase">
-              ANNUAL BUDGET CONTROL &amp; AUDIT SYSTEM
+              ANNUAL BUDGET CONTROL &amp; 2-MONTH PAYMENT CYCLE SYSTEM
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#003C71] tracking-tight flex items-baseline gap-2">
-            <span>ระบบควบคุมงบประมาณ ปี 2570</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#003C71] tracking-tight flex flex-wrap items-baseline gap-2">
+            <span>ระบบควบคุมงบประมาณ ปี {fiscalYear}</span>
             <span className="font-serif text-sm font-normal text-[#A8996E]">
-              (ติดตามงวดจ่าย &amp; งบผูกพัน 11 ไซต์)
+              (ติดตามรอบจ่าย &amp; วงจรเบิกจ่าย +2 เดือน 11 ไซต์)
             </span>
           </h1>
         </div>
 
-        {/* Status indicator of Scraper bots */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full text-xs text-emerald-800 shadow-2xs">
+        {/* Fiscal Year Switcher & Status Pill */}
+        <div className="flex items-center gap-3">
+          {/* Year Switcher (2569 Active vs 2570 Plan) */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setFiscalYear('2569')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                fiscalYear === '2569'
+                  ? 'bg-[#003C71] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ปี 2569 (ดำเนินงานจริง)
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiscalYear('2570')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                fiscalYear === '2570'
+                  ? 'bg-[#7A1C28] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ปี 2570 (แผนจัดสรร)
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full text-xs text-emerald-800 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold">The Auditor:</span>
-            <span className="font-mono text-[11px]">Sync แล้ว 110 ใบงาน</span>
+            <span className="font-bold">LHServ Sync:</span>
+            <span className="font-mono text-[11px]">รายเดือน 12 เดือนพร้อมใช้</span>
           </div>
         </div>
       </div>
 
-      {/* Control Bar: Drill-down Filters (กรองโครงการ & กรองงวดเดือน) */}
+      {/* Control Bar: Drill-down Filters (กรองโครงการ & กรองรอบส่งเบิก M) */}
       <div className="bg-white p-4 rounded-2xl shadow-card border border-slate-200/90 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -428,52 +447,42 @@ export default function BudgetTab({
               </select>
             </div>
 
-            {/* Period / Month Filter */}
+            {/* Billing Month (เดือนที่ทำ/ส่งเบิก M) */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-              <span className="text-xs font-bold text-slate-500">งวดอนุมัติจ่าย:</span>
+              <span className="text-xs font-bold text-slate-500">งวดส่งเบิก (M):</span>
               <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
+                value={selectedBillingMonth}
+                onChange={(e) => setSelectedBillingMonth(e.target.value)}
                 className="bg-transparent text-xs font-bold text-[#7A1C28] outline-none cursor-pointer"
               >
-                <option value="ALL">📅 ทุกงวดเดือน (สะสม YTD)</option>
-                {availablePeriods.map((per) => (
-                  <option key={per} value={per}>
-                    งวด {per === '2026-10' ? 'ต.ค. 2569' : per === '2026-11' ? 'พ.ย. 2569' : per}
-                  </option>
-                ))}
+                {Array.from({ length: 12 }, (_, i) => {
+                  const mStr = String(i + 1).padStart(2, '0');
+                  const key = `2026-${mStr}`;
+                  return (
+                    <option key={key} value={key}>
+                      {formatThaiMonthStr(key)}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
-            {/* Account Category Pills */}
-            <div className="hidden sm:flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
-              {[
-                { id: 'ALL', label: 'ทุกหมวด' },
-                { id: 'VARIABLE', label: '🛠️ งานซ่อม' },
-                { id: 'FIXED', label: '🌿 ดูแล/บริการ' }
-              ].map((btn) => (
-                <button
-                  key={btn.id}
-                  type="button"
-                  onClick={() => setAccountFilter(btn.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    accountFilter === btn.id
-                      ? 'bg-white text-[#003C71] shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {btn.label}
-                </button>
-              ))}
+            {/* Payment Month Indicator Pill (เดือนที่ทำจ่ายจริง M+2) */}
+            <div className="flex items-center gap-1.5 bg-blue-50/80 border border-blue-200/80 text-[#003C71] rounded-xl px-3 py-1.5 text-xs font-bold shadow-2xs">
+              <span className="text-slate-400">➡️</span>
+              <span className="text-[11px] font-medium text-slate-600">เงินตัดจ่ายจริงงวด (+2M):</span>
+              <span className="font-extrabold text-[#003C71] underline decoration-[#003C71]/40">
+                {formatThaiMonthStr(paymentMonth)}
+              </span>
             </div>
 
-            {/* Reset Button */}
-            {(selectedProj !== 'ALL' || selectedPeriod !== 'ALL' || accountFilter !== 'ALL' || woSearch) && (
+            {/* Reset Filter Button */}
+            {(selectedProj !== 'ALL' || selectedBillingMonth !== '2026-10' || accountFilter !== 'ALL' || woSearch) && (
               <button
                 type="button"
                 onClick={() => {
                   setSelectedProj('ALL');
-                  setSelectedPeriod('ALL');
+                  setSelectedBillingMonth('2026-10');
                   setAccountFilter('ALL');
                   setWoSearch('');
                 }}
@@ -484,18 +493,29 @@ export default function BudgetTab({
             )}
           </div>
 
-          {/* View Mode Toggle: Summary vs Detailed Work Orders */}
+          {/* View Mode Toggle: Cycle vs Trend vs Work Orders */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
             <button
               type="button"
-              onClick={() => setViewMode('summary')}
+              onClick={() => setViewMode('cycle')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                viewMode === 'summary'
+                viewMode === 'cycle'
                   ? 'bg-white text-[#003C71] shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              📊 ภาพรวม &amp; หมวดบัญชี
+              🔄 วงจรเบิกจ่าย (+2 เดือน)
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('trend')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'trend'
+                  ? 'bg-white text-[#003C71] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              📈 กราฟแนวโน้มรายเดือน
             </button>
             <button
               type="button"
@@ -506,7 +526,7 @@ export default function BudgetTab({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📋 เจาะลึกใบสั่งซ่อม (WO)</span>
+              <span>📋 รายการใบสั่งซ่อม (WO)</span>
               <span className="bg-[#7A1C28]/10 text-[#7A1C28] text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
                 {filteredWorkOrders.length}
               </span>
@@ -514,7 +534,7 @@ export default function BudgetTab({
           </div>
         </div>
 
-        {/* Search & Export Toolbar when in WOs mode */}
+        {/* Search bar inside filter header when in WOs mode */}
         {viewMode === 'wos' && (
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
             <div className="relative flex-1 min-w-[240px]">
@@ -556,296 +576,217 @@ export default function BudgetTab({
         )}
       </div>
 
-      {/* 4 Macro KPI Cards */}
+      {/* 4 Macro KPI Cards: Model วงจรเบิกจ่าย +2 เดือน */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: งบจัดสรรปี 70 */}
+        {/* Card 1: เพดานงบเดือนทำจ่าย (M+2 Budget) */}
         <div className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-500">
-              {selectedProj !== 'ALL' ? `งบปี 70 (${selectedProj})` : 'งบจัดสรรปี 2570 รวม'}
-            </span>
+            <span className="text-xs font-semibold text-slate-500">เพดานงบเดือนตัดจ่ายจริง (+2M)</span>
             <span className="p-1.5 bg-blue-50 text-[#003C71] rounded-lg">
               <Icon name="wallet" size={16} />
             </span>
           </div>
           <div className="text-2xl font-black text-[#003C71] tracking-tight">
-            ฿{macroKPIs.totalBudget70.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            ฿{macroCycleKPIs.targetBudget.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            {selectedProj !== 'ALL' ? activeProjects[0]?.name : `ครอบคลุม ${activeProjects.length} โครงการ`}
+          <div className="text-[11px] text-[#003C71] font-semibold mt-1">
+            งวดทำจ่าย: {formatThaiMonthStr(paymentMonth)}
           </div>
         </div>
 
-        {/* Card 2: จ่ายจริงแล้ว (Actual) */}
+        {/* Card 2: ยอดส่งเบิกสะสมในมือ (Committed ในงวดทำ M) */}
         <div className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-500">
-              {selectedPeriod !== 'ALL' ? `จ่ายจริงงวด ${selectedPeriod}` : 'จ่ายจริงสะสม (Actual)'}
+            <span className="text-xs font-semibold text-slate-500">ยอดส่งเบิกสะสมในมือ (Committed)</span>
+            <span className="p-1.5 bg-amber-50 text-amber-700 rounded-lg">
+              <Icon name="fileText" size={16} />
             </span>
+          </div>
+          <div className="text-2xl font-black text-amber-700 tracking-tight">
+            ฿{macroCycleKPIs.committed.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+          <div className="text-[11px] text-amber-700 font-semibold mt-1">
+            งวดส่งเบิก: {formatThaiMonthStr(selectedBillingMonth)}
+          </div>
+        </div>
+
+        {/* Card 3: ยอดตัดจ่ายจริงในระบบ (M+2 Actual) */}
+        <div className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-semibold text-slate-500">ตัดจ่ายจริงในระบบ (LHServ)</span>
             <span className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg">
               <Icon name="checkCircle" size={16} />
             </span>
           </div>
           <div className="text-2xl font-black text-emerald-700 tracking-tight">
-            ฿{macroKPIs.totalActualSpent.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            ฿{macroCycleKPIs.actualSpent.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
           <div className="text-[11px] text-emerald-600 font-medium mt-1">
-            คิดเป็น {((macroKPIs.totalActualSpent / (macroKPIs.totalBudget70 || 1)) * 100).toFixed(1)}% ของงบจัดสรร
+            ตัดจ่ายแล้วในงวด {formatThaiMonthStr(paymentMonth, true)}
           </div>
         </div>
 
-        {/* Card 3: งบผูกพันรอจ่าย (Committed) */}
+        {/* Card 4: คงเหลือพร้อมใช้ในงวดจ่าย (Available for Month M+2) */}
         <div className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-500">งบผูกพันรอจ่าย (Committed)</span>
-            <span className="p-1.5 bg-amber-50 text-amber-700 rounded-lg">
-              <Icon name="clock" size={16} />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-amber-700 tracking-tight">
-            ฿{macroKPIs.totalCommitted.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
-          <div className="text-[11px] text-amber-600 font-medium mt-1">
-            ใบงานจบงาน/ค้างส่งเบิกใน TaskFlow
-          </div>
-        </div>
-
-        {/* Card 4: งบคงเหลือพร้อมใช้ (Available) */}
-        <div className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-500">งบคงเหลือพร้อมใช้ (Available)</span>
-            <span className={`p-1.5 rounded-lg ${macroKPIs.burnRatePct > 85 ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-700'}`}>
+            <span className="text-xs font-semibold text-slate-500">งบคงเหลือในงวดจ่าย (+2M)</span>
+            <span className={`p-1.5 rounded-lg ${macroCycleKPIs.burnRatePct > 90 ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-700'}`}>
               <Icon name="pieChart" size={16} />
             </span>
           </div>
-          <div className={`text-2xl font-black tracking-tight ${macroKPIs.burnRatePct > 85 ? 'text-rose-700' : 'text-[#0F2E4A]'}`}>
-            ฿{macroKPIs.totalAvailable.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          <div className={`text-2xl font-black tracking-tight ${macroCycleKPIs.burnRatePct > 90 ? 'text-rose-700' : 'text-[#0F2E4A]'}`}>
+            ฿{macroCycleKPIs.available.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
             <div
               className={`h-full transition-all ${
-                macroKPIs.burnRatePct > 85 ? 'bg-rose-500' : macroKPIs.burnRatePct > 65 ? 'bg-amber-500' : 'bg-emerald-500'
+                macroCycleKPIs.burnRatePct > 90 ? 'bg-rose-500' : macroCycleKPIs.burnRatePct > 75 ? 'bg-amber-500' : 'bg-emerald-500'
               }`}
-              style={{ width: `${Math.min(100, macroKPIs.burnRatePct)}%` }}
+              style={{ width: `${Math.min(100, macroCycleKPIs.burnRatePct)}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* VIEW MODE 1: SUMMARY (ภาพรวมและหมวดบัญชี) */}
-      {viewMode === 'summary' && (
-        <>
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left: Bar Chart */}
-            <div className="lg:col-span-2 bg-white p-5 rounded-2xl shadow-card border border-slate-200/90 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="font-bold text-[#0F2E4A] text-sm flex items-center gap-2">
-                    <Icon name="barChart3" size={16} className="text-[#003C71]" />
-                    {selectedProj === 'ALL'
-                      ? 'เปรียบเทียบงบประมาณรายโครงการ (Budget vs Actual vs Committed)'
-                      : `การใช้จ่ายแยกตามหมวดบัญชีของโครงการ [${selectedProj}]`}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {selectedProj === 'ALL'
-                      ? 'เปรียบเทียบงบจัดสรรกับยอดจ่ายจริงและงบผูกพัน 11 ไซต์'
-                      : `วิเคราะห์สัดส่วนงบประมาณที่ใช้ไปจริงในแต่ละหมวดของโครงการ ${activeProjects[0]?.name}`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                    <XAxis dataKey="code" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `฿${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(val) => `฿${Number(val).toLocaleString()}`}
-                      labelFormatter={(lbl) => {
-                        const item = barChartData.find(d => d.code === lbl);
-                        return item ? `${item.code}: ${item.fullName}` : lbl;
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar dataKey={selectedProj === 'ALL' ? 'งบจัดสรรปี 70' : 'งบประมาณจัดสรร'} fill="#93C5FD" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="จ่ายจริงแล้ว (Actual)" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey={selectedProj === 'ALL' ? 'งบผูกพันรอจ่าย (Committed)' : 'งบผูกพัน (Committed)'} fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+      {/* VIEW 1: ตารางสรุป 12 เดือน วงจรเบิกจ่าย +2 เดือน */}
+      {viewMode === 'cycle' && (
+        <div className="bg-white rounded-2xl shadow-card border border-slate-200/90 overflow-hidden space-y-0">
+          <div className="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50/70 gap-2">
+            <div>
+              <h3 className="font-bold text-sm text-[#0F2E4A] flex items-center gap-2">
+                <Icon name="clock" size={16} className="text-[#003C71]" />
+                <span>ตารางติดตามรอบส่งเบิกและรอบตัดจ่ายจริง 12 เดือน (The 2-Month Lag Engine)</span>
+                {selectedProj !== 'ALL' && <span className="text-[#003C71]">[{selectedProj}]</span>}
+              </h3>
+              <p className="text-xs text-slate-400">
+                งานที่ส่งเบิกในเดือน $M$ จะถูกนำไปกระทบยอดตัดจ่ายจริงในงวดเดือน $M+2$ ของระบบ LHServ
+              </p>
             </div>
-
-            {/* Right: Pie Chart by Account Code */}
-            <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-200/90 flex flex-col">
-              <div className="mb-4">
-                <h3 className="font-bold text-[#0F2E4A] text-sm flex items-center gap-2">
-                  <Icon name="pieChart" size={16} className="text-[#7A1C28]" />
-                  สัดส่วนค่าใช้จ่ายตามหมวดบัญชี
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  {selectedPeriod !== 'ALL' ? `งวด ${selectedPeriod}` : 'ยอดจ่ายจริงสะสม'}
-                </p>
-              </div>
-
-              <div className="h-72 w-full flex items-center justify-center">
-                {pieChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={48}
-                        outerRadius={85}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v) => `฿${Number(v).toLocaleString()}`} />
-                      <Legend wrapperStyle={{ fontSize: '10.5px' }} layout="horizontal" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-xs text-slate-400 text-center py-10">ไม่มีข้อมูลค่าใช้จ่ายในหมวดที่เลือก</div>
-                )}
-              </div>
-            </div>
+            <span className="text-xs font-semibold text-[#003C71] bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+              ปีงบประมาณ {fiscalYear}
+            </span>
           </div>
 
-          {/* Detailed Account Code Table (11 หมวด) */}
-          <div className="bg-white rounded-2xl shadow-card border border-slate-200/90 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
-              <div>
-                <h3 className="font-bold text-sm text-[#0F2E4A] flex items-center gap-2">
-                  <Icon name="table" size={16} className="text-[#A8996E]" />
-                  ตารางแจกแจงค่าใช้จ่ายตาม 11 รหัสบัญชี
-                  {selectedProj !== 'ALL' && <span className="text-[#003C71]">({activeProjects[0]?.name})</span>}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  ข้อมูลกระทบยอดจากระบบหลังการขาย LHServ (รวมค่าดำเนินการ 20%)
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full">
-                {selectedProj !== 'ALL' ? '1 โครงการ' : `รวม ${activeProjects.length} ไซต์`}
-              </span>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
+                <tr>
+                  <th className="p-3">งวดที่ส่งเบิก (Billing Month)</th>
+                  <th className="p-3">งวดที่ตัดจ่ายจริง (Payment Month +2M)</th>
+                  <th className="p-3 text-right">ยอดส่งเบิกในมือ (Committed)</th>
+                  <th className="p-3 text-right">เพดานงบเดือนจ่าย (Budget +2M)</th>
+                  <th className="p-3 text-right">จ่ายจริงในระบบ (Actual +2M)</th>
+                  <th className="p-3 text-right">คงเหลือใช้ได้ในงวดจ่าย</th>
+                  <th className="p-3 text-center">สถานะความเสี่ยง</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {rollingPaymentCycleTable.map((row) => {
+                  const isOver = row.availableInPayment < 0;
+                  const isWarning = row.burnRate > 80 && !isOver;
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="p-3">รหัสบัญชี</th>
-                    <th className="p-3">ชื่อหมวดค่าใช้จ่าย</th>
-                    <th className="p-3">ประเภท</th>
-                    <th className="p-3 text-right">งบประมาณจัดสรร</th>
-                    <th className="p-3 text-right">จ่ายจริงแล้ว (Actual)</th>
-                    <th className="p-3 text-right">ผูกพันในมือ (Committed)</th>
-                    <th className="p-3 text-right">คงเหลือใช้ได้</th>
-                    <th className="p-3 text-center">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {TARGET_ACCOUNT_CODES.filter(ac => accountFilter === 'ALL' || ac.group === accountFilter).map((ac) => {
-                    let acBudget = 0;
-                    let acActual = 0;
-                    let acCommitted = 0;
-
-                    activeProjects.forEach((prj) => {
-                      const bPerAccount = Math.round(prj.baseBudget70 * 0.09);
-                      acBudget += bPerAccount;
-
-                      if (selectedPeriod !== 'ALL') {
-                        Object.values(woExpensesData?.workOrders || {}).forEach((w) => {
-                          if (w.projectCode === prj.code && w.approvalPeriod === selectedPeriod && Array.isArray(w.lineItems)) {
-                            w.lineItems.forEach((li) => {
-                              if (li.accountCode === ac.code) acActual += Number(li.feeCost || 0);
-                            });
-                          }
-                        });
-                      } else {
-                        const pExp = forecastData?.projects?.[prj.code]?.expenses?.find(e => e.code === ac.code);
-                        if (pExp && pExp.ytdActual != null) {
-                          acActual += kThbToBaht(pExp.ytdActual);
-                        } else {
-                          acActual += Math.round(bPerAccount * 0.38);
-                        }
-                      }
-
-                      const stdName = getStdProj(prj.name);
-                      acCommitted += (projectCommittedMap[stdName]?.byAccount?.[ac.code] || 0);
-                    });
-
-                    const acRemaining = Math.max(0, acBudget - (acActual + acCommitted));
-                    const acBurnRate = acBudget > 0 ? ((acActual + acCommitted) / acBudget) * 100 : 0;
-
-                    return (
-                      <tr key={ac.code} className="hover:bg-slate-50/80 transition">
-                        <td className="p-3 font-mono font-bold text-[#003C71]">{ac.code}</td>
-                        <td className="p-3 font-medium text-[#0F2E4A]">{ac.name}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            ac.group === 'FIXED'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : ac.group === 'VARIABLE'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
-                          }`}>
-                            {ac.typeName}
+                  return (
+                    <tr
+                      key={row.billingMonth}
+                      onClick={() => setSelectedBillingMonth(row.billingMonth)}
+                      className={`hover:bg-blue-50/40 cursor-pointer transition ${
+                        row.isCurrent ? 'bg-amber-50/50 font-bold border-l-4 border-amber-500' : ''
+                      }`}
+                    >
+                      <td className="p-3 font-semibold text-slate-800 flex items-center gap-1.5">
+                        {row.isCurrent && <span className="text-amber-500">👉</span>}
+                        <span>{row.billingLabel}</span>
+                        <span className="font-mono text-[10px] text-slate-400">({row.billingMonth})</span>
+                      </td>
+                      <td className="p-3 font-semibold text-[#003C71]">
+                        <span>{row.paymentLabel}</span>
+                        <span className="font-mono text-[10px] text-slate-400 ml-1">({row.paymentMonth})</span>
+                      </td>
+                      <td className="p-3 text-right font-bold text-amber-700">
+                        ฿{row.committedInBilling.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="p-3 text-right font-medium text-slate-700">
+                        ฿{row.budgetInPayment.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="p-3 text-right font-bold text-emerald-700">
+                        ฿{row.actualInPayment.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className={`p-3 text-right font-bold ${isOver ? 'text-rose-700' : 'text-slate-800'}`}>
+                        ฿{row.availableInPayment.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="p-3 text-center">
+                        {isOver ? (
+                          <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                            🚨 เสี่ยงเกินงบ ({row.burnRate.toFixed(0)}%)
                           </span>
-                        </td>
-                        <td className="p-3 text-right font-medium">฿{acBudget.toLocaleString()}</td>
-                        <td className="p-3 text-right font-bold text-emerald-700">฿{acActual.toLocaleString()}</td>
-                        <td className="p-3 text-right font-bold text-amber-700">฿{acCommitted.toLocaleString()}</td>
-                        <td className="p-3 text-right font-bold text-slate-800">฿{acRemaining.toLocaleString()}</td>
-                        <td className="p-3 text-center">
-                          {acBurnRate > 85 ? (
-                            <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              🚨 เสี่ยงเกินงบ ({acBurnRate.toFixed(0)}%)
-                            </span>
-                          ) : acBurnRate > 65 ? (
-                            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              ⚠️ เฝ้าระวัง ({acBurnRate.toFixed(0)}%)
-                            </span>
-                          ) : (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              ✅ ในงบ ({acBurnRate.toFixed(0)}%)
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        ) : isWarning ? (
+                          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                            ⚠️ เฝ้าระวัง ({row.burnRate.toFixed(0)}%)
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                            ✅ ปลอดภัย ({row.burnRate.toFixed(0)}%)
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </>
+        </div>
       )}
 
-      {/* VIEW MODE 2: WORK ORDERS DRILL-DOWN (เจาะลึกรายใบสั่งซ่อม) */}
+      {/* VIEW 2: กราฟแนวโน้มรายเดือน (Monthly Trend) */}
+      {viewMode === 'trend' && (
+        <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-200/90 flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="font-bold text-[#0F2E4A] text-sm flex items-center gap-2">
+                <Icon name="barChart3" size={16} className="text-[#003C71]" />
+                เปรียบเทียบงบประมาณรายเดือน (12-Month Monthly Budget vs Actual)
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                วิเคราะห์แนวโน้มยอดเงินที่จัดสรรไว้เทียบกับยอดที่ส่งเบิกและจ่ายจริงรายเดือน
+              </p>
+            </div>
+          </div>
+
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyTrendChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `฿${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(val) => `฿${Number(val).toLocaleString()}`} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="เพดานงบเดือนจ่าย (+2M)" fill="#93C5FD" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ยอดส่งเบิกในมือ (Committed)" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ตัดจ่ายจริง (Actual)" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: เจาะลึกใบสั่งซ่อม (Work Orders Table) */}
       {viewMode === 'wos' && (
         <div className="bg-white rounded-2xl shadow-card border border-slate-200/90 overflow-hidden space-y-0">
           <div className="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50/70 gap-2">
             <div>
               <h3 className="font-bold text-sm text-[#0F2E4A] flex items-center gap-2">
                 <Icon name="fileText" size={16} className="text-[#7A1C28]" />
-                <span>รายการใบสั่งซ่อมจริง (LHServ Work Orders)</span>
+                <span>รายการใบสั่งซ่อมจริงจากระบบ LHServ</span>
                 {selectedProj !== 'ALL' && <span className="text-[#003C71]">[{selectedProj}]</span>}
-                {selectedPeriod !== 'ALL' && <span className="text-[#7A1C28] font-normal">งวด {selectedPeriod}</span>}
+                <span className="text-slate-500 font-normal">งวด {formatThaiMonthStr(selectedBillingMonth)}</span>
               </h3>
               <p className="text-xs text-slate-400">
-                คลิกที่แถวรายการเพื่อดูการแจกแจงค่าแรง ค่าของ และค่าดำเนินการ 20%
+                คลิกแถวรายการเพื่อดูการแจกแจงค่าแรง ค่าของ และบวก 20% ตามใบแจ้งซ่อม
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-                รวม {filteredWorkOrders.length} รายการ (฿{filteredWOsTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })})
-              </span>
-            </div>
+            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+              รวม {filteredWorkOrders.length} รายการ (฿{filteredWOsTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -868,7 +809,7 @@ export default function BudgetTab({
                 {filteredWorkOrders.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="text-center py-12 text-slate-400">
-                      ไม่พบรายการใบสั่งซ่อมที่ตรงกับเงื่อนไขการกรอง
+                      ไม่พบรายการใบสั่งซ่อมในงวดเดือนที่เลือก
                     </td>
                   </tr>
                 ) : (

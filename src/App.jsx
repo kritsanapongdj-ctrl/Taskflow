@@ -1643,7 +1643,7 @@ export default function App() {
                 { i: 'daily', l: 'งานรายวัน', icon: 'listTodo' },
                 { i: 'monthly', l: 'ปฏิทิน', icon: 'calendar' },
                 { i: 'kanban', l: 'ส่งเบิก', icon: 'fileText' },
-                { i: 'budget', l: 'งบประมาณ 2570', icon: 'wallet' },
+                { i: 'budget', l: 'งบประมาณ 2569', icon: 'wallet' },
                 { i: 'inform', l: 'แจ้งเปิดงาน', icon: 'bell' },
                 { i: 'team', l: 'สถานะทีม', icon: 'users' },
                 { i: 'settings', l: 'ตั้งค่า', icon: 'settings' }
@@ -2290,7 +2290,7 @@ export default function App() {
                     },
                     {
                       id: 'budget',
-                      title: 'งบประมาณ 2570',
+                      title: 'งบประมาณ 2569',
                       subtitle: 'ควบคุมงบ 11 โครงการ',
                       icon: 'wallet',
                       color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200/60'
