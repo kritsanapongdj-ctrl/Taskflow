@@ -29,6 +29,7 @@ const InformDetailModal = React.lazy(() => import('./components/modals/InformDet
 const InformStatusModal = React.lazy(() => import('./components/modals/InformStatusModal.jsx'));
 const AvatarCropModal = React.lazy(() => import('./components/modals/AvatarCropModal.jsx'));
 const JobTimelineModal = React.lazy(() => import('./components/modals/JobTimelineModal.jsx'));
+const CommandPaletteModal = React.lazy(() => import('./components/modals/CommandPaletteModal.jsx'));
 
 const TabLoadingSpinner = () => (
   <div className="flex-1 flex flex-col items-center justify-center p-16 text-slate-400">
@@ -174,6 +175,30 @@ export default function App() {
   const [timelineTask, setTimelineTask] = useState(null);
   const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [showMoreMobileMenu, setShowMoreMobileMenu] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Global Command Palette Shortcut Listener (Ctrl+K, Cmd+K, or /)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+      if (
+        e.key === '/' &&
+        !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) &&
+        !document.activeElement?.isContentEditable
+      ) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Compute top 5 most frequently used SLA categories from task history for quick pins
   const frequentSlaCategories = useMemo(() => {
@@ -1695,7 +1720,37 @@ export default function App() {
                   <Icon name="map" size={12} className="text-sky-600" /> แผนที่น้ำ Real-time
                 </a>
               </div>
+
+              {/* Desktop Spotlight Search Bar (Cmd + K) */}
+              <div className="flex-1 max-w-sm lg:max-w-md mx-3 hidden md:block">
+                <button
+                  type="button"
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100/90 border border-slate-200/90 text-slate-400 hover:text-slate-600 px-3.5 py-1.5 rounded-xl text-xs transition shadow-2xs cursor-pointer group"
+                  title="ค้นหาด่วน (Ctrl + K หรือ /)"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon name="search" size={14} className="text-[#003C71] group-hover:scale-110 transition-transform" />
+                    <span className="font-normal text-slate-500">ค้นหาแปลงบ้าน, โครงการ, ช่าง...</span>
+                  </div>
+                  <kbd className="font-mono text-[10px] bg-white border border-slate-200 px-1.5 py-0.2 rounded shadow-2xs text-slate-400">
+                    Ctrl K
+                  </kbd>
+                </button>
+              </div>
+
               <div className="flex items-center gap-2">
+                {/* Mobile Spotlight Search Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="md:hidden p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-[#003C71] hover:text-[#0F2E4A] transition cursor-pointer"
+                  title="ค้นหาด่วน (Spotlight Search)"
+                  aria-label="ค้นหาด่วน"
+                >
+                  <Icon name="search" size={16} />
+                </button>
+
                 {/* Supervisor Mode Toggle */}
                 {isSupervisor ? (
                   <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/15 via-amber-600/15 to-amber-700/15 border border-amber-400/50 px-2.5 sm:px-3 py-1 rounded-full shadow-xs">
@@ -2476,6 +2531,58 @@ export default function App() {
               isOpen={!!timelineTask}
               task={timelineTask}
               onClose={() => setTimelineTask(null)}
+              Icon={Icon}
+            />
+          )}
+
+          {isCommandPaletteOpen && (
+            <CommandPaletteModal
+              isOpen={isCommandPaletteOpen}
+              onClose={() => setIsCommandPaletteOpen(false)}
+              tasks={tasks}
+              staffList={allStaffNames.map((name) => ({
+                name,
+                role: getStaffRole(name).label
+              }))}
+              getStdProj={getStdProj}
+              onSelectTask={(t) => {
+                setIsCommandPaletteOpen(false);
+                const targetDate = t.endDate || t.startDate || getTStr();
+                setGilt((prev) => ({ ...prev, date: targetDate }));
+                setHighlightTaskId(t.id);
+                setTab('daily');
+              }}
+              onSelectProject={(proj) => {
+                setIsCommandPaletteOpen(false);
+                setGilt((prev) => ({ ...prev, project: proj }));
+                setTab('daily');
+              }}
+              onSelectStaff={(staffName) => {
+                setIsCommandPaletteOpen(false);
+                setGilt((prev) => ({ ...prev, staffName }));
+                setTab('daily');
+              }}
+              onNavigateTab={(tabId) => {
+                setIsCommandPaletteOpen(false);
+                setTab(tabId);
+              }}
+              onQuickAction={(actionId) => {
+                setIsCommandPaletteOpen(false);
+                if (actionId === 'create_task') {
+                  openTaskModal(null);
+                } else if (actionId === 'open_overdue') {
+                  const tS = getTStr();
+                  const overdueTasks = tasks.filter((t) => {
+                    if (t.status === 'ยกเลิก') return false;
+                    return t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, tS);
+                  });
+                  setOPop({ isOpen: true, tasks: overdueTasks });
+                } else if (actionId === 'open_flood_map') {
+                  window.open('/api/flood-report?mode=map', '_blank');
+                } else if (actionId === 'open_changelog') {
+                  setShowChangelog(true);
+                }
+              }}
               Icon={Icon}
             />
           )}
