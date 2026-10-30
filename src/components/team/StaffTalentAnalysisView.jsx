@@ -20,6 +20,7 @@ import {
 
 export default function StaffTalentAnalysisView({
   teamForm,
+  setTeamForm,
   selTeam,
   classMap = {},
   sets = {},

@@ -1118,6 +1118,7 @@ export default function TeamStatusTab({
               {/* Full Intelligence Suite Analysis (Corporate / RPG) */}
               <StaffTalentAnalysisView
                 teamForm={teamForm}
+                setTeamForm={setTeamForm}
                 selTeam={selTeam}
                 classMap={classMap}
                 sets={sets}
