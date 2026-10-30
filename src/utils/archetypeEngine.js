@@ -2116,6 +2116,8 @@ export const getStaffAssignedProjects = (staffOrName, sets = {}) => {
 };
 
 export const GO_LIVE_DATE_CUTOFF = '2026-09-01'; // 1 กันยายน 2569 (วันเริ่มใช้งานระบบจริง)
+const MIN_RATE_SAMPLE = 5; // min completed jobs before a rate-based SLA deduction applies
+const AXIS_PENALTY_CAP = 5; // max total deduction per WHAT axis
 
 /**
  * Normalizes date string to standard Gregorian YYYY-MM-DD
@@ -2342,7 +2344,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     const attr = getTaskAttribution(t, 'foreman');
     if (attr.role === 'waived') return false; // Supervisor granted waiver
     if (attr.role === 'admin') return false; // Supervisor attributed to Admin, Foreman is not penalized
-    if (t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า') return true;
+    if (t.overdueStatus === 'เกินกำหนด') return true;
     if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
     return false;
   });
@@ -2595,13 +2597,35 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   const penalties = [];
   const alerts = [];
 
+  // Rate-based deduction: volume-fair (late share of completed jobs, not raw count).
+  // Below MIN_RATE_SAMPLE completed jobs the rate is too noisy, so no deduction is made.
+  const lateRateBandPoints = (count, total, maxPts) => {
+    if (!count || total < MIN_RATE_SAMPLE) return 0;
+    const rate = count / total;
+    const pts = rate <= 0.05 ? 0 : rate <= 0.10 ? 1 : rate <= 0.15 ? 2 : rate <= 0.20 ? 3 : rate <= 0.30 ? 4 : 5;
+    return Math.min(maxPts, pts);
+  };
+  const ratePct = (count, total) => (total > 0 ? Math.round((count / total) * 1000) / 10 : 0);
+  // One task is penalized once: a job already counted as a late finish is not penalized again as a late WO
+  const lateFinishedIds = new Set(lateCompleted.map(t => t.id));
+  const notLateFinished = (t) => !lateFinishedIds.has(t.id);
+  const completedTotal = completedTasks.length;
+  if (lateCompleted.length > 0 && completedTotal < MIN_RATE_SAMPLE) {
+    alerts.push({
+      type: 'info',
+      title: 'ข้อมูลไม่พอสำหรับคิดสัดส่วน SLA',
+      desc: `มีงานที่จบแล้วเพียง ${completedTotal} งาน (ต้องมีอย่างน้อย ${MIN_RATE_SAMPLE} งาน) จึงยังไม่หักคะแนนความล่าช้า แต่รายการยังแสดงในห้องตัดสิน`
+    });
+  }
+
   if (roleType === 'foreman') {
     // Foreman Penalties: SLA Speed, Proactive Planning, Time Discipline, Crisis Discipline
-    if (lateCompleted.length > 0) {
+    const lateFinishPts = lateRateBandPoints(lateCompleted.length, completedTotal, 5);
+    if (lateFinishPts > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(5, lateCompleted.length),
-        reason: `จบงานช้ากว่ากำหนดจำนวน ${lateCompleted.length} งาน (หักคะแนน SLA Speed)`
+        points: lateFinishPts,
+        reason: `จบงานช้ากว่ากำหนด ${lateCompleted.length} จาก ${completedTotal} งาน (${ratePct(lateCompleted.length, completedTotal)}%) (หักคะแนน SLA Speed)`
       });
     }
     if (retroactiveStartPostpones.length > 0) {
@@ -2618,11 +2642,13 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
         reason: `ขอเลื่อนวันจบหลังเลยกำหนดเดิมเกิน 1 วัน จำนวน ${retroactiveEndPostpones.length} ครั้ง (หักคะแนนวินัยเวลา)`
       });
     }
-    if (lateWOForemanAttributed.length > 0) {
+    const lateWOForeman = lateWOForemanAttributed.filter(notLateFinished);
+    const lateWOForemanPts = lateRateBandPoints(lateWOForeman.length, completedTotal, 4);
+    if (lateWOForemanPts > 0) {
       penalties.push({
         axis: 'tech',
-        points: Math.min(4, lateWOForemanAttributed.length),
-        reason: `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา จำนวน ${lateWOForemanAttributed.length} รายการ (หักคะแนนความเร็วทำราคา)`
+        points: lateWOForemanPts,
+        reason: `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา ${lateWOForeman.length} จาก ${completedTotal} งาน (${ratePct(lateWOForeman.length, completedTotal)}%) (หักคะแนนความเร็วทำราคา)`
       });
     }
     // Rule 5: Stale tasks (70% responsibility)
@@ -2655,18 +2681,21 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     }
   } else if (roleType === 'admin') {
     // Admin Penalties: WO SLA Speed, Billing Cycle Discipline (15th Cut-off), Late Completions Attributed to Admin, System Integrity
-    if (lateCompletedAdminAttributed.length > 0) {
+    const lateAdminPts = lateRateBandPoints(lateCompletedAdminAttributed.length, completedTotal, 4);
+    if (lateAdminPts > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(4, lateCompletedAdminAttributed.length),
-        reason: `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร จำนวน ${lateCompletedAdminAttributed.length} งาน (คำวินิจฉัยผู้ดูแล)`
+        points: lateAdminPts,
+        reason: `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร ${lateCompletedAdminAttributed.length} จาก ${completedTotal} งาน (${ratePct(lateCompletedAdminAttributed.length, completedTotal)}%) (คำวินิจฉัยผู้ดูแล)`
       });
     }
-    if (lateWOAdminAttributed.length > 0) {
+    const lateWOAdmin = lateWOAdminAttributed.filter(notLateFinished);
+    const lateWOAdminPts = lateRateBandPoints(lateWOAdmin.length, completedTotal, 5);
+    if (lateWOAdminPts > 0) {
       penalties.push({
         axis: 'sla',
-        points: Math.min(5, lateWOAdminAttributed.length),
-        reason: `ออกใบงานช้าเกิน 3 วัน SLA จำนวน ${lateWOAdminAttributed.length} รายการ (หักคะแนนความเร็วระบบเอกสาร)`
+        points: lateWOAdminPts,
+        reason: `ออกใบงานช้าเกิน 3 วัน SLA ${lateWOAdmin.length} จาก ${completedTotal} งาน (${ratePct(lateWOAdmin.length, completedTotal)}%) (หักคะแนนความเร็วระบบเอกสาร)`
       });
     }
     // Rule 5: Stale tasks (30% responsibility)
@@ -2698,6 +2727,16 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
       });
     }
   }
+
+  // Cap total deduction per axis so several rules cannot stack an axis down to the floor
+  const axisRemaining = {};
+  const cappedPenalties = [];
+  penalties.forEach(pen => {
+    const left = axisRemaining[pen.axis] ?? AXIS_PENALTY_CAP;
+    const pts = Math.min(pen.points, left);
+    axisRemaining[pen.axis] = left - pts;
+    if (pts > 0) cappedPenalties.push(pts < pen.points ? { ...pen, points: pts, reason: `${pen.reason} [ถึงเพดานหักรวมต่อแกน ${AXIS_PENALTY_CAP} แต้ม]` } : pen);
+  });
 
   // Collect All Prior-Resolved Discrepancies (Historical Audits from Prior Months)
   // These are preserved for audit trail transparency, but excluded from active month queues and deductions
@@ -2749,7 +2788,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     billingViolations: billingViolations.length,
     discrepancyTasks,
     priorResolvedDiscrepancies,
-    penalties,
+    penalties: cappedPenalties,
     alerts,
     activeMonth,
     goLiveCutoff: GO_LIVE_DATE_CUTOFF

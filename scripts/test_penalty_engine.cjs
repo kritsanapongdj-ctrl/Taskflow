@@ -21,57 +21,67 @@ async function runTests() {
     cx: 8, tech: 8, sla: 8, crisis: 8, resource: 8, innovation: 8
   };
 
-  // 1. Test Single Late Completion: Should deduct exactly 1 pt (not fractional 0.5)
-  const taskLate1 = {
-    id: 'JOB-001',
+  const mkTask = (id, overrides = {}) => ({
+    id,
     project: 'มัณฑนา',
     staffName: 'สมชาย ช่างทอง',
     status: 'จบงาน',
     startDate: '2026-09-01',
-    endDate: '2026-09-03',
-    completedDate: '2026-09-05', // 2 days late
-    receivedDate: '2026-09-01'
-  };
+    endDate: '2026-09-10',
+    completedDate: '2026-09-09',
+    receivedDate: '2026-09-01',
+    ...overrides
+  });
+  const lateTask = (id, overrides = {}) => mkTask(id, { completedDate: '2026-09-12', ...overrides });
+  const slaPts = (t) => (t.penalties.find(p => p.axis === 'sla') || { points: 0 }).points;
 
-  const telemetry1 = aggregateStaffTaskTelemetry(mockStaff, [taskLate1], mockSets, '2026-09');
-  const slaPen1 = telemetry1.penalties.find(p => p.axis === 'sla');
-  assert(slaPen1, 'Should produce an SLA penalty for 1 late task');
-  assert.strictEqual(slaPen1.points, 1, '1 late task should deduct exactly 1 point');
-  console.log('✓ Test 1 Passed: 1 late task = -1 pt SLA');
+  // 1. Too few completed jobs (< 5): no rate-based deduction, but an info alert explains why
+  const telemetry1 = aggregateStaffTaskTelemetry(mockStaff, [lateTask('JOB-001')], mockSets, '2026-09');
+  assert.strictEqual(slaPts(telemetry1), 0, '1 completed job is too small a sample to deduct');
+  assert(telemetry1.alerts.some(a => a.type === 'info'), 'Should explain insufficient sample');
+  console.log('✓ Test 1 Passed: sample < 5 jobs = no SLA deduction + info alert');
 
-  // 2. Test 2 Late Completions: Should deduct 2 pts (previously was capped at 1 due to Math.ceil(2*0.5) = 1)
-  const taskLate2 = {
-    id: 'JOB-002',
-    project: 'มัณฑนา',
-    staffName: 'สมชาย ช่างทอง',
-    status: 'จบงาน',
-    startDate: '2026-09-05',
-    endDate: '2026-09-07',
-    completedDate: '2026-09-10',
-    receivedDate: '2026-09-05'
-  };
+  // 2. Volume fairness: 3 late of 20 (15%) = -2, same late count on a small base is harsher
+  const tasks20 = [
+    ...Array.from({ length: 17 }, (_, i) => mkTask(`OK-${i}`)),
+    ...Array.from({ length: 3 }, (_, i) => lateTask(`LATE-${i}`))
+  ];
+  const telemetry2 = aggregateStaffTaskTelemetry(mockStaff, tasks20, mockSets, '2026-09');
+  assert.strictEqual(slaPts(telemetry2), 2, '15% late rate should deduct 2 points');
+  const tasks152 = [
+    ...Array.from({ length: 139 }, (_, i) => mkTask(`BIG-OK-${i}`)),
+    ...Array.from({ length: 13 }, (_, i) => lateTask(`BIG-LATE-${i}`))
+  ];
+  const telemetryBig = aggregateStaffTaskTelemetry(mockStaff, tasks152, mockSets, '2026-10');
+  assert.strictEqual(telemetryBig.slaRate, 91, 'On-time rate should be 91%');
+  assert.strictEqual(slaPts(telemetryBig), 1, '91% on-time (13 late of 152) should deduct only 1 point');
+  const telemetryAllLate = aggregateStaffTaskTelemetry(mockStaff, Array.from({ length: 13 }, (_, i) => lateTask(`L-${i}`)), mockSets, '2026-10');
+  assert.strictEqual(slaPts(telemetryAllLate), 5, '100% late should hit the SLA cap of 5');
+  console.log('✓ Test 2 Passed: SLA deduction scales with late rate, not raw count');
 
-  const telemetry2 = aggregateStaffTaskTelemetry(mockStaff, [taskLate1, taskLate2], mockSets, '2026-09');
-  const slaPen2 = telemetry2.penalties.find(p => p.axis === 'sla');
-  assert.strictEqual(slaPen2.points, 2, '2 late tasks should deduct 2 points (not 1)');
-  console.log('✓ Test 2 Passed: 2 late tasks = -2 pts SLA');
+  // 3. Same task is penalized once: a WO-late job (BOQ) must not also count as a late finish
+  const woLateTasks = Array.from({ length: 13 }, (_, i) => mkTask(`WO-${i}`, { overdueStatus: 'ออกใบงานช้า', lateWorkOrder: true, overdueReason: 'รอ BOQ' }));
+  const telemetryWO = aggregateStaffTaskTelemetry(mockStaff, woLateTasks, mockSets, '2026-10');
+  assert.strictEqual(telemetryWO.lateFinishedTasks, 0, 'Late-WO status is not a late finish');
+  assert.strictEqual(slaPts(telemetryWO), 0, 'Late-WO jobs must not be penalized on SLA axis');
+  assert.strictEqual(telemetryWO.penalties.find(p => p.axis === 'tech').points, 4, 'Late-WO jobs are penalized once on TECH axis');
+  const bothLate = Array.from({ length: 10 }, (_, i) => lateTask(`BOTH-${i}`, { lateWorkOrder: true, overdueReason: 'รอ BOQ' }));
+  const telemetryBoth = aggregateStaffTaskTelemetry(mockStaff, bothLate, mockSets, '2026-10');
+  assert.strictEqual(telemetryBoth.penalties.find(p => p.axis === 'tech'), undefined, 'Job already penalized as late finish is not penalized again as late WO');
+  console.log('✓ Test 3 Passed: one task is penalized once across axes');
 
-  // 3. Test Cap: 6 Late Completions should reach new cap of 5 (previously 3)
-  const tasks6 = Array.from({ length: 6 }, (_, i) => ({
-    id: `JOB-00${i + 10}`,
-    project: 'มัณฑนา',
-    staffName: 'สมชาย ช่างทอง',
-    status: 'จบงาน',
-    startDate: '2026-09-01',
-    endDate: '2026-09-03',
-    completedDate: '2026-09-06',
-    receivedDate: '2026-09-01'
-  }));
+  // 3b. Per-axis cap: stacked rules cannot exceed 5 points on one axis
+  const stacked = [
+    ...Array.from({ length: 10 }, (_, i) => lateTask(`ST-${i}`)),
+    ...Array.from({ length: 4 }, (_, i) => mkTask(`RE-${i}`, { status: 'เลื่อนวันจบ', postponedAt: '2026-09-20', previousEndDate: '2026-09-10' }))
+  ];
+  const telemetryStacked = aggregateStaffTaskTelemetry(mockStaff, stacked, mockSets, '2026-10');
+  assert(telemetryStacked.penalties.filter(p => p.axis === 'sla').reduce((a, p) => a + p.points, 0) <= 5, 'SLA axis total deduction must not exceed 5');
+  console.log('✓ Test 3b Passed: per-axis deduction cap = 5');
 
+  const tasks6 = Array.from({ length: 6 }, (_, i) => lateTask(`JOB-00${i + 10}`));
   const telemetry6 = aggregateStaffTaskTelemetry(mockStaff, tasks6, mockSets, '2026-09');
-  const slaPen6 = telemetry6.penalties.find(p => p.axis === 'sla');
-  assert.strictEqual(slaPen6.points, 5, '6 late tasks should cap at 5 points (not 3)');
-  console.log('✓ Test 3 Passed: 6 late tasks = -5 pts SLA (expanded cap)');
+  assert.strictEqual(slaPts(telemetry6), 5, '6 of 6 late should cap at 5 points');
 
   // 4. Test Live Auto-Deduct in analyzeOuterLayer
   const statsObj = { str: 7, agi: 8, dex: 7, int: 6, con: 7, sen: 6 };
