@@ -1718,6 +1718,9 @@ export default function TeamStatusTab({
                                     🔒 ปิดรอบเดือน
                                  </button>
                               )}
+                              {!monthClosed && !canCloseMonth(evalMonth, currentSystemMonth) && (
+                                 <span className="text-[11px] text-slate-400">ปิดรอบได้เฉพาะเดือนที่จบแล้ว — เลือกเดือนก่อนหน้า</span>
+                              )}
                               <button
                                  type="button"
                                  onClick={() => {
