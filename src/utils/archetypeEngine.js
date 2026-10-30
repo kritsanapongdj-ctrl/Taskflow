@@ -2344,9 +2344,14 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     const attr = getTaskAttribution(t, 'foreman');
     if (attr.role === 'waived') return false; // Supervisor granted waiver
     if (attr.role === 'admin') return false; // Supervisor attributed to Admin, Foreman is not penalized
-    if (t.overdueStatus === 'เกินกำหนด') return true;
-    if (t.completedDate && t.endDate && t.completedDate > t.endDate) return true;
-    return false;
+    // Dates are authoritative: a stale 'เกินกำหนด' flag must not make an early/on-date finish "late".
+    // Only a same-day finish defers to the flag (it encodes the after-cutoff-time rule).
+    if (t.completedDate && t.endDate) {
+      const done = String(t.completedDate).slice(0, 10);
+      const due = String(t.endDate).slice(0, 10);
+      if (done !== due) return done > due;
+    }
+    return t.overdueStatus === 'เกินกำหนด';
   });
 
   const lateCompletedAdminAttributed = completedTasks.filter(t => {

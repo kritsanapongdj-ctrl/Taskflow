@@ -79,6 +79,14 @@ async function runTests() {
   assert(telemetryStacked.penalties.filter(p => p.axis === 'sla').reduce((a, p) => a + p.points, 0) <= 5, 'SLA axis total deduction must not exceed 5');
   console.log('✓ Test 3b Passed: per-axis deduction cap = 5');
 
+  // 3c. Finished before due date but carrying a stale 'เกินกำหนด' flag is NOT late; same-day defers to the flag
+  const early = Array.from({ length: 10 }, (_, i) => mkTask(`EARLY-${i}`, { completedDate: '2026-10-13', endDate: '2026-10-14', overdueStatus: 'เกินกำหนด' }));
+  const telemetryEarly = aggregateStaffTaskTelemetry(mockStaff, early, mockSets, '2026-10');
+  assert.strictEqual(telemetryEarly.lateFinishedTasks, 0, 'Early finish with stale flag must not count as late');
+  const sameDay = Array.from({ length: 10 }, (_, i) => mkTask(`SAME-${i}`, { completedDate: '2026-10-14', endDate: '2026-10-14', overdueStatus: 'เกินกำหนด' }));
+  assert.strictEqual(aggregateStaffTaskTelemetry(mockStaff, sameDay, mockSets, '2026-10').lateFinishedTasks, 10, 'Same-day finish keeps the after-cutoff flag');
+  console.log('✓ Test 3c Passed: dates override stale overdue flag');
+
   const tasks6 = Array.from({ length: 6 }, (_, i) => lateTask(`JOB-00${i + 10}`));
   const telemetry6 = aggregateStaffTaskTelemetry(mockStaff, tasks6, mockSets, '2026-09');
   assert.strictEqual(slaPts(telemetry6), 5, '6 of 6 late should cap at 5 points');

@@ -33,7 +33,12 @@ export function getTaskOverdueInfo(task, today, sets = {}) {
 
   // 1. กรณี: งานจบแล้ว (Completed) แต่จบช้ากว่ากำหนด หรือออกใบงานช้า
   if (isCompleted) {
-    const isCompletedLate = (task.completedDate && task.completedDate > task.endDate) || task.overdueStatus === 'เกินกำหนด';
+    // Dates are authoritative; a stale flag must not mark an early finish as late (same-day defers to the flag)
+    const doneDate = task.completedDate ? String(task.completedDate).slice(0, 10) : '';
+    const dueDate = task.endDate ? String(task.endDate).slice(0, 10) : '';
+    const isCompletedLate = (doneDate && dueDate && doneDate !== dueDate)
+      ? doneDate > dueDate
+      : task.overdueStatus === 'เกินกำหนด';
     const isLateWO = task.overdueStatus === 'ออกใบงานช้า' || task.lateWorkOrder === true;
 
     if (isCompletedLate) {
