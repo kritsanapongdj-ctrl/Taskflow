@@ -211,15 +211,28 @@ export default function BudgetTab({
   }, [selectedBillingMonth]);
 
   // คำนวณยอดเงินผูกพัน (Committed) ใน Taskflow แยกตามเดือนที่ส่งเบิก (Billing Month)
+  // ป้องกันการบวกซ้ำสำหรับ Task ที่ใช้เลขที่ WO เดียวกัน (Deduplicate by Unique WO)
   const taskCommittedByMonth = useMemo(() => {
-    const map = {}; // { [monthKey]: { total: 0, byProject: {}, byAccount: {} } }
+    const map = {}; // { [monthKey]: { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} } }
+    const seenWOsByMonth = {}; // { [monthKey]: Set<woNo> }
+
     tasks.forEach((t) => {
       // พิจารณาเฉพาะงานที่จบงาน หรือรอส่งเบิก หรือส่งเบิกแล้ว
       if (t.status?.startsWith('จบงาน') || t.billingStatus === 'รอส่งเบิก' || t.billingStatus === 'ส่งเบิกแล้ว') {
         // เดือนที่ส่งเบิก: อิงจาก billingMonth หรือ completedDate หรือ openedMonth
         const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.slice(0, 7) : '') || (t.openedDate ? t.openedDate.slice(0, 7) : '2026-10');
         if (!bMonth) return;
-        if (!map[bMonth]) map[bMonth] = { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} };
+        if (!map[bMonth]) {
+          map[bMonth] = { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} };
+          seenWOsByMonth[bMonth] = new Set();
+        }
+
+        const wo = (t.workOrderNo || t.woNo || t.lhRefId || '').trim().toUpperCase();
+        // ถ้าเป็นใบสั่งซ่อมที่มีเลข WO และเคยคิดยอดในเดือนนี้ไปแล้ว ให้ข้ามการบวกซ้ำ (Deduplicate)
+        if (wo) {
+          if (seenWOsByMonth[bMonth].has(wo)) return;
+          seenWOsByMonth[bMonth].add(wo);
+        }
 
         const cost = Number(t.costAmount || 0);
         map[bMonth].total += cost;
@@ -269,7 +282,52 @@ export default function BudgetTab({
     return map;
   }, [tasks, getStdProj]);
 
-  // ดึงเพดานงบประมาณ (Budget) และยอดจ่ายจริง (Actual) รายเดือนจาก Firestore
+  // คำนวณยอดเงินที่ตัดจ่ายจริงของใบสั่งซ่อม (WO Actual Paid) จากระบบ LHServ แยกตามเดือนที่จ่ายจริง
+  const woActualByMonth = useMemo(() => {
+    const map = {}; // { [monthKey]: { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} } }
+    if (!woExpensesData?.workOrders) return map;
+
+    Object.values(woExpensesData.workOrders).forEach((w) => {
+      // พิจารณาเฉพาะใบสั่งซ่อมที่ตัดจ่ายจริงแล้วในระบบ (มี pvNo และไม่ใช่ OPEN_JOB)
+      if (w.isEstimated || !w.approvalPeriod || w.pvNo === 'OPEN_JOB') return;
+      const pMonth = w.approvalPeriod;
+      if (!map[pMonth]) map[pMonth] = { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} };
+
+      const cost = Number(w.totalCost || 0);
+      map[pMonth].total += cost;
+
+      const pCode = w.projectCode;
+      if (pCode) {
+        map[pMonth].byProject[pCode] = (map[pMonth].byProject[pCode] || 0) + cost;
+      }
+
+      if (Array.isArray(w.lineItems) && w.lineItems.length > 0) {
+        w.lineItems.forEach((it) => {
+          const ac = it.accountCode || '54012';
+          const fee = Number(it.feeCost || it.directCost || 0);
+          map[pMonth].byAccount[ac] = (map[pMonth].byAccount[ac] || 0) + fee;
+          if (pCode) {
+            if (!map[pMonth].byProjAccount) map[pMonth].byProjAccount = {};
+            if (!map[pMonth].byProjAccount[pCode]) map[pMonth].byProjAccount[pCode] = {};
+            map[pMonth].byProjAccount[pCode][ac] = (map[pMonth].byProjAccount[pCode][ac] || 0) + fee;
+          }
+        });
+      } else if (Array.isArray(w.accounts) && w.accounts.length > 0) {
+        w.accounts.forEach((ac) => {
+          map[pMonth].byAccount[ac] = (map[pMonth].byAccount[ac] || 0) + cost;
+          if (pCode) {
+            if (!map[pMonth].byProjAccount) map[pMonth].byProjAccount = {};
+            if (!map[pMonth].byProjAccount[pCode]) map[pMonth].byProjAccount[pCode] = {};
+            map[pMonth].byProjAccount[pCode][ac] = (map[pMonth].byProjAccount[pCode][ac] || 0) + cost;
+          }
+        });
+      }
+    });
+
+    return map;
+  }, [woExpensesData]);
+
+  // ดึงเพดานงบประมาณ (Budget) และยอดจ่ายจริง (Actual) รายเดือนจาก LHServ
   const getMonthlyFinances = (monthKey, projCode = 'ALL') => {
     let budget = 0;
     let actual = 0;
@@ -277,22 +335,29 @@ export default function BudgetTab({
     if (projCode === 'ALL') {
       if (forecastData?.totalMonthly?.[monthKey]) {
         budget = kThbToBaht(forecastData.totalMonthly[monthKey].budget);
-        actual = kThbToBaht(forecastData.totalMonthly[monthKey].actual);
       } else {
-        // Fallback จากฐานงบประมาณ 9 โครงการ
         const fullYr = CORE_11_PROJECTS.reduce((s, p) => s + (p.baseBudget69 || 0), 0);
         budget = Math.round(fullYr / 12);
-        actual = Math.round(budget * 0.85);
+      }
+      // ยอดจ่ายจริงของใบสั่งซ่อม
+      if (woActualByMonth[monthKey]) {
+        actual = woActualByMonth[monthKey].total || 0;
+      } else if (forecastData?.totalMonthly?.[monthKey]) {
+        actual = kThbToBaht(forecastData.totalMonthly[monthKey].actual);
       }
     } else {
       if (forecastData?.projects?.[projCode]?.monthly?.[monthKey]) {
         budget = kThbToBaht(forecastData.projects[projCode].monthly[monthKey].budget);
-        actual = kThbToBaht(forecastData.projects[projCode].monthly[monthKey].actual);
       } else {
         const prj = CORE_11_PROJECTS.find(p => p.code === projCode);
         const base = prj ? prj.baseBudget69 : 2500000;
         budget = Math.round(base / 12);
-        actual = Math.round(budget * 0.85);
+      }
+      // ยอดจ่ายจริงของใบสั่งซ่อมรายโครงการ
+      if (woActualByMonth[monthKey]?.byProject?.[projCode] !== undefined) {
+        actual = woActualByMonth[monthKey].byProject[projCode];
+      } else if (forecastData?.projects?.[projCode]?.monthly?.[monthKey]) {
+        actual = kThbToBaht(forecastData.projects[projCode].monthly[monthKey].actual);
       }
     }
 
@@ -342,7 +407,7 @@ export default function BudgetTab({
       });
     }
     return list;
-  }, [selectedProj, taskCommittedByMonth, forecastData, selectedBillingMonth, getStdProj]);
+  }, [selectedProj, taskCommittedByMonth, woActualByMonth, forecastData, selectedBillingMonth, getStdProj]);
 
   // คำนวณ Macro KPIs สำหรับเดือนที่เลือก ปฏิบัติตามกฎ +2 เดือน
   const macroCycleKPIs = useMemo(() => {
@@ -404,7 +469,7 @@ export default function BudgetTab({
       available,
       burnRatePct
     };
-  }, [paymentMonth, selectedBillingMonth, selectedProj, forecastData, taskCommittedByMonth, getStdProj]);
+  }, [paymentMonth, selectedBillingMonth, selectedProj, forecastData, taskCommittedByMonth, woActualByMonth, getStdProj]);
 
   // กรองรายการใบสั่งซ่อมจริง (WOs)
   const filteredWorkOrders = useMemo(() => {
@@ -416,7 +481,7 @@ export default function BudgetTab({
       if (!showAllSiteWOs && selectedBillingMonth !== 'ALL') {
         const linked = taskByWO[w.woNo];
         const taskMonth = linked ? (linked.billingMonth || (linked.completedDate ? linked.completedDate.slice(0, 7) : '')) : '';
-        matchPeriod = w.approvalPeriod === selectedBillingMonth || taskMonth === selectedBillingMonth;
+        matchPeriod = w.approvalPeriod === selectedBillingMonth || taskMonth === selectedBillingMonth || w.approvalPeriod === paymentMonth;
       }
 
       let matchAccount = true;
@@ -434,7 +499,7 @@ export default function BudgetTab({
     });
 
     return list.sort((a, b) => (b.totalCost || 0) - (a.totalCost || 0));
-  }, [woExpensesData, selectedProj, selectedBillingMonth, showAllSiteWOs, taskByWO, accountFilter, woSearch]);
+  }, [woExpensesData, selectedProj, selectedBillingMonth, paymentMonth, showAllSiteWOs, taskByWO, accountFilter, woSearch]);
 
   const filteredWOsTotalCost = useMemo(() => {
     return filteredWorkOrders.reduce((sum, w) => sum + (w.totalCost || 0), 0);
@@ -509,6 +574,10 @@ export default function BudgetTab({
             const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
             if (acData) {
               budgetBaht += kThbToBaht(acData.budget);
+            }
+            if (woActualByMonth[pKey]?.byAccount?.[acCode] !== undefined) {
+              actualBaht += woActualByMonth[pKey].byAccount[acCode];
+            } else if (acData) {
               actualBaht += kThbToBaht(acData.actual);
             }
             committedBaht += taskCommittedByMonth[mKey]?.byAccount?.[acCode] || 0;
@@ -516,6 +585,12 @@ export default function BudgetTab({
             const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
             if (acData) {
               budgetBaht += kThbToBaht(acData.budget);
+            }
+            if (woActualByMonth[pKey]?.byProjAccount?.[selectedProj]?.[acCode] !== undefined) {
+              actualBaht += woActualByMonth[pKey].byProjAccount[selectedProj][acCode];
+            } else if (woActualByMonth[pKey]?.byProject?.[selectedProj] !== undefined) {
+              actualBaht += 0;
+            } else if (acData) {
               actualBaht += kThbToBaht(acData.actual);
             }
             committedBaht += taskCommittedByMonth[mKey]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
@@ -528,6 +603,10 @@ export default function BudgetTab({
           const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
           if (acData) {
             budgetBaht = kThbToBaht(acData.budget);
+          }
+          if (woActualByMonth[pKey]?.byAccount?.[acCode] !== undefined) {
+            actualBaht = woActualByMonth[pKey].byAccount[acCode];
+          } else if (acData) {
             actualBaht = kThbToBaht(acData.actual);
           }
           committedBaht = taskCommittedByMonth[selectedBillingMonth]?.byAccount?.[acCode] || 0;
@@ -535,7 +614,13 @@ export default function BudgetTab({
           const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
           if (acData) {
             budgetBaht = kThbToBaht(acData.budget);
-            actualBaht = kThbToBaht(acData.actual);
+          }
+          if (woActualByMonth[pKey]?.byProjAccount?.[selectedProj]?.[acCode] !== undefined) {
+            actualBaht = woActualByMonth[pKey].byProjAccount[selectedProj][acCode];
+          } else if (woActualByMonth[pKey]?.byProject?.[selectedProj] !== undefined) {
+            actualBaht += 0;
+          } else if (acData) {
+            actualBaht += kThbToBaht(acData.actual);
           }
           committedBaht = taskCommittedByMonth[selectedBillingMonth]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
         }
@@ -547,7 +632,8 @@ export default function BudgetTab({
           if (selectedBillingMonth !== 'ALL') {
             const linked = taskByWO[w.woNo];
             const taskMonth = linked ? (linked.billingMonth || (linked.completedDate ? linked.completedDate.slice(0, 7) : '')) : '';
-            if (w.approvalPeriod !== selectedBillingMonth && taskMonth !== selectedBillingMonth) return;
+            const match = w.approvalPeriod === paymentMonth || w.approvalPeriod === selectedBillingMonth || taskMonth === selectedBillingMonth;
+            if (!match) return;
           }
           if (Array.isArray(w.accounts) && w.accounts.includes(acCode)) {
             woCount++;
@@ -576,7 +662,7 @@ export default function BudgetTab({
         woCount
       };
     });
-  }, [selectedBillingMonth, selectedProj, paymentMonth, forecastData, taskCommittedByMonth, woExpensesData, taskByWO]);
+  }, [selectedBillingMonth, selectedProj, paymentMonth, forecastData, taskCommittedByMonth, woActualByMonth, woExpensesData, taskByWO]);
 
   // ตาราง Matrix 12 เดือน แยกตามรหัสบัญชี (12-Month Matrix: Account x Month)
   const account12MonthMatrix = useMemo(() => {
@@ -601,6 +687,10 @@ export default function BudgetTab({
           const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
           if (acData) {
             bVal = kThbToBaht(acData.budget);
+          }
+          if (woActualByMonth[pKey]?.byAccount?.[acCode] !== undefined) {
+            aVal = woActualByMonth[pKey].byAccount[acCode];
+          } else if (acData) {
             aVal = kThbToBaht(acData.actual);
           }
           cVal = taskCommittedByMonth[mKey]?.byAccount?.[acCode] || 0;
@@ -608,6 +698,12 @@ export default function BudgetTab({
           const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
           if (acData) {
             bVal = kThbToBaht(acData.budget);
+          }
+          if (woActualByMonth[pKey]?.byProjAccount?.[selectedProj]?.[acCode] !== undefined) {
+            aVal = woActualByMonth[pKey].byProjAccount[selectedProj][acCode];
+          } else if (woActualByMonth[pKey]?.byProject?.[selectedProj] !== undefined) {
+            aVal = 0;
+          } else if (acData) {
             aVal = kThbToBaht(acData.actual);
           }
           cVal = taskCommittedByMonth[mKey]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
@@ -642,7 +738,7 @@ export default function BudgetTab({
         yearBurnRate: yearBudget > 0 ? ((yearCommitted + yearActual) / yearBudget) * 100 : 0
       };
     });
-  }, [selectedProj, forecastData, taskCommittedByMonth]);
+  }, [selectedProj, forecastData, taskCommittedByMonth, woActualByMonth]);
 
   // Export ตารางสรุปตามรหัสบัญชีเป็น CSV
   const exportAccountSummaryToCSV = () => {
