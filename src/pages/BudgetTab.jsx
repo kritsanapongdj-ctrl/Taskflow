@@ -13,6 +13,23 @@ import {
 } from 'recharts';
 import { doc, onSnapshot } from 'firebase/firestore';
 
+// 9 หมวดบัญชีหลักตามมาตรฐานรายงานบัญชีกลาง LH
+const ACCOUNT_META = {
+  '54010': { name: 'ค่าซ่อม-สโมสร,สระว่ายน้ำ', shortName: 'ซ่อมสโมสร/สระ', group: 'VARIABLE', groupName: 'ผันแปร', color: '#6366F1', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  '54011': { name: 'ค่าซ่อม-ต้นไม้,สวน', shortName: 'ซ่อมต้นไม้/สวน', group: 'VARIABLE', groupName: 'ผันแปร', color: '#10B981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  '54012': { name: 'ค่าซ่อม-สาธารณูฯ,ทรัพย์สินอื่น', shortName: 'ซ่อมสาธารณูฯ/ทรัพย์สิน', group: 'VARIABLE', groupName: 'ผันแปร', color: '#0EA5E9', badge: 'bg-sky-50 text-sky-700 border-sky-200' },
+  '54014': { name: 'ค่าบำรุงรักษา-ต้นไม้,สวน', shortName: 'บำรุงรักษาต้นไม้/สวน', group: 'MAINTENANCE', groupName: 'บำรุงรักษา', color: '#059669', badge: 'bg-teal-50 text-teal-700 border-teal-200' },
+  '54015': { name: 'ค่าบำรุงรักษา-สาธารณูฯ,ทรัพย์สินอื่น', shortName: 'บำรุงรักษาสาธารณูฯ', group: 'MAINTENANCE', groupName: 'บำรุงรักษา', color: '#F59E0B', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  '54021': { name: 'ค่าบริหาร-ควบคุมงานซ่อม(รายเดือน)', shortName: 'ค่าบริหารควบคุมงาน', group: 'FIXED', groupName: 'คงที่', color: '#8B5CF6', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  '54107': { name: 'ค่าน้ำประปา-บริษัท', shortName: 'ค่าน้ำประปา', group: 'UTILITY', groupName: 'สาธารณูปโภค', color: '#0284C7', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  '54108': { name: 'ค่าไฟฟ้า-บริษัท', shortName: 'ค่าไฟฟ้า', group: 'UTILITY', groupName: 'สาธารณูปโภค', color: '#EAB308', badge: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
+  '54111': { name: 'คชจ.ดูแลสวน(จัดสรรใหม่)', shortName: 'สัญญาดูแลสวน', group: 'FIXED', groupName: 'คงที่', color: '#14B8A6', badge: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+};
+
+const getAccountName = (code) => ACCOUNT_META[code]?.name || `รหัสบัญชี ${code}`;
+const getAccountShortName = (code) => ACCOUNT_META[code]?.shortName || `รหัส ${code}`;
+const getAccountBadge = (code) => ACCOUNT_META[code]?.badge || 'bg-slate-100 text-slate-700 border-slate-200';
+
 // 11 หมวดบัญชีเป้าหมายตามมาตรฐาน LH
 const TARGET_ACCOUNT_CODES = [
   { code: '54011', name: 'ค่าซ่อม-ต้นไม้,สวน', group: 'VARIABLE', typeName: 'งานซ่อมผันแปร' },
@@ -112,6 +129,8 @@ export default function BudgetTab({
   const [viewMode, setViewMode] = useState('cycle'); // 'cycle' (วงจร +2 เดือน) | 'trend' (แนวโน้มรายเดือน) | 'wos' (เจาะลึกใบสั่งซ่อม)
   const [expandedWOs, setExpandedWOs] = useState({});
   const [showAllSiteWOs, setShowAllSiteWOs] = useState(false);
+  const [accountViewSubTab, setAccountViewSubTab] = useState('summary'); // 'summary' | 'matrix'
+  const [matrixMetric, setMatrixMetric] = useState('committed'); // 'committed' | 'actual' | 'budget' | 'total'
 
   const [forecastData, setForecastData] = useState(null);
   const [woExpensesData, setWoExpensesData] = useState(null);
@@ -201,11 +220,30 @@ export default function BudgetTab({
           map[bMonth].byProject[pStd] = (map[bMonth].byProject[pStd] || 0) + cost;
         }
 
-        if (Array.isArray(t.costBreakdown)) {
+        if (Array.isArray(t.costBreakdown) && t.costBreakdown.length > 0) {
           t.costBreakdown.forEach((item) => {
             const ac = item.accountCode || '54012';
-            map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + Number(item.feeCost || 0);
+            const fee = Number(item.feeCost || 0);
+            map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + fee;
+            if (pCode) {
+              if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
+              map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + fee;
+            }
           });
+        } else if (Array.isArray(t.costAccounts) && t.costAccounts.length > 0) {
+          const ac = t.costAccounts[0];
+          map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + cost;
+          if (pCode) {
+            if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
+            map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + cost;
+          }
+        } else if (cost > 0) {
+          const ac = '54012';
+          map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + cost;
+          if (pCode) {
+            if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
+            map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + cost;
+          }
         }
       }
     });
@@ -424,6 +462,195 @@ export default function BudgetTab({
     URL.revokeObjectURL(url);
   };
 
+  // สรุปข้อมูลรายหมวดบัญชี (Account Code Summary) ประจำงวดเดือน หรือทั้งปี
+  const accountMonthlySummary = useMemo(() => {
+    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111'];
+
+    return targetCodes.map((acCode) => {
+      const meta = ACCOUNT_META[acCode] || {
+        name: `รหัส ${acCode}`,
+        shortName: acCode,
+        group: 'OTHER',
+        groupName: 'ทั่วไป',
+        color: '#64748B',
+        badge: 'bg-slate-100 text-slate-700 border-slate-200'
+      };
+
+      let budgetBaht = 0;
+      let actualBaht = 0;
+      let committedBaht = 0;
+      let woCount = 0;
+
+      if (selectedBillingMonth === 'ALL') {
+        for (let m = 1; m <= 12; m++) {
+          const mKey = `2026-${String(m).padStart(2, '0')}`;
+          const pKey = getPaymentMonth(mKey);
+
+          if (selectedProj === 'ALL') {
+            const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
+            if (acData) {
+              budgetBaht += kThbToBaht(acData.budget);
+              actualBaht += kThbToBaht(acData.actual);
+            }
+            committedBaht += taskCommittedByMonth[mKey]?.byAccount?.[acCode] || 0;
+          } else {
+            const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
+            if (acData) {
+              budgetBaht += kThbToBaht(acData.budget);
+              actualBaht += kThbToBaht(acData.actual);
+            }
+            committedBaht += taskCommittedByMonth[mKey]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
+          }
+        }
+      } else {
+        const pKey = paymentMonth;
+
+        if (selectedProj === 'ALL') {
+          const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
+          if (acData) {
+            budgetBaht = kThbToBaht(acData.budget);
+            actualBaht = kThbToBaht(acData.actual);
+          }
+          committedBaht = taskCommittedByMonth[selectedBillingMonth]?.byAccount?.[acCode] || 0;
+        } else {
+          const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
+          if (acData) {
+            budgetBaht = kThbToBaht(acData.budget);
+            actualBaht = kThbToBaht(acData.actual);
+          }
+          committedBaht = taskCommittedByMonth[selectedBillingMonth]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
+        }
+      }
+
+      if (woExpensesData?.workOrders) {
+        Object.values(woExpensesData.workOrders).forEach((w) => {
+          if (selectedProj !== 'ALL' && w.projectCode !== selectedProj) return;
+          if (selectedBillingMonth !== 'ALL') {
+            const linked = taskByWO[w.woNo];
+            const taskMonth = linked ? (linked.billingMonth || (linked.completedDate ? linked.completedDate.slice(0, 7) : '')) : '';
+            if (w.approvalPeriod !== selectedBillingMonth && taskMonth !== selectedBillingMonth) return;
+          }
+          if (Array.isArray(w.accounts) && w.accounts.includes(acCode)) {
+            woCount++;
+          }
+        });
+      }
+
+      const totalSpent = committedBaht + actualBaht;
+      const available = budgetBaht - totalSpent;
+      const burnRate = budgetBaht > 0 ? (totalSpent / budgetBaht) * 100 : 0;
+
+      return {
+        code: acCode,
+        name: meta.name,
+        shortName: meta.shortName,
+        group: meta.group,
+        groupName: meta.groupName,
+        color: meta.color,
+        badge: meta.badge,
+        budgetBaht,
+        committedBaht,
+        actualBaht,
+        totalSpent,
+        available,
+        burnRate,
+        woCount
+      };
+    });
+  }, [selectedBillingMonth, selectedProj, paymentMonth, forecastData, taskCommittedByMonth, woExpensesData, taskByWO]);
+
+  // ตาราง Matrix 12 เดือน แยกตามรหัสบัญชี (12-Month Matrix: Account x Month)
+  const account12MonthMatrix = useMemo(() => {
+    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111'];
+
+    return targetCodes.map((acCode) => {
+      const meta = ACCOUNT_META[acCode] || { name: acCode, shortName: acCode, groupName: '' };
+      const months = [];
+      let yearBudget = 0;
+      let yearCommitted = 0;
+      let yearActual = 0;
+
+      for (let m = 1; m <= 12; m++) {
+        const mKey = `2026-${String(m).padStart(2, '0')}`;
+        const pKey = getPaymentMonth(mKey);
+
+        let bVal = 0;
+        let aVal = 0;
+        let cVal = 0;
+
+        if (selectedProj === 'ALL') {
+          const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
+          if (acData) {
+            bVal = kThbToBaht(acData.budget);
+            aVal = kThbToBaht(acData.actual);
+          }
+          cVal = taskCommittedByMonth[mKey]?.byAccount?.[acCode] || 0;
+        } else {
+          const acData = forecastData?.projects?.[selectedProj]?.monthly?.[pKey]?.byAccount?.[acCode];
+          if (acData) {
+            bVal = kThbToBaht(acData.budget);
+            aVal = kThbToBaht(acData.actual);
+          }
+          cVal = taskCommittedByMonth[mKey]?.byProjAccount?.[selectedProj]?.[acCode] || 0;
+        }
+
+        yearBudget += bVal;
+        yearCommitted += cVal;
+        yearActual += aVal;
+
+        months.push({
+          monthKey: mKey,
+          label: formatThaiMonthStr(mKey, true),
+          budget: bVal,
+          committed: cVal,
+          actual: aVal,
+          totalSpent: cVal + aVal
+        });
+      }
+
+      return {
+        code: acCode,
+        name: meta.name,
+        shortName: meta.shortName,
+        groupName: meta.groupName,
+        badge: meta.badge,
+        months,
+        yearBudget,
+        yearCommitted,
+        yearActual,
+        yearTotalSpent: yearCommitted + yearActual,
+        yearAvailable: yearBudget - (yearCommitted + yearActual),
+        yearBurnRate: yearBudget > 0 ? ((yearCommitted + yearActual) / yearBudget) * 100 : 0
+      };
+    });
+  }, [selectedProj, forecastData, taskCommittedByMonth]);
+
+  // Export ตารางสรุปตามรหัสบัญชีเป็น CSV
+  const exportAccountSummaryToCSV = () => {
+    if (!accountMonthlySummary.length) return alert('ไม่มีข้อมูล');
+    const headers = ['รหัสบัญชี', 'ชื่อหมวดบัญชี', 'กลุ่มค่าใช้จ่าย', 'เพดานงบเดือนจ่าย (+2M)', 'ยอดส่งเบิกในมือ (Committed)', 'จ่ายจริงในระบบ LHServ (Actual)', 'รวมใช้ไป', 'คงเหลือ', '% Burn Rate', 'จำนวนใบงาน WO'];
+    const rows = accountMonthlySummary.map(a => [
+      `"${a.code}"`,
+      `"${a.name}"`,
+      `"${a.groupName}"`,
+      a.budgetBaht,
+      a.committedBaht,
+      a.actualBaht,
+      a.totalSpent,
+      a.available,
+      `"${a.burnRate.toFixed(1)}%"`,
+      a.woCount
+    ]);
+    const csv = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LH_AccountSummary_${selectedProj}_${selectedBillingMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const toggleExpandWO = (woNo) => {
     setExpandedWOs(prev => ({ ...prev, [woNo]: !prev[woNo] }));
   };
@@ -551,7 +778,7 @@ export default function BudgetTab({
             )}
           </div>
 
-          {/* View Mode Toggle: Cycle vs Trend vs Work Orders */}
+          {/* View Mode Toggle: Cycle vs Account vs Trend vs Work Orders */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
             <button
               type="button"
@@ -563,6 +790,17 @@ export default function BudgetTab({
               }`}
             >
               🔄 วงจรเบิกจ่าย (+2 เดือน)
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('account')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'account'
+                  ? 'bg-white text-[#003C71] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>📊 สรุปตามรหัสบัญชี</span>
             </button>
             <button
               type="button"
@@ -796,6 +1034,363 @@ export default function BudgetTab({
         </div>
       )}
 
+      {/* VIEW: สรุปข้อมูลตามรหัสบัญชี (Account Code Breakdown Summary) */}
+      {viewMode === 'account' && (
+        <div className="space-y-6">
+          {/* Sub-navigation & Actions */}
+          <div className="bg-white p-4 rounded-2xl shadow-card border border-slate-200/90 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-[#0F2E4A] flex items-center gap-2">
+                <Icon name="pieChart" size={16} className="text-[#003C71]" />
+                <span>สรุปงบประมาณจำแนกตามรหัสบัญชี (9 หมวดมาตรฐาน LH)</span>
+                {selectedProj !== 'ALL' && <span className="text-[#003C71]">[{selectedProj}]</span>}
+                <span className="text-slate-500 font-normal">
+                  (ส่งเบิก {formatThaiMonthStr(selectedBillingMonth)} ➡️ ตัดจ่ายจริง {selectedBillingMonth === 'ALL' ? 'ตลอดปี' : formatThaiMonthStr(paymentMonth)})
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                เปรียบเทียบเพดานงบประมาณจัดสรร (+2M) vs ยอดส่งเบิกจริงในมือ (Committed) vs ยอดตัดจ่ายทางบัญชี (Actual)
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setAccountViewSubTab('summary')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    accountViewSubTab === 'summary'
+                      ? 'bg-white text-[#003C71] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📋 สรุปประจำงวดเดือน
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountViewSubTab('matrix')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    accountViewSubTab === 'matrix'
+                      ? 'bg-white text-[#003C71] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🗓️ ตาราง Matrix 12 เดือน
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={exportAccountSummaryToCSV}
+                className="flex items-center gap-1.5 bg-[#003C71] hover:bg-[#002D54] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <Icon name="download" size={13} />
+                <span>ส่งออก CSV</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-Tab 1: สรุปประจำงวดเดือน */}
+          {accountViewSubTab === 'summary' && (
+            <div className="space-y-4">
+              {/* 3 Group Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    title: 'งานซ่อมผันแปร (Variable)',
+                    codes: ['54010', '54011', '54012'],
+                    desc: 'สโมสร, สวน/ต้นไม้, สาธารณูปโภค',
+                    color: 'indigo'
+                  },
+                  {
+                    title: 'งานบำรุงรักษา (Maintenance)',
+                    codes: ['54014', '54015'],
+                    desc: 'บำรุงรักษาต้นไม้, ทรัพย์สินสาธารณูฯ',
+                    color: 'teal'
+                  },
+                  {
+                    title: 'งานคงที่ & สาธารณูปโภค (Fixed & Utility)',
+                    codes: ['54021', '54107', '54108', '54111'],
+                    desc: 'ค่าบริหารควบคุม, ค่าน้ำ, ค่าไฟ, สัญญาดูแลสวน',
+                    color: 'amber'
+                  }
+                ].map((grp, gIdx) => {
+                  const grpItems = accountMonthlySummary.filter(a => grp.codes.includes(a.code));
+                  const grpBudget = grpItems.reduce((s, a) => s + a.budgetBaht, 0);
+                  const grpCommitted = grpItems.reduce((s, a) => s + a.committedBaht, 0);
+                  const grpActual = grpItems.reduce((s, a) => s + a.actualBaht, 0);
+                  const grpSpent = grpCommitted + grpActual;
+                  const grpAvail = grpBudget - grpSpent;
+                  const grpBurn = grpBudget > 0 ? (grpSpent / grpBudget) * 100 : 0;
+                  const isOver = grpAvail < 0;
+
+                  return (
+                    <div key={gIdx} className="bg-white p-4.5 rounded-2xl shadow-card border border-slate-200/90 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-xs font-bold text-slate-800">{grp.title}</div>
+                          <div className="text-[11px] text-slate-400">{grp.desc}</div>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          isOver ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {isOver ? `เกินงบ ${grpBurn.toFixed(0)}%` : `ใช้ไป ${grpBurn.toFixed(0)}%`}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
+                        <div className="bg-slate-50 p-2 rounded-xl">
+                          <div className="text-[10px] text-slate-400">เพดานงบ</div>
+                          <div className="font-bold text-xs text-slate-700">฿{Math.round(grpBudget).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-amber-50/50 p-2 rounded-xl">
+                          <div className="text-[10px] text-amber-700 font-semibold">ส่งเบิก (M)</div>
+                          <div className="font-bold text-xs text-amber-800">฿{Math.round(grpCommitted).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-emerald-50/50 p-2 rounded-xl">
+                          <div className="text-[10px] text-emerald-700 font-semibold">จ่ายจริง (+2M)</div>
+                          <div className="font-bold text-xs text-emerald-800">฿{Math.round(grpActual).toLocaleString()}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs pt-1">
+                        <span className="text-slate-500">คงเหลือในกระเป๋า:</span>
+                        <span className={`font-extrabold ${isOver ? 'text-rose-600' : 'text-slate-800'}`}>
+                          ฿{Math.round(grpAvail).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Table of 9 Accounts */}
+              <div className="bg-white rounded-2xl shadow-card border border-slate-200/90 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">รหัสบัญชี</th>
+                        <th className="p-3">ชื่อหมวดบัญชี (มาตรฐาน LH)</th>
+                        <th className="p-3">กลุ่มค่าใช้จ่าย</th>
+                        <th className="p-3 text-right">เพดานงบ (+2M Budget)</th>
+                        <th className="p-3 text-right">ส่งเบิกสะสม (Committed M)</th>
+                        <th className="p-3 text-right">ตัดจ่ายจริง (Actual +2M)</th>
+                        <th className="p-3 text-right">รวมใช้ไป</th>
+                        <th className="p-3 text-right">คงเหลือใช้ได้</th>
+                        <th className="p-3 w-32 text-center">% อัตราใช้ไป</th>
+                        <th className="p-3 text-center">จำนวน WO</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {accountMonthlySummary.map((ac) => {
+                        const isOver = ac.available < 0;
+                        const isWarn = ac.burnRate >= 80 && !isOver;
+
+                        return (
+                          <tr key={ac.code} className="hover:bg-slate-50/80 transition">
+                            <td className="p-3">
+                              <span className={`font-mono font-bold px-2 py-0.5 rounded border text-[11px] ${ac.badge}`}>
+                                {ac.code}
+                              </span>
+                            </td>
+                            <td className="p-3 font-semibold text-slate-800">
+                              {ac.name}
+                            </td>
+                            <td className="p-3 text-slate-500">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10.5px]">
+                                {ac.groupName}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right font-medium text-slate-600">
+                              ฿{ac.budgetBaht.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-3 text-right font-bold text-amber-700">
+                              {ac.committedBaht > 0 ? (
+                                `฿${ac.committedBaht.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-bold text-emerald-700">
+                              {ac.actualBaht > 0 ? (
+                                `฿${ac.actualBaht.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-bold text-slate-800">
+                              ฿{ac.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td className={`p-3 text-right font-extrabold ${isOver ? 'text-rose-600' : 'text-slate-800'}`}>
+                              ฿{ac.available.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-3">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-semibold">
+                                  <span className={isOver ? 'text-rose-600 font-bold' : isWarn ? 'text-amber-600' : 'text-slate-500'}>
+                                    {ac.burnRate.toFixed(1)}%
+                                  </span>
+                                  {isOver && <span className="text-rose-600 font-bold">เกินงบ</span>}
+                                </div>
+                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      isOver ? 'bg-rose-500' : isWarn ? 'bg-amber-500' : 'bg-emerald-500'
+                                    }`}
+                                    style={{ width: `${Math.min(100, ac.burnRate)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              {ac.woCount > 0 ? (
+                                <span className="bg-blue-50 text-[#003C71] font-bold px-2 py-0.5 rounded-full text-[10.5px] border border-blue-200/60">
+                                  {ac.woCount} ใบ
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50 font-bold border-t-2 border-slate-200 text-slate-800">
+                      <tr>
+                        <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-[11px]">
+                          รวมทั้งสิ้น (Grand Total 9 หมวด):
+                        </td>
+                        <td className="p-3 text-right font-black">
+                          ฿{accountMonthlySummary.reduce((s, a) => s + a.budgetBaht, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-black text-amber-700">
+                          ฿{accountMonthlySummary.reduce((s, a) => s + a.committedBaht, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-black text-emerald-700">
+                          ฿{accountMonthlySummary.reduce((s, a) => s + a.actualBaht, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-black text-slate-900">
+                          ฿{accountMonthlySummary.reduce((s, a) => s + a.totalSpent, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-black text-[#003C71]">
+                          ฿{accountMonthlySummary.reduce((s, a) => s + a.available, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td colSpan={2} className="p-3 text-center">
+                          {(() => {
+                            const totB = accountMonthlySummary.reduce((s, a) => s + a.budgetBaht, 0);
+                            const totS = accountMonthlySummary.reduce((s, a) => s + a.totalSpent, 0);
+                            const r = totB > 0 ? (totS / totB) * 100 : 0;
+                            return (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                r > 100 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                อัตราใช้ไปรวม {r.toFixed(1)}%
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-Tab 2: ตาราง Matrix 12 เดือน แยกตามรหัสบัญชี */}
+          {accountViewSubTab === 'matrix' && (
+            <div className="bg-white rounded-2xl shadow-card border border-slate-200/90 overflow-hidden space-y-3 p-4">
+              <div className="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-slate-100">
+                <div>
+                  <div className="font-bold text-sm text-[#0F2E4A]">ตารางเปรียบเทียบงวดเดือน 12 เดือน x 9 หมวดบัญชี (12-Month Matrix)</div>
+                  <div className="text-xs text-slate-400">คลิกเลือกตัวชี้วัดเพื่อสลับดูตัวเลขในแต่ละงวดเดือน (ม.ค. - ธ.ค. 2569)</div>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                  {[
+                    { id: 'committed', label: 'ยอดส่งเบิก (Committed)' },
+                    { id: 'actual', label: 'ตัดจ่ายจริง (Actual)' },
+                    { id: 'budget', label: 'เพดานงบ (Budget)' },
+                    { id: 'total', label: 'รวมใช้ไป (Committed+Actual)' }
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMatrixMetric(m.id)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        matrixMetric === m.id
+                          ? 'bg-white text-[#003C71] shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="p-2.5 w-24">รหัส</th>
+                      <th className="p-2.5 min-w-[150px]">หมวดบัญชี</th>
+                      {Array.from({ length: 12 }, (_, i) => {
+                        return (
+                          <th key={i} className="p-2.5 text-right font-mono min-w-[75px]">
+                            {THAI_MONTH_SHORT[i + 1]}
+                          </th>
+                        );
+                      })}
+                      <th className="p-2.5 text-right font-bold text-slate-800 min-w-[90px] bg-slate-200/60">รวมทั้งปี</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-mono text-[11px]">
+                    {account12MonthMatrix.map((row) => {
+                      const totalVal = row.months.reduce((sum, m) => {
+                        const val = matrixMetric === 'committed' ? m.committed : matrixMetric === 'actual' ? m.actual : matrixMetric === 'budget' ? m.budget : m.totalSpent;
+                        return sum + val;
+                      }, 0);
+
+                      return (
+                        <tr key={row.code} className="hover:bg-slate-50/80 transition">
+                          <td className="p-2.5">
+                            <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${row.badge}`}>
+                              {row.code}
+                            </span>
+                          </td>
+                          <td className="p-2.5 font-sans font-semibold text-slate-800 truncate max-w-[160px]">
+                            {row.name}
+                          </td>
+                          {row.months.map((m, idx) => {
+                            const val = matrixMetric === 'committed' ? m.committed : matrixMetric === 'actual' ? m.actual : matrixMetric === 'budget' ? m.budget : m.totalSpent;
+                            return (
+                              <td key={idx} className="p-2.5 text-right">
+                                {val > 0 ? (
+                                  <span className={matrixMetric === 'committed' ? 'text-amber-700 font-semibold' : matrixMetric === 'actual' ? 'text-emerald-700 font-semibold' : 'text-slate-700'}>
+                                    ฿{Math.round(val).toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="p-2.5 text-right font-black text-slate-900 bg-slate-50">
+                            ฿{Math.round(totalVal).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* VIEW 2: กราฟแนวโน้มรายเดือน (Monthly Trend) */}
       {viewMode === 'trend' && (
         <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-200/90 flex flex-col">
@@ -916,11 +1511,22 @@ export default function BudgetTab({
                           </td>
                           <td className="p-3">
                             <div className="flex flex-wrap gap-1">
-                              {(w.accounts || []).map((ac) => (
-                                <span key={ac} className="bg-blue-50 text-blue-700 border border-blue-200/60 px-1.5 py-0.2 rounded font-mono text-[10px]">
-                                  {ac}
-                                </span>
-                              ))}
+                              {(w.accounts && w.accounts.length > 0) ? (
+                                w.accounts.map((ac) => (
+                                  <span
+                                    key={ac}
+                                    title={getAccountName(ac)}
+                                    className={`border px-1.5 py-0.5 rounded font-mono text-[10px] font-bold flex items-center gap-1 ${getAccountBadge(ac)}`}
+                                  >
+                                    <span>{ac}</span>
+                                    <span className="font-normal opacity-80 hidden xl:inline">
+                                      ({getAccountShortName(ac)})
+                                    </span>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
                             </div>
                           </td>
                           <td className="p-3 text-right font-medium text-slate-600">
@@ -979,7 +1585,14 @@ export default function BudgetTab({
                                     {w.lineItems.map((li, lIdx) => (
                                       <tr key={lIdx} className="text-slate-600">
                                         <td className="py-1">{li.reportType || '-'}</td>
-                                        <td className="py-1 font-mono text-[#003C71]">{li.accountCode || '-'}</td>
+                                        <td className="py-1">
+                                          <span className={`px-1.5 py-0.2 rounded font-mono text-[10px] font-bold border ${getAccountBadge(li.accountCode)}`}>
+                                            {li.accountCode || '-'}
+                                          </span>
+                                          <span className="ml-1 text-slate-700 font-sans text-[10.5px]">
+                                            {getAccountName(li.accountCode)}
+                                          </span>
+                                        </td>
                                         <td className="py-1 text-right">฿{(li.laborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="py-1 text-right">฿{(li.materialCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="py-1 text-right font-bold text-emerald-700">฿{(li.feeCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
