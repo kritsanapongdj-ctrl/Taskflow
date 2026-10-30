@@ -1240,7 +1240,7 @@ export default function SettingsTab({
                     ])
                   )
                     .filter(Boolean)
-                    .sort((a, b) => a.localeCompare('th'))
+                    .sort((a, b) => a.localeCompare(b, 'th'))
                     .map((n) => (
                       <option key={n} value={n}>
                         {n}

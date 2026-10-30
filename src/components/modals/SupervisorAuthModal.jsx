@@ -29,29 +29,11 @@ export default function SupervisorAuthModal({
             return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
           })
         )
-      ).filter(Boolean).sort((a, b) => a.localeCompare('th'));
+      ).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
       if (emailStaff.length > 0) return emailStaff;
     }
     return authorizedStaff;
   }, [authorizedStaff, sets?.emails]);
-
-  // Auto-select supervisor if available
-  useEffect(() => {
-    if (isOpen) {
-      setPin('');
-      setAuthError(null);
-      setGpsError(null);
-      if (staffList.length > 0) {
-        if (defaultSupervisor && staffList.includes(defaultSupervisor)) {
-          setSelectedSupervisor(defaultSupervisor);
-        } else if (!selectedSupervisor || !staffList.includes(selectedSupervisor)) {
-          setSelectedSupervisor(staffList[0]);
-        }
-      }
-      // Trigger GPS detection when modal opens
-      requestGeolocation();
-    }
-  }, [isOpen, staffList, defaultSupervisor]);
 
   const requestGeolocation = () => {
     if (!navigator.geolocation) {
@@ -73,7 +55,7 @@ export default function SupervisorAuthModal({
       },
       (error) => {
         setGpsLoading(false);
-        let msg = 'ไม่สามารถระบุพิกัดได้';
+        let msg;
         switch (error.code) {
           case error.PERMISSION_DENIED:
             msg = 'ปฏิเสธการเข้าถึงตำแหน่ง GPS: ระบบความปลอดภัย LH กำหนดให้ต้องอนุญาตพิกัดเพื่อบันทึก Audit Trail ก่อนเข้าสู่โหมดผู้ดูแล';
@@ -92,6 +74,25 @@ export default function SupervisorAuthModal({
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
+
+  // Auto-select supervisor if available
+  useEffect(() => {
+    if (isOpen) {
+      setPin('');
+      setAuthError(null);
+      setGpsError(null);
+      if (staffList.length > 0) {
+        if (defaultSupervisor && staffList.includes(defaultSupervisor)) {
+          setSelectedSupervisor(defaultSupervisor);
+        } else if (!selectedSupervisor || !staffList.includes(selectedSupervisor)) {
+          setSelectedSupervisor(staffList[0]);
+        }
+      }
+      // Trigger GPS detection when modal opens
+      requestGeolocation();
+    }
+  }, [isOpen, staffList, defaultSupervisor]);
+
 
   if (!isOpen) return null;
 

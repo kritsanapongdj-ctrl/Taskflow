@@ -171,7 +171,14 @@ export default function App() {
 
   const [taskForm, setTaskForm] = useState({ receivedDate: getTStr(), details: '', requester: '', slaCategory: '', staffName: '', project: '', area: '', startDate: getTStr(), endDate: getTStr() });
   const [informForm, setInformForm] = useState({ date: getTStr(), requesterName: '', phone: '', staffName: '', project: '', area: '', jobType: '', location: '', details: '' });
-  const [showChangelog, setShowChangelog] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(() => {
+    try {
+      return localStorage.getItem('lh_taskflow_viewed_version') !== CURRENT_VERSION;
+    } catch (e) {
+      console.error("Error reading version from localStorage:", e);
+      return false;
+    }
+  });
   const [timelineTask, setTimelineTask] = useState(null);
   const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [showMoreMobileMenu, setShowMoreMobileMenu] = useState(false);
@@ -220,7 +227,7 @@ export default function App() {
   const [supervisorAuthModalOpen, setSupervisorAuthModalOpen] = useState(false);
 
   // 15-Minute Inactivity Auto-Logout for Supervisor Mode (uses Ref to prevent root App re-renders on keystrokes)
-  const supervisorLastActiveRef = useRef(Date.now());
+  const supervisorLastActiveRef = useRef(0);
 
   useEffect(() => {
     if (!isSupervisor) return;
@@ -254,8 +261,7 @@ export default function App() {
     const session = {
       supervisorName,
       coords,
-      authenticatedAt,
-      lastActive: Date.now()
+      authenticatedAt
     };
     setSupervisorSession(session);
 
@@ -277,17 +283,6 @@ export default function App() {
     setIsSupervisor(false);
     setSupervisorSession(null);
   };
-
-  useEffect(() => {
-    try {
-      const viewedVer = localStorage.getItem('lh_taskflow_viewed_version');
-      if (viewedVer !== CURRENT_VERSION) {
-        setShowChangelog(true);
-      }
-    } catch (e) {
-      console.error("Error reading version from localStorage:", e);
-    }
-  }, []);
 
   const handleDismissChangelog = () => {
     try {
@@ -598,6 +593,19 @@ export default function App() {
     return { key: 'officer', label: '🛠️ เจ้าหน้าที่บริการฯ' };
   };
 
+  const allStaffNames = useMemo(() => {
+    const fromEmails = (sets.emails || []).flatMap(e => {
+      const parts = e.split('|');
+      const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
+      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+    });
+    const fromStats = (sets.staffStats || []).flatMap(s => {
+      const rawName = (s.name || '').trim();
+      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
+    });
+    return Array.from(new Set([...fromEmails, ...fromStats])).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
+  }, [sets.emails, sets.staffStats]);
+
   const checkStaffMatch = (taskProj, staffNameFilter = 'ทั้งหมด', staffRoleFilter = 'ทั้งหมด') => {
     const sName = staffNameFilter || 'ทั้งหมด';
     const sRole = (staffRoleFilter && staffRoleFilter !== 'ทั้งหมด')
@@ -678,26 +686,13 @@ export default function App() {
     return '';
   };
 
-  const allStaffNames = useMemo(() => {
-    const fromEmails = (sets.emails || []).flatMap(e => {
-      const parts = e.split('|');
-      const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
-      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
-    });
-    const fromStats = (sets.staffStats || []).flatMap(s => {
-      const rawName = (s.name || '').trim();
-      return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
-    });
-    return Array.from(new Set([...fromEmails, ...fromStats])).filter(Boolean).sort((a, b) => a.localeCompare('th'));
-  }, [sets.emails, sets.staffStats]);
-
   const emailStaffNames = useMemo(() => {
     const fromEmails = (sets.emails || []).flatMap(e => {
       const parts = e.split('|');
       const rawName = (parts[2] || parts[0].split('@')[0] || '').trim();
       return rawName.split(/[,/]/).map(n => n.trim()).filter(Boolean);
     });
-    return Array.from(new Set(fromEmails)).filter(Boolean).sort((a, b) => a.localeCompare('th'));
+    return Array.from(new Set(fromEmails)).filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
   }, [sets.emails]);
 
   // ตรวจสอบว่าเจ้าหน้าที่ได้รับมอบหมายโครงการนี้หรือไม่ (จาก sets.staffStats หรือ sets.emails)
@@ -747,7 +742,7 @@ export default function App() {
         const role = getStaffRole(name);
         return allowedRoles.has(role.key);
       })
-      .sort((a, b) => a.localeCompare('th'));
+      .sort((a, b) => a.localeCompare(b, 'th'));
 
     if (filtered.length > 0) return filtered;
 
@@ -759,7 +754,7 @@ export default function App() {
         const role = getStaffRole(name);
         return allowedRoles.has(role.key);
       })
-      .sort((a, b) => a.localeCompare('th'));
+      .sort((a, b) => a.localeCompare(b, 'th'));
 
     return statsForemanAdmin.length > 0 ? statsForemanAdmin : emailStaffNames;
   }, [sets.emails, sets.staffStats, sets.staffClasses, emailStaffNames]);

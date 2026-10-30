@@ -18,13 +18,17 @@ export default defineConfig([
         ...globals.browser,
         __firebase_config: 'readonly',
         __app_id: 'readonly',
+        __initial_auth_token: 'readonly',
       },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^(React|Icon|_)' }],
       'no-useless-escape': 'off',
-      'react-hooks/exhaustive-deps': 'warn'
+      'react-hooks/exhaustive-deps': 'warn',
+      // Reset-on-open modals, Firestore loading flags and the PixelAgents canvas loop rely on these patterns
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn'
     },
   },
 ])

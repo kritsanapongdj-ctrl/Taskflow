@@ -329,7 +329,7 @@ export default function BudgetTab({
 
   // ดึงเพดานงบประมาณ (Budget) และยอดจ่ายจริง (Actual) รายเดือนจาก LHServ
   const getMonthlyFinances = (monthKey, projCode = 'ALL') => {
-    let budget = 0;
+    let budget;
     let actual = 0;
 
     if (projCode === 'ALL') {
@@ -373,7 +373,7 @@ export default function BudgetTab({
       const pMonth = getPaymentMonth(bMonth);
 
       // 1. งบผูกพันที่ส่งเบิกในเดือน bMonth
-      let committedInBilling = 0;
+      let committedInBilling;
       if (selectedProj === 'ALL') {
         committedInBilling = taskCommittedByMonth[bMonth]?.total || 0;
       } else {
@@ -448,7 +448,7 @@ export default function BudgetTab({
     const actualSpent = payFinances.actual;
 
     // ยอดส่งเบิกในเดือนที่ทำ
-    let committed = 0;
+    let committed;
     if (selectedProj === 'ALL') {
       committed = taskCommittedByMonth[selectedBillingMonth]?.total || 0;
     } else {
@@ -681,7 +681,7 @@ export default function BudgetTab({
 
         let bVal = 0;
         let aVal = 0;
-        let cVal = 0;
+        let cVal;
 
         if (selectedProj === 'ALL') {
           const acData = forecastData?.totalMonthly?.[pKey]?.byAccount?.[acCode];
