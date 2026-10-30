@@ -66,7 +66,7 @@ const kThbToBaht = (val, fallback = 0) => {
 
 // คำนวณเดือนจ่ายจริง: เดือนที่ส่งเบิก M -> เงินออกจริงเดือน M+2
 const getPaymentMonth = (billingMonthStr) => {
-  if (!billingMonthStr || !billingMonthStr.includes('-')) return '2026-12';
+  if (!billingMonthStr || billingMonthStr === 'ALL' || !billingMonthStr.includes('-')) return '2026-12';
   const [y, m] = billingMonthStr.split('-').map(Number);
   let payM = m + 2;
   let payY = y;
@@ -78,7 +78,8 @@ const getPaymentMonth = (billingMonthStr) => {
 };
 
 const formatThaiMonthStr = (mStr, short = false) => {
-  if (!mStr || !mStr.includes('-')) return mStr;
+  if (!mStr || mStr === 'ALL') return short ? 'ทั้งปี 69' : 'ทุกเดือน (ม.ค. - ธ.ค. 2569)';
+  if (!mStr.includes('-')) return mStr;
   const [y, m] = mStr.split('-').map(Number);
   const thaiY = (y + 543) % 100;
   const fullThaiY = y + 543;
@@ -272,6 +273,35 @@ export default function BudgetTab({
 
   // คำนวณ Macro KPIs สำหรับเดือนที่เลือก ปฏิบัติตามกฎ +2 เดือน
   const macroCycleKPIs = useMemo(() => {
+    if (selectedBillingMonth === 'ALL') {
+      let totalBudget = 0;
+      let totalActual = 0;
+      let totalCommitted = 0;
+      for (let m = 1; m <= 12; m++) {
+        const mKey = `2026-${String(m).padStart(2, '0')}`;
+        const pKey = getPaymentMonth(mKey);
+        const finances = getMonthlyFinances(pKey, selectedProj);
+        totalBudget += finances.budget;
+        totalActual += finances.actual;
+        if (selectedProj === 'ALL') {
+          totalCommitted += taskCommittedByMonth[mKey]?.total || 0;
+        } else {
+          const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
+          const std = singleP ? getStdProj(singleP.name) : '';
+          totalCommitted += taskCommittedByMonth[mKey]?.byProject?.[std] || 0;
+        }
+      }
+      const available = Math.max(0, totalBudget - (totalCommitted + totalActual));
+      const burnRatePct = totalBudget > 0 ? ((totalCommitted + totalActual) / totalBudget) * 100 : 0;
+      return {
+        targetBudget: totalBudget,
+        committed: totalCommitted,
+        actualSpent: totalActual,
+        available,
+        burnRatePct
+      };
+    }
+
     // เดือนทำจ่ายจริง
     const payFinances = getMonthlyFinances(paymentMonth, selectedProj);
     const targetBudget = payFinances.budget;
@@ -455,6 +485,7 @@ export default function BudgetTab({
                 onChange={(e) => setSelectedBillingMonth(e.target.value)}
                 className="bg-transparent text-xs font-bold text-[#7A1C28] outline-none cursor-pointer"
               >
+                <option value="ALL">📅 ทุกเดือน (ม.ค. - ธ.ค. 2569)</option>
                 {Array.from({ length: 12 }, (_, i) => {
                   const mStr = String(i + 1).padStart(2, '0');
                   const key = `2026-${mStr}`;
@@ -472,7 +503,7 @@ export default function BudgetTab({
               <span className="text-slate-400">➡️</span>
               <span className="text-[11px] font-medium text-slate-600">เงินตัดจ่ายจริงงวด (+2M):</span>
               <span className="font-extrabold text-[#003C71] underline decoration-[#003C71]/40">
-                {formatThaiMonthStr(paymentMonth)}
+                {selectedBillingMonth === 'ALL' ? 'วงจรรอบจ่าย +2 เดือน' : formatThaiMonthStr(paymentMonth)}
               </span>
             </div>
 
@@ -835,7 +866,7 @@ export default function BudgetTab({
                           </td>
                           <td className="p-3 font-mono text-slate-600">
                             <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold">
-                              {w.approvalPeriod === '2026-10' ? 'ต.ค. 2569' : w.approvalPeriod === '2026-11' ? 'พ.ย. 2569' : w.approvalPeriod}
+                              {formatThaiMonthStr(w.approvalPeriod, true)}
                             </span>
                           </td>
                           <td className="p-3 font-medium text-slate-700 truncate max-w-[180px]">
