@@ -39,7 +39,7 @@ import {
   getDiscrepancyPenaltyShare
 } from '../utils/archetypeEngine';
 import { buildMonthlySnapshots, canCloseMonth, isMonthClosed } from '../utils/monthlySnapshot';
-import { getModeVocab, getTierBadge, getOuterShort, getAlignmentDisplay, getDnaTitle, getNineBoxDisplay } from '../utils/modeVocabulary';
+import { getModeVocab, getTierBadge, getAlignmentDisplay, getDnaTitle, getNineBoxDisplay } from '../utils/modeVocabulary';
 
 export default function TeamStatusTab({
   teamUnlk,
@@ -1172,7 +1172,7 @@ export default function TeamStatusTab({
                               title={hasPenalty ? `${def.desc || o.n} (คะแนนประเมิน ${o.rawVal} - แต้มหักวินัยห้องตัดสิน ${o.penalty})` : (def.desc || o.n)}
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{getOuterShort(o.k, talentViewMode, def.short || o.n)}</span>
+                                <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{def.short || o.n}</span>
                                 {hasPenalty && (
                                   <span className="text-[7px] font-bold px-1 rounded bg-rose-950/80 text-rose-300 border border-rose-500/50">
                                     -{o.penalty}

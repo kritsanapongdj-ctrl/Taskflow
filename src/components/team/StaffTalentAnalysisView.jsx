@@ -17,7 +17,7 @@ import {
   calculateBusinessRiskIndex,
   calculateSuccessionReadiness
 } from '../../utils/archetypeEngine';
-import { getModeVocab, getOuterNames, getNineBoxDisplay } from '../../utils/modeVocabulary';
+import { getModeVocab, getNineBoxDisplay } from '../../utils/modeVocabulary';
 
 export default function StaffTalentAnalysisView({
   teamForm,
@@ -462,8 +462,8 @@ export default function StaffTalentAnalysisView({
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${def.bg}`}>
                                 {def.key.toUpperCase()}
                               </span>
-                              <strong className="text-xs text-slate-900 font-bold">{getOuterNames(k, talentViewMode, def).name}</strong>
-                              <span className="text-[11px] text-slate-500">({getOuterNames(k, talentViewMode, def).thai})</span>
+                              <strong className="text-xs text-slate-900 font-bold">{def.name}</strong>
+                              <span className="text-[11px] text-slate-500">({def.thai})</span>
                               {!isAssessed && (
                                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
                                   รอประเมิน
@@ -777,8 +777,8 @@ export default function StaffTalentAnalysisView({
                         <div className="flex flex-col sm:flex-row sm:justify-between items-start mb-2 gap-2">
                            <div className="flex-1">
                               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                                <strong className="text-[13px] text-slate-900 font-bold">{getOuterNames(k, talentViewMode, def).name}</strong>
-                                <span className="text-[11px] text-slate-500 font-medium">({getOuterNames(k, talentViewMode, def).thai})</span>
+                                <strong className="text-[13px] text-slate-900 font-bold">{def.name}</strong>
+                                <span className="text-[11px] text-slate-500 font-medium">({def.thai})</span>
                               </div>
                               <span className="text-[10px] text-slate-500 block mt-1 leading-relaxed">{def.desc} • สูตร: {def.formulaDesc}</span>
                            </div>

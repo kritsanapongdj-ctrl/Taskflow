@@ -67,11 +67,6 @@ async function runTests() {
     assert.notStrictEqual(r.desc, p.desc, `${c.code}: 9-box description identical across modes`);
     assert.notStrictEqual(r.action, p.action, `${c.code}: 9-box action identical across modes`);
   });
-  E.OUTER_KEYS.forEach(k => {
-    assert.notStrictEqual(V.getOuterNames(k, 'rpg', E.OUTER_DEFINITIONS[k]).name, V.getOuterNames(k, 'corporate', E.OUTER_DEFINITIONS[k]).name, `${k}: axis name identical`);
-    assert.notStrictEqual(V.getOuterShort(k, 'rpg'), V.getOuterShort(k, 'corporate'), `${k}: axis short label identical`);
-    assert.strictEqual(V.getOuterShort(k, 'rpg'), E.OUTER_DEFINITIONS[k].formulaDesc.replace(/[() ]/g, '').replace(/\/2$/, ''), `${k}: RPG short label must match the stat formula`);
-  });
   ['harmonized', 'over_achiever', 'under_leveraged'].forEach(k => {
     assert.notStrictEqual(V.getAlignmentDisplay(k, 'rpg').title, V.getAlignmentDisplay(k, 'corporate').title, `${k}: alignment title identical`);
   });

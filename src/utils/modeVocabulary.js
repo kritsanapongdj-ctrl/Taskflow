@@ -51,38 +51,6 @@ const RPG_TIER = {
 };
 export const getTierBadge = (level, mode, fallback = '') => (isCorp(mode) ? fallback : (RPG_TIER[level] || fallback));
 
-// ---- outer-layer axes (short card labels) -----------------------------------
-// RPG keeps the original stat vocabulary: each WHAT axis is shown by the stats it is computed from
-// (same formulas as OUTER_DEFINITIONS.formulaDesc). Corporate uses competency names.
-const OUTER_FORMULA = {
-  cx: 'CON+SEN', tech: 'INT+DEX', sla: 'AGI+DEX', crisis: 'STR+CON', resource: 'STR+SEN', innovation: 'INT+SEN'
-};
-const OUTER_SHORT = {
-  rpg: OUTER_FORMULA,
-  corporate: { cx: 'Customer', tech: 'Technical', sla: 'Timeliness', crisis: 'Incident', resource: 'Resource', innovation: 'Innovation' }
-};
-export const getOuterShort = (key, mode, fallback = '') => (OUTER_SHORT[isCorp(mode) ? 'corporate' : 'rpg'][key] || fallback);
-
-// ---- outer-layer axes (full names) -------------------------------------------
-const OUTER_NAMES = {
-  corporate: {
-    cx: ['Customer Service Excellence', 'ความเป็นเลิศด้านบริการลูกบ้าน'],
-    tech: ['Technical Competence', 'สมรรถนะเชิงช่างและมาตรฐานสาธารณูปโภค'],
-    sla: ['Delivery & Timeliness', 'การส่งมอบตรงเวลาและการปิดใบงาน'],
-    crisis: ['Incident Management', 'การบริหารเหตุฉุกเฉิน'],
-    resource: ['Resource & Vendor Management', 'การบริหารงบประมาณ ผู้รับเหมา และอะไหล่'],
-    innovation: ['Proactive Maintenance & Digital', 'งานเชิงรุก PM และระบบดิจิทัล']
-  }
-};
-export const getOuterNames = (key, mode, def = {}) => {
-  if (!isCorp(mode)) {
-    // original system name + the stats it is built from, e.g. "Customer Exp. [CON+SEN]"
-    return { name: `${def.name || key} [${OUTER_FORMULA[key]}]`, thai: def.thai };
-  }
-  const pair = OUTER_NAMES.corporate[key];
-  return pair ? { name: pair[0], thai: pair[1] } : { name: def.name, thai: def.thai };
-};
-
 // ---- alignment (HOW vs WHAT gap) ---------------------------------------------
 const ALIGNMENT = {
   rpg: {
