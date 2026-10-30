@@ -17,6 +17,7 @@ import {
   calculateBusinessRiskIndex,
   calculateSuccessionReadiness
 } from '../../utils/archetypeEngine';
+import { getModeVocab, getOuterNames, getNineBoxDisplay } from '../../utils/modeVocabulary';
 
 export default function StaffTalentAnalysisView({
   teamForm,
@@ -217,7 +218,7 @@ export default function StaffTalentAnalysisView({
                         <div>
                           <div className="flex items-center justify-between gap-1 mb-1">
                             <span className={`text-[11px] font-bold ${isMatched ? 'text-sky-950 font-black' : 'text-slate-800'}`}>
-                              {cell.title}
+                              {getNineBoxDisplay(cell.code, talentViewMode, cell).title}
                             </span>
                             {isMatched && (
                               <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-sky-600 text-white shadow-xs">
@@ -260,7 +261,7 @@ export default function StaffTalentAnalysisView({
                   <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-950 space-y-1 mt-2">
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-sky-900">📦 แผนขับเคลื่อนบุคลากร (Talent Action Playbook):</span>
-                      <span className="font-bold text-sky-700">{outerSummary.talentGrid.title}</span>
+                      <span className="font-bold text-sky-700">{getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).title}</span>
                     </div>
                     <p className="text-slate-700 leading-relaxed">
                       ▶ <strong>ข้อแนะนำสำหรับผู้บริหาร:</strong> {outerSummary.talentGrid.action}
@@ -460,8 +461,8 @@ export default function StaffTalentAnalysisView({
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${def.bg}`}>
                                 {def.key.toUpperCase()}
                               </span>
-                              <strong className="text-xs text-slate-900 font-bold">{def.name}</strong>
-                              <span className="text-[11px] text-slate-500">({def.thai})</span>
+                              <strong className="text-xs text-slate-900 font-bold">{getOuterNames(k, talentViewMode, def).name}</strong>
+                              <span className="text-[11px] text-slate-500">({getOuterNames(k, talentViewMode, def).thai})</span>
                               {!isAssessed && (
                                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
                                   รอประเมิน
@@ -775,8 +776,8 @@ export default function StaffTalentAnalysisView({
                         <div className="flex flex-col sm:flex-row sm:justify-between items-start mb-2 gap-2">
                            <div className="flex-1">
                               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                                <strong className="text-[13px] text-slate-900 font-bold">{def.name}</strong>
-                                <span className="text-[11px] text-slate-500 font-medium">({def.thai})</span>
+                                <strong className="text-[13px] text-slate-900 font-bold">{getOuterNames(k, talentViewMode, def).name}</strong>
+                                <span className="text-[11px] text-slate-500 font-medium">({getOuterNames(k, talentViewMode, def).thai})</span>
                               </div>
                               <span className="text-[10px] text-slate-500 block mt-1 leading-relaxed">{def.desc} • สูตร: {def.formulaDesc}</span>
                            </div>
@@ -901,7 +902,7 @@ export default function StaffTalentAnalysisView({
                       <div className="flex items-center gap-1.5">
                         {outerSummary.talentGrid && (
                           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.talentGrid.badge || 'bg-purple-50 text-purple-700 border-purple-200'}`}>
-                            📦 {outerSummary.talentGrid.title}
+                            {getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).title}
                           </span>
                         )}
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${outerSummary.alignmentBadge}`}>
@@ -922,7 +923,7 @@ export default function StaffTalentAnalysisView({
                             <Icon name="alert-triangle" size={14} className="text-rose-500 shrink-0 mt-0.5" />
                             <div>
                               <strong className="text-rose-900 font-bold block">{r.title}</strong>
-                              <span>{r.desc} <strong className="text-rose-950 font-bold ml-1">💡 แนวทาง: {r.advice}</strong></span>
+                              <span>{r.desc} <strong className="text-rose-950 font-bold ml-1">{getModeVocab(talentViewMode).riskAdvice} {r.advice}</strong></span>
                             </div>
                           </div>
                         ))}
@@ -932,10 +933,10 @@ export default function StaffTalentAnalysisView({
                     {/* HOW vs WHAT Synthesis Bar */}
                     <div className="p-3 rounded-lg bg-white/90 border border-indigo-100 text-[11px] space-y-2">
                       <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 pb-1.5 border-b border-slate-100">
-                        <span>ศักยภาพตั้งต้น (HOW): <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong> / 10</span>
-                        <span>ผลงานจริง (WHAT): <strong className="text-indigo-600">{outerSummary.avgOuter}</strong> / 10</span>
+                        <span>{getModeVocab(talentViewMode).howLabel}: <strong className="text-[#0f2e4a]">{outerSummary.avgInner}</strong> / 10</span>
+                        <span>{getModeVocab(talentViewMode).whatLabel}: <strong className="text-indigo-600">{outerSummary.avgOuter}</strong> / 10</span>
                         <span className={outerSummary.gap >= 0 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
-                          Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
+                          {getModeVocab(talentViewMode).gapLabel}: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
                         </span>
                       </div>
                       <p className="text-slate-700 leading-snug">
@@ -943,20 +944,20 @@ export default function StaffTalentAnalysisView({
                       </p>
                       {outerSummary.talentGrid && (
                         <div className="text-[10px] text-purple-950 bg-purple-50/80 p-2 rounded-lg border border-purple-100 font-medium leading-snug">
-                          📦 <strong>แผนขับเคลื่อน (9-Box Grid - {outerSummary.talentGrid.title}):</strong> {outerSummary.talentGrid.action}
+                          <strong>{talentViewMode === 'corporate' ? `แผนขับเคลื่อน (9-Box Grid - ${getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).title}):` : `แผนฝึกซ้อม (${getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).title}):`}</strong> {getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).action}
                         </div>
                       )}
                       {(outerSummary.bestFitAssignment || outerSummary.pairingRecommendation) && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
                           {outerSummary.bestFitAssignment && (
                             <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 leading-snug">
-                              <strong className="text-indigo-900 block mb-0.5">🎯 ภารกิจหลักที่เหมาะสม:</strong>
+                              <strong className="text-indigo-900 block mb-0.5">{getModeVocab(talentViewMode).bestFit}</strong>
                               {outerSummary.bestFitAssignment}
                             </div>
                           )}
                           {outerSummary.pairingRecommendation && (
                             <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 leading-snug">
-                              <strong className="text-purple-900 block mb-0.5">👥 การจับคู่คู่หู (Pairing):</strong>
+                              <strong className="text-purple-900 block mb-0.5">{getModeVocab(talentViewMode).pairing}</strong>
                               {outerSummary.pairingRecommendation}
                             </div>
                           )}

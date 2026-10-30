@@ -38,6 +38,7 @@ import {
   doesDiscrepancyPenalizeStaff,
   getDiscrepancyPenaltyShare
 } from '../utils/archetypeEngine';
+import { getModeVocab, getTierBadge, getOuterShort, getAlignmentDisplay, getDnaTitle, getNineBoxDisplay } from '../utils/modeVocabulary';
 
 export default function TeamStatusTab({
   teamUnlk,
@@ -72,6 +73,7 @@ export default function TeamStatusTab({
   const [selectedRadarAxis, setSelectedRadarAxis] = useState(null);
   const [cinematicViewMode, setCinematicViewMode] = useState('avatar');
   const [talentViewMode, setTalentViewMode] = useState('rpg'); // 'rpg' | 'corporate'
+  const vocab = getModeVocab(talentViewMode);
   const [staffReportModalOpen, setStaffReportModalOpen] = useState(false);
   const [aiAdvisorModalOpen, setAiAdvisorModalOpen] = useState(false);
   const [calibrationModalOpen, setCalibrationModalOpen] = useState(false);
@@ -375,7 +377,7 @@ export default function TeamStatusTab({
 
       const displayTitle = isCorporate ? corporatePersona.title : enTitle;
       const displaySubStyle = isCorporate ? corporatePersona.thai : (thTitle ? `${thTitle} ${flavorText ? `(${flavorText})` : ''}` : '');
-      const displayTierBadge = isCorporate ? corporateTierName : `${archAnalysis.competencyTier?.name} (${archAnalysis.competencyTier?.thai || ''})`;
+      const displayTierBadge = isCorporate ? corporateTierName : getTierBadge(archAnalysis.competencyTier?.level, 'rpg', `${archAnalysis.competencyTier?.name} (${archAnalysis.competencyTier?.thai || ''})`);
 
       const bottomDescText = (
         <span className="flex flex-col gap-2 mt-2 bg-stone-900/60 p-2.5 rounded-lg border border-stone-800/80">
@@ -401,7 +403,7 @@ export default function TeamStatusTab({
                 <span className="font-bold text-sky-300 flex items-center gap-1.5">
                   <Icon name="award" size={14} className="text-sky-400 shrink-0" />
                   <span>
-                    พฤติกรรมเชิงประจักษ์จริง (BARS Level {heuristic.primaryBarsStrength.level}): {isCorporate ? heuristic.primaryBarsStrength.corporateName : heuristic.primaryBarsStrength.statName}
+                    {vocab.barsHeading(heuristic.primaryBarsStrength.level)}: {isCorporate ? heuristic.primaryBarsStrength.corporateName : heuristic.primaryBarsStrength.statName}
                   </span>
                 </span>
                 <span className="text-[9px] px-2 py-0.5 rounded bg-sky-900/90 text-sky-200 border border-sky-600 font-mono shrink-0">
@@ -418,7 +420,7 @@ export default function TeamStatusTab({
                 <div className="pt-1.5 border-t border-sky-800/70 flex items-start gap-1.5 text-[10px] text-sky-200">
                   <span className="text-amber-300 font-bold shrink-0 flex items-center gap-1">
                     <Icon name="target" size={13} className="text-amber-400" />
-                    เป้าหมายถัดไป (Level {heuristic.primaryBarsNextMilestone.targetLevel}):
+                    {vocab.barsNext(heuristic.primaryBarsNextMilestone.targetLevel)}
                   </span>
                   <span className="leading-snug text-slate-200">
                     "{heuristic.primaryBarsNextMilestone.behaviorText}"
@@ -1035,10 +1037,10 @@ export default function TeamStatusTab({
                           </span>
                           <div>
                             <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
-                              6 แกนสมรรถนะผลงาน (The Outer Layer)
+                              {vocab.outerHeading}
                             </span>
                             <strong className="text-xs sm:text-sm text-white font-black drop-shadow tracking-tight">
-                              ⭐ {outerSummary.performanceDna.title}
+                              {isCorporate ? '⭐ ' : ''}{getDnaTitle(outerSummary.performanceDna, talentViewMode)}
                             </strong>
                           </div>
                         </div>
@@ -1057,7 +1059,7 @@ export default function TeamStatusTab({
                                 ? 'bg-slate-500/20 text-slate-300 border-slate-500/40'
                                 : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                             }`}>
-                              📦 {outerSummary.talentGrid.title}
+                              {isCorporate ? '📦 ' : ''}{getNineBoxDisplay(outerSummary.talentGrid.key, talentViewMode, outerSummary.talentGrid).title}
                             </span>
                           )}
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${
@@ -1067,7 +1069,7 @@ export default function TeamStatusTab({
                               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                               : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                           }`}>
-                            {outerSummary.alignmentTitle}
+                            {getAlignmentDisplay(outerSummary.alignmentKey, talentViewMode, { title: outerSummary.alignmentTitle }).title}
                           </span>
                         </div>
                       </div>
@@ -1081,13 +1083,13 @@ export default function TeamStatusTab({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[9px] sm:text-[10px]">
                           {outerSummary.bestFitAssignment && (
                             <div className="p-1.5 rounded bg-white/5 border border-white/10 text-slate-300 leading-snug">
-                              <span className="text-[#e6d0a7] font-bold mr-1">🎯 ภารกิจหลักที่เหมาะสม:</span>
+                              <span className="text-[#e6d0a7] font-bold mr-1">{vocab.bestFit}</span>
                               {outerSummary.bestFitAssignment}
                             </div>
                           )}
                           {outerSummary.pairingRecommendation && (
                             <div className="p-1.5 rounded bg-white/5 border border-white/10 text-slate-300 leading-snug">
-                              <span className="text-purple-300 font-bold mr-1">👥 การจับคู่คู่หู (Pairing):</span>
+                              <span className="text-purple-300 font-bold mr-1">{vocab.pairing}</span>
                               {outerSummary.pairingRecommendation}
                             </div>
                           )}
@@ -1102,7 +1104,7 @@ export default function TeamStatusTab({
                               <Icon name="alert-triangle" size={13} className="text-rose-400 shrink-0 mt-0.5" />
                               <div>
                                 <strong className="text-rose-300 font-bold block">{r.title}</strong>
-                                <span>{r.desc} <strong className="text-rose-200 ml-1">💡 แนวทาง: {r.advice}</strong></span>
+                                <span>{r.desc} <strong className="text-rose-200 ml-1">{vocab.riskAdvice} {r.advice}</strong></span>
                               </div>
                             </div>
                           ))}
@@ -1112,10 +1114,10 @@ export default function TeamStatusTab({
                       {/* HOW vs WHAT Synthesis Bar */}
                       <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md space-y-1.5">
                         <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-slate-400 border-b border-white/5 pb-1">
-                          <span>ศักยภาพตั้งต้น (HOW): <strong className="text-[#e6d0a7]">{outerSummary.avgInner}</strong> / 10</span>
-                          <span>ผลสัมฤทธิ์จริง (WHAT): <strong className="text-white">{outerSummary.avgOuter}</strong> / 10</span>
+                          <span>{vocab.howLabel}: <strong className="text-[#e6d0a7]">{outerSummary.avgInner}</strong> / 10</span>
+                          <span>{vocab.whatLabel}: <strong className="text-white">{outerSummary.avgOuter}</strong> / 10</span>
                           <span className={outerSummary.gap >= 0 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-                            Gap: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
+                            {vocab.gapLabel}: {outerSummary.gap > 0 ? `+${outerSummary.gap}` : outerSummary.gap}
                           </span>
                         </div>
                         <p className="text-[9px] sm:text-[10px] text-slate-300 leading-tight">
@@ -1123,7 +1125,7 @@ export default function TeamStatusTab({
                         </p>
                         {outerSummary.coachingAdvice && (
                           <div className="text-[8.5px] sm:text-[9.5px] text-[#e6d0a7] bg-[#bca374]/10 p-1.5 rounded border border-[#bca374]/20 leading-tight">
-                            📢 <strong>โค้ชชิ่งประจำวัน (Standup):</strong> {outerSummary.coachingAdvice}
+                            <strong>{vocab.coaching}</strong> {outerSummary.coachingAdvice}
                           </div>
                         )}
                       </div>
@@ -1147,7 +1149,7 @@ export default function TeamStatusTab({
                               title={hasPenalty ? `${def.desc || o.n} (คะแนนประเมิน ${o.rawVal} - แต้มหักวินัยห้องตัดสิน ${o.penalty})` : (def.desc || o.n)}
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{def.short || o.n}</span>
+                                <span className="text-[7.5px] sm:text-[8px] text-slate-400 uppercase tracking-tighter truncate">{getOuterShort(o.k, talentViewMode, def.short || o.n)}</span>
                                 {hasPenalty && (
                                   <span className="text-[7px] font-bold px-1 rounded bg-rose-950/80 text-rose-300 border border-rose-500/50">
                                     -{o.penalty}
@@ -1226,15 +1228,15 @@ export default function TeamStatusTab({
                   <div className="w-full flex flex-col items-center justify-center max-w-[340px] max-h-[90%] overflow-y-auto custom-scrollbar bg-slate-900/90 p-4 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-300">
                     <div className="w-full flex justify-between items-center mb-2">
                       <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider flex items-center gap-1">
-                        <Icon name="grid" size={13} /> MCKINSEY 9-BOX MATRIX
+                        <Icon name="grid" size={13} /> {vocab.nineBoxHeading}
                       </span>
                       {outerSummary.isAssessed ? (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          ประเมินแล้ว
+                          {vocab.nineBoxDone}
                         </span>
                       ) : (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          รอประเมิน WHAT
+                          {vocab.nineBoxPending}
                         </span>
                       )}
                     </div>
@@ -1256,7 +1258,7 @@ export default function TeamStatusTab({
                             }`}
                           >
                             <span className={`text-[8.5px] font-bold leading-tight ${isMatched ? 'text-white font-black' : ''}`}>
-                              {cell.title}
+                              {getNineBoxDisplay(cell.code, talentViewMode, cell).title}
                             </span>
                             {isMatched && (
                               <span className="text-[7.5px] font-black text-sky-300 uppercase mt-0.5">
@@ -1277,12 +1279,12 @@ export default function TeamStatusTab({
                       {outerSummary.isAssessed ? (
                         <>
                           <div className="flex justify-between items-center mb-1">
-                            <strong className="text-sky-300 font-bold">{outerSummary.talentGrid?.title}</strong>
+                            <strong className="text-sky-300 font-bold">{getNineBoxDisplay(outerSummary.talentGrid?.key, talentViewMode, outerSummary.talentGrid).title}</strong>
                             <span className="text-[8.5px] text-slate-400 font-mono">
-                              HOW: {outerSummary.avgInner} | WHAT: {outerSummary.avgOuter}
+                              {isCorporate ? 'Potential' : 'Base'}: {outerSummary.avgInner} | {isCorporate ? 'Performance' : 'Field'}: {outerSummary.avgOuter}
                             </span>
                           </div>
-                          <p className="text-[8.5px] text-slate-400">{outerSummary.talentGrid?.action}</p>
+                          <p className="text-[8.5px] text-slate-400">{getNineBoxDisplay(outerSummary.talentGrid?.key, talentViewMode, outerSummary.talentGrid).action}</p>
                         </>
                       ) : (
                         <div className="flex flex-col gap-1 text-center">
@@ -1335,12 +1337,12 @@ export default function TeamStatusTab({
                           <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">
                             <div className="flex justify-between items-center mb-1">
                               <strong className="text-[#e6d0a7] font-black text-xs">
-                                {o.isAssessed ? o.performanceDna.title : 'สเตตัสศักยภาพตั้งต้น (HOW)'}
+                                {o.isAssessed ? getDnaTitle(o.performanceDna, talentViewMode) : vocab.howLabel}
                               </strong>
                               <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded border ${
                                 o.isAssessed ? o.alignmentBadge : 'bg-slate-800 text-slate-400 border-slate-700'
                               }`}>
-                                {o.isAssessed ? o.alignmentTitle.split(' (')[0] : 'ยังไม่ประเมิน 6 แกน'}
+                                {o.isAssessed ? getAlignmentDisplay(o.alignmentKey, talentViewMode, { title: o.alignmentTitle }).title.split(' (')[0] : vocab.unassessedBadge}
                               </span>
                             </div>
                             <p className="text-[9px] text-slate-400 leading-snug">
