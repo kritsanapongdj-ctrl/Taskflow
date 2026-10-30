@@ -87,6 +87,12 @@ const formatThaiMonthStr = (mStr, short = false) => {
   return short ? `${list[m]} ${thaiY}` : `${list[m]} ${fullThaiY}`;
 };
 
+const extractProjCode = (projStr) => {
+  if (!projStr) return '';
+  const m = String(projStr).match(/([A-Z]{2}-\d{3})/i);
+  return m ? m[1].toUpperCase() : '';
+};
+
 export default function BudgetTab({
   tasks = [],
   gFilt = {},
@@ -105,6 +111,7 @@ export default function BudgetTab({
   const [woSearch, setWoSearch] = useState('');
   const [viewMode, setViewMode] = useState('cycle'); // 'cycle' (วงจร +2 เดือน) | 'trend' (แนวโน้มรายเดือน) | 'wos' (เจาะลึกใบสั่งซ่อม)
   const [expandedWOs, setExpandedWOs] = useState({});
+  const [showAllSiteWOs, setShowAllSiteWOs] = useState(false);
 
   const [forecastData, setForecastData] = useState(null);
   const [woExpensesData, setWoExpensesData] = useState(null);
@@ -184,8 +191,15 @@ export default function BudgetTab({
         const cost = Number(t.costAmount || 0);
         map[bMonth].total += cost;
 
+        const pCode = extractProjCode(t.project);
+        if (pCode) {
+          map[bMonth].byProject[pCode] = (map[bMonth].byProject[pCode] || 0) + cost;
+        }
+
         const pStd = getStdProj(t.project);
-        map[bMonth].byProject[pStd] = (map[bMonth].byProject[pStd] || 0) + cost;
+        if (pStd) {
+          map[bMonth].byProject[pStd] = (map[bMonth].byProject[pStd] || 0) + cost;
+        }
 
         if (Array.isArray(t.costBreakdown)) {
           t.costBreakdown.forEach((item) => {
@@ -243,7 +257,9 @@ export default function BudgetTab({
       } else {
         const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
         const std = singleP ? getStdProj(singleP.name) : '';
-        committedInBilling = taskCommittedByMonth[bMonth]?.byProject?.[std] || 0;
+        committedInBilling = (taskCommittedByMonth[bMonth]?.byProject?.[selectedProj])
+          || (taskCommittedByMonth[bMonth]?.byProject?.[std])
+          || 0;
       }
 
       // 2. เพดานงบประมาณของเดือนจ่าย (pMonth)
@@ -288,7 +304,9 @@ export default function BudgetTab({
         } else {
           const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
           const std = singleP ? getStdProj(singleP.name) : '';
-          totalCommitted += taskCommittedByMonth[mKey]?.byProject?.[std] || 0;
+          totalCommitted += (taskCommittedByMonth[mKey]?.byProject?.[selectedProj])
+            || (taskCommittedByMonth[mKey]?.byProject?.[std])
+            || 0;
         }
       }
       const available = Math.max(0, totalBudget - (totalCommitted + totalActual));
@@ -314,7 +332,9 @@ export default function BudgetTab({
     } else {
       const singleP = CORE_11_PROJECTS.find(p => p.code === selectedProj);
       const std = singleP ? getStdProj(singleP.name) : '';
-      committed = taskCommittedByMonth[selectedBillingMonth]?.byProject?.[std] || 0;
+      committed = (taskCommittedByMonth[selectedBillingMonth]?.byProject?.[selectedProj])
+        || (taskCommittedByMonth[selectedBillingMonth]?.byProject?.[std])
+        || 0;
     }
 
     const available = Math.max(0, targetBudget - (committed + actualSpent));
@@ -334,7 +354,14 @@ export default function BudgetTab({
     if (!woExpensesData?.workOrders) return [];
     const list = Object.values(woExpensesData.workOrders).filter((w) => {
       const matchProj = selectedProj === 'ALL' || w.projectCode === selectedProj;
-      const matchPeriod = selectedBillingMonth === 'ALL' || w.approvalPeriod === selectedBillingMonth;
+
+      let matchPeriod = true;
+      if (!showAllSiteWOs && selectedBillingMonth !== 'ALL') {
+        const linked = taskByWO[w.woNo];
+        const taskMonth = linked ? (linked.billingMonth || (linked.completedDate ? linked.completedDate.slice(0, 7) : '')) : '';
+        matchPeriod = w.approvalPeriod === selectedBillingMonth || taskMonth === selectedBillingMonth;
+      }
+
       let matchAccount = true;
       if (accountFilter !== 'ALL') {
         const targetCodes = TARGET_ACCOUNT_CODES.filter((ac) => ac.group === accountFilter).map((ac) => ac.code);
@@ -350,7 +377,7 @@ export default function BudgetTab({
     });
 
     return list.sort((a, b) => (b.totalCost || 0) - (a.totalCost || 0));
-  }, [woExpensesData, selectedProj, selectedBillingMonth, accountFilter, woSearch]);
+  }, [woExpensesData, selectedProj, selectedBillingMonth, showAllSiteWOs, taskByWO, accountFilter, woSearch]);
 
   const filteredWOsTotalCost = useMemo(() => {
     return filteredWorkOrders.reduce((sum, w) => sum + (w.totalCost || 0), 0);
@@ -809,15 +836,30 @@ export default function BudgetTab({
                 <Icon name="fileText" size={16} className="text-[#7A1C28]" />
                 <span>รายการใบสั่งซ่อมจริงจากระบบ LHServ</span>
                 {selectedProj !== 'ALL' && <span className="text-[#003C71]">[{selectedProj}]</span>}
-                <span className="text-slate-500 font-normal">งวด {formatThaiMonthStr(selectedBillingMonth)}</span>
+                <span className="text-slate-500 font-normal">
+                  {showAllSiteWOs ? '(ทุกงวดเต็มปี 2569)' : `งวด ${formatThaiMonthStr(selectedBillingMonth)}`}
+                </span>
               </h3>
               <p className="text-xs text-slate-400">
                 คลิกแถวรายการเพื่อดูการแจกแจงค่าแรง ค่าของ และบวก 20% ตามใบแจ้งซ่อม
               </p>
             </div>
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-              รวม {filteredWorkOrders.length} รายการ (฿{filteredWOsTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })})
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAllSiteWOs(!showAllSiteWOs)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border shadow-2xs ${
+                  showAllSiteWOs
+                    ? 'bg-[#003C71] text-white border-[#003C71]'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                {showAllSiteWOs ? '📋 กำลังแสดง WO ทั้งปี (100%)' : '🔍 ดู WO ทั้งหมดของไซต์นี้'}
+              </button>
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                รวม {filteredWorkOrders.length} รายการ (฿{filteredWOsTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
