@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-// 9 หมวดบัญชีหลักตามมาตรฐานรายงานบัญชีกลาง LH
+// 13 หมวดบัญชีตามมาตรฐานรายงานบัญชีกลาง LH
 const ACCOUNT_META = {
   '54010': { name: 'ค่าซ่อม-สโมสร,สระว่ายน้ำ', shortName: 'ซ่อมสโมสร/สระ', group: 'VARIABLE', groupName: 'ผันแปร', color: '#6366F1', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   '54011': { name: 'ค่าซ่อม-ต้นไม้,สวน', shortName: 'ซ่อมต้นไม้/สวน', group: 'VARIABLE', groupName: 'ผันแปร', color: '#10B981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -23,7 +23,11 @@ const ACCOUNT_META = {
   '54021': { name: 'ค่าบริหาร-ควบคุมงานซ่อม(รายเดือน)', shortName: 'ค่าบริหารควบคุมงาน', group: 'FIXED', groupName: 'คงที่', color: '#8B5CF6', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
   '54107': { name: 'ค่าน้ำประปา-บริษัท', shortName: 'ค่าน้ำประปา', group: 'UTILITY', groupName: 'สาธารณูปโภค', color: '#0284C7', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
   '54108': { name: 'ค่าไฟฟ้า-บริษัท', shortName: 'ค่าไฟฟ้า', group: 'UTILITY', groupName: 'สาธารณูปโภค', color: '#EAB308', badge: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
-  '54111': { name: 'คชจ.ดูแลสวน(จัดสรรใหม่)', shortName: 'สัญญาดูแลสวน', group: 'FIXED', groupName: 'คงที่', color: '#14B8A6', badge: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+  '54111': { name: 'คชจ.ดูแลสวน(จัดสรรใหม่)', shortName: 'สัญญาดูแลสวน', group: 'FIXED', groupName: 'คงที่', color: '#14B8A6', badge: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  '54110': { name: 'ค่าซ่อมแซม-อาคารสโมสร/ส่วนกลาง', shortName: 'ซ่อมสโมสร', group: 'VARIABLE', groupName: 'ผันแปร', color: '#6366F1', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  '54210': { name: 'ค่าบำรุงรักษา-อาคารสโมสร/ส่วนกลาง', shortName: 'บำรุงรักษาสโมสร', group: 'MAINTENANCE', groupName: 'บำรุงรักษา', color: '#F59E0B', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  '54102': { name: 'ค่าบริการส่วนกลางจัดสรร', shortName: 'ส่วนกลางจัดสรร', group: 'FIXED', groupName: 'คงที่', color: '#8B5CF6', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  '54202': { name: 'ค่าบำรุงรักษาส่วนกลางจัดสรร', shortName: 'บำรุงส่วนกลาง', group: 'MAINTENANCE', groupName: 'บำรุงรักษา', color: '#F59E0B', badge: 'bg-amber-50 text-amber-700 border-amber-200' }
 };
 
 const getAccountName = (code) => ACCOUNT_META[code]?.name || `รหัสบัญชี ${code}`;
@@ -146,7 +150,17 @@ export default function BudgetTab({
 
       const woRef = doc(db, 'artifacts', 'default-app-id', 'public', 'data', 'lh_scraper', 'work_order_expenses');
       const unsubWO = onSnapshot(woRef, (snap) => {
-        if (snap.exists()) setWoExpensesData(snap.data());
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d.workOrdersJson && typeof d.workOrdersJson === 'string') {
+            try {
+              d.workOrders = JSON.parse(d.workOrdersJson);
+            } catch (e) {
+              console.error('Failed to parse workOrdersJson', e);
+            }
+          }
+          setWoExpensesData(d);
+        }
       }, () => {});
 
       return () => {
@@ -205,7 +219,7 @@ export default function BudgetTab({
         // เดือนที่ส่งเบิก: อิงจาก billingMonth หรือ completedDate หรือ openedMonth
         const bMonth = t.billingMonth || (t.completedDate ? t.completedDate.slice(0, 7) : '') || (t.openedDate ? t.openedDate.slice(0, 7) : '2026-10');
         if (!bMonth) return;
-        if (!map[bMonth]) map[bMonth] = { total: 0, byProject: {}, byAccount: {} };
+        if (!map[bMonth]) map[bMonth] = { total: 0, byProject: {}, byAccount: {}, byProjAccount: {} };
 
         const cost = Number(t.costAmount || 0);
         map[bMonth].total += cost;
@@ -223,24 +237,29 @@ export default function BudgetTab({
         if (Array.isArray(t.costBreakdown) && t.costBreakdown.length > 0) {
           t.costBreakdown.forEach((item) => {
             const ac = item.accountCode || '54012';
-            const fee = Number(item.feeCost || 0);
+            const fee = Number(item.feeCost || item.directCost || 0);
             map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + fee;
             if (pCode) {
+              if (!map[bMonth].byProjAccount) map[bMonth].byProjAccount = {};
               if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
               map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + fee;
             }
           });
         } else if (Array.isArray(t.costAccounts) && t.costAccounts.length > 0) {
-          const ac = t.costAccounts[0];
-          map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + cost;
-          if (pCode) {
-            if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
-            map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + cost;
-          }
+          // โชว์ยอดเต็มตามคำสั่งผู้ใช้ สำหรับรหัสบัญชีที่ระบุคู่กัน
+          t.costAccounts.forEach((ac) => {
+            map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + cost;
+            if (pCode) {
+              if (!map[bMonth].byProjAccount) map[bMonth].byProjAccount = {};
+              if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
+              map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + cost;
+            }
+          });
         } else if (cost > 0) {
           const ac = '54012';
           map[bMonth].byAccount[ac] = (map[bMonth].byAccount[ac] || 0) + cost;
           if (pCode) {
+            if (!map[bMonth].byProjAccount) map[bMonth].byProjAccount = {};
             if (!map[bMonth].byProjAccount[pCode]) map[bMonth].byProjAccount[pCode] = {};
             map[bMonth].byProjAccount[pCode][ac] = (map[bMonth].byProjAccount[pCode][ac] || 0) + cost;
           }
@@ -464,7 +483,7 @@ export default function BudgetTab({
 
   // สรุปข้อมูลรายหมวดบัญชี (Account Code Summary) ประจำงวดเดือน หรือทั้งปี
   const accountMonthlySummary = useMemo(() => {
-    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111'];
+    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111', '54110', '54210'];
 
     return targetCodes.map((acCode) => {
       const meta = ACCOUNT_META[acCode] || {
@@ -561,7 +580,7 @@ export default function BudgetTab({
 
   // ตาราง Matrix 12 เดือน แยกตามรหัสบัญชี (12-Month Matrix: Account x Month)
   const account12MonthMatrix = useMemo(() => {
-    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111'];
+    const targetCodes = ['54010', '54011', '54012', '54014', '54015', '54021', '54107', '54108', '54111', '54110', '54210'];
 
     return targetCodes.map((acCode) => {
       const meta = ACCOUNT_META[acCode] || { name: acCode, shortName: acCode, groupName: '' };
