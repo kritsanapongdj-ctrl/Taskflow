@@ -79,6 +79,26 @@ export default function TeamStatusTab({
   const [activeSubTab, setActiveSubTab] = useState('performance'); // 'performance' | 'field_logs' | 'settings'
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
+  const [listCollapsed, setListCollapsed] = useState(() => {
+    try { return localStorage.getItem('teamListCollapsed') === '1'; } catch { return false; }
+  });
+  const toggleListCollapsed = React.useCallback(() => {
+    setListCollapsed(prev => {
+      try { localStorage.setItem('teamListCollapsed', prev ? '0' : '1'); } catch { /* ignore */ }
+      return !prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== '[') return;
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
+      toggleListCollapsed();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggleListCollapsed]);
 
   const now = new Date();
   const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -95,6 +115,15 @@ export default function TeamStatusTab({
   }, [currentMonth]);
 
   const sList = sets?.staffStats || [];
+  // ผู้ตัดสิน = ชื่อที่ตั้งอีเมล @lh.co.th ไว้ในการตั้งค่า (sets.emails: "email|projects|name")
+  const judgeOptions = React.useMemo(() => {
+    const names = new Set();
+    (sets?.emails || []).forEach(entry => {
+      const [em = '', , name = ''] = String(entry).split('|');
+      if (name.trim() && em.trim().toLowerCase().endsWith('@lh.co.th')) names.add(name.trim());
+    });
+    return [...names];
+  }, [sets?.emails]);
   const classMap = (sets?.staffClasses || []).reduce((a, c) => { a[c.id] = c; return a; }, {});
 
   // Escape key exits Focus Mode
@@ -2269,10 +2298,21 @@ export default function TeamStatusTab({
 
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
-        <div className="w-full md:w-72 bg-white border rounded-xl shadow-sm flex flex-col min-h-[300px] max-h-[350px] md:max-h-none md:h-full shrink-0">
-          <div className="p-3 sm:p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl gap-1">
-            <h3 className="font-bold text-[#0f2e4a] text-sm truncate">รายชื่อทีมงาน</h3>
+        <div className={`w-full ${listCollapsed ? 'md:w-16' : 'md:w-72'} bg-white border rounded-xl shadow-sm flex flex-col ${listCollapsed ? 'min-h-0 max-h-[120px]' : 'min-h-[300px] max-h-[350px]'} md:max-h-none md:min-h-0 md:h-full shrink-0 transition-[width] duration-200`}>
+          <div className={`p-3 sm:p-4 border-b flex ${listCollapsed ? 'justify-center' : 'justify-between'} items-center bg-gray-50 rounded-t-xl gap-1`}>
+            {!listCollapsed && <h3 className="font-bold text-[#0f2e4a] text-sm truncate">รายชื่อทีมงาน</h3>}
             <div className="flex items-center gap-1.5 shrink-0">
+               <button
+                 type="button"
+                 onClick={toggleListCollapsed}
+                 title={listCollapsed ? 'ขยายรายชื่อ ( [ )' : 'ย่อรายชื่อ ( [ )'}
+                 aria-label={listCollapsed ? 'ขยายรายชื่อทีมงาน' : 'ย่อรายชื่อทีมงาน'}
+                 aria-expanded={!listCollapsed}
+                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-[#0f2e4a] hover:bg-gray-100 transition cursor-pointer"
+               >
+                 <Icon name={listCollapsed ? 'chevronRight' : 'chevronLeft'} size={16} />
+               </button>
+               {!listCollapsed && <>
                <button 
                  type="button" 
                  onClick={() => {
@@ -2321,6 +2361,7 @@ export default function TeamStatusTab({
                >
                  + เพิ่ม
                </button>
+               </>}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
@@ -2329,14 +2370,14 @@ export default function TeamStatusTab({
                 setSelTeam(s);
                 const assigned = (s.assignedProjects && s.assignedProjects.length > 0) ? s.assignedProjects : getStaffAssignedProjects(s, sets);
                 setTeamForm({ ...s, assignedProjects: assigned, email: s.email || '' });
-              }} className={`flex items-center p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
-                {s.image ? <img src={s.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-white/50" /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{(s?.name || '').substring(0,2)}</div>}
-                <div className="truncate flex-1">
+              }} title={listCollapsed ? `${s.name} • ${classMap[s.classId]?.name || ''}` : undefined} className={`flex items-center ${listCollapsed ? 'justify-center' : ''} p-2 rounded-lg cursor-pointer transition ${selTeam?.id===s.id ? 'bg-[#0f2e4a] text-white' : 'hover:bg-blue-50 text-gray-700'}`}>
+                {s.image ? <img src={s.image} className={`w-8 h-8 rounded-full object-cover ${listCollapsed ? '' : 'mr-3'} border border-white/50`} /> : <div className={`w-8 h-8 rounded-full flex items-center justify-center ${listCollapsed ? '' : 'mr-3'} text-xs font-bold ${selTeam?.id===s.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{(s?.name || '').substring(0,2)}</div>}
+                {!listCollapsed && <div className="truncate flex-1">
                   <div className="font-bold text-sm truncate">{s.name}</div>
                   <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
                   <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{getArchetypeIdentity(s) || s.potentialIdentity}</div>
-                </div>
-                {selTeam?.id === s.id && (
+                </div>}
+                {!listCollapsed && selTeam?.id === s.id && (
                   <div className="flex items-center gap-1 ml-1" onClick={(e) => e.stopPropagation()}>
                     <button type="button" onClick={() => { handleSelectStaff(s); setIsFocusMode(true); }} title="เปิดห้องตัดสินเต็มจอ (Focus Mode)" className="p-1 rounded bg-white/20 hover:bg-white/30 text-amber-300 transition"><Icon name="maximize2" size={11} /></button>
                     <button type="button" onClick={() => handleOpenInNewTab(s.id)} title="เปิดในแท็บใหม่" className="p-1 rounded bg-white/20 hover:bg-white/30 text-sky-200 transition"><Icon name="externalLink" size={11} /></button>
@@ -2432,6 +2473,7 @@ export default function TeamStatusTab({
           isSupervisor={isSupervisor}
           supervisorSession={supervisorSession}
           onOpenSupervisorModal={onOpenSupervisorModal}
+          judgeOptions={judgeOptions}
           Icon={Icon}
         />
       </div>

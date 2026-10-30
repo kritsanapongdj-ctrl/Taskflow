@@ -14,12 +14,15 @@ export default function DiscrepancyAuditModal({
   isSupervisor = false,
   supervisorSession = null,
   onOpenSupervisorModal = null,
+  judgeOptions = [],
   Icon
 }) {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'LATE_COMPLETED' | 'LATE_WO' | 'STALE_TASK' | 'SPARE_PARTS_45D' | 'RETROACTIVE' | 'PENALTY_SPARE_PART' | 'BILLING' | 'PRIOR_RESOLVED'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [savingTaskId, setSavingTaskId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusView, setStatusView] = useState('pending'); // 'pending' | 'decided' | 'all'
+  const [judgeFilter, setJudgeFilter] = useState('');
   const PAGE_SIZE = 20;
 
   const formatMonthThai = (mStr) => {
@@ -37,6 +40,7 @@ export default function DiscrepancyAuditModal({
     if (isOpen) {
       setCurrentPage(1);
       if (initialTaskId) {
+        setStatusView('all');
         const allItems = [...discrepancyTasks, ...priorResolvedTasks];
         const targetItem = allItems.find(i => String(i.task.id) === String(initialTaskId));
         if (targetItem) {
@@ -58,33 +62,40 @@ export default function DiscrepancyAuditModal({
     }
   }, [isOpen, initialTaskId, discrepancyTasks, priorResolvedTasks]);
 
+  const statusItems = useMemo(() => discrepancyTasks.filter(item => {
+    const decided = !!item.attribution?.isExplicit;
+    if (statusView === 'pending' && decided) return false;
+    if (statusView === 'decided' && !decided) return false;
+    if (judgeFilter && (!decided || String(item.attribution?.by || '').trim() !== judgeFilter)) return false;
+    return true;
+  }), [discrepancyTasks, statusView, judgeFilter]);
+
   const filteredItems = useMemo(() => {
     if (!isOpen) return [];
     if (activeTab === 'PRIOR_RESOLVED') return priorResolvedTasks;
-    return discrepancyTasks.filter(item => {
+    return statusItems.filter(item => {
       if (activeTab === 'ALL') return true;
-      if (activeTab === 'LATE_COMPLETED') return item.type === 'LATE_COMPLETED';
-      if (activeTab === 'LATE_WO') return item.type === 'LATE_WO';
-      if (activeTab === 'STALE_TASK') return item.type === 'STALE_TASK';
-      if (activeTab === 'SPARE_PARTS_45D') return item.type === 'SPARE_PARTS_45D';
       if (activeTab === 'RETROACTIVE') return item.type === 'RETROACTIVE_START' || item.type === 'RETROACTIVE_END';
-      if (activeTab === 'PENALTY_SPARE_PART') return item.type === 'PENALTY_SPARE_PART';
       if (activeTab === 'BILLING') return item.type === 'BILLING_CUTOFF';
-      return true;
+      return item.type === activeTab;
     });
-  }, [isOpen, activeTab, priorResolvedTasks, discrepancyTasks]);
+  }, [isOpen, activeTab, priorResolvedTasks, statusItems]);
 
-  const counts = useMemo(() => ({
-    lateCompleted: discrepancyTasks.filter(i => i.type === 'LATE_COMPLETED').length,
-    lateWO: discrepancyTasks.filter(i => i.type === 'LATE_WO').length,
-    stale: discrepancyTasks.filter(i => i.type === 'STALE_TASK').length,
-    parts: discrepancyTasks.filter(i => i.type === 'SPARE_PARTS_45D').length,
-    retro: discrepancyTasks.filter(i => i.type === 'RETROACTIVE_START' || i.type === 'RETROACTIVE_END').length,
-    penalty: discrepancyTasks.filter(i => i.type === 'PENALTY_SPARE_PART').length,
-    billing: discrepancyTasks.filter(i => i.type === 'BILLING_CUTOFF').length,
-  }), [discrepancyTasks]);
+  const pendingCount = useMemo(() => discrepancyTasks.filter(i => !i.attribution?.isExplicit).length, [discrepancyTasks]);
+  const decidedCount = discrepancyTasks.length - pendingCount;
 
-  const { lateCompleted: lateCompletedCount, lateWO: lateWOCount, stale: staleCount, parts: partsCount, retro: retroCount, penalty: penaltyCount, billing: billingCount } = counts;
+  const typeCount = (pred) => statusItems.filter(pred).length;
+  const typeOptions = [
+    { id: 'ALL', label: 'ทุกประเภท', count: statusItems.length },
+    { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: typeCount(i => i.type === 'LATE_COMPLETED') },
+    { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: typeCount(i => i.type === 'LATE_WO') },
+    { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: typeCount(i => i.type === 'STALE_TASK') },
+    { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: typeCount(i => i.type === 'SPARE_PARTS_45D') },
+    { id: 'RETROACTIVE', label: 'เลื่อนวันย้อนหลัง', count: typeCount(i => i.type === 'RETROACTIVE_START' || i.type === 'RETROACTIVE_END') },
+    { id: 'PENALTY_SPARE_PART', label: 'ผิดวินัยอะไหล่', count: typeCount(i => i.type === 'PENALTY_SPARE_PART') },
+    { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: typeCount(i => i.type === 'BILLING_CUTOFF') },
+    ...(priorResolvedTasks.length > 0 ? [{ id: 'PRIOR_RESOLVED', label: 'ตัดสินแล้วในเดือนก่อนหน้า', count: priorResolvedTasks.length }] : [])
+  ];
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const paginatedItems = useMemo(() => {
@@ -248,38 +259,51 @@ export default function DiscrepancyAuditModal({
           </div>
         </div>
 
-        {/* Tab Filters (Hidden during Single-Task Focus View for clean, distraction-free typing) */}
+        {/* Filters (hidden during single-task focus view) */}
         {!editingItem && (
-          <div className="bg-slate-950/60 p-2 sm:p-3 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs shrink-0 overflow-x-auto">
-            {[
-              { id: 'ALL', label: 'ทั้งหมดรอบเดือนนี้', count: discrepancyTasks.length },
-              { id: 'LATE_COMPLETED', label: 'จบงานช้า (SLA)', count: lateCompletedCount },
-              { id: 'LATE_WO', label: 'ออกใบงานช้า (>3 วัน)', count: lateWOCount },
-              { id: 'STALE_TASK', label: 'งานค้างทิ้งร้าง (>7 วัน)', count: staleCount },
-              { id: 'SPARE_PARTS_45D', label: 'รออะไหล่ (>45 วัน)', count: partsCount },
-              { id: 'RETROACTIVE', label: 'เลื่อนวันย้อนหลัง', count: retroCount },
-              { id: 'PENALTY_SPARE_PART', label: '🚨 ผิดวินัยอะไหล่', count: penaltyCount },
-              { id: 'BILLING', label: 'หลุดรอบเบิกจ่าย 15th', count: billingCount },
-              ...(priorResolvedTasks.length > 0 ? [{ id: 'PRIOR_RESOLVED', label: '🏛️ ตัดสินแล้วในเดือนก่อนหน้า', count: priorResolvedTasks.length }] : [])
-            ].map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabChange(tab.id)}
-                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === tab.id
-                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                    : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                }`}
+          <div className="bg-slate-950/60 p-3 border-b border-slate-800 flex flex-wrap items-center gap-2 text-sm shrink-0">
+            <div role="tablist" aria-label="สถานะการตัดสิน" className="flex rounded-lg border border-slate-700 overflow-hidden">
+              {[
+                { id: 'pending', label: 'รอตัดสิน', count: pendingCount },
+                { id: 'decided', label: 'ตัดสินแล้ว', count: decidedCount },
+                { id: 'all', label: 'ทั้งหมด', count: discrepancyTasks.length }
+              ].map(v => (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusView === v.id}
+                  onClick={() => { setStatusView(v.id); setCurrentPage(1); if (activeTab === 'PRIOR_RESOLVED') setActiveTab('ALL'); }}
+                  className={`px-3 py-2 min-h-[40px] text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${statusView === v.id ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}
+                >
+                  {v.label}
+                  <span className={`text-xs px-1.5 rounded-full ${statusView === v.id ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>{v.count}</span>
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={activeTab}
+              onChange={(e) => handleTabChange(e.target.value)}
+              aria-label="ประเภทความผิดปกติ"
+              className="min-h-[40px] px-3 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm font-semibold cursor-pointer"
+            >
+              {typeOptions.map(t => (
+                <option key={t.id} value={t.id}>{t.label} ({t.count})</option>
+              ))}
+            </select>
+
+            {judgeOptions.length > 0 && (
+              <select
+                value={judgeFilter}
+                onChange={(e) => { setJudgeFilter(e.target.value); setCurrentPage(1); if (e.target.value && statusView === 'pending') setStatusView('decided'); }}
+                aria-label="กรองตามผู้ตัดสิน"
+                className="min-h-[40px] px-3 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-sm font-semibold cursor-pointer"
               >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  activeTab === tab.id ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
+                <option value="">ผู้ตัดสิน: ทุกคน</option>
+                {judgeOptions.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            )}
           </div>
         )}
 
@@ -364,105 +388,46 @@ export default function DiscrepancyAuditModal({
               ) : (
                 paginatedItems.map((item, idx) => {
                   const attr = item.attribution || {};
+                  const decided = !!attr.isExplicit;
                   const isWaived = attr.role === 'waived';
-                  const isExplicit = attr.isExplicit;
+                  const roleLabel = { foreman: 'Foreman 100%', admin: 'Admin 100%', shared: 'ร่วมกัน', waived: 'ยกเว้น' }[attr.role];
 
                   return (
-                    <div 
+                    <div
                       key={`${item.task.id}-${idx}`}
-                      className={`bg-slate-900/90 rounded-xl border p-4 transition ${
-                        isWaived 
-                          ? 'border-emerald-500/30 bg-emerald-950/10' 
-                          : item.type === 'PENALTY_SPARE_PART'
-                          ? 'border-rose-500/50 bg-rose-950/20'
-                          : 'border-slate-800 hover:border-slate-600'
-                      }`}
+                      onClick={() => handleStartEdit(item)}
+                      title="คลิกเพื่อวินิจฉัย/ปรับสิทธิ์งานนี้"
+                      className={`rounded-lg border px-4 py-3 cursor-pointer transition flex items-start justify-between gap-3 ${
+                        decided ? 'border-slate-800 bg-slate-900/50 hover:border-slate-600' : 'border-slate-700 bg-slate-900 hover:border-amber-500/60'
+                      } ${item.type === 'PENALTY_SPARE_PART' && !decided ? 'border-l-4 border-l-rose-500' : ''}`}
                     >
-                      <div 
-                        className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 cursor-pointer group"
-                        onClick={() => handleStartEdit(item)}
-                        title="คลิกเพื่อวินิจฉัย/ปรับสิทธิ์งานนี้"
-                      >
-                        {/* Left: Task Info & Trigger Violation */}
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-amber-300 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                              {item.task.id}
-                            </span>
-                            <span className="text-white font-semibold text-xs truncate max-w-[220px]">
-                              {item.task.project}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              • สถานะ: <strong className="text-slate-200">{item.task.status}</strong>
-                            </span>
-                          </div>
-
-                          <div className="text-sm font-bold text-white leading-snug">
-                            {item.task.details}
-                          </div>
-
-                          <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
-                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10.5px] font-bold">
-                              ⚠️ {item.title}
-                            </span>
-                            <span className="text-slate-400 text-[11px]">
-                              {item.desc}
-                            </span>
-                          </div>
-
-                          {/* Current Attribution Box */}
-                          <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 text-xs flex flex-wrap items-center justify-between gap-2 mt-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-400 text-[11px]">การกำหนดความรับผิดชอบ RACI:</span>
-                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
-                                attr.role === 'foreman'
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : attr.role === 'admin'
-                                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                                  : attr.role === 'waived'
-                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                                  : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                              }`}>
-                                {attr.role === 'foreman' && '🛠️ Foreman (รับผิดชอบ 100%)'}
-                                {attr.role === 'admin' && '📋 Admin (รับผิดชอบ 100%)'}
-                                {attr.role === 'shared' && '🤝 ร่วมกัน (Shared)'}
-                                {attr.role === 'waived' && '🛡️ ได้รับการยกเว้น (Waived)'}
-                                {!attr.role && '⏳ ยังไม่ระบุ'}
-                              </span>
-                              {isExplicit ? (
-                                <span className="text-[10px] text-emerald-400 bg-emerald-950/50 px-1.5 py-0.2 rounded border border-emerald-800">
-                                  ✓ มีการวินิจฉัยโดย {attr.by || 'ผู้ดูแล'}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800">
-                                  (ระบบจัดสรรอัตโนมัติ)
-                                </span>
-                              )}
-                            </div>
-
-                            {attr.reason && (
-                              <div className="text-[11px] text-slate-300 italic w-full">
-                                "{attr.reason}"
-                              </div>
-                            )}
-                          </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          <span className="font-mono font-bold text-amber-300">{item.task.id}</span>
+                          <span className="text-slate-300 truncate max-w-[240px]">{item.task.project}</span>
+                          <span className="text-slate-500">• {item.task.status}</span>
                         </div>
-
-                        {/* Right: Actions */}
-                        <div className="shrink-0 flex items-center sm:flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEdit(item);
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"
-                          >
-                            <Icon name="scale" size={13} />
-                            <span>วินิจฉัย/ปรับสิทธิ์</span>
-                          </button>
+                        <div className="text-sm font-semibold text-white leading-snug line-clamp-2">{item.task.details}</div>
+                        <div className="text-xs text-slate-400 leading-snug">
+                          <span className="text-rose-300 font-semibold">{item.title}</span>
+                          <span> — {item.desc}</span>
                         </div>
+                        {decided && (
+                          <div className="text-xs text-emerald-300 pt-0.5">
+                            ✓ {roleLabel || 'ตัดสินแล้ว'} • โดย {attr.by || 'ผู้ดูแล'}
+                            {attr.reason && <span className="text-slate-400 italic"> — "{attr.reason}"</span>}
+                          </div>
+                        )}
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleStartEdit(item); }}
+                        className={`shrink-0 min-h-[40px] px-3 rounded-lg text-sm font-bold transition cursor-pointer border ${
+                          decided ? 'bg-transparent text-slate-300 border-slate-700 hover:bg-slate-800' : 'bg-amber-500 text-slate-950 border-amber-500 hover:bg-amber-400'
+                        }`}
+                      >
+                        {decided ? (isWaived ? 'ดู/แก้ไข' : 'แก้ไข') : 'ตัดสิน'}
+                      </button>
                     </div>
                   );
                 })
