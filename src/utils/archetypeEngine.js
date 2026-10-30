@@ -251,6 +251,14 @@ export const getStatDisplay = (statKey, viewMode = 'rpg') => {
 };
 
 export const getCorporateArchetypePersona = (archetypeKey, mainStyle) => {
+  // Authored Corporate profile (title, Thai role, description, competencies, development, role fit)
+  const corp = defaultArchetypesData.find(a => a.key === archetypeKey)?.corporate;
+  if (corp) {
+    const tier = /^(Master|Senior)\s/.exec(mainStyle || '');
+    const prefix = tier ? (tier[1] === 'Master' ? 'Principal ' : 'Senior ') : '';
+    return { ...corp, title: prefix + corp.title };
+  }
+
   const map = {
     'uniform_1': { title: 'Critical Risk Profile', thai: 'กลุ่มความเสี่ยงวิกฤต' },
     'uniform_2': { title: 'Underperforming Associate', thai: 'กลุ่มต้องฟื้นฟูผลงานเร่งด่วน' },
@@ -380,10 +388,11 @@ export const calculateArchetypeKey = (statsObj, archetypesData = defaultArchetyp
   return validStats.slice(0, 2).map(s => s.key).sort().join('_');
 };
 
-export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetypesData) => {
+export const getArchetypeIdentity = (statsObj, archetypesData = defaultArchetypesData, viewMode = 'rpg') => {
   if (!statsObj) return '-';
   const key = calculateArchetypeKey(statsObj, archetypesData);
   const arch = archetypesData.find(a => a.key === key);
+  if (viewMode === 'corporate' && arch?.corporate) return `${arch.corporate.title} (${arch.corporate.thai})`;
   return arch?.identity || arch?.name || '-';
 };
 
@@ -611,6 +620,40 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     dynamicStrength = signatureStrengths.map(s => `${s.name} (${s.val}/10: ${s.desc})`).join(' | ');
   }
 
+  // --- Corporate-mode wording: same facts in competency language (no stat codes, no game terms) ---
+  const corpName = (k) => STAT_DEFINITIONS[k]?.corporate?.thai || k.toUpperCase();
+  const corpLowNames = sortedStats.filter(s => s[1] === minStat).map(s => corpName(s[0])).join(' และ');
+  let dynamicStrengthCorp;
+  if (maxStat < 5) {
+    const top = sortedStats[0];
+    dynamicStrengthCorp = `อยู่ระหว่างสร้างสมรรถนะพื้นฐาน (ทุกสมรรถนะต่ำกว่าเกณฑ์ 5/10) ยังไม่ถึงระดับปฏิบัติงานอิสระ${top[1] >= 3 ? ` • สมรรถนะที่เป็นจุดตั้งต้น: ${corpName(top[0])} (${top[1]}/10)` : ''}`;
+  } else if (signatureStrengths.length === 0) {
+    dynamicStrengthCorp = (minStat >= 4 && maxStat <= 5)
+      ? 'ผ่านเกณฑ์สมรรถนะมาตรฐาน (5/10) ครบทุกด้าน แต่ยังไม่มีสมรรถนะเด่นเฉพาะด้าน ควรกำหนดสายความเชี่ยวชาญใน IDP'
+      : `สมรรถนะที่ผ่านเกณฑ์: ${standardPass.map(s => `${corpName(s.key)} (${s.val}/10)`).join(' • ')} — ปฏิบัติงานตามมาตรฐานได้ครบถ้วน`;
+  } else {
+    dynamicStrengthCorp = signatureStrengths.map(s => `${corpName(s.key)} (${s.val}/10)`).join(' • ') + ' — อยู่ในระดับที่เป็นต้นแบบให้ทีมได้';
+  }
+
+  let dynamicWeaknessCorp;
+  let weaknessLabelCorp;
+  if (minStat >= 7) {
+    weaknessLabelCorp = 'สมรรถนะรอบด้าน:';
+    dynamicWeaknessCorp = 'สมรรถนะอยู่ในระดับสูงทุกด้าน เหมาะเป็นพี่เลี้ยง (Mentor) และผู้ถ่ายทอดความรู้ให้ทีม';
+  } else if (minStat >= 5) {
+    weaknessLabelCorp = 'เป้าหมายการพัฒนา:';
+    dynamicWeaknessCorp = `ทุกสมรรถนะผ่านเกณฑ์มาตรฐาน (5/10) โดย ${corpLowNames} อยู่ที่ ${minStat}/10 ควรตั้งเป้ายกระดับสู่ความเชี่ยวชาญตามสายงานใน IDP`;
+  } else if (sortedStats.filter(s => s[1] === minStat).every(s => roleProfile.flexibleStats.includes(s[0]))) {
+    weaknessLabelCorp = 'ประเด็นที่ทีมช่วยเสริมได้:';
+    dynamicWeaknessCorp = `${corpLowNames} (${minStat}/10) ต่ำกว่าเกณฑ์ แต่ไม่ใช่สมรรถนะหลักของบทบาท${roleProfile.shortRole} ควรจัดทีมให้มีผู้เสริมสมรรถนะนี้`;
+  } else if (minStat >= 3) {
+    weaknessLabelCorp = 'ประเด็นพัฒนาสมรรถนะ (IDP):';
+    dynamicWeaknessCorp = `${corpLowNames} (${minStat}/10) ต่ำกว่าเกณฑ์ ควรกำหนดแผนพัฒนารายบุคคล (IDP) พร้อมพี่เลี้ยงและติดตามผลทุกไตรมาส`;
+  } else {
+    weaknessLabelCorp = 'ประเด็นวิกฤตที่ต้องจัดการ:';
+    dynamicWeaknessCorp = `${corpLowNames} (${minStat}/10) ต่ำกว่าเกณฑ์มาก ต้องจัดทำแผนปรับปรุงผลงานและกำกับดูแลใกล้ชิดจนกว่าจะถึงเกณฑ์`;
+  }
+
   // --- Action Playbook for Managers (The 4-Box Talent Action Framework) ---
   let actionPlaybook = {
     type: 'specialize',
@@ -676,6 +719,11 @@ export const analyzeArchetype = (teamForm, _sets = {}, archetypesData = defaultA
     styleDesc,
     archetypeKey,
     archObj,
+    corporate: archObj.corporate || null,
+    dynamicStrengthCorp,
+    dynamicWeaknessCorp,
+    weaknessLabelCorp,
+    rpgExtras: archObj.rpg || null,
     dynamicWeakness,
     weaknessLabel,
     weaknessColor,
@@ -2224,7 +2272,7 @@ export const getDiscrepancyPenaltyShare = (item, roleType) => {
  * 1. Go-Live Cutoff: Tasks older than September 2569 (2026-09-01) are excluded as legacy/pre-launch data.
  * 2. Prior Resolution Roll-forward: Tasks decided by a supervisor in a prior month do not reappear in subsequent months.
  */
-export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, currentMonth = null) => {
+export const aggregateMonthTelemetry = (staff, tasks = [], sets = {}, currentMonth = null) => {
   const now = new Date();
   const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const activeMonth = currentMonth ? normalizeToGregorianDate(currentMonth).substring(0, 7) : currentSystemMonth;
@@ -2818,4 +2866,74 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   };
 };
 
+/**
+ * Rolling-quarter evaluation: period token "R3:YYYY-MM" = the 3 months ending at YYYY-MM.
+ * Each month is scored on its own (month-isolated audit), then the monthly axis deductions are blended with
+ * recency weights (oldest 20 / middle 30 / newest 50, renormalised over months that actually have work).
+ * Plain "YYYY-MM" (or null) keeps the single-month behaviour used by the audit room.
+ */
+export const ROLLING_RECENCY_WEIGHTS = [0.2, 0.3, 0.5];
+export const toRollingPeriod = (month) => `R3:${monthOf(month)}`;
+export const isRollingPeriod = (period) => /^R3:\d{4}-\d{2}$/.test(String(period || ''));
+export const getRollingMonths = (period) => {
+  const end = String(period).slice(3);
+  return [shiftMonth(end, -2), shiftMonth(end, -1), end];
+};
 
+const MERGE_SUM_KEYS = [
+  'totalTasks', 'completedTasks', 'activeTasks', 'issueTasks', 'canceledTasks', 'activeOverdueTasks',
+  'lateFinishedTasks', 'onTimeFinishedTasks', 'retroactiveStartPostpones', 'retroactiveEndPostpones',
+  'lateWOTasks', 'lateWOForemanAttributed', 'lateWOAdminAttributed', 'lateCompletedAdminAttributed',
+  'staleGhostTasks', 'sparePartsOver45Days', 'penaltySparePartsTasks', 'duplicateCancellations', 'billingViolations'
+];
+
+export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, period = null) => {
+  if (!isRollingPeriod(period)) return aggregateMonthTelemetry(staff, tasks, sets, period);
+
+  const months = getRollingMonths(period);
+  const perMonth = months.map(m => ({ month: m, tel: aggregateMonthTelemetry(staff, tasks, sets, m) }));
+  const latest = perMonth[perMonth.length - 1].tel;
+  if (latest.isExempt || latest.roleType === 'unknown') return latest;
+
+  // months that carry any work are the evidence base; empty months neither help nor hurt
+  const withData = perMonth.filter(x => x.tel.totalTasks > 0);
+  const weightOf = new Map();
+  const rawW = withData.map(x => ROLLING_RECENCY_WEIGHTS[months.indexOf(x.month)]);
+  const sumW = rawW.reduce((a, b) => a + b, 0) || 1;
+  withData.forEach((x, i) => weightOf.set(x.month, rawW[i] / sumW));
+
+  const axisTotals = {};
+  const axisNotes = {};
+  withData.forEach(({ month, tel }) => {
+    const w = weightOf.get(month);
+    (tel.penalties || []).forEach(pen => {
+      axisTotals[pen.axis] = (axisTotals[pen.axis] || 0) + pen.points * w;
+      (axisNotes[pen.axis] = axisNotes[pen.axis] || []).push(`${month}: -${pen.points}`);
+    });
+  });
+  const penalties = Object.keys(axisTotals).map(axis => ({
+    axis,
+    points: Math.round(Math.min(AXIS_PENALTY_CAP, axisTotals[axis]) * 10) / 10,
+    reason: `เฉลี่ยถ่วงน้ำหนัก ${withData.length} เดือนล่าสุด (${axisNotes[axis].join(' • ')})`
+  })).filter(p => p.points > 0);
+
+  const merged = { ...latest, isRolling: true, period, penalties };
+  MERGE_SUM_KEYS.forEach(k => { merged[k] = perMonth.reduce((a, x) => a + (Number(x.tel[k]) || 0), 0); });
+  merged.slaRate = merged.completedTasks > 0 ? Math.round((merged.onTimeFinishedTasks / merged.completedTasks) * 100) : 100;
+  merged.discrepancyTasks = perMonth.flatMap(x => (x.tel.discrepancyTasks || []).map(d => ({ ...d, month: x.month })));
+  merged.priorResolvedDiscrepancies = perMonth.flatMap(x => (x.tel.priorResolvedDiscrepancies || []).map(d => ({ ...d, month: x.month })));
+  const seen = new Set();
+  merged.alerts = perMonth.flatMap(x => x.tel.alerts || []).filter(a => { const k = a.title; if (seen.has(k)) return false; seen.add(k); return true; });
+  merged.monthly = perMonth.map(({ month, tel }) => ({
+    month,
+    hasData: tel.totalTasks > 0,
+    weight: weightOf.get(month) || 0,
+    totalTasks: tel.totalTasks,
+    completedTasks: tel.completedTasks,
+    lateFinishedTasks: tel.lateFinishedTasks,
+    slaRate: tel.slaRate,
+    penaltyTotal: Math.round((tel.penalties || []).reduce((a, p) => a + p.points, 0) * 10) / 10
+  }));
+  merged.activeMonth = months[months.length - 1];
+  return merged;
+};

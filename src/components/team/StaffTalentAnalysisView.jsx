@@ -612,7 +612,7 @@ export default function StaffTalentAnalysisView({
           <div className="mb-4 text-[12px] p-3 rounded-xl bg-[#f8fafc] text-slate-700 border border-slate-200 shadow-xs relative z-10">
              <strong className="block mb-1 text-[#0f2e4a] font-bold">▶ {isCorporate ? 'บทบาทและแนวโน้มการทำงาน (Corporate Role Profile):' : 'แนวโน้มการทำงาน (Work Style Tendency):'}</strong>
              <span className="font-bold text-[#0f2e4a] text-sm block ml-3 mb-1">{isCorporate ? corporatePersona.title : mainStyle}</span>
-             <span className="block text-slate-600 leading-relaxed ml-3">{styleDesc}</span>
+             <span className="block text-slate-600 leading-relaxed ml-3">{isCorporate && corporatePersona.desc ? corporatePersona.desc : styleDesc}</span>
           </div>
 
           <div className="grid grid-cols-1 gap-3 mt-2 relative z-10">

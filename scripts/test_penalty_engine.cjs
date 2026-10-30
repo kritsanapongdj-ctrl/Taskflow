@@ -125,6 +125,24 @@ async function runTests() {
   const telemetry6 = aggregateStaffTaskTelemetry(mockStaff, tasks6, mockSets, '2026-09');
   assert.strictEqual(slaPts(telemetry6), 5, '6 of 6 late should cap at 5 points');
 
+  // 3f. Rolling quarter (R3:YYYY-MM): each month scored on its own, then blended with recency weights
+  const sepBad = Array.from({ length: 10 }, (_, i) => (i < 4 ? lateTask(`Q-SEP-L-${i}`) : mkTask(`Q-SEP-${i}`)));
+  const octGood = Array.from({ length: 10 }, (_, i) => mkTask(`Q-OCT-${i}`, { endDate: '2026-10-10', completedDate: '2026-10-09' }));
+  const qTasks = [...sepBad, ...octGood];
+  const tQ = aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, 'R3:2026-10');
+  const tSepOnly = aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, '2026-09');
+  assert.strictEqual(tQ.isRolling, true, 'R3 period is flagged as rolling');
+  assert.strictEqual(tQ.totalTasks, 20, 'Quarter sums the months with work (Sep 10 + Oct 10)');
+  assert.strictEqual(tQ.monthly.length, 3, 'Three monthly rows (Aug has no data)');
+  assert.strictEqual(tQ.monthly.filter(m => m.hasData).length, 2, 'Only Sep and Oct carry data');
+  assert(Math.abs(tQ.monthly.reduce((a, m) => a + m.weight, 0) - 1) < 1e-9, 'Weights renormalise to 1 over months with data');
+  const sepPts = slaPts(tSepOnly);
+  assert(sepPts >= 3, 'September alone is a bad month');
+  assert(slaPts(tQ) > 0 && slaPts(tQ) < sepPts, 'A clean October softens (but does not erase) a bad September');
+  assert.strictEqual(slaPts(aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, 'R3:2026-12')), 0, 'Sep is outside a Oct-Dec window; Oct alone is clean');
+  assert.strictEqual(aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, '2026-10').isRolling, undefined, 'Plain month keeps single-month behaviour');
+  console.log('✓ Test 3f Passed: rolling 3-month blend with recency weights');
+
   // 4. Test Live Auto-Deduct in analyzeOuterLayer
   const statsObj = { str: 7, agi: 8, dex: 7, int: 6, con: 7, sen: 6 };
   const outerSummary = analyzeOuterLayer(mockStaff, statsObj, { telemetry: telemetry2 });

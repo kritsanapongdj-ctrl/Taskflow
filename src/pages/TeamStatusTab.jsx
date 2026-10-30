@@ -29,6 +29,7 @@ import {
   getCorporateArchetypePersona,
   generateHeuristicTalentDiagnostic,
   aggregateStaffTaskTelemetry,
+  toRollingPeriod,
   getStaffRoleType,
   getStaffAssignedProjects,
   NINE_BOX_DEFINITIONS,
@@ -104,6 +105,9 @@ export default function TeamStatusTab({
   const now = new Date();
   const currentSystemMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [evalMonth, setEvalMonth] = useState(currentMonth || currentSystemMonth);
+  // Audit room stays month-isolated; scores/evaluation can blend the last 3 months (rolling quarter)
+  const [periodMode, setPeriodMode] = useState('month'); // 'month' | 'quarter'
+  const evalPeriod = periodMode === 'quarter' ? toRollingPeriod(evalMonth) : evalMonth;
 
   const modalTelemetry = React.useMemo(() => {
     const targetStaff = teamForm?.id ? teamForm : selTeam;
@@ -116,6 +120,8 @@ export default function TeamStatusTab({
   }, [currentMonth]);
 
   const sList = sets?.staffStats || [];
+  // Items still awaiting a supervisor ruling (explicitly decided ones are done)
+  const countPendingDiscrepancies = (tel) => (tel?.discrepancyTasks || []).filter(i => !i.attribution?.isExplicit).length;
   // ผู้ตัดสิน = ชื่อที่ตั้งอีเมล @lh.co.th ไว้ในการตั้งค่า (sets.emails: "email|projects|name")
   const judgeOptions = React.useMemo(() => {
     const names = new Set();
@@ -332,7 +338,7 @@ export default function TeamStatusTab({
       const u = teamForm;
       if (!u.id && !selTeam?.isNew && !u.name) return null;
       const role = classMap[u.classId];
-      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
 
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const archAnalysis = analyzeArchetype(u, sets, archetypesData) || {};
@@ -427,18 +433,33 @@ export default function TeamStatusTab({
             <span className={`${archAnalysis.dynamicStrengthColor || 'text-emerald-400'} font-bold mr-1 shrink-0`}>
               {isCorporate ? 'สมรรถนะเด่นที่ผ่านการพิสูจน์:' : (archAnalysis.dynamicStrengthLabel || 'จุดเด่นของสายอาชีพ:')}
             </span>
-            <span className="text-stone-300">{archAnalysis.dynamicStrength || archObj.strengths}</span>
+            <span className="text-stone-300">{isCorporate && archAnalysis.dynamicStrengthCorp ? archAnalysis.dynamicStrengthCorp : (archAnalysis.dynamicStrength || archObj.strengths)}</span>
           </span>
 
           {/* Dynamic Weakness / Critical Deficit */}
           {archAnalysis.dynamicWeakness && (
             <span className="flex items-start text-xs leading-relaxed">
               <span className={`font-bold mr-1 shrink-0 ${archAnalysis.weaknessColor || 'text-amber-400'}`}>
-                {isCorporate ? 'แผนพัฒนาสมรรถนะ:' : (archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:')}
+                {isCorporate ? (archAnalysis.weaknessLabelCorp || 'แผนพัฒนาสมรรถนะ:') : (archAnalysis.weaknessLabel || 'ข้อเสนอแนะในการพัฒนา:')}
               </span>
-              <span className="text-stone-300">{archAnalysis.dynamicWeakness}</span>
+              <span className="text-stone-300">{isCorporate && archAnalysis.dynamicWeaknessCorp ? archAnalysis.dynamicWeaknessCorp : archAnalysis.dynamicWeakness}</span>
             </span>
           )}
+
+          {/* Mode-specific profile: RPG party/skills vs Corporate competencies/IDP */}
+          {isCorporate && archAnalysis.corporate ? (
+            <span className="flex flex-col gap-1 text-xs leading-relaxed">
+              <span><span className="font-bold text-sky-300 mr-1">สมรรถนะประจำสไตล์งาน:</span><span className="text-stone-300">{archAnalysis.corporate.strengths}</span></span>
+              <span><span className="font-bold text-amber-300 mr-1">แนวทางพัฒนาตามสไตล์งาน:</span><span className="text-stone-300">{archAnalysis.corporate.development}</span></span>
+              <span><span className="font-bold text-emerald-300 mr-1">งานที่เหมาะสม:</span><span className="text-stone-300">{archAnalysis.corporate.fit}</span></span>
+            </span>
+          ) : (!isCorporate && archAnalysis.rpgExtras) ? (
+            <span className="flex flex-col gap-1 text-xs leading-relaxed">
+              <span><span className="font-bold text-[#e6d0a7] mr-1">⚔️ ตำแหน่งในปาร์ตี้:</span><span className="text-stone-300">{archAnalysis.rpgExtras.party}</span></span>
+              <span><span className="font-bold text-emerald-300 mr-1">✨ สกิลประจำคลาส:</span><span className="text-stone-300">{archAnalysis.rpgExtras.skill}</span></span>
+              <span><span className="font-bold text-rose-300 mr-1">💀 ดีบัฟ:</span><span className="text-stone-300">{archAnalysis.rpgExtras.debuff}</span></span>
+            </span>
+          ) : null}
 
           {/* Action Playbook for Managers */}
           {archAnalysis.actionPlaybook && (
@@ -620,9 +641,9 @@ export default function TeamStatusTab({
                  >
                     <Icon name="clipboardList" size={14} className={activeSubTab === 'field_logs' ? 'text-sky-300' : 'text-slate-400'} />
                     <span>2. บันทึกงาน &amp; Telemetry</span>
-                    {telemetry.discrepancyTasks && telemetry.discrepancyTasks.length > 0 && (
+                    {countPendingDiscrepancies(telemetry) > 0 && (
                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white animate-pulse">
-                          {telemetry.discrepancyTasks.length}
+                          {countPendingDiscrepancies(telemetry)}
                        </span>
                     )}
                  </button>
@@ -815,7 +836,7 @@ export default function TeamStatusTab({
                 </div>
                 <div className={`mb-4 lg:mb-5 border-l-2 ${isCorporate ? 'border-sky-400/80 bg-sky-950/20' : 'border-[#C5A059]/80 bg-[#C5A059]/5'} pl-3.5 py-1 rounded-r-xl`}>
                   <p className="text-[11px] sm:text-xs lg:text-sm text-slate-300 font-light italic mb-1.5 lg:mb-2 leading-relaxed">
-                     "{styleDesc}"
+                     "{isCorporate && archAnalysis.corporate?.desc ? archAnalysis.corporate.desc : styleDesc}"
                   </p>
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-400 leading-relaxed font-bold mb-1">
                      {isCorporate ? 'กลุ่มสมรรถนะเชิงวิชาชีพ:' : 'สไตล์และแนวทางการทำงาน:'} <span className={isCorporate ? 'text-sky-300 font-bold' : 'text-[#e6d0a7] font-bold'}>{displaySubStyle}</span>
@@ -827,7 +848,7 @@ export default function TeamStatusTab({
 
                 {/* Project Scope & TaskFlow Operational Telemetry Grounding */}
                 {(() => {
-                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
+                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
                   return (
                     <div className="mb-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2 backdrop-blur-md">
                       {/* Role Classification & Project Scope Bar */}
@@ -915,7 +936,7 @@ export default function TeamStatusTab({
                           )}
 
                           {/* Discrepancy Audit Trigger Button */}
-                          {telemetry.discrepancyTasks && telemetry.discrepancyTasks.length > 0 && (
+                          {(telemetry.discrepancyTasks || []).length > 0 && (
                             <div className="pt-2">
                               <button
                                 type="button"
@@ -927,7 +948,7 @@ export default function TeamStatusTab({
                                   <span>ตรวจสอบงานผิดเงื่อนไข & วินิจฉัยความรับผิดชอบ</span>
                                 </span>
                                 <span className="bg-amber-500/30 text-amber-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-                                  {telemetry.discrepancyTasks.length} รายการ
+                                  {countPendingDiscrepancies(telemetry)} รายการ
                                 </span>
                               </button>
                             </div>
@@ -1152,7 +1173,7 @@ export default function TeamStatusTab({
                 selTeam={selTeam}
                 classMap={classMap}
                 sets={sets}
-                evalMonth={evalMonth}
+                evalMonth={evalPeriod}
                 tasks={tasks}
                 Icon={Icon}
                 talentViewMode={talentViewMode}
@@ -1371,7 +1392,7 @@ export default function TeamStatusTab({
           SUB-TAB 2: OPERATIONAL LOGS & AUDIT TELEMETRY
           ========================================================================= */}
       {activeSubTab === 'field_logs' && (() => {
-         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
+         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
          const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
 
          return (
@@ -1505,7 +1526,7 @@ export default function TeamStatusTab({
                      </div>
                      <div className="flex items-baseline gap-2 mb-2">
                         <span className="text-3xl font-black text-amber-400">
-                           {telemetry.discrepancyTasks?.length || 0}
+                           {countPendingDiscrepancies(telemetry)}
                         </span>
                         <span className="text-xs text-slate-400">รายการ</span>
                      </div>
@@ -1637,6 +1658,20 @@ export default function TeamStatusTab({
                               </p>
                            </div>
                            <div className="flex items-center gap-2">
+                              <div role="group" aria-label="ช่วงเวลาประเมิน" className="flex rounded-lg border border-white/15 overflow-hidden">
+                                 {[['month', 'รายเดือน'], ['quarter', '3 เดือนล่าสุด']].map(([id, label]) => (
+                                    <button
+                                       key={id}
+                                       type="button"
+                                       aria-pressed={periodMode === id}
+                                       onClick={() => setPeriodMode(id)}
+                                       title={id === 'quarter' ? 'ประเมินรายไตรมาส: รวม 3 เดือนล่าสุดแบบถ่วงน้ำหนักเดือนใหม่มากกว่า' : 'ประเมินเฉพาะเดือนที่เลือก'}
+                                       className={`px-2.5 py-1 min-h-[32px] text-xs font-bold cursor-pointer transition ${periodMode === id ? 'bg-[#C5A059] text-slate-950' : 'bg-black/40 text-slate-300 hover:bg-black/60'}`}
+                                    >
+                                       {label}
+                                    </button>
+                                 ))}
+                              </div>
                               <input
                                  type="month"
                                  value={evalMonth}
@@ -1657,6 +1692,26 @@ export default function TeamStatusTab({
                               </button>
                            </div>
                         </div>
+
+                        {telemetry.isRolling && (
+                           <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 text-xs space-y-2">
+                              <div className="font-bold text-sky-200">ประเมินรายไตรมาส: 3 เดือนล่าสุด (เดือนใหม่มีน้ำหนักมากกว่า) • คะแนนที่หักด้านบนเป็นค่าเฉลี่ยถ่วงน้ำหนัก ห้องตัดสินยังตัดสินแยกรายเดือน</div>
+                              <div className="grid grid-cols-3 gap-2">
+                                 {telemetry.monthly.map(m => (
+                                    <div key={m.month} className={`rounded-lg border p-2 ${m.hasData ? 'border-white/15 bg-black/30' : 'border-white/5 bg-black/10 opacity-60'}`}>
+                                       <div className="font-mono font-bold text-white">{m.month}</div>
+                                       {m.hasData ? (
+                                          <div className="text-slate-300 leading-relaxed">
+                                             งาน {m.totalTasks} • ตรงเวลา {m.slaRate}%<br />หักรวม -{m.penaltyTotal} • น้ำหนัก {Math.round(m.weight * 100)}%
+                                          </div>
+                                       ) : (
+                                          <div className="text-slate-500">ไม่มีข้อมูล (ไม่นำมาคิด)</div>
+                                       )}
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+                        )}
 
                         {/* Executive RACI Explainer Callout Box */}
                         <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-950/90 to-[#0F2E4A]/30 border border-white/10 text-xs space-y-2 text-slate-300">
@@ -2302,20 +2357,22 @@ export default function TeamStatusTab({
     return (
       <div className="flex flex-col md:flex-row gap-6 animate-in h-auto md:h-full pb-10">
         <div className={`w-full ${listCollapsed ? 'md:w-16' : 'md:w-72'} bg-white border rounded-xl shadow-sm flex flex-col ${listCollapsed ? 'min-h-0 max-h-[120px]' : 'min-h-[300px] max-h-[350px]'} md:max-h-none md:min-h-0 md:h-full shrink-0 transition-[width] duration-200`}>
-          <div className={`p-3 sm:p-4 border-b flex ${listCollapsed ? 'justify-center' : 'justify-between'} items-center bg-gray-50 rounded-t-xl gap-1`}>
-            {!listCollapsed && <h3 className="font-bold text-[#0f2e4a] text-sm truncate">รายชื่อทีมงาน</h3>}
-            <div className="flex items-center gap-1.5 shrink-0">
-               <button
-                 type="button"
-                 onClick={toggleListCollapsed}
-                 title={listCollapsed ? 'ขยายรายชื่อ ( [ )' : 'ย่อรายชื่อ ( [ )'}
-                 aria-label={listCollapsed ? 'ขยายรายชื่อทีมงาน' : 'ย่อรายชื่อทีมงาน'}
-                 aria-expanded={!listCollapsed}
-                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-[#0f2e4a] hover:bg-gray-100 transition cursor-pointer"
-               >
-                 <Icon name={listCollapsed ? 'chevronRight' : 'chevronLeft'} size={16} />
-               </button>
-               {!listCollapsed && <>
+          <div className={`p-3 border-b flex ${listCollapsed ? 'justify-center items-center' : 'flex-col gap-2'} bg-gray-50 rounded-t-xl`}>
+            <div className={`flex items-center ${listCollapsed ? '' : 'justify-between'} gap-1`}>
+              {!listCollapsed && <h3 className="font-bold text-[#0f2e4a] text-sm truncate">รายชื่อทีมงาน</h3>}
+              <button
+                type="button"
+                onClick={toggleListCollapsed}
+                title={listCollapsed ? 'ขยายรายชื่อ ( [ )' : 'ย่อรายชื่อ ( [ )'}
+                aria-label={listCollapsed ? 'ขยายรายชื่อทีมงาน' : 'ย่อรายชื่อทีมงาน'}
+                aria-expanded={!listCollapsed}
+                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-[#0f2e4a] hover:bg-gray-100 transition cursor-pointer"
+              >
+                <Icon name={listCollapsed ? 'chevronRight' : 'chevronLeft'} size={16} />
+              </button>
+            </div>
+            {!listCollapsed && <div className="flex flex-wrap items-center gap-1.5">
+               <>
                <button 
                  type="button" 
                  onClick={() => {
@@ -2364,8 +2421,8 @@ export default function TeamStatusTab({
                >
                  + เพิ่ม
                </button>
-               </>}
-            </div>
+               </>
+            </div>}
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
             {sList.map(s => (
@@ -2378,7 +2435,7 @@ export default function TeamStatusTab({
                 {!listCollapsed && <div className="truncate flex-1">
                   <div className="font-bold text-sm truncate">{s.name}</div>
                   <div className={`text-[10px] ${selTeam?.id===s.id ? 'text-blue-200' : 'text-gray-400'}`}>{classMap[s.classId]?.name || 'ไม่ระบุคลาส'}</div>
-                  <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{getArchetypeIdentity(s) || s.potentialIdentity}</div>
+                  <div className={`text-[9px] ${selTeam?.id===s.id ? 'text-[#e6d0a7]' : 'text-[#bca374]'} font-bold truncate mt-0.5`}>{getArchetypeIdentity(s, undefined, talentViewMode) || s.potentialIdentity}</div>
                 </div>}
                 {!listCollapsed && selTeam?.id === s.id && (
                   <div className="flex items-center gap-1 ml-1" onClick={(e) => e.stopPropagation()}>
@@ -2418,7 +2475,7 @@ export default function TeamStatusTab({
           staff={teamForm?.id ? teamForm : selTeam} 
           sets={sets} 
           tasks={tasks}
-          evalMonth={evalMonth}
+          evalMonth={evalPeriod}
           Icon={Icon} 
         />
         <AITalentAdvisorModal
@@ -2427,7 +2484,7 @@ export default function TeamStatusTab({
           staff={teamForm?.id ? teamForm : selTeam}
           sets={sets}
           tasks={tasks}
-          evalMonth={evalMonth}
+          evalMonth={evalPeriod}
           archetypesData={archetypesData}
           initialViewMode={talentViewMode}
           onSaveDiagnostic={(newDiag) => {

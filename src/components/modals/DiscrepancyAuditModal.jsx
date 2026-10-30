@@ -220,7 +220,7 @@ export default function DiscrepancyAuditModal({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {staff ? `บุคลากร: ${staff.name} (${staff.role || staff.classId || 'ทีมงาน'})` : 'ภาพรวมทีมงาน'} • รายการรอตรวจรอบนี้ {discrepancyTasks.length} รายการ (คลิกที่รายการเพื่อปรับผลการตัดสิน)
+                {staff ? `บุคลากร: ${staff.name} (${staff.role || staff.classId || 'ทีมงาน'})` : 'ภาพรวมทีมงาน'} • รอตัดสิน {pendingCount} • ตัดสินแล้ว {decidedCount} รายการในรอบนี้ (คลิกที่รายการเพื่อปรับผลการตัดสิน)
               </p>
             </div>
           </div>
