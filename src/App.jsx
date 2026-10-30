@@ -700,7 +700,27 @@ export default function App() {
     return Array.from(new Set(fromEmails)).filter(Boolean).sort((a, b) => a.localeCompare('th'));
   }, [sets.emails]);
 
-  // รายชื่อเจ้าหน้าที่สำหรับบันทึกเปลี่ยนสถานะงาน (เฉพาะ Foreman, Admin, Officer ที่มีชื่อผูกกับอีเมลไว้)
+  // ตรวจสอบว่าเจ้าหน้าที่ได้รับมอบหมายโครงการนี้หรือไม่ (จาก sets.staffStats หรือ sets.emails)
+  const isStaffAssignedToTaskProject = (staffName, taskProject) => {
+    if (!taskProject) return true;
+    const stdProj = getStdProj(taskProject);
+    const cleanStdProj = stdProj.trim().toLowerCase();
+    const normStdProj = cleanStdProj.replace(/[\s\-_]/g, '');
+
+    const sProjs = getStaffAssignedProjectsList(staffName);
+    if (sProjs.includes('ทั้งหมด') || sProjs.includes('ทุกโครงการ')) return true;
+
+    return sProjs.some(p => {
+      if (!p) return false;
+      const cleanP = p.trim().toLowerCase();
+      if (cleanP === 'ทั้งหมด' || cleanP === 'ทุกโครงการ') return true;
+      if (cleanStdProj.includes(cleanP) || cleanP.includes(cleanStdProj)) return true;
+      const normP = cleanP.replace(/[\s\-_]/g, '');
+      return normStdProj.includes(normP) || normP.includes(normStdProj);
+    });
+  };
+
+  // รายชื่อเจ้าหน้าที่สำหรับบันทึกเปลี่ยนสถานะงาน (เฉพาะ Foreman และ Admin ที่มีชื่อผูกกับอีเมลไว้)
   const statusStaffList = useMemo(() => {
     const emailLinkedNames = new Set();
 
@@ -718,7 +738,8 @@ export default function App() {
       }
     });
 
-    const allowedRoles = new Set(['foreman', 'admin', 'officer', 'supervisor']);
+    // กำหนดให้เหลือเฉพาะ Foreman และ Admin เท่านั้น ตามความต้องการของระบบประเมินผล (ตัด Officer ออก 100%)
+    const allowedRoles = new Set(['foreman', 'admin']);
 
     const filtered = Array.from(emailLinkedNames)
       .filter(name => {
@@ -728,8 +749,29 @@ export default function App() {
       })
       .sort((a, b) => a.localeCompare('th'));
 
-    return filtered.length > 0 ? filtered : emailStaffNames;
+    if (filtered.length > 0) return filtered;
+
+    // Fallback: หากยังไม่ได้ผูกอีเมล ให้ดึงชื่อจาก staffStats ที่เป็น Foreman/Admin
+    const statsForemanAdmin = (sets.staffStats || [])
+      .map(s => (s.name || '').trim())
+      .filter(name => {
+        if (!name) return false;
+        const role = getStaffRole(name);
+        return allowedRoles.has(role.key);
+      })
+      .sort((a, b) => a.localeCompare('th'));
+
+    return statsForemanAdmin.length > 0 ? statsForemanAdmin : emailStaffNames;
   }, [sets.emails, sets.staffStats, sets.staffClasses, emailStaffNames]);
+
+  // ดึงรายชื่อเฉพาะ Foreman และ Admin ที่ผูกกับอีเมล และรับผิดชอบโครงการนั้น (หรือดูแลทุกโครงการ)
+  const getStatusStaffForTask = (task) => {
+    const taskProj = task?.project;
+    if (!taskProj) return statusStaffList;
+
+    const scoped = statusStaffList.filter(name => isStaffAssignedToTaskProject(name, taskProj));
+    return scoped.length > 0 ? scoped : statusStaffList;
+  };
 
   const availableRoles = useMemo(() => {
     const rolesMap = new Map();
@@ -952,9 +994,12 @@ export default function App() {
     if (!t) return;
     if (val === t.status) return;
 
-    const defaultRecorder = (gFilt.staffName !== 'ทั้งหมด' && statusStaffList.includes(gFilt.staffName) ? gFilt.staffName : '') ||
-      (statusStaffList.includes(getStaffForTask(t)) ? getStaffForTask(t) : '') ||
-      (statusStaffList.length > 0 ? statusStaffList[0] : '');
+    // กรองเฉพาะ Foreman และ Admin ที่รับผิดชอบโครงการนี้
+    const taskStaffList = getStatusStaffForTask(t);
+    const defaultRecorder = (gFilt.staffName !== 'ทั้งหมด' && taskStaffList.includes(gFilt.staffName) ? gFilt.staffName : '') ||
+      taskStaffList.find(name => getStaffRole(name).key === 'foreman') ||
+      taskStaffList.find(name => getStaffRole(name).key === 'admin') ||
+      (taskStaffList.length > 0 ? taskStaffList[0] : '');
 
     if (val === 'จบงาน') {
       const isOvd = t.overdueStatus === 'เกินกำหนด' || t.overdueStatus === 'ออกใบงานช้า' || chkOvdTimeAware(t, getTStr());
@@ -2441,7 +2486,8 @@ export default function App() {
               sMod={sMod}
               setSMod={setSMod}
               getTStr={getTStr}
-              staffList={statusStaffList}
+              staffList={getStatusStaffForTask(tasks.find(x => String(x.id) === String(sMod.taskId)))}
+              getStaffRole={getStaffRole}
               task={tasks.find(x => String(x.id) === String(sMod.taskId))}
               isSupervisor={isSupervisor}
               supervisorSession={supervisorSession}

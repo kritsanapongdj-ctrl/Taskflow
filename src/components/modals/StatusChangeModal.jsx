@@ -10,6 +10,7 @@ export default function StatusChangeModal({
   setSMod: propSetSMod,
   getTStr,
   staffList = [],
+  getStaffRole = null,
   task = null,
   _isSupervisor = false,
   supervisorSession = null
@@ -163,13 +164,13 @@ export default function StatusChangeModal({
 
         <div className="space-y-3">
           {/* ช่องเลือกชื่อผู้บันทึกข้อมูล (Recorded By) */}
-          <div className="bg-blue-50/60 border border-blue-200 rounded-lg p-3 space-y-2">
+          <div className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 border border-slate-200/90 rounded-xl p-3.5 space-y-2.5 shadow-2xs">
             <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <span>👤</span>
-                <span>ผู้บันทึก / เจ้าหน้าที่ดำเนินการ *</span>
+                <span className="text-sm">👤</span>
+                <span className="text-[#003C71] font-semibold">ผู้บันทึก / เจ้าหน้าที่ดำเนินการ *</span>
               </span>
-              <span className="text-[10px] text-blue-600 font-semibold bg-blue-100/60 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] text-[#003C71] font-semibold bg-[#003C71]/10 px-2 py-0.5 rounded-full border border-[#003C71]/15">
                 ลงประวัติไทม์ไลน์
               </span>
             </label>
@@ -184,14 +185,18 @@ export default function StatusChangeModal({
                   setSMod({ ...sMod, recordedBy: val, isCustomStaff: false });
                 }
               }}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-800 bg-white focus:ring-1 focus:ring-[#0f2e4a] outline-none"
+              className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-[#003C71]/20 focus:border-[#003C71] outline-none transition shadow-2xs"
             >
               <option value="">-- กรุณาเลือกชื่อผู้บันทึก --</option>
-              {staffList.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
+              {staffList.map((name) => {
+                const roleInfo = getStaffRole ? getStaffRole(name) : null;
+                const roleTag = roleInfo?.key === 'foreman' ? 'Foreman' : roleInfo?.key === 'admin' ? 'Admin' : (roleInfo?.key === 'supervisor' ? 'Supervisor' : '');
+                return (
+                  <option key={name} value={name}>
+                    {name} {roleTag ? `(${roleTag})` : ''}
+                  </option>
+                );
+              })}
               <option value="__custom__">✏️ ระบุชื่ออื่น / กรอกเอง...</option>
             </select>
 
@@ -201,13 +206,16 @@ export default function StatusChangeModal({
                 placeholder="ระบุชื่อผู้บันทึก..."
                 value={sMod.recordedBy || ''}
                 onChange={(e) => setSMod({ ...sMod, recordedBy: e.target.value })}
-                className="w-full border border-blue-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                className="w-full border border-blue-300 rounded-lg p-2.5 text-xs bg-white focus:ring-2 focus:ring-[#003C71]/20 focus:border-[#003C71] outline-none shadow-2xs"
               />
             )}
 
             <div className="flex items-center justify-between text-[10.5px] text-slate-500 pt-0.5">
-              <span>🔒 เฉพาะ Foreman, Admin และ Officer ที่มีอีเมล</span>
-              <span className="font-mono text-slate-400">({staffList.length} ท่าน)</span>
+              <span className="flex items-center gap-1 text-[#003C71] font-semibold">
+                <span>🔒</span>
+                <span>เฉพาะ Foreman และ Admin ประจำโครงการ</span>
+              </span>
+              <span className="font-mono text-slate-400 font-medium">({staffList.length} ท่าน)</span>
             </div>
           </div>
 
