@@ -38,6 +38,7 @@ import {
   doesDiscrepancyPenalizeStaff,
   getDiscrepancyPenaltyShare
 } from '../utils/archetypeEngine';
+import { buildMonthlySnapshots, canCloseMonth, isMonthClosed } from '../utils/monthlySnapshot';
 import { getModeVocab, getTierBadge, getOuterShort, getAlignmentDisplay, getDnaTitle, getNineBoxDisplay } from '../utils/modeVocabulary';
 
 export default function TeamStatusTab({
@@ -65,7 +66,9 @@ export default function TeamStatusTab({
   supervisorSession = null,
   onOpenSupervisorModal = null,
   initialFocusMode = false,
-  currentMonth = null
+  currentMonth = null,
+  monthlySnapshots = {},
+  onCloseMonth = null
 }) {
   const getProjName = propGetProjName || ((str) => str ? String(str).split('|')[0] : '');
   const [subTabProjSearch, setSubTabProjSearch] = useState('');
@@ -110,6 +113,26 @@ export default function TeamStatusTab({
   // Audit room stays month-isolated; scores/evaluation can blend the last 3 months (rolling quarter)
   const [periodMode, setPeriodMode] = useState('month'); // 'month' | 'quarter'
   const evalPeriod = periodMode === 'quarter' ? toRollingPeriod(evalMonth) : evalMonth;
+  const monthClosed = isMonthClosed(monthlySnapshots, evalMonth);
+
+  // Freeze the evaluated month: create-only snapshots, supervisor only, never while rulings are pending
+  const handleCloseMonth = async () => {
+    if (!isSupervisor) { if (onOpenSupervisorModal) onOpenSupervisorModal(); return; }
+    if (!onCloseMonth) return;
+    if (!canCloseMonth(evalMonth, currentSystemMonth)) return alert('ปิดรอบได้เฉพาะเดือนที่สิ้นสุดแล้วเท่านั้น');
+    const { docs, pending } = buildMonthlySnapshots(sList, tasks, sets, evalMonth, supervisorSession?.supervisorName);
+    if (pending.length > 0) {
+      return alert(`ยังปิดรอบไม่ได้: มีรายการรอตัดสินค้างอยู่\n${pending.map(p => `• ${p.staffName}: ${p.count} รายการ`).join('\n')}`);
+    }
+    if (!window.confirm(`ปิดรอบ ${evalMonth} และล็อกคะแนนของ ${docs.length} คน?\n(บันทึกแล้วแก้ไขย้อนหลังไม่ได้)`)) return;
+    try {
+      const { created, skipped } = await onCloseMonth(docs);
+      alert(`ปิดรอบสำเร็จ ${created.length} คน${skipped.length ? ` (ข้าม ${skipped.length} คนที่ล็อกไว้แล้ว)` : ''}`);
+    } catch (err) {
+      console.error('Close month error:', err);
+      alert('ปิดรอบไม่สำเร็จ กรุณาลองใหม่ (ข้อมูลเดิมไม่ได้ถูกแก้ไข)');
+    }
+  };
 
   const modalTelemetry = React.useMemo(() => {
     const targetStaff = teamForm?.id ? teamForm : selTeam;
@@ -340,7 +363,7 @@ export default function TeamStatusTab({
       const u = teamForm;
       if (!u.id && !selTeam?.isNew && !u.name) return null;
       const role = classMap[u.classId];
-      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod, monthlySnapshots);
 
       const statsObj = { str: Number(u.str)||0, agi: Number(u.agi)||0, dex: Number(u.dex)||0, int: Number(u.int)||0, con: Number(u.con)||0, sen: Number(u.sen)||0 };
       const archAnalysis = analyzeArchetype(u, sets, archetypesData) || {};
@@ -850,7 +873,7 @@ export default function TeamStatusTab({
 
                 {/* Project Scope & TaskFlow Operational Telemetry Grounding */}
                 {(() => {
-                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
+                  const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod, monthlySnapshots);
                   return (
                     <div className="mb-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2 backdrop-blur-md">
                       {/* Role Classification & Project Scope Bar */}
@@ -1176,6 +1199,7 @@ export default function TeamStatusTab({
                 classMap={classMap}
                 sets={sets}
                 evalMonth={evalPeriod}
+                snapshots={monthlySnapshots}
                 tasks={tasks}
                 Icon={Icon}
                 talentViewMode={talentViewMode}
@@ -1394,7 +1418,7 @@ export default function TeamStatusTab({
           SUB-TAB 2: OPERATIONAL LOGS & AUDIT TELEMETRY
           ========================================================================= */}
       {activeSubTab === 'field_logs' && (() => {
-         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod);
+         const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalPeriod, monthlySnapshots);
          const totalPenaltyPts = (telemetry.penalties || []).reduce((sum, p) => sum + (p.points || 0), 0);
 
          return (
@@ -1681,6 +1705,19 @@ export default function TeamStatusTab({
                                  className="border border-white/15 bg-black/40 hover:bg-black/60 focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] rounded-lg px-2.5 py-1 text-xs text-white outline-none cursor-pointer"
                                  title="เลือกรอบเดือนที่ต้องการประเมิน"
                               />
+                              {monthClosed ? (
+                                 <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-400/40 text-emerald-300" title="คะแนนเดือนนี้ถูกล็อกแล้ว ไม่เปลี่ยนตามข้อมูลย้อนหลัง">🔒 ปิดรอบแล้ว</span>
+                              ) : (
+                                 <button
+                                    type="button"
+                                    onClick={handleCloseMonth}
+                                    disabled={!canCloseMonth(evalMonth, currentSystemMonth)}
+                                    title={canCloseMonth(evalMonth, currentSystemMonth) ? 'ล็อกคะแนนเดือนนี้ (ต้องไม่มีรายการรอตัดสิน)' : 'ปิดรอบได้หลังสิ้นเดือน'}
+                                    className="px-3 py-1.5 min-h-[32px] rounded-lg border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition cursor-pointer"
+                                 >
+                                    🔒 ปิดรอบเดือน
+                                 </button>
+                              )}
                               <button
                                  type="button"
                                  onClick={() => {
@@ -1701,7 +1738,7 @@ export default function TeamStatusTab({
                               <div className="grid grid-cols-3 gap-2">
                                  {telemetry.monthly.map(m => (
                                     <div key={m.month} className={`rounded-lg border p-2 ${m.hasData ? 'border-white/15 bg-black/30' : 'border-white/5 bg-black/10 opacity-60'}`}>
-                                       <div className="font-mono font-bold text-white">{m.month}</div>
+                                       <div className="font-mono font-bold text-white">{m.month}{m.locked ? ' 🔒' : ''}</div>
                                        {m.hasData ? (
                                           <div className="text-slate-300 leading-relaxed">
                                              งาน {m.totalTasks} • ตรงเวลา {m.slaRate}%<br />หักรวม -{m.penaltyTotal} • น้ำหนัก {Math.round(m.weight * 100)}%

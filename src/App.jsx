@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, setDoc, onSnapshot, getDocs, deleteDoc, runTransaction } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import TaskFormModal from './components/modals/TaskFormModal.jsx';
 import StatusChangeModal from './components/modals/StatusChangeModal.jsx';
@@ -132,6 +132,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   
   const [tasks, setTasks] = useState([]);
+  const [monthlySnapshots, setMonthlySnapshots] = useState({}); // id -> immutable monthly snapshot
   const [informs, setInforms] = useState([]);
   const [sets, setSets] = useState({ areas: [], projects: [], jobTypes: [], locations: [], emails: [], slas: [], overdueTime: '17:30', lateWorkOrderHours: 24, staffClasses: [], staffStats: [] });
   
@@ -346,7 +347,11 @@ export default function App() {
       setLoading(false);
     }, console.error);
 
-    return () => { unsubTasks(); unsubInfs(); unsubSets(); };
+    const unsubSnaps = onSnapshot(getColRef('MonthlySnapshots'), (snap) => {
+      const map = {}; snap.forEach(d => { map[d.id] = d.data(); }); setMonthlySnapshots(map);
+    }, console.error);
+
+    return () => { unsubTasks(); unsubInfs(); unsubSets(); unsubSnaps(); };
   }, [user]);
 
   const chkOvdTimeAware = (t, rD = getTStr()) => { 
@@ -382,6 +387,22 @@ export default function App() {
       }
     }
     return clean;
+  };
+
+  // Create-only: an existing snapshot is never overwritten (month closing is final).
+  const closeMonthSnapshots = async (docs) => {
+    if (!user) return { created: [], skipped: [] };
+    const created = [], skipped = [];
+    for (const d of docs) {
+      await runTransaction(db, async (tx) => {
+        const ref = getDocRef('MonthlySnapshots', d.id);
+        const existing = await tx.get(ref);
+        if (existing.exists()) { skipped.push(d.id); return; }
+        tx.set(ref, sanitizeForFirestore(d));
+        created.push(d.id);
+      });
+    }
+    return { created, skipped };
   };
 
   const saveD = async (t, d) => {
@@ -2176,6 +2197,8 @@ export default function App() {
                     onOpenSupervisorModal={() => setSupervisorAuthModalOpen(true)}
                     initialFocusMode={initialFullscreen}
                     currentMonth={gFilt.month}
+                    monthlySnapshots={monthlySnapshots}
+                    onCloseMonth={closeMonthSnapshots}
                   />
                 )}
                 {tab === 'settings' && (

@@ -26,6 +26,7 @@ export default function StaffTalentAnalysisView({
   classMap = {},
   sets = {},
   evalMonth,
+  snapshots = null,
   tasks = [],
   Icon,
   talentViewMode = 'all',
@@ -61,7 +62,7 @@ export default function StaffTalentAnalysisView({
       const heuristic = generateHeuristicTalentDiagnostic(u, sets, archetypesData) || {};
       const corporatePersona = heuristic?.corporatePersona || getCorporateArchetypePersona(analysis.archetypeKey, mainStyle);
 
-      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth);
+      const telemetry = aggregateStaffTaskTelemetry(u, tasks, sets, evalMonth, snapshots);
       const outerSummary = analyzeOuterLayer(teamForm, statsObj, { telemetry });
       const businessRisk = calculateBusinessRiskIndex(u, telemetry, outerSummary);
       const succession = calculateSuccessionReadiness(u, analysis, outerSummary);

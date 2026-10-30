@@ -2887,11 +2887,20 @@ const MERGE_SUM_KEYS = [
   'staleGhostTasks', 'sparePartsOver45Days', 'penaltySparePartsTasks', 'duplicateCancellations', 'billingViolations'
 ];
 
-export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, period = null) => {
+/** Id of the immutable monthly snapshot of one staff member. */
+export const snapshotId = (month, staffId) => `${month}_${staffId}`;
+
+// A closed month is frozen: its metrics and deductions come from the snapshot, the rest stays live.
+const applySnapshot = (live, snap) => (snap ? { ...live, ...snap.metrics, penalties: snap.penalties || [], fromSnapshot: true } : live);
+
+export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, period = null, snapshots = null) => {
   if (!isRollingPeriod(period)) return aggregateMonthTelemetry(staff, tasks, sets, period);
 
   const months = getRollingMonths(period);
-  const perMonth = months.map(m => ({ month: m, tel: aggregateMonthTelemetry(staff, tasks, sets, m) }));
+  const perMonth = months.map(m => ({
+    month: m,
+    tel: applySnapshot(aggregateMonthTelemetry(staff, tasks, sets, m), snapshots?.[snapshotId(m, staff?.id)])
+  }));
   const latest = perMonth[perMonth.length - 1].tel;
   if (latest.isExempt || latest.roleType === 'unknown') return latest;
 
@@ -2927,6 +2936,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, period
   merged.monthly = perMonth.map(({ month, tel }) => ({
     month,
     hasData: tel.totalTasks > 0,
+    locked: !!tel.fromSnapshot,
     weight: weightOf.get(month) || 0,
     totalTasks: tel.totalTasks,
     completedTasks: tel.completedTasks,

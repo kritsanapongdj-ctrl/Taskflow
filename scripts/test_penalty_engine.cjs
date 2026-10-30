@@ -143,6 +143,34 @@ async function runTests() {
   assert.strictEqual(aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, '2026-10').isRolling, undefined, 'Plain month keeps single-month behaviour');
   console.log('✓ Test 3f Passed: rolling 3-month blend with recency weights');
 
+  // 3g. Monthly snapshots: build, closing rules, and a frozen month overriding live data in the rolling quarter
+  const { buildMonthlySnapshots, canCloseMonth, isMonthClosed } = await import('../src/utils/monthlySnapshot.js');
+  assert.strictEqual(canCloseMonth('2026-09', '2026-10'), true, 'A finished month can be closed');
+  assert.strictEqual(canCloseMonth('2026-10', '2026-10'), false, 'The running month cannot be closed');
+  assert.strictEqual(canCloseMonth('bad', '2026-10'), false, 'Malformed month is rejected');
+
+  const { docs: snapDocs } = buildMonthlySnapshots([mockStaff], qTasks, mockSets, '2026-09', 'ผู้ดูแล', new Date('2026-10-01T00:00:00Z'));
+  assert.strictEqual(snapDocs.length, 1, 'One snapshot per operational staff member');
+  assert.strictEqual(snapDocs[0].id, '2026-09_staff-1', 'Snapshot id is month_staffId');
+  assert.strictEqual(snapDocs[0].metrics.totalTasks, 10, 'Snapshot freezes the September metrics');
+  assert(snapDocs[0].penaltyTotal >= 3, 'Snapshot carries the September deductions');
+  assert.strictEqual(snapDocs[0].closedBy, 'ผู้ดูแล');
+  assert.strictEqual(isMonthClosed({ [snapDocs[0].id]: snapDocs[0] }, '2026-09'), true);
+  assert.strictEqual(isMonthClosed({ [snapDocs[0].id]: snapDocs[0] }, '2026-10'), false);
+
+  // a staff member with an unruled discrepancy blocks closing (the frozen score would be wrong)
+  const staleOpen = [mkTask('PEND-1', { status: 'กำลังดำเนินการ', completedDate: undefined, updatedAt: '2000-01-01', startDate: '2000-01-01' })];
+  const { pending: blocked } = buildMonthlySnapshots([mockStaff], staleOpen, mockSets, '2099-01');
+  assert.strictEqual(blocked.length > 0, true, 'Pending discrepancies are reported so the month can not be closed');
+
+  const frozen = { [snapDocs[0].id]: { ...snapDocs[0], penalties: [], metrics: { ...snapDocs[0].metrics, lateFinishedTasks: 0, onTimeFinishedTasks: 10, slaRate: 100 } } };
+  const tLive = aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, 'R3:2026-10');
+  const tFrozen = aggregateStaffTaskTelemetry(mockStaff, qTasks, mockSets, 'R3:2026-10', frozen);
+  assert(slaPts(tFrozen) < slaPts(tLive), 'A frozen (snapshot) September replaces its live deductions');
+  assert.strictEqual(tFrozen.monthly.find(m => m.month === '2026-09').locked, true, 'Frozen month is flagged locked');
+  assert.strictEqual(tLive.monthly.find(m => m.month === '2026-09').locked, false, 'Live month is not locked');
+  console.log('✓ Test 3g Passed: monthly snapshots build, close rules and freeze behave');
+
   // 4. Test Live Auto-Deduct in analyzeOuterLayer
   const statsObj = { str: 7, agi: 8, dex: 7, int: 6, con: 7, sen: 6 };
   const outerSummary = analyzeOuterLayer(mockStaff, statsObj, { telemetry: telemetry2 });
