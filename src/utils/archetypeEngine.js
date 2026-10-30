@@ -2118,6 +2118,15 @@ export const getStaffAssignedProjects = (staffOrName, sets = {}) => {
 export const GO_LIVE_DATE_CUTOFF = '2026-09-01'; // 1 กันยายน 2569 (วันเริ่มใช้งานระบบจริง)
 const MIN_RATE_SAMPLE = 5; // min completed jobs before a rate-based SLA deduction applies
 const AXIS_PENALTY_CAP = 5; // max total deduction per WHAT axis
+const DEFAULT_SHARED_FOREMAN_SHARE = 50; // % of a "shared" ruling borne by the Foreman when the supervisor gives no ratio
+const STALE_AUTO_FOREMAN_SHARE = 70; // auto-allocation for stale tasks without a ruling: Foreman 70% / Admin 30%
+
+const monthOf = (d) => (d ? normalizeToGregorianDate(d).substring(0, 7) : '');
+const shiftMonth = (m, delta) => {
+  const [y, mo] = String(m).split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1 + delta, 1));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 
 /**
  * Normalizes date string to standard Gregorian YYYY-MM-DD
@@ -2173,7 +2182,7 @@ export const doesDiscrepancyPenalizeStaff = (item, roleType) => {
   if (roleType === 'foreman') {
     if (item.type === 'LATE_COMPLETED') return attrRole !== 'admin' && attrRole !== 'waived';
     if (item.type === 'LATE_WO') return attrRole === 'foreman' || attrRole === 'shared';
-    if (item.type === 'STALE_TASK') return attrRole !== 'waived';
+    if (item.type === 'STALE_TASK') return attrRole !== 'waived' && attrRole !== 'admin';
     if (item.type === 'SPARE_PARTS_45D' || item.type === 'PENALTY_SPARE_PART' || (item.type && item.type.startsWith('RETROACTIVE'))) {
       return attrRole !== 'admin' && attrRole !== 'waived';
     }
@@ -2184,12 +2193,24 @@ export const doesDiscrepancyPenalizeStaff = (item, roleType) => {
     if (item.type === 'LATE_WO' || item.type === 'DUPLICATE_WO' || item.type === 'BILLING_CUTOFF') {
       return attrRole === 'admin' || attrRole === 'shared';
     }
-    if (item.type === 'LATE_COMPLETED') return attrRole === 'admin';
-    if (item.type === 'STALE_TASK') return attrRole !== 'waived';
+    if (item.type === 'LATE_COMPLETED') return attrRole === 'admin' || attrRole === 'shared';
+    if (item.type === 'STALE_TASK') return attrRole !== 'waived' && attrRole !== 'foreman';
     return false;
   }
 
   return false;
+};
+
+/**
+ * Fraction (0..1) of a discrepancy's deduction borne by this role.
+ * foreman/admin rulings = 100% to that role; shared rulings split by attribution.foremanShare (Foreman %).
+ */
+export const getDiscrepancyPenaltyShare = (item, roleType) => {
+  if (!doesDiscrepancyPenalizeStaff(item, roleType)) return 0;
+  const a = item.attribution || {};
+  if (a.role !== 'shared') return 1;
+  const f = (Number.isFinite(Number(a.foremanShare)) ? Number(a.foremanShare) : DEFAULT_SHARED_FOREMAN_SHARE) / 100;
+  return roleType === 'foreman' ? f : roleType === 'admin' ? 1 - f : 0;
 };
 
 /**
@@ -2268,7 +2289,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   }
 
   // 2. Filter tasks within the staff member's operational scope AND after the Go-Live Date (Sep 2026)
-  const scopedTasks = tasks.filter(t => {
+  const staffTasks = tasks.filter(t => {
     if (!t) return false;
 
     // Rule: Exclude tasks prior to Go-Live Date (September 2569 / 2026-09-01)
@@ -2292,6 +2313,16 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     return false;
   });
 
+  // 2b. Month scoping: the audit room covers ONLY the evaluated month.
+  // Closed work belongs to the month it finished/cancelled; open work is a live snapshot (current month only).
+  const isLiveMonth = activeMonth >= currentSystemMonth;
+  const isDoneStatus = (t) => t.status === 'จบงาน' || t.status === 'จบงาน(รอใบงาน)';
+  const scopedTasks = staffTasks.filter(t => {
+    if (isDoneStatus(t)) return monthOf(t.completedDate || getTaskOperationalDate(t)) === activeMonth;
+    if (t.status === 'ยกเลิก') return monthOf(t.canceledAt || t.cancelledAt || t.updatedAt || getTaskOperationalDate(t)) === activeMonth;
+    return isLiveMonth;
+  });
+
   const totalAssigned = scopedTasks.length;
   const completedTasks = scopedTasks.filter(t => t.status === 'จบงาน' || t.status === 'จบงาน(รอใบงาน)');
   const activeTasks = scopedTasks.filter(t => t.status === 'รอดำเนินการ' || t.status === 'กำลังดำเนินการ');
@@ -2302,7 +2333,7 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   // 1. Explicit supervisor audit resolution (slaAuditResolution)
   // 2. Explicit WO attribution recorded upon completion (woAttribution)
   // 3. Automated heuristic fallback
-  const getTaskAttribution = (t, defaultType = 'unassigned') => {
+  const getBaseAttribution = (t, defaultType = 'unassigned') => {
     if (t.slaAuditResolution && t.slaAuditResolution.responsibleRole) {
       return {
         role: t.slaAuditResolution.responsibleRole, // 'foreman' | 'admin' | 'shared' | 'waived'
@@ -2329,6 +2360,27 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     }
     return { role: defaultType, reason: '', isExplicit: false };
   };
+
+  // Shared rulings carry the Foreman's % (Admin bears the rest). Auto-allocated shared (stale) = 70/30.
+  const getTaskAttribution = (t, defaultType = 'unassigned') => {
+    const attr = getBaseAttribution(t, defaultType);
+    if (attr.role !== 'shared') return attr;
+    const raw = t.slaAuditResolution?.foremanShare ?? t.woAttribution?.foremanShare;
+    const n = Number(raw);
+    const share = (raw !== undefined && raw !== null && Number.isFinite(n))
+      ? Math.max(0, Math.min(100, n))
+      : (attr.isExplicit ? DEFAULT_SHARED_FOREMAN_SHARE : STALE_AUTO_FOREMAN_SHARE);
+    return { ...attr, foremanShare: share };
+  };
+  const foremanWeight = (t, def) => {
+    const a = getTaskAttribution(t, def);
+    return a.role === 'foreman' ? 1 : a.role === 'shared' ? a.foremanShare / 100 : 0;
+  };
+  const adminWeight = (t, def) => {
+    const a = getTaskAttribution(t, def);
+    return a.role === 'admin' ? 1 : a.role === 'shared' ? 1 - a.foremanShare / 100 : 0;
+  };
+  const weighted = (arr, fn, def) => Math.round(arr.reduce((sum, t) => sum + fn(t, def), 0) * 10) / 10;
 
   // Rule 1: Late finish (จบงานช้า) -> Overdue completions & active overdue (Waived and Admin-attributed tasks excluded from Foreman penalties)
   const activeOverdue = scopedTasks.filter(t => {
@@ -2357,15 +2409,16 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   const lateCompletedAdminAttributed = completedTasks.filter(t => {
     if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'foreman');
-    return attr.role === 'admin';
+    return attr.role === 'admin' || attr.role === 'shared';
   });
 
   const onTimeCompleted = completedTasks.length - lateCompleted.length;
   const slaRate = completedTasks.length > 0 ? Math.round((Math.max(0, onTimeCompleted) / completedTasks.length) * 100) : 100;
 
-  // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม)
-  const retroactiveStartPostpones = scopedTasks.filter(t => {
+  // Rule 2: Retroactive start postponements (เลื่อนวันเริ่มหลังกำหนดเริ่ม) — counted in the month the postponement happened
+  const retroactiveStartPostpones = staffTasks.filter(t => {
     if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
+    if (monthOf(t.startPostponedAt) !== activeMonth) return false;
     const attr = getTaskAttribution(t, 'foreman');
     if (attr.role === 'waived' || attr.role === 'admin') return false;
     if (t.status === 'เลื่อนวันเริ่ม' && t.startPostponedAt && t.previousStartDate) {
@@ -2374,9 +2427,10 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     return false;
   });
 
-  // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน)
-  const retroactiveEndPostpones = scopedTasks.filter(t => {
+  // Rule 3: Retroactive end postponements (เลื่อนวันจบหลังจากเลยกำหนดเดิมไปแล้ว >= 1 วัน) — month of the postponement
+  const retroactiveEndPostpones = staffTasks.filter(t => {
     if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
+    if (monthOf(t.postponedAt) !== activeMonth) return false;
     const attr = getTaskAttribution(t, 'foreman');
     if (attr.role === 'waived' || attr.role === 'admin') return false;
     if (t.postponedAt && t.previousEndDate) {
@@ -2434,8 +2488,9 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
   });
 
   // Rule 6B: Disciplinary Revocation Flag ("ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)")
-  const penaltySparePartsTasks = scopedTasks.filter(t => {
+  const penaltySparePartsTasks = staffTasks.filter(t => {
     if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
+    if (monthOf(t.penaltyAudit?.timestamp || getTaskOperationalDate(t)) !== activeMonth) return false;
     return t.status === 'ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)' || t.penaltyRevokeSla === true;
   });
 
@@ -2448,24 +2503,18 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     return text.includes('ซ้ำ') || text.includes('duplicate') || text.includes('เปิดเบิ้ล');
   });
 
-  // Rule 8: Monthly Billing Cycle (15th Cut-off Rule) - Evaluated for Admin
-  const billingEligible = completedTasks.filter(t => t.completedDate);
-  const billingViolations = billingEligible.filter(t => {
+  // Rule 8: Monthly Billing Cycle (15th Cut-off Rule) - Evaluated for Admin.
+  // Work finished on/before the 15th must be billed that month; the lapse is booked once, in the following month.
+  const billingViolations = staffTasks.filter(t => {
+    if (!isDoneStatus(t) || !t.completedDate) return false;
     if (isTaskDecidedInPriorMonth(t, activeMonth)) return false;
     const attr = getTaskAttribution(t, 'admin');
     if (attr.role === 'waived') return false;
-    if (!t.completedDate) return false;
     const compParts = t.completedDate.split('-');
     if (compParts.length < 3) return false;
     const day = parseInt(compParts[2], 10);
-    const compMonth = `${compParts[0]}-${compParts[1]}`;
-    const isFinishedBefore15 = day <= 15;
-    
-    // If finished on or before 15th, must be billed in that same month or earlier
-    if (isFinishedBefore15 && t.billingStatus !== 'ส่งเบิกแล้ว') {
-      if (activeMonth > compMonth) return true; // Past the cycle without billing
-    }
-    return false;
+    if (monthOf(t.completedDate) !== shiftMonth(activeMonth, -1)) return false;
+    return day <= 15 && t.billingStatus !== 'ส่งเบิกแล้ว';
   });
 
   // Collect All Discrepancy Tasks for Audit
@@ -2623,58 +2672,44 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     });
   }
 
+  const shareNote = (arr, def) => {
+    const mixed = arr.some(t => { const a = getTaskAttribution(t, def); return a.role === 'shared'; });
+    return mixed ? ' (นับตามสัดส่วนรับผิดชอบร่วม)' : '';
+  };
+  const pushPts = (axis, points, reason) => { if (points > 0) penalties.push({ axis, points, reason }); };
+
   if (roleType === 'foreman') {
-    // Foreman Penalties: SLA Speed, Proactive Planning, Time Discipline, Crisis Discipline
-    const lateFinishPts = lateRateBandPoints(lateCompleted.length, completedTotal, 5);
-    if (lateFinishPts > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: lateFinishPts,
-        reason: `จบงานช้ากว่ากำหนด ${lateCompleted.length} จาก ${completedTotal} งาน (${ratePct(lateCompleted.length, completedTotal)}%) (หักคะแนน SLA Speed)`
-      });
-    }
-    if (retroactiveStartPostpones.length > 0) {
-      penalties.push({
-        axis: 'tech',
-        points: Math.min(4, retroactiveStartPostpones.length),
-        reason: `ขอเลื่อนวันเริ่มย้อนหลังจำนวน ${retroactiveStartPostpones.length} ครั้ง (หักคะแนนการวางแผนเชิงรุก)`
-      });
-    }
-    if (retroactiveEndPostpones.length > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: Math.min(4, retroactiveEndPostpones.length),
-        reason: `ขอเลื่อนวันจบหลังเลยกำหนดเดิมเกิน 1 วัน จำนวน ${retroactiveEndPostpones.length} ครั้ง (หักคะแนนวินัยเวลา)`
-      });
-    }
+    // Foreman Penalties: SLA Speed, Proactive Planning, Time Discipline, Crisis Discipline.
+    // Every count is weighted by the Foreman's share of each ruling (100% / shared split / 0%).
+    const lateFinishW = weighted(lateCompleted, foremanWeight, 'foreman');
+    pushPts('sla', lateRateBandPoints(lateFinishW, completedTotal, 5),
+      `จบงานช้ากว่ากำหนด ${lateFinishW} จาก ${completedTotal} งาน (${ratePct(lateFinishW, completedTotal)}%)${shareNote(lateCompleted, 'foreman')} (หักคะแนน SLA Speed)`);
+
+    const retroStartW = weighted(retroactiveStartPostpones, foremanWeight, 'foreman');
+    pushPts('tech', Math.min(4, retroStartW),
+      `ขอเลื่อนวันเริ่มย้อนหลัง ${retroStartW} ครั้ง${shareNote(retroactiveStartPostpones, 'foreman')} (หักคะแนนการวางแผนเชิงรุก)`);
+
+    const retroEndW = weighted(retroactiveEndPostpones, foremanWeight, 'foreman');
+    pushPts('sla', Math.min(4, retroEndW),
+      `ขอเลื่อนวันจบหลังเลยกำหนดเดิมเกิน 1 วัน ${retroEndW} ครั้ง${shareNote(retroactiveEndPostpones, 'foreman')} (หักคะแนนวินัยเวลา)`);
+
     const lateWOForeman = lateWOForemanAttributed.filter(notLateFinished);
-    const lateWOForemanPts = lateRateBandPoints(lateWOForeman.length, completedTotal, 4);
-    if (lateWOForemanPts > 0) {
-      penalties.push({
-        axis: 'tech',
-        points: lateWOForemanPts,
-        reason: `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา ${lateWOForeman.length} จาก ${completedTotal} งาน (${ratePct(lateWOForeman.length, completedTotal)}%) (หักคะแนนความเร็วทำราคา)`
-      });
-    }
-    // Rule 5: Stale tasks (70% responsibility)
-    const activeUnwaivedStale = staleGhostTasks.filter(t => getTaskAttribution(t, 'shared').role !== 'waived');
-    if (activeUnwaivedStale.length > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: Math.min(5, activeUnwaivedStale.length),
-        reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 70% ด้านการขับเคลื่อนงาน)`
-      });
-    }
+    const lateWOForemanW = weighted(lateWOForeman, foremanWeight, 'admin');
+    pushPts('tech', lateRateBandPoints(lateWOForemanW, completedTotal, 4),
+      `ออกใบงานช้าเกิน 3 วันจากสาเหตุรอ BOQ/ราคา ${lateWOForemanW} จาก ${completedTotal} งาน (${ratePct(lateWOForemanW, completedTotal)}%)${shareNote(lateWOForeman, 'admin')} (หักคะแนนความเร็วทำราคา)`);
+
+    // Rule 5: Stale tasks — auto-allocation Foreman 70% / Admin 30% unless the supervisor rules otherwise
+    const staleForemanW = weighted(staleGhostTasks, foremanWeight, 'shared');
+    pushPts('sla', Math.min(5, staleForemanW),
+      `มีงานค้างทิ้งร้างในระบบเกิน 7 วัน ${staleForemanW} งาน (ถ่วงน้ำหนักตามสัดส่วนรับผิดชอบ: โฟร์แมน ${STALE_AUTO_FOREMAN_SHARE}% หากผู้ดูแลยังไม่วินิจฉัย)`);
+
     if (penaltySparePartsTasks.length > 0) {
-      penalties.push({
-        axis: 'crisis',
-        points: Math.min(6, penaltySparePartsTasks.length * 2),
-        reason: `🚨 ถูกผู้ดูแลลงโทษสถานะ "ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)" จำนวน ${penaltySparePartsTasks.length} รายการ (หักคะแนนวินัยวิกฤต)`
-      });
+      pushPts('crisis', Math.min(6, penaltySparePartsTasks.length * 2),
+        `🚨 ถูกผู้ดูแลลงโทษสถานะ "ผิดเงื่อนไขรออะไหล่ (ตัดคะแนน)" จำนวน ${penaltySparePartsTasks.length} รายการ (หักคะแนนวินัยวิกฤต — โฟร์แมน 100%)`);
       alerts.push({
         type: 'danger',
         title: '🚨 ตรวจพบการถูกลงโทษทางวินัยอะไหล่',
-        desc: `พบงานที่ถูกผู้ดูแลประทับตรา "ผิดเงื่อนไขรออะไหล่" จำนวน ${penaltySparePartsTasks.length} รายการ ส่งผลให้ถูกตัดคะแนน SLA และ Crisis ทันที`
+        desc: `พบงานที่ถูกผู้ดูแลประทับตรา "ผิดเงื่อนไขรออะไหล่" จำนวน ${penaltySparePartsTasks.length} รายการ ส่งผลให้ถูกตัดคะแนน Crisis ทันที`
       });
     }
     if (sparePartsOver45Days.length > 0) {
@@ -2686,49 +2721,32 @@ export const aggregateStaffTaskTelemetry = (staff, tasks = [], sets = {}, curren
     }
   } else if (roleType === 'admin') {
     // Admin Penalties: WO SLA Speed, Billing Cycle Discipline (15th Cut-off), Late Completions Attributed to Admin, System Integrity
-    const lateAdminPts = lateRateBandPoints(lateCompletedAdminAttributed.length, completedTotal, 4);
-    if (lateAdminPts > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: lateAdminPts,
-        reason: `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร ${lateCompletedAdminAttributed.length} จาก ${completedTotal} งาน (${ratePct(lateCompletedAdminAttributed.length, completedTotal)}%) (คำวินิจฉัยผู้ดูแล)`
-      });
-    }
+    const lateAdminW = weighted(lateCompletedAdminAttributed, adminWeight, 'foreman');
+    pushPts('sla', lateRateBandPoints(lateAdminW, completedTotal, 4),
+      `งานจบช้ากว่ากำหนดจากสาเหตุฝ่ายธุรการ/เอกสาร ${lateAdminW} จาก ${completedTotal} งาน (${ratePct(lateAdminW, completedTotal)}%)${shareNote(lateCompletedAdminAttributed, 'foreman')} (คำวินิจฉัยผู้ดูแล)`);
+
     const lateWOAdmin = lateWOAdminAttributed.filter(notLateFinished);
-    const lateWOAdminPts = lateRateBandPoints(lateWOAdmin.length, completedTotal, 5);
-    if (lateWOAdminPts > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: lateWOAdminPts,
-        reason: `ออกใบงานช้าเกิน 3 วัน SLA ${lateWOAdmin.length} จาก ${completedTotal} งาน (${ratePct(lateWOAdmin.length, completedTotal)}%) (หักคะแนนความเร็วระบบเอกสาร)`
-      });
-    }
-    // Rule 5: Stale tasks (30% responsibility)
-    const activeUnwaivedStale = staleGhostTasks.filter(t => getTaskAttribution(t, 'shared').role !== 'waived');
-    if (activeUnwaivedStale.length > 0) {
-      penalties.push({
-        axis: 'sla',
-        points: Math.min(3, activeUnwaivedStale.length),
-        reason: `มีงานค้างทิ้งร้างในระบบเกิน 7 วันจำนวน ${activeUnwaivedStale.length} งาน (รับผิดชอบร่วม 30% ด้านการติดตามระบบ)`
-      });
-    }
-    if (duplicateCancellations.length > 0) {
-      penalties.push({
-        axis: 'innovation',
-        points: Math.min(4, duplicateCancellations.length),
-        reason: `เปิดใบงานซ้ำซ้อนจนต้องยกเลิกจำนวน ${duplicateCancellations.length} รายการ (หักคะแนนความถูกต้องของระบบ)`
-      });
-    }
+    const lateWOAdminW = weighted(lateWOAdmin, adminWeight, 'admin');
+    pushPts('sla', lateRateBandPoints(lateWOAdminW, completedTotal, 5),
+      `ออกใบงานช้าเกิน 3 วัน SLA ${lateWOAdminW} จาก ${completedTotal} งาน (${ratePct(lateWOAdminW, completedTotal)}%)${shareNote(lateWOAdmin, 'admin')} (หักคะแนนความเร็วระบบเอกสาร)`);
+
+    // Rule 5: Stale tasks — Admin bears the remainder of the Foreman share (default 30%)
+    const staleAdminW = weighted(staleGhostTasks, adminWeight, 'shared');
+    pushPts('sla', Math.min(3, staleAdminW),
+      `มีงานค้างทิ้งร้างในระบบเกิน 7 วัน ${staleAdminW} งาน (ถ่วงน้ำหนักตามสัดส่วนรับผิดชอบ: แอดมิน ${100 - STALE_AUTO_FOREMAN_SHARE}% หากผู้ดูแลยังไม่วินิจฉัย)`);
+
+    const dupW = weighted(duplicateCancellations, adminWeight, 'admin');
+    pushPts('innovation', Math.min(4, dupW),
+      `เปิดใบงานซ้ำซ้อนจนต้องยกเลิก ${dupW} รายการ (หักคะแนนความถูกต้องของระบบ)`);
+
+    const billingW = weighted(billingViolations, adminWeight, 'admin');
     if (billingViolations.length > 0) {
-      penalties.push({
-        axis: 'resource',
-        points: Math.min(5, billingViolations.length),
-        reason: `ไม่ส่งเบิกงานที่จบก่อนวันที่ 15 ภายในรอบเดือน จำนวน ${billingViolations.length} รายการ (หักคะแนนวินัยการเงิน)`
-      });
+      pushPts('resource', Math.min(5, billingW),
+        `ไม่ส่งเบิกงานที่จบก่อนวันที่ 15 ภายในรอบเดือน ${billingW} รายการ (หักคะแนนวินัยการเงิน)`);
       alerts.push({
         type: 'warning',
         title: '⚠️ หลุดรอบส่งเบิกเงินตามเกณฑ์วันที่ 15',
-        desc: `พบงานที่ปิดจบก่อนวันที่ 15 แต่ยังไม่ส่งเบิกในรอบเดือนจำนวน ${billingViolations.length} รายการ`
+        desc: `พบงานที่ปิดจบก่อนวันที่ 15 ของเดือนก่อน แต่ยังไม่ส่งเบิกจำนวน ${billingViolations.length} รายการ`
       });
     }
   }

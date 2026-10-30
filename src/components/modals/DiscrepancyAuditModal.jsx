@@ -132,7 +132,7 @@ export default function DiscrepancyAuditModal({
     setEditingTaskId(item.task.id);
   };
 
-  const handleSaveResolution = async (item, role, reason) => {
+  const handleSaveResolution = async (item, role, reason, foremanShare = null) => {
     if (!reason || !reason.trim()) {
       return alert('กรุณาระบุเหตุผลหรือคำวินิจฉัยประกอบการตัดสินใจ');
     }
@@ -145,6 +145,7 @@ export default function DiscrepancyAuditModal({
 
       updatedTask.slaAuditResolution = {
         responsibleRole: role, // 'foreman' | 'admin' | 'shared' | 'waived'
+        ...(role === 'shared' ? { foremanShare } : {}), // Foreman % of a shared ruling (Admin bears the rest)
         reason: reason.trim(),
         supervisorName,
         coords: supervisorSession?.coords || null,
@@ -158,7 +159,7 @@ export default function DiscrepancyAuditModal({
         ? '📋 Admin (รับผิดชอบเต็ม 100%)' 
         : role === 'waived' 
         ? '🛡️ ยกเว้น (Waived - เหตุสุดวิสัย)' 
-        : '🤝 รับผิดชอบร่วม (Shared)';
+        : `🤝 รับผิดชอบร่วม (โฟร์แมน ${foremanShare}% / แอดมิน ${100 - foremanShare}%)`;
 
       timeline.push({
         timestamp: nowIso,
@@ -362,6 +363,7 @@ export default function DiscrepancyAuditModal({
               item={editingItem}
               initialRole={editingItem.attribution?.role || editingItem.task?.slaAuditResolution?.responsibleRole || 'foreman'}
               initialReason={editingItem.attribution?.reason || editingItem.task?.slaAuditResolution?.reason || ''}
+              initialShare={editingItem.attribution?.foremanShare}
               supervisorSession={supervisorSession}
               onSave={handleSaveResolution}
               onCancel={() => setEditingTaskId(null)}
@@ -390,7 +392,12 @@ export default function DiscrepancyAuditModal({
                   const attr = item.attribution || {};
                   const decided = !!attr.isExplicit;
                   const isWaived = attr.role === 'waived';
-                  const roleLabel = { foreman: 'Foreman 100%', admin: 'Admin 100%', shared: 'ร่วมกัน', waived: 'ยกเว้น' }[attr.role];
+                  const roleLabel = {
+                    foreman: 'Foreman 100%',
+                    admin: 'Admin 100%',
+                    shared: `ร่วมกัน โฟร์แมน ${attr.foremanShare ?? 50}% / แอดมิน ${100 - (attr.foremanShare ?? 50)}%`,
+                    waived: 'ยกเว้น ไม่หักใคร'
+                  }[attr.role];
 
                   return (
                     <div
@@ -490,6 +497,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
   item,
   initialRole,
   initialReason,
+  initialShare,
   supervisorSession,
   onSave,
   onCancel,
@@ -497,6 +505,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
   Icon
 }) {
   const [role, setRole] = useState(initialRole || 'foreman');
+  const [foremanShare, setForemanShare] = useState(Number.isFinite(Number(initialShare)) ? Number(initialShare) : 50);
   const reasonRef = useRef(null);
 
   const handleSubmit = (e) => {
@@ -505,7 +514,7 @@ const AdjudicationForm = memo(function AdjudicationForm({
     if (!reasonText) {
       return alert('กรุณาระบุเหตุผลหรือคำวินิจฉัยประกอบการตัดสินใจ');
     }
-    onSave(item, role, reasonText);
+    onSave(item, role, reasonText, role === 'shared' ? foremanShare : null);
   };
 
   return (
@@ -525,10 +534,10 @@ const AdjudicationForm = memo(function AdjudicationForm({
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
-            { id: 'foreman', label: '🛠️ Foreman', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนโฟร์แมน)' },
-            { id: 'admin', label: '📋 Admin', sub: 'รับผิดชอบเต็ม 100% (หักคะแนนแอดมิน)' },
-            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งสัดส่วนรับผิดชอบคู่หู' },
-            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย (ไม่หักคะแนน)' }
+            { id: 'foreman', label: '🛠️ Foreman', sub: 'โฟร์แมนรับผิด 100% • แอดมิน 0%' },
+            { id: 'admin', label: '📋 Admin', sub: 'แอดมินรับผิด 100% • โฟร์แมน 0%' },
+            { id: 'shared', label: '🤝 รับผิดชอบร่วม', sub: 'แบ่งโทษตามสัดส่วนด้านล่าง' },
+            { id: 'waived', label: '🛡️ ยกเว้น (Waived)', sub: 'เหตุสุดวิสัย • ไม่หักทั้งสองฝ่าย' }
           ].map(opt => (
             <button
               key={opt.id}
@@ -546,6 +555,29 @@ const AdjudicationForm = memo(function AdjudicationForm({
           ))}
         </div>
       </div>
+
+      {role === 'shared' && (
+        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 space-y-2">
+          <div className="text-xs font-bold text-slate-200">สัดส่วนความรับผิดชอบ (โฟร์แมน / แอดมิน)</div>
+          <div className="flex flex-wrap gap-2">
+            {[70, 50, 30].map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setForemanShare(v)}
+                aria-pressed={foremanShare === v}
+                className={`min-h-[40px] px-3 rounded-lg border text-sm font-bold cursor-pointer transition ${foremanShare === v ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'}`}
+              >
+                {v} / {100 - v}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400">
+            โฟร์แมนรับ <strong className="text-slate-200">{foremanShare}%</strong> • แอดมินรับ <strong className="text-slate-200">{100 - foremanShare}%</strong> ของคะแนนที่หักจากงานนี้
+            (นับเป็นน้ำหนักในสัดส่วนงานช้าประจำเดือน ไม่ใช่หักซ้ำทั้งสองฝ่ายเต็มจำนวน)
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="text-xs text-slate-300 block mb-1.5 font-bold">

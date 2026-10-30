@@ -34,7 +34,8 @@ import {
   NINE_BOX_DEFINITIONS,
   calculateBusinessRiskIndex,
   calculateSuccessionReadiness,
-  doesDiscrepancyPenalizeStaff
+  doesDiscrepancyPenalizeStaff,
+  getDiscrepancyPenaltyShare
 } from '../utils/archetypeEngine';
 
 export default function TeamStatusTab({
@@ -1790,6 +1791,8 @@ export default function TeamStatusTab({
                                        const t = item.task || {};
                                        const attrRole = item.attribution?.role || 'foreman';
                                        const doesPenalize = doesDiscrepancyPenalizeStaff(item, telemetry.roleType);
+                                       const penaltyShare = getDiscrepancyPenaltyShare(item, telemetry.roleType);
+                                       const foremanShare = item.attribution?.foremanShare ?? 50;
                                        const isExplicit = item.attribution?.isExplicit;
 
                                        return (
@@ -1840,7 +1843,7 @@ export default function TeamStatusTab({
                                                          {attrRole === 'admin' ? '📋 ธุรการ (Admin)' :
                                                           attrRole === 'foreman' ? '🛠️ โฟร์แมน (Foreman)' :
                                                           attrRole === 'waived' ? '🛡️ ยกเว้น (Waived)' :
-                                                          '🤝 รับผิดชอบร่วม (70/30)'}
+                                                          `🤝 ร่วมกัน (โฟร์แมน ${foremanShare}% / แอดมิน ${100 - foremanShare}%)`}
                                                       </span>
                                                       {isExplicit && (
                                                          <span className="text-[9px] text-emerald-400 bg-emerald-950/60 px-1 rounded border border-emerald-800">
@@ -1853,7 +1856,7 @@ export default function TeamStatusTab({
                                                    <div>
                                                       {doesPenalize ? (
                                                          <span className="inline-block text-[9.5px] font-bold text-rose-300 bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-500/30">
-                                                            ⚠️ มีผลหักคะแนน {u?.name || 'พนักงาน'}
+                                                            ⚠️ มีผลหักคะแนน {u?.name || 'พนักงาน'}{penaltyShare < 1 ? ` (รับ ${Math.round(penaltyShare * 100)}%)` : ''}
                                                          </span>
                                                       ) : attrRole === 'waived' ? (
                                                          <span className="inline-block text-[9.5px] font-bold text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/30">

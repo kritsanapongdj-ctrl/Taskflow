@@ -52,21 +52,21 @@ async function runTests() {
     ...Array.from({ length: 139 }, (_, i) => mkTask(`BIG-OK-${i}`)),
     ...Array.from({ length: 13 }, (_, i) => lateTask(`BIG-LATE-${i}`))
   ];
-  const telemetryBig = aggregateStaffTaskTelemetry(mockStaff, tasks152, mockSets, '2026-10');
+  const telemetryBig = aggregateStaffTaskTelemetry(mockStaff, tasks152, mockSets, '2026-09');
   assert.strictEqual(telemetryBig.slaRate, 91, 'On-time rate should be 91%');
   assert.strictEqual(slaPts(telemetryBig), 1, '91% on-time (13 late of 152) should deduct only 1 point');
-  const telemetryAllLate = aggregateStaffTaskTelemetry(mockStaff, Array.from({ length: 13 }, (_, i) => lateTask(`L-${i}`)), mockSets, '2026-10');
+  const telemetryAllLate = aggregateStaffTaskTelemetry(mockStaff, Array.from({ length: 13 }, (_, i) => lateTask(`L-${i}`)), mockSets, '2026-09');
   assert.strictEqual(slaPts(telemetryAllLate), 5, '100% late should hit the SLA cap of 5');
   console.log('✓ Test 2 Passed: SLA deduction scales with late rate, not raw count');
 
   // 3. Same task is penalized once: a WO-late job (BOQ) must not also count as a late finish
   const woLateTasks = Array.from({ length: 13 }, (_, i) => mkTask(`WO-${i}`, { overdueStatus: 'ออกใบงานช้า', lateWorkOrder: true, overdueReason: 'รอ BOQ' }));
-  const telemetryWO = aggregateStaffTaskTelemetry(mockStaff, woLateTasks, mockSets, '2026-10');
+  const telemetryWO = aggregateStaffTaskTelemetry(mockStaff, woLateTasks, mockSets, '2026-09');
   assert.strictEqual(telemetryWO.lateFinishedTasks, 0, 'Late-WO status is not a late finish');
   assert.strictEqual(slaPts(telemetryWO), 0, 'Late-WO jobs must not be penalized on SLA axis');
   assert.strictEqual(telemetryWO.penalties.find(p => p.axis === 'tech').points, 4, 'Late-WO jobs are penalized once on TECH axis');
   const bothLate = Array.from({ length: 10 }, (_, i) => lateTask(`BOTH-${i}`, { lateWorkOrder: true, overdueReason: 'รอ BOQ' }));
-  const telemetryBoth = aggregateStaffTaskTelemetry(mockStaff, bothLate, mockSets, '2026-10');
+  const telemetryBoth = aggregateStaffTaskTelemetry(mockStaff, bothLate, mockSets, '2026-09');
   assert.strictEqual(telemetryBoth.penalties.find(p => p.axis === 'tech'), undefined, 'Job already penalized as late finish is not penalized again as late WO');
   console.log('✓ Test 3 Passed: one task is penalized once across axes');
 
@@ -75,7 +75,7 @@ async function runTests() {
     ...Array.from({ length: 10 }, (_, i) => lateTask(`ST-${i}`)),
     ...Array.from({ length: 4 }, (_, i) => mkTask(`RE-${i}`, { status: 'เลื่อนวันจบ', postponedAt: '2026-09-20', previousEndDate: '2026-09-10' }))
   ];
-  const telemetryStacked = aggregateStaffTaskTelemetry(mockStaff, stacked, mockSets, '2026-10');
+  const telemetryStacked = aggregateStaffTaskTelemetry(mockStaff, stacked, mockSets, '2026-09');
   assert(telemetryStacked.penalties.filter(p => p.axis === 'sla').reduce((a, p) => a + p.points, 0) <= 5, 'SLA axis total deduction must not exceed 5');
   console.log('✓ Test 3b Passed: per-axis deduction cap = 5');
 
@@ -86,6 +86,40 @@ async function runTests() {
   const sameDay = Array.from({ length: 10 }, (_, i) => mkTask(`SAME-${i}`, { completedDate: '2026-10-14', endDate: '2026-10-14', overdueStatus: 'เกินกำหนด' }));
   assert.strictEqual(aggregateStaffTaskTelemetry(mockStaff, sameDay, mockSets, '2026-10').lateFinishedTasks, 10, 'Same-day finish keeps the after-cutoff flag');
   console.log('✓ Test 3c Passed: dates override stale overdue flag');
+
+  // 3d. Month isolation: September work never leaks into October, and vice versa
+  const septTasks = Array.from({ length: 10 }, (_, i) => lateTask(`SEP-${i}`));
+  const octTasks = Array.from({ length: 10 }, (_, i) => mkTask(`OCT-${i}`, { endDate: '2026-10-10', completedDate: '2026-10-09' }));
+  const mixed = [...septTasks, ...octTasks];
+  const tSep = aggregateStaffTaskTelemetry(mockStaff, mixed, mockSets, '2026-09');
+  const tOct = aggregateStaffTaskTelemetry(mockStaff, mixed, mockSets, '2026-10');
+  assert.strictEqual(tSep.completedTasks, 10, 'September sees only its own 10 finished jobs');
+  assert.strictEqual(tSep.lateFinishedTasks, 10, 'September late jobs counted in September');
+  assert.strictEqual(tOct.completedTasks, 10, 'October sees only its own 10 finished jobs');
+  assert.strictEqual(tOct.lateFinishedTasks, 0, 'September late jobs must not leak into October');
+  assert.strictEqual(slaPts(tOct), 0, 'October SLA must be clean');
+  assert(!tOct.discrepancyTasks.some(i => i.type !== 'BILLING_CUTOFF'), 'October room holds no September SLA items (only the 15th billing cycle lapse is booked in the following month)');
+  console.log('✓ Test 3d Passed: audit room is isolated per month');
+
+  // 3e. Shared ruling splits the deduction (Foreman % / Admin %) instead of charging both in full
+  const adminStaff = { id: 'staff-2', name: 'ธุรการ ทดสอบ', classId: 'admin', role: 'admin', outerAssessed: true, cx: 8, tech: 8, sla: 8, crisis: 8, resource: 8, innovation: 8 };
+  const adminSets = { staffClasses: [{ id: 'admin', key: 'admin', title: 'ธุรการ' }], emails: ['adm@lh.co.th|มัณฑนา|ธุรการ ทดสอบ'] };
+  const onTime16 = Array.from({ length: 16 }, (_, i) => mkTask('SHOK-' + i));
+  const ruled = (role, foremanShare) => onTime16.concat(Array.from({ length: 4 }, (_, i) => lateTask(`SH-${role}-${i}`, {
+    slaAuditResolution: { responsibleRole: role, reason: 'test', supervisorName: 'ผู้ดูแล', timestamp: '2026-09-30T10:00:00Z', ...(foremanShare !== undefined ? { foremanShare } : {}) }
+  })));
+  const fmPts = (tasks) => slaPts(aggregateStaffTaskTelemetry(mockStaff, tasks, mockSets, '2026-09'));
+  const adPts = (tasks) => slaPts(aggregateStaffTaskTelemetry(adminStaff, tasks, adminSets, '2026-09'));
+  assert.strictEqual(fmPts(ruled('foreman')), 3, 'Foreman 100%: 4/20 late (20%) = -3');
+  assert.strictEqual(adPts(ruled('foreman')), 0, 'Foreman 100%: Admin bears nothing');
+  assert.strictEqual(fmPts(ruled('admin')), 0, 'Admin 100%: Foreman bears nothing');
+  assert.strictEqual(adPts(ruled('admin')), 3, 'Admin 100%: 4/20 late (20%) = -3');
+  assert.strictEqual(fmPts(ruled('waived')) + adPts(ruled('waived')), 0, 'Waived: nobody is penalized');
+  assert(fmPts(ruled('shared', 70)) > 0 && adPts(ruled('shared', 70)) > 0, 'Shared: both bear a part');
+  assert(fmPts(ruled('shared', 70)) < fmPts(ruled('foreman')), 'Shared 70%: Foreman bears less than a full 100% ruling');
+  assert(fmPts(ruled('shared', 70)) > fmPts(ruled('shared', 30)), 'Higher Foreman share = larger Foreman deduction');
+  assert(adPts(ruled('shared', 70)) < adPts(ruled('shared', 30)), 'Higher Foreman share = smaller Admin deduction');
+  console.log('✓ Test 3e Passed: shared rulings split Foreman/Admin deductions');
 
   const tasks6 = Array.from({ length: 6 }, (_, i) => lateTask(`JOB-00${i + 10}`));
   const telemetry6 = aggregateStaffTaskTelemetry(mockStaff, tasks6, mockSets, '2026-09');
